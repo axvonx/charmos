@@ -88,6 +88,9 @@ paddr_t pmm_alloc_pages_internal(uint64_t count, enum alloc_flags f) {
 }
 
 void pmm_free_pages(paddr_t addr, uint64_t count) {
+    if (!addr)
+        return;
+
     current_free_fn(addr, count);
 }
 

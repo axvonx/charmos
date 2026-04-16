@@ -133,7 +133,10 @@
 
 #include <console/printf.h>
 #include <kassert.h>
+#include <math/bit_ops.h>
 #include <math/div.h>
+#include <math/ilog2.h>
+#include <math/pow.h>
 #include <math/sort.h>
 #include <mem/alloc.h>
 #include <mem/domain.h>
@@ -153,69 +156,75 @@
 #include "mem/domain/internal.h"
 #include "stat_internal.h"
 
-struct slab_size_constant *slab_class_sizes = NULL;
-size_t slab_num_sizes = 0;
-struct vas_space *slab_vas = NULL;
-struct slab_caches slab_caches = {0};
+struct slab_globals slab_global = {0};
 LOG_HANDLE_DECLARE_DEFAULT(slab);
 LOG_SITE_DECLARE_DEFAULT(slab);
 
-static void *slab_map_new_page(struct slab_domain *domain, paddr_t *phys_out,
-                               enum slab_type type) {
-    paddr_t phys = 0x0;
-    vaddr_t virt = 0x0;
+static void *slab_map_new(struct slab_domain *domain, struct slab_cache *cache,
+                          paddr_t phys_out[SLAB_MAX_PAGES],
+                          struct slab_chunk **out) {
+    size_t pages = cache->pages_per_slab;
+    enum slab_type type = cache->type;
+    kassert(pages <= SLAB_MAX_PAGES);
+    memset(phys_out, 0, pages * sizeof(paddr_t));
+    size_t pages_mapped = 0;
+    vaddr_t virt_base = 0x0;
 
-    if (domain) {
-        phys = domain_alloc_from_domain(domain->domain, 1);
-    } else {
-        phys = pmm_alloc_page();
+    for (size_t i = 0; i < pages; i++) {
+        if (domain) {
+            phys_out[i] = domain_alloc_from_domain(domain->domain, 1);
+        } else {
+            phys_out[i] = pmm_alloc_page();
+        }
+        if (unlikely(!phys_out[i]))
+            goto err;
     }
 
-    *phys_out = phys;
-
-    if (unlikely(!phys))
+    virt_base = slab_chunks_alloc(&cache->chunks, out);
+    if (unlikely(!virt_base))
         goto err;
 
-    /* map three pages for the slab so that OOB writes are caught */
-    /* TODO: three pages change... */
-    virt = vas_alloc(slab_vas, PAGE_SIZE * 3, PAGE_SIZE);
-    if (unlikely(!virt))
-        goto err;
+    uint64_t pflags = slab_page_flags(type);
 
-    /* go one page up so that the memory is as follows
-     *
-     * [unmapped] [mapped] [unmapped] */
-    virt += PAGE_SIZE;
+    for (pages_mapped = 0; pages_mapped < pages; pages_mapped++) {
+        paddr_t phys = phys_out[pages_mapped];
+        vaddr_t virt = virt_base + pages_mapped * PAGE_SIZE;
+        if (unlikely(vmm_map_page(virt, phys, pflags, VMM_FLAG_NONE) < 0))
+            goto err;
+    }
 
-    uint64_t pflags = PAGE_PRESENT | PAGE_WRITE;
-
-    kassert(type != SLAB_TYPE_NONE);
-    if (type == SLAB_TYPE_PAGEABLE)
-        pflags |= PAGE_PAGEABLE;
-
-    enum errno e = vmm_map_page(virt, phys, pflags, VMM_FLAG_NONE);
-    if (unlikely(e < 0))
-        goto err;
-
-    return (void *) virt;
+    return (void *) virt_base;
 
 err:
-    if (phys)
+    for (size_t i = 0; i < pages; i++) {
+        paddr_t phys = phys_out[i];
         pmm_free_page(phys);
+    }
 
-    if (virt)
-        vas_free(slab_vas, virt, PAGE_SIZE * 3);
+    for (size_t i = 0; i < pages_mapped; i++) {
+        vaddr_t virt = virt_base + i * PAGE_SIZE;
+        vmm_unmap_page(virt, VMM_FLAG_NONE);
+    }
+
+    if (virt_base)
+        slab_chunks_free(&cache->chunks, *out, virt_base);
 
     return NULL;
 }
 
-static void slab_free_virt_and_phys(vaddr_t virt, paddr_t phys) {
-    vmm_unmap_page(virt, VMM_FLAG_NONE);
-    pmm_free_page(phys);
+static void slab_free_virt_and_phys(struct slab *slab) {
+    vaddr_t virt_base = (vaddr_t) slab;
+    struct slab_chunk *chunk = slab->parent_chunk;
+    struct slab_chunks *chunks = &slab->parent_cache->chunks;
 
-    /* go back down a PAGE_SIZE for our virt allocation */
-    virt -= PAGE_SIZE;
-    vas_free(slab_vas, virt, PAGE_SIZE * 3);
+    for (size_t i = 0; i < slab->page_count; i++) {
+        size_t virt = virt_base + i * PAGE_SIZE;
+        paddr_t phys = PFN_TO_PAGE(page_get_pfn(slab->backing_pages[i]));
+        vmm_unmap_page(virt, VMM_FLAG_NONE);
+        pmm_free_page(phys);
+    }
+
+    slab_chunks_free(chunks, chunk, virt_base);
 }
 
 void slab_cache_init(size_t order, struct slab_cache *cache, uint64_t obj_size,
@@ -225,7 +234,9 @@ void slab_cache_init(size_t order, struct slab_cache *cache, uint64_t obj_size,
     cache->obj_align = align;
     cache->obj_stride = SLAB_ALIGN_UP(obj_size, align);
     cache->pages_per_slab = 1;
-    uint64_t available = PAGE_NON_SLAB_SPACE;
+    size_t page_ptr_size = sizeof(struct page *) * cache->pages_per_slab;
+
+    uint64_t available = NON_SLAB_SPACE(cache);
 
     if (cache->obj_size > available)
         panic("Slab class too large, object size is %u with %u available "
@@ -233,9 +244,10 @@ void slab_cache_init(size_t order, struct slab_cache *cache, uint64_t obj_size,
               cache->obj_size, available);
 
     uint64_t n;
-    for (n = PAGE_NON_SLAB_SPACE / obj_size; n > 0; n--) {
+    for (n = NON_SLAB_SPACE(cache) / obj_size; n > 0; n--) {
         uint64_t bitmap_bytes = SLAB_BITMAP_BYTES_FOR(n);
-        uintptr_t data_start = sizeof(struct slab) + bitmap_bytes;
+        uintptr_t data_start =
+            sizeof(struct slab) + bitmap_bytes + page_ptr_size;
         data_start = SLAB_ALIGN_UP(data_start, align);
         uintptr_t data_end = data_start + n * cache->obj_stride;
 
@@ -250,27 +262,26 @@ void slab_cache_init(size_t order, struct slab_cache *cache, uint64_t obj_size,
         panic("Slab cache cannot hold any objects per slab!\n");
 
     cache->bitmap_bytes = SLAB_BITMAP_BYTES_FOR(cache->objs_per_slab);
-    cache->slab_metadata_size = sizeof(struct slab) + cache->bitmap_bytes;
+    cache->slab_metadata_size = sizeof(struct slab) + cache->bitmap_bytes +
+                                cache->pages_per_slab * sizeof(struct page *);
 
     INIT_LIST_HEAD(&cache->slabs[SLAB_FREE]);
     INIT_LIST_HEAD(&cache->slabs[SLAB_PARTIAL]);
     INIT_LIST_HEAD(&cache->slabs[SLAB_FULL]);
+    slab_chunks_init(&cache->chunks, cache);
 }
 
 struct slab *slab_init(struct slab *slab, struct slab_cache *parent) {
     void *page = slab;
     slab->parent_cache = parent;
-    slab->pages = parent->pages_per_slab;
     slab->bitmap = slab_get_bitmap_location(slab);
 
     vaddr_t data_start = (vaddr_t) page + parent->slab_metadata_size;
     data_start = SLAB_ALIGN_UP(data_start, parent->obj_align);
     slab->mem = data_start;
 
-    spinlock_init(&slab->lock);
     slab->used = 0;
     slab->state = SLAB_FREE;
-    slab->self = slab;
     slab->gc_enqueue_time_ms = 0;
     slab->type = parent->type;
     rbt_init_node(&slab->rb);
@@ -283,13 +294,20 @@ struct slab *slab_init(struct slab *slab, struct slab_cache *parent) {
 
 static struct slab *slab_create_new(struct slab_domain *domain,
                                     struct slab_cache *cache) {
-    paddr_t phys;
-    void *page = slab_map_new_page(domain, &phys, cache->type);
+    paddr_t phys[SLAB_MAX_PAGES];
+    struct slab_chunk *out;
+    void *page = slab_map_new(domain, cache, phys, &out);
     if (!page)
         return NULL;
 
     struct slab *slab = (struct slab *) page;
-    slab->backing_page = page_for_pfn(PAGE_TO_PFN(phys));
+    slab->parent_chunk = out;
+    slab->page_count = cache->pages_per_slab;
+
+    for (size_t i = 0; i < cache->pages_per_slab; i++) {
+        slab->backing_pages[i] = page_for_pfn(PAGE_TO_PFN(phys[i]));
+    }
+
     return slab_init(slab, cache);
 }
 
@@ -326,7 +344,6 @@ struct slab *slab_create(struct slab_cache *cache,
 }
 
 static void *slab_alloc_from(struct slab_cache *cache, struct slab *slab) {
-    enum irql irql = slab_lock(slab);
     slab_check_assert(slab);
 
     SPINLOCK_ASSERT_HELD(&cache->lock);
@@ -357,21 +374,17 @@ static void *slab_alloc_from(struct slab_cache *cache, struct slab *slab) {
             kassert(ret > (vaddr_t) slab && ret < (vaddr_t) slab + PAGE_SIZE);
 
             slab_check_assert(slab);
-            slab_unlock(slab, irql);
             return (void *) ret;
         }
     }
 
     slab_check_assert(slab);
-    slab_unlock(slab, irql);
     return NULL;
 }
 
 void slab_destroy(struct slab *slab) {
     slab_list_del(slab);
-    uintptr_t virt = (uintptr_t) slab;
-    paddr_t phys = vmm_get_phys(virt, VMM_FLAG_NONE);
-    slab_free_virt_and_phys(virt, phys);
+    slab_free_virt_and_phys(slab);
 }
 
 static void slab_bitmap_free(struct slab *slab, void *obj) {
@@ -382,7 +395,7 @@ static void slab_bitmap_free(struct slab *slab, void *obj) {
     slab_index_and_mask(slab, obj, &byte_idx, &bit_mask);
 
     if (!SLAB_BITMAP_TEST(slab->bitmap[byte_idx], bit_mask))
-        return;
+        panic("Possible UAF\n");
 
     SLAB_BITMAP_UNSET(slab->bitmap[byte_idx], bit_mask);
     slab->used -= 1;
@@ -392,7 +405,6 @@ void slab_free_old(struct slab *slab, void *obj) {
     struct slab_cache *cache = slab->parent_cache;
 
     enum irql slab_cache_irql = slab_cache_lock(cache);
-    enum irql irql = slab_lock(slab);
 
     slab_bitmap_free(slab, obj);
 
@@ -400,12 +412,9 @@ void slab_free_old(struct slab *slab, void *obj) {
         slab_move(cache, slab, SLAB_FREE);
         if (slab_should_enqueue_gc(slab)) {
             slab_list_del(slab);
-            slab_unlock(slab, irql);
             slab_cache_unlock(cache, slab_cache_irql);
 
-            uintptr_t virt = (uintptr_t) slab;
-            paddr_t phys = PFN_TO_PAGE(page_get_pfn(slab->backing_page));
-            slab_free_virt_and_phys(virt, phys);
+            slab_free_virt_and_phys(slab);
             return;
         }
     } else if (slab->state == SLAB_FULL) {
@@ -413,7 +422,6 @@ void slab_free_old(struct slab *slab, void *obj) {
     }
 
     slab_check_assert(slab);
-    slab_unlock(slab, irql);
     slab_cache_unlock(cache, slab_cache_irql);
 }
 
@@ -479,8 +487,8 @@ out:
 }
 
 int32_t slab_size_to_index(size_t size) {
-    for (size_t i = 0; i < slab_num_sizes; i++)
-        if (slab_class_sizes[i].size >= size)
+    for (size_t i = 0; i < slab_global.num_sizes; i++)
+        if (slab_global.class_sizes[i].size >= size)
             return i;
 
     return -1;
@@ -513,8 +521,8 @@ static void log_dupes(const char *keep, const char *discard, size_t size) {
 
 void slab_allocator_init() {
     /* bootstrap VAS */
-    slab_vas = vas_space_bootstrap(SLAB_HEAP_START, SLAB_HEAP_END);
-    if (!slab_vas)
+    slab_global.vas = vas_space_bootstrap(SLAB_HEAP_START, SLAB_HEAP_END);
+    if (!slab_global.vas)
         panic("Could not initialize slab VAS\n");
 
     struct slab_size_constant *start = __skernel_slab_sizes;
@@ -524,8 +532,9 @@ void slab_allocator_init() {
     size_t total_input = dyn_count + SLAB_CLASS_CONST_COUNT;
 
     struct slab_size_constant *tmp =
-        simple_alloc(slab_vas, total_input * sizeof(*tmp));
+        simple_alloc(slab_global.vas, total_input * sizeof(*tmp));
     kassert(tmp);
+    slab_order_map_init();
 
     size_t idx = 0;
 
@@ -559,27 +568,32 @@ void slab_allocator_init() {
         }
     }
 
-    slab_num_sizes = out;
+    slab_global.num_sizes = out;
 
-    slab_class_sizes =
-        simple_alloc(slab_vas, slab_num_sizes * sizeof(*slab_class_sizes));
-    kassert(slab_class_sizes);
+    slab_global.class_sizes =
+        simple_alloc(slab_global.vas,
+                     slab_global.num_sizes * sizeof(*slab_global.class_sizes));
+    kassert(slab_global.class_sizes);
 
-    memcpy(slab_class_sizes, tmp, slab_num_sizes * sizeof(*slab_class_sizes));
+    memcpy(slab_global.class_sizes, tmp,
+           slab_global.num_sizes * sizeof(*slab_global.class_sizes));
 
-    slab_caches.caches = slab_caches_alloc();
+    slab_global.caches.caches = slab_caches_alloc();
 
-    for (uint64_t i = 0; i < slab_num_sizes; i++) {
-        slab_cache_init(i, &slab_caches.caches[i], slab_class_sizes[i].size,
-                        slab_class_sizes[i].align);
+    for (uint64_t i = 0; i < slab_global.num_sizes; i++) {
+        slab_cache_init(i, &slab_global.caches.caches[i],
+                        slab_global.class_sizes[i].size,
+                        slab_global.class_sizes[i].align);
 
-        slab_caches.caches[i].type = SLAB_TYPE_NONPAGEABLE;
-        slab_caches.caches[i].parent = &slab_caches;
+        slab_global.caches.caches[i].type = SLAB_TYPE_NONPAGEABLE;
+        slab_global.caches.caches[i].parent = &slab_global.caches;
 
-        slab_info("Slab cache s=%u a=%u \"%s\", o=%u, w=%u",
-                  slab_class_sizes[i].size, slab_class_sizes[i].align,
-                  slab_class_sizes[i].name, slab_caches.caches[i].objs_per_slab,
-                  slab_cache_wasted_space_per_slab(&slab_caches.caches[i]));
+        slab_info(
+            "Slab cache s=%u a=%u \"%s\", o=%u, w=%u",
+            slab_global.class_sizes[i].size, slab_global.class_sizes[i].align,
+            slab_global.class_sizes[i].name,
+            slab_global.caches.caches[i].objs_per_slab,
+            slab_cache_wasted_space_per_slab(&slab_global.caches.caches[i]));
     }
 }
 
@@ -609,7 +623,7 @@ void *kmalloc_pages_raw(struct slab_domain *parent, size_t size,
     uint64_t total_size = size + sizeof(struct slab_page_hdr);
     uint64_t pages = PAGES_NEEDED_FOR(total_size);
 
-    uintptr_t virt = vas_alloc(slab_vas, pages * PAGE_SIZE, PAGE_SIZE);
+    uintptr_t virt = vas_alloc(slab_global.vas, pages * PAGE_SIZE, PAGE_SIZE);
     uintptr_t phys_pages[pages];
     uint64_t allocated = 0;
 
@@ -658,8 +672,8 @@ void *kmalloc_old(size_t size) {
     int idx = slab_size_to_index(size);
 
     if (kmalloc_size_fits_in_slab(size) &&
-        slab_caches.caches[idx].objs_per_slab > 0)
-        return slab_alloc_old(&slab_caches.caches[idx]);
+        slab_global.caches.caches[idx].objs_per_slab > 0)
+        return slab_alloc_old(&slab_global.caches.caches[idx]);
 
     /* we say NULL and just free these to domain 0 */
     return kmalloc_pages_raw(NULL, size, ALLOC_FLAGS_DEFAULT);
@@ -676,12 +690,11 @@ void slab_free_page_hdr(struct slab_page_hdr *hdr) {
         pmm_free_page(phys);
     }
 
-    vas_free(slab_vas, virt, pages * PAGE_SIZE);
+    vas_free(slab_global.vas, virt, pages * PAGE_SIZE);
 }
 
 void slab_free_addr_to_cache(void *addr) {
-    vaddr_t vaddr = (vaddr_t) addr;
-    kassert(vaddr >= SLAB_HEAP_START && vaddr <= SLAB_HEAP_END);
+    slab_ptr_validate(addr);
 
     struct slab_page_hdr *hdr_candidate = slab_page_hdr_for_addr(addr);
     if (hdr_candidate->magic == KMALLOC_PAGE_MAGIC)
@@ -1052,6 +1065,7 @@ void kfree_pages(void *ptr, size_t size, enum alloc_behavior behavior) {
      * we should flush to domain 0 since that is most likely where
      * the allocation had come from. */
     struct slab_domain *owner = header->domain;
+
     owner = owner ? owner : global.domains[0]->slab_domain;
 
     /* these pages don't turn into slabs and thus don't get added
@@ -1133,14 +1147,12 @@ void slab_free(struct slab_domain *domain, void *obj) {
     struct slab_cache *cache = slab->parent_cache;
 
     enum irql slab_cache_irql = slab_cache_lock(cache);
-    enum irql irql = slab_lock(slab);
     slab_bitmap_free(slab, obj);
 
     if (slab->used == 0) {
         slab_move(cache, slab, SLAB_FREE);
         if (slab_should_enqueue_gc(slab)) {
             slab_list_del(slab);
-            slab_unlock(slab, irql);
             slab_stat_gc_collection(domain);
             slab_gc_enqueue(domain, slab);
             slab_cache_unlock(cache, slab_cache_irql);
@@ -1151,7 +1163,6 @@ void slab_free(struct slab_domain *domain, void *obj) {
     }
 
     slab_check_assert(slab);
-    slab_unlock(slab, irql);
     slab_cache_unlock(cache, slab_cache_irql);
 }
 
@@ -1167,6 +1178,8 @@ static size_t slab_free_queue_drain_on_free(struct slab_domain *domain,
 void kfree_new(void *ptr, enum alloc_behavior behavior) {
     if (!ptr)
         return;
+
+    slab_ptr_validate(ptr);
 
     size_t size = ksize(ptr);
     int32_t idx = slab_size_to_index(size);

@@ -150,7 +150,7 @@ void slab_percpu_refill(struct slab_domain *dom,
                         enum alloc_behavior behavior) {
     /* This flushes a portion of the freequeue into the percpu cache */
     slab_free_queue_drain_limited(cache, dom, /* pct = */ 100);
-    for (size_t class = 0; class < slab_num_sizes; class++)
+    for (size_t class = 0; class < slab_global.num_sizes; class++)
         slab_percpu_refill_class(dom, cache, class, behavior);
 }
 
@@ -173,13 +173,13 @@ void slab_domain_percpu_init(struct slab_domain *domain) {
     for (size_t i = 0; i < cpus; i++) {
         domain->percpu_caches[i] = kzalloc(sizeof(struct slab_percpu_cache));
         domain->percpu_caches[i]->mag =
-            kzalloc(sizeof(struct slab_magazine) * slab_num_sizes);
+            kzalloc(sizeof(struct slab_magazine) * slab_global.num_sizes);
 
         if (!domain->percpu_caches[i] || !domain->percpu_caches[i]->mag)
             panic("Could not allocate domain's percpu caches\n");
 
         domain->percpu_caches[i]->domain = domain;
-        for (size_t j = 0; j < slab_num_sizes; j++) {
+        for (size_t j = 0; j < slab_global.num_sizes; j++) {
             struct slab_magazine *mag = &domain->percpu_caches[i]->mag[j];
             mag->count = 0;
             spinlock_init(&mag->lock);

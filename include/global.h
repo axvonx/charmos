@@ -10,7 +10,10 @@
 /* TODO: almost everything here is RO after init.
  *
  * I can clone these per-NUMA node and make backpointers
- * via the per-core 'struct core' in the G segment register */
+ * via the per-core 'struct core' in the G segment register 
+ *
+ * AKA, split into global and rw_global
+ */
 struct globals {
     volatile atomic_bool panicked;
     volatile enum bootstage current_bootstage;
@@ -36,6 +39,7 @@ struct globals {
 
     atomic_size_t thread_count;
 
+    /* TODO: We can consider migrating these to per-subsystem locations */
     size_t domain_count;
     struct domain **domains;
     struct domain_buddy *domain_buddies;

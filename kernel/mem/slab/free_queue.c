@@ -157,7 +157,9 @@ size_t slab_free_queue_drain(struct slab_percpu_cache *cache,
             goto flush;
 
         /* Magazines only cache nonpageable addresses */
-        struct page *page = slab_for_ptr((void *) addr)->backing_page;
+        /* NOTE: We dereference the first page in the backing page array
+         * since all pages should have the same property as it */
+        struct page *page = *slab_for_ptr((void *) addr)->backing_pages;
         if (page_is_pageable(page))
             goto flush;
 

@@ -28,6 +28,7 @@ struct elcm_params {
     bool bias_towards_pow2;
     size_t metadata_size_bytes;
     size_t metadata_bits_per_obj;
+    size_t metadata_bytes_per_page;
     struct elcm_candidate out;
 };
 

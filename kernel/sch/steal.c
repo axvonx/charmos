@@ -1,3 +1,4 @@
+#include <math/ilog2.h>
 #include <sch/sched.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -212,14 +213,6 @@ struct thread *scheduler_try_do_steal(struct scheduler *sched) {
     }
 
     return stolen;
-}
-
-/* for work_steal_victim_min_diff */
-static inline uint8_t ilog2(uint64_t x) {
-    uint8_t r = 0;
-    while (x >>= 1)
-        r++;
-    return r;
 }
 
 uint64_t scheduler_compute_steal_threshold() {

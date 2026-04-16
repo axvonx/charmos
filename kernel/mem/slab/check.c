@@ -1,5 +1,5 @@
 #include "internal.h"
-#include <math/popcount.h>
+#include <math/bit_ops.h>
 
 #define slab_check_assert_return_false(statement)                              \
     do {                                                                       \
@@ -12,7 +12,6 @@
 bool slab_check_reset_slab(struct slab *slab) {
     slab_check_assert_return_false(slab->state == SLAB_FREE);
     slab_check_assert_return_false(slab->bitmap == NULL);
-    slab_check_assert_return_false(slab->self == slab);
     slab_check_assert_return_false(slab->used == 0);
     return true;
 }
@@ -41,13 +40,10 @@ bool slab_check_meta(struct slab *slab) {
 }
 
 bool slab_check(struct slab *slab) {
-    /* Caller must deal with this */
-    SPINLOCK_ASSERT_HELD(&slab->lock);
-
     switch (slab->state) {
     case SLAB_FREE:
     case SLAB_PARTIAL:
-    case SLAB_IN_GC_LIST:
+    case SLAB_IN_GC:
     case SLAB_FULL: break;
     default: return false; /* Invalid state */
     }

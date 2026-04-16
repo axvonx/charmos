@@ -46,18 +46,18 @@ void slab_domain_build_locality_lists(struct slab_domain *sdom) {
 }
 
 void slab_init_caches(struct slab_caches *caches, bool pageable) {
-    for (size_t i = 0; i < slab_num_sizes; i++) {
+    for (size_t i = 0; i < slab_global.num_sizes; i++) {
         struct slab_cache *cache = &caches->caches[i];
         cache->type = pageable ? SLAB_TYPE_PAGEABLE : SLAB_TYPE_NONPAGEABLE;
 
-        slab_cache_init(i, cache, slab_class_sizes[i].size,
-                        slab_class_sizes[i].align);
+        slab_cache_init(i, cache, slab_global.class_sizes[i].size,
+                        slab_global.class_sizes[i].align);
     }
 }
 
 void slab_domain_link_caches(struct slab_domain *domain,
                              struct slab_caches *caches) {
-    for (size_t i = 0; i < slab_num_sizes; i++) {
+    for (size_t i = 0; i < slab_global.num_sizes; i++) {
         caches->caches[i].parent_domain = domain;
         caches->caches[i].parent = caches;
     }
@@ -134,8 +134,8 @@ static struct slab_cache *slab_domain_cache_for_slab(struct slab *slab) {
 }
 
 void slab_domain_move_slabs(void) {
-    for (size_t i = 0; i < slab_num_sizes; i++) {
-        struct slab_cache *c = &slab_caches.caches[i];
+    for (size_t i = 0; i < slab_global.num_sizes; i++) {
+        struct slab_cache *c = &slab_global.caches.caches[i];
         for (size_t j = 0; j < SLAB_STANDARD_STATE_COUNT; j++) {
             struct slab *slab, *tmp;
             list_for_each_entry_safe(slab, tmp, &c->slabs[j], list) {

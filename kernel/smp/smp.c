@@ -272,6 +272,8 @@ void smp_init() {
             global.cores[i] = kmalloc_from_domain(d, sizeof(struct core));
             if (!global.cores[i])
                 panic("OOM\n");
+
+            memset(global.cores[i], 0, sizeof(struct core));
         }
 
         global.cores[i]->id = i;

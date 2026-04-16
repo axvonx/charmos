@@ -35,7 +35,7 @@ LOG_HANDLE_EXTERN(slab);
 
 #define KMALLOC_PAGE_MAGIC 0xC0FFEE42
 #define SLAB_ALLOC_BEHAVIOR_FROM_ALLOC (1 << ALLOC_BEHAVIOR_AVAILABLE_SHIFT)
-#define SLAB_ELCM_DEFAULT_MAX_PAGES 64
+#define SLAB_ELCM_DEFAULT_MAX_WASTAGE_PCT 5
 
 #define SLAB_HEAP_START 0xFFFFF00000000000ULL
 #define SLAB_HEAP_END 0xFFFFF10000000000ULL
@@ -49,6 +49,8 @@ LOG_HANDLE_EXTERN(slab);
 
 #define SLAB_MIN_SIZE (sizeof(vaddr_t))
 #define SLAB_MAX_SIZE (PAGE_SIZE / 4)
+#define SLAB_MAX_PAGES 64
+#define SLAB_POW2_ORDER_COUNT 16
 
 /* Bitmap */
 #define SLAB_BITMAP_BYTES_FOR(x) ((x + 7ull) / 8ull)
@@ -114,6 +116,8 @@ static const size_t slab_class_sizes_const[] = {
 #define SLAB_STAT_SERIES_CAPACITY 64
 #define SLAB_STAT_SERIES_BUCKET_US MS_TO_US(250)
 
+#define SLAB_CHUNK_SIZE PAGE_2MB
+
 #define kmalloc_validate_params(size, flags, behavior)                         \
     do {                                                                       \
         kassert(alloc_flags_valid(flags));                                     \
@@ -142,7 +146,7 @@ enum slab_state {
     SLAB_PARTIAL = 1,
     SLAB_FULL = 2,
     SLAB_STANDARD_STATE_COUNT = 3,
-    SLAB_IN_GC_LIST = 4,
+    SLAB_IN_GC = 4,
 };
 
 enum slab_type {
@@ -151,27 +155,42 @@ enum slab_type {
     SLAB_TYPE_PAGEABLE,
 };
 
+/*
+ * Memory layout of slab with N pages:
+ * ┌──────────────────────────────────────┐
+ * │                 slab                 │
+ * └──────────────────────────────────────┘
+ *    │                                │
+ *    │                                │
+ *    │                                │
+ *    ▼                                ▼
+ * ┌────────┐ ┌────────┐         ┌────────┐
+ * │ page 1 │ │ page 2 │ ●  ●  ● │ page N │
+ * └────────┘ └────────┘         └────────┘
+ *      │
+ *      └──────────┐
+ *                 ▼
+ * ┌──────────────────────────────┐┌──────┐
+ * │        slab metadata         ││ data │
+ * └──────────────────────────────┘└──────┘
+ *      │          │         │
+ *      └──┐       └───────┐ └─────────┐
+ *         │               │           │
+ *         ▼               ▼           ▼
+ * ┌───────────────┐┌─────────────┐┌──────┐
+ * │static metadata││page pointers││bitmap│
+ * └───────────────┘└─────────────┘└──────┘
+ */
 struct slab {
-    struct slab *self; /* We need this field because multi-page slabs
-                        * will keep a pointer to the parent slab at
-                        * the start of each page, and if we add this
-                        * to the actual slab itself, we can branchlessly
-                        * retrieve the slab for any given pointer.
-                        *
-                        * MUST be first element in structure  */
-
     /* Put commonly accessed fields up here to make cache happier */
     uint8_t *bitmap;
     vaddr_t mem; /* Where does the slab data start */
     size_t used;
+    struct slab_chunk *parent_chunk;
     struct slab_cache *parent_cache;
 
-    enum slab_type type;
-    enum slab_state state;
-    struct spinlock lock;
-
-    struct page *backing_page; /* TODO: array */
-    size_t pages;
+    enum slab_type type : 3;
+    enum slab_state state : 3;
 
     /* Sorted by gc_enqueue_time_ms */
     struct rbt_node rb;
@@ -181,15 +200,16 @@ struct slab {
 
     size_t recycle_count; /* How many times has this been
                            * recycled from the GC list? */
+
+    size_t page_count;
+    struct page *backing_pages[];
 };
-SPINLOCK_GENERATE_LOCK_UNLOCK_FOR_STRUCT(slab, lock);
 
 #define slab_from_rbt_node(n) (container_of(n, struct slab, rb))
 #define slab_from_list_node(ln) (container_of(ln, struct slab, list))
-#define PAGE_NON_SLAB_SPACE (PAGE_SIZE - sizeof(struct slab))
-
-_Static_assert(offsetof(struct slab, self) == 0,
-               "self pointer not at start of struct");
+#define NON_SLAB_SPACE(c)                                                      \
+    (PAGE_SIZE - sizeof(struct slab) -                                         \
+     (c)->pages_per_slab * sizeof(struct page *))
 
 /* Just a simple stack */
 struct slab_magazine {
@@ -227,6 +247,36 @@ struct slab_free_queue {
 #define SLAB_FREE_QUEUE_SUB_COUNT(fq, n) (atomic_fetch_sub(&(fq)->count, n))
 #define SLAB_FREE_QUEUE_DEC_COUNT(fq) (atomic_fetch_sub(&(fq)->count, 1))
 
+enum slab_chunk_state : uintptr_t {
+    SLAB_CHUNK_FREE,
+    SLAB_CHUNK_PARTIAL,
+    SLAB_CHUNK_USED,
+    SLAB_CHUNK_MAX,
+};
+
+struct slab_chunk {
+    struct list_head list; /* Either on: free list, partial list, used list */
+    vaddr_t base_addr : 64 - PAGE_4K_SHIFT;
+    enum slab_chunk_state state : 2;
+    size_t used : 9;
+    uint8_t bitmap[];
+};
+
+struct slab_chunks {
+    struct slab_cache *parent;
+    size_t bitmap_bytes;
+    size_t page_stride;
+    union {
+        struct {
+            struct list_head freelist;
+            struct list_head partial_list;
+            struct list_head used_list;
+        };
+        struct list_head lists[SLAB_CHUNK_MAX];
+    };
+    struct spinlock lock;
+};
+
 struct slab_cache {
     struct slab_caches *parent;
     uint64_t obj_size;
@@ -249,6 +299,7 @@ struct slab_cache {
     size_t ewma_free_slabs;
 
     struct spinlock lock;
+    struct slab_chunks chunks;
 };
 SPINLOCK_GENERATE_LOCK_UNLOCK_FOR_STRUCT(slab_cache, lock);
 
@@ -359,6 +410,7 @@ enum slab_gc_flags : uint32_t {
 };
 
 struct slab_gc {
+    struct list_head pow2_order_lists[SLAB_POW2_ORDER_COUNT];
     struct slab_domain *parent;
     struct rbt rbt;
     struct spinlock lock;
@@ -430,6 +482,14 @@ struct slab_domain {
     struct slab_domain_bucket aggregate;
 };
 
+struct slab_globals {
+    struct vas_space *vas;
+    struct slab_caches caches;
+    struct slab_size_constant *class_sizes;
+    size_t num_sizes;
+    _Atomic uint8_t *order_map;
+};
+
 static inline struct domain_buddy *
 slab_domain_buddy(struct slab_domain *domain) {
     return domain->domain->domain_buddy;
@@ -442,14 +502,10 @@ struct slab_page_hdr {
     struct slab_domain *domain;
 };
 
-struct slab_elcm_params {
-    size_t max_wastage_pct;
-    size_t max_pages;
-};
-
 struct slab_elcm_candidate {
     size_t pages;
     size_t bitmap_size_bytes;
+    size_t obj_count;
 };
 
 struct slab *slab_init(struct slab *slab, struct slab_cache *parent);
@@ -465,7 +521,8 @@ void *slab_cache_try_alloc_from_lists(struct slab_cache *c);
 void slab_cache_init(size_t order, struct slab_cache *cache, uint64_t obj_size,
                      uint64_t obj_align);
 void slab_cache_insert(struct slab_cache *cache, struct slab *slab);
-struct slab *slab_create(struct slab_cache *cache, enum alloc_behavior behavior);
+struct slab *slab_create(struct slab_cache *cache,
+                         enum alloc_behavior behavior);
 void *slab_alloc(struct slab_cache *cache, enum alloc_behavior behavior);
 
 /* Magazine + percpu */
@@ -513,12 +570,24 @@ bool slab_should_enqueue_gc(struct slab *slab);
 void slab_switch_to_domain_allocations(void);
 
 /* ELCM for slab allocator */
-struct slab_elcm_candidate slab_elcm(size_t object_size, struct slab_elcm_params sep);
+struct slab_elcm_candidate slab_elcm(size_t obj_size, size_t obj_alignment);
 
-extern struct vas_space *slab_vas;
-extern struct slab_caches slab_caches;
-extern struct slab_size_constant *slab_class_sizes;
-extern size_t slab_num_sizes;
+/* Resizing */
+bool slab_resize(struct slab *slab, size_t new_size_pages);
+bool slab_can_resize_to(struct slab *slab, size_t new_size_pages);
+
+/* Order map */
+uint8_t slab_order_map_get(void *ptr);
+void slab_order_map_set(void *ptr, uint8_t order);
+void slab_order_map_init(void);
+
+/* Chunks */
+vaddr_t slab_chunks_alloc(struct slab_chunks *sc, struct slab_chunk **out);
+void slab_chunks_free(struct slab_chunks *sc, struct slab_chunk *chunk,
+                      vaddr_t addr);
+void slab_chunks_init(struct slab_chunks *sc, struct slab_cache *parent);
+
+extern struct slab_globals slab_global;
 
 /* Recall that the EWMA formula is
  *
@@ -526,7 +595,6 @@ extern size_t slab_num_sizes;
  *
  * where r is the value that we are scaling with
  */
-
 static inline void slab_gc_update_ewma(struct slab_cache *cache) {
     size_t free_slabs = cache->slabs_count[SLAB_FREE];
 
@@ -558,12 +626,8 @@ static inline size_t slab_object_size(struct slab *slab) {
     return slab->parent_cache->obj_size;
 }
 
-/* The parent slab object has a pointer
- * to itself at the start of the structure,
- * and following pages all contain a backpointer
- * to the slab at the start of every page */
 static inline struct slab *slab_for_ptr(void *ptr) {
-    return *(struct slab **) PAGE_ALIGN_DOWN(ptr);
+    return (struct slab *) PAGE_ALIGN_DOWN(ptr);
 }
 
 static inline struct slab_domain *slab_domain_local(void) {
@@ -575,13 +639,13 @@ static inline struct slab_percpu_cache *slab_percpu_cache_local(void) {
 }
 
 static inline void slab_list_del(struct slab *slab) {
-    if (slab->state != SLAB_IN_GC_LIST)
+    if (slab->state != SLAB_IN_GC)
         kassert(spinlock_held(&slab->parent_cache->lock));
 
     enum slab_state state = slab->state;
     list_del_init(&slab->list);
 
-    if (state != SLAB_IN_GC_LIST) {
+    if (state != SLAB_IN_GC) {
         if (state == SLAB_FREE)
             slab_gc_update_ewma(slab->parent_cache);
 
@@ -628,11 +692,13 @@ static inline void slab_index_and_mask(struct slab *slab, void *obj,
 }
 
 static inline struct slab_cache *slab_caches_alloc() {
-    return simple_alloc(slab_vas, sizeof(struct slab_cache) * slab_num_sizes);
+    return simple_alloc(slab_global.vas,
+                        sizeof(struct slab_cache) * slab_global.num_sizes);
 }
 
 static inline uint8_t *slab_get_bitmap_location(struct slab *s) {
-    return (uint8_t *) s + sizeof(struct slab);
+    uint8_t *base = (uint8_t *) s + sizeof(struct slab);
+    return base + sizeof(struct page *) * s->page_count;
 }
 
 static inline size_t
@@ -648,4 +714,22 @@ slab_cache_wasted_space_per_slab(struct slab_cache *cache) {
     size_t used = cache->obj_stride * cache->objs_per_slab;
 
     return usable - used;
+}
+
+static inline uint64_t slab_page_flags(enum slab_type type) {
+    uint64_t pflags = PAGE_PRESENT | PAGE_WRITE;
+    kassert(type != SLAB_TYPE_NONE);
+    if (type == SLAB_TYPE_PAGEABLE)
+        pflags |= PAGE_PAGEABLE;
+
+    return pflags;
+}
+
+static inline void slab_ptr_validate(void *ptr) {
+    vaddr_t vaddr = (vaddr_t) ptr;
+    kassert(vaddr >= SLAB_HEAP_START && vaddr <= SLAB_HEAP_END);
+}
+
+static inline size_t slab_chunks_per_page(struct slab_chunks *chunks) {
+    return PAGE_SIZE / (sizeof(struct slab_chunk) + chunks->bitmap_bytes);
 }

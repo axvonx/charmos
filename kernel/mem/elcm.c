@@ -4,7 +4,7 @@
 #include <math/fixed.h>
 #include <math/fixed_extended.h>
 #include <math/gcd_lcm.h>
-#include <math/popcount.h>
+#include <math/bit_ops.h>
 #include <math/sort.h>
 #include <math/to_bits_bytes.h>
 #include <mem/alloc.h>
@@ -201,6 +201,7 @@ enum errno elcm(struct elcm_params *params) {
     size_t metadata_size_bytes = params->metadata_size_bytes;
     size_t max_pages = params->max_pages;
     size_t max_wastage_pct = params->max_wastage_pct;
+    size_t metadata_bytes_per_page = params->metadata_bytes_per_page;
     bool bias_towards_pow2 = params->bias_towards_pow2;
 
     kassert(obj_size > 0 && "Object size must be greater than 0");
@@ -242,8 +243,9 @@ enum errno elcm(struct elcm_params *params) {
         if (obj_count == 0)
             continue;
 
+        size_t mdata_bytes = metadata_size_bytes + metadata_bytes_per_page * i;
         size_t bmap_bytes = bitmap_bytes_for(obj_count, metadata_bits_per_obj);
-        size_t data_start = metadata_size_bytes + bmap_bytes;
+        size_t data_start = mdata_bytes + bmap_bytes;
         size_t aligned_start = ALIGN_UP(data_start, obj_alignment);
         size_t used_bytes = aligned_start + obj_count * aligned_obj_size;
         size_t total_bytes = i * page_size;

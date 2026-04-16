@@ -21,7 +21,7 @@ size_t slab_gc_score(struct slab *slab, enum slab_gc_flags flags) {
     size_t size_factor_pct = gc_agg_size_factor_pct[aggressiveness];
     size_t recycle_penalty_pct = gc_agg_recycle_penalty_pct[aggressiveness];
 
-    size_t size_part_raw = SLAB_GC_SIZE_FACTOR * slab->pages;
+    size_t size_part_raw = SLAB_GC_SIZE_FACTOR * slab->page_count;
     time_t age_seconds = time_get_ms() - slab->gc_enqueue_time_ms;
     size_t recycle_part_raw = SLAB_GC_RECYCLE_PENALTY * slab->recycle_count;
 
@@ -45,7 +45,7 @@ bool slab_gc_should_recycle(struct slab *slab, uint8_t bias_destroy) {
     struct slab_caches *parent_caches = parent->parent;
     size_t class = SLAB_CACHE_COUNT_FOR(parent, SLAB_FREE);
     size_t total = SLAB_CACHE_COUNT_FOR(parent_caches, SLAB_FREE);
-    size_t avg = total / slab_num_sizes;
+    size_t avg = total / slab_global.num_sizes;
     size_t smoothed = parent->ewma_free_slabs;
 
     /* scale the thresholds by bias_destroy: higher bias = more destruction */
@@ -66,7 +66,7 @@ bool slab_gc_should_recycle(struct slab *slab, uint8_t bias_destroy) {
 static size_t slab_gc_get_total_free_for(struct slab_caches *caches,
                                          size_t *free_per_order) {
     size_t total_free = 0;
-    for (size_t i = 0; i < slab_num_sizes; i++) {
+    for (size_t i = 0; i < slab_global.num_sizes; i++) {
         free_per_order[i] = SLAB_CACHE_COUNT_FOR(caches, SLAB_FREE);
         total_free += free_per_order[i];
     }
@@ -152,14 +152,14 @@ void slab_gc_recycle(struct slab_domain *domain, struct slab *slab,
     struct slab_caches *caches = slab_gc_pick_caches(domain, slab);
 
     /* Gather totals */
-    size_t free_per_order[slab_num_sizes];
+    size_t free_per_order[slab_global.num_sizes];
     size_t total_free = slab_gc_get_total_free_for(caches, free_per_order);
     size_t original_order = slab->parent_cache->order;
 
     int32_t best_idx = original_order; /* Default */
     int64_t best_score = INT64_MIN;
 
-    for (size_t i = 0; i < slab_num_sizes; i++) {
+    for (size_t i = 0; i < slab_global.num_sizes; i++) {
         int64_t score = score_order(total_free, bias_bitmap, i, free_per_order,
                                     slabs_recycled, original_order);
 
@@ -257,8 +257,8 @@ static inline size_t slab_gc_get_max_unfit_slabs(size_t target,
 size_t slab_gc_run(struct slab_gc *gc, enum slab_gc_flags flags) {
     enum irql irql = slab_gc_lock(gc);
 
-    size_t slabs_recycled[slab_num_sizes];
-    memset(slabs_recycled, 0, sizeof(size_t) * slab_num_sizes);
+    size_t slabs_recycled[slab_global.num_sizes];
+    memset(slabs_recycled, 0, sizeof(size_t) * slab_global.num_sizes);
     size_t target = slab_gc_derive_target_gc_slabs(gc, flags);
     size_t threshold = slab_gc_derive_threshold_score(gc, flags);
     size_t max_unfit = slab_gc_get_max_unfit_slabs(target, flags);
@@ -299,7 +299,7 @@ void slab_gc_enqueue(struct slab_domain *domain, struct slab *slab) {
 
     /* We do NOT reset the slab here in case we recycle it back
      * to the same order it was pulled from */
-    slab->state = SLAB_IN_GC_LIST;
+    slab->state = SLAB_IN_GC;
     slab->gc_enqueue_time_ms = time_get_ms();
 
     struct slab_gc *gc = &domain->slab_gc;
@@ -408,7 +408,7 @@ bool slab_should_enqueue_gc(struct slab *slab) {
     if (total < SLAB_EWMA_MIN_TOTAL || class < SLAB_EWMA_MIN_TOTAL)
         return false;
 
-    size_t avg = total / slab_num_sizes;
+    size_t avg = total / slab_global.num_sizes;
     size_t smoothed = parent->ewma_free_slabs;
 
     /* scale thresholds for mid-sized caches */

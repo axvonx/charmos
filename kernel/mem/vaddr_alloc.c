@@ -24,6 +24,8 @@ static void vasrange_refill(struct vas_space *space) {
     SPINLOCK_ASSERT_HELD(&space->lock);
 
     uintptr_t phys = pmm_alloc_page();
+
+    /* TODO: */
     if (!phys)
         panic("OOM allocating vas_range page");
 
@@ -53,8 +55,7 @@ static void vasrange_free(struct vas_space *space, struct vas_range *r) {
     list_add_tail(&r->free_list_node, &space->freelist);
 }
 
-__no_sanitize_address struct vas_space *vas_space_bootstrap(vaddr_t base,
-                                                            vaddr_t limit) {
+struct vas_space *vas_space_bootstrap(vaddr_t base, vaddr_t limit) {
     uintptr_t phys = pmm_alloc_page();
     if (!phys)
         panic("OOM creating vas_space");
@@ -84,7 +85,10 @@ __no_sanitize_address struct vas_space *vas_space_bootstrap(vaddr_t base,
 }
 
 struct vas_space *vas_space_init(vaddr_t base, vaddr_t limit) {
-    struct vas_space *vas = kzalloc(sizeof(struct vas_space));
+    struct vas_space *vas =
+        kzalloc(sizeof(struct vas_space), ALLOC_FLAGS_DEFAULT,
+                /* Prevent recursing into ourselves */
+                ALLOC_BEHAVIOR_NORMAL | ALLOC_BEHAVIOR_FLAG_MINIMAL);
     if (!vas)
         return NULL;
 

@@ -13,7 +13,9 @@ struct slab_size_constant {
     size_t size;
     size_t align;
     struct list_head list;
-    struct list_head sort_list;
+    struct {
+        size_t page_count;
+    } internal;
 } __linker_aligned;
 
 #define SLAB_SIZE_REGISTER(n, s, a)                                            \
@@ -23,7 +25,7 @@ struct slab_size_constant {
             .size = s,                                                         \
             .align = a,                                                        \
             .list = LIST_HEAD_INIT(slab_size_constant_##n.list),               \
-            .sort_list = LIST_HEAD_INIT(slab_size_constant_##n.sort_list),     \
+            .internal = {0},                                                   \
     }
 
 /* convenience wrapper */
