@@ -7,6 +7,7 @@
 
 #define PAGE_SIZE 4096ULL
 #define PAGE_2MB 0x200000
+#define PAGE_1GB 0x40000000
 
 #define PAGE_PRESENT (0x1UL)
 #define PAGE_WRITE (0x2UL)
@@ -27,6 +28,10 @@
 #define PAGE_2MB_PHYS_MASK (~((uintptr_t) PAGE_2MB - 1))
 #define PAGE_ALIGN_DOWN(x) ALIGN_DOWN((uintptr_t) (x), PAGE_SIZE)
 #define PAGE_ALIGN_UP(x) ALIGN_UP((uintptr_t) (x), PAGE_SIZE)
+#define PAGE_2MB_ALIGN_DOWN(x) ALIGN_DOWN((uintptr_t) (x), PAGE_2MB)
+#define PAGE_2MB_ALIGN_UP(x) ALIGN_UP((uintptr_t) (x), PAGE_2MB)
+#define PAGE_1GB_ALIGN_DOWN(x) ALIGN_DOWN((uintptr_t) (x), PAGE_1GB)
+#define PAGE_1GB_ALIGN_UP(x) ALIGN_UP((uintptr_t) (x), PAGE_1GB)
 
 #define PAGE_TO_PFN(addr) ((addr) / PAGE_SIZE)
 #define PFN_TO_PAGE(pfn) ((pfn) * PAGE_SIZE)

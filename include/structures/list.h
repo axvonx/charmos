@@ -71,6 +71,23 @@ static inline struct list_head *list_pop_front_init(struct list_head *head) {
     return ret;
 }
 
+static inline struct list_head *list_pop_tail(struct list_head *head) {
+    if (list_empty(head))
+        return NULL;
+
+    struct list_head *entry = head->prev;
+    list_del(entry);
+    return entry;
+}
+
+static inline struct list_head *list_pop_tail_init(struct list_head *head) {
+    struct list_head *ret = list_pop_tail(head);
+    if (ret)
+        INIT_LIST_HEAD(ret);
+
+    return ret;
+}
+
 static inline void __list_splice(const struct list_head *list,
                                  struct list_head *prev,
                                  struct list_head *next) {

@@ -286,7 +286,7 @@ struct stress_arg {
     volatile int *done_flag;
 };
 
-static volatile bool all_ready = false;
+static atomic_bool all_ready = false;
 
 static void stress_worker(void *) {
     struct stress_arg *a = NULL;

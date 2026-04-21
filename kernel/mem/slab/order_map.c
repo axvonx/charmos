@@ -3,18 +3,18 @@
 
 #include "internal.h"
 
-static _Atomic uint8_t *order_map_entry_for(void *ptr, bool *high_bits) {
-    slab_ptr_validate(ptr);
-    vaddr_t vptr_relative = ((vaddr_t) ptr) - SLAB_HEAP_START;
+static _Atomic uint8_t *order_map_entry_for(vaddr_t vaddr, bool *high_bits) {
+    slab_ptr_validate((void *) vaddr);
+    vaddr_t vptr_relative = vaddr - SLAB_HEAP_START;
     vaddr_t aligned_2mb = ALIGN_DOWN(vptr_relative, PAGE_2MB);
     vaddr_t aligned_4mb = ALIGN_DOWN(vptr_relative, PAGE_2MB * 2);
     *high_bits = aligned_2mb != aligned_4mb;
-    return &slab_global.order_map[aligned_4mb];
+    return &slab_global.order_map[aligned_4mb / (PAGE_2MB * 2)];
 }
 
-uint8_t slab_order_map_get(void *ptr) {
+uint8_t slab_order_map_get(vaddr_t vaddr) {
     bool get_high;
-    uint8_t byte = *order_map_entry_for(ptr, &get_high);
+    uint8_t byte = *order_map_entry_for(vaddr, &get_high);
     if (get_high) {
         return byte >> 4;
     } else {
@@ -22,10 +22,10 @@ uint8_t slab_order_map_get(void *ptr) {
     }
 }
 
-void slab_order_map_set(void *ptr, uint8_t order) {
+void slab_order_map_set(vaddr_t vaddr, uint8_t order) {
     order &= 0xF;
     bool set_high;
-    _Atomic uint8_t *bptr = order_map_entry_for(ptr, &set_high);
+    _Atomic uint8_t *bptr = order_map_entry_for(vaddr, &set_high);
 
     uint8_t first_mask = set_high ? 0xF : 0xF0;
     order = set_high ? order << 4 : order;
@@ -41,4 +41,11 @@ void slab_order_map_init(void) {
     slab_global.order_map = simple_alloc(slab_global.vas, bytes_needed);
     if (!slab_global.order_map)
         panic("OOM\n");
+
+    uint8_t set_to = SLAB_POW2_ORDER_EMPTY << 4 | SLAB_POW2_ORDER_EMPTY;
+    memset(slab_global.order_map, set_to, bytes_needed);
+}
+
+bool slab_order_map_none(vaddr_t vaddr) {
+    return slab_order_map_get(vaddr) == SLAB_POW2_ORDER_NONE;
 }

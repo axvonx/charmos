@@ -346,7 +346,7 @@ void scheduler_switch_in() {
     struct thread *drop = us->drop_last_ref;
     us->drop_last_ref = NULL;
     if (drop)
-        reaper_enqueue(drop);
+        thread_put(drop);
 }
 
 void scheduler_yield() {

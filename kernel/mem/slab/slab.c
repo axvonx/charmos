@@ -227,13 +227,13 @@ static void slab_free_virt_and_phys(struct slab *slab) {
     slab_chunks_free(chunks, chunk, virt_base);
 }
 
-void slab_cache_init(size_t order, struct slab_cache *cache, uint64_t obj_size,
-                     uint64_t align) {
+void slab_cache_init(size_t order, struct slab_cache *cache,
+                     struct slab_size_constant *ssc) {
     cache->order = order;
-    cache->obj_size = obj_size;
-    cache->obj_align = align;
-    cache->obj_stride = SLAB_ALIGN_UP(obj_size, align);
-    cache->pages_per_slab = 1;
+    cache->obj_size = ssc->size;
+    cache->obj_align = ssc->align;
+    cache->obj_stride = SLAB_ALIGN_UP(ssc->size, ssc->align);
+    cache->pages_per_slab = ssc->internal.cand.pages;
     size_t page_ptr_size = sizeof(struct page *) * cache->pages_per_slab;
 
     uint64_t available = NON_SLAB_SPACE(cache);
@@ -244,11 +244,11 @@ void slab_cache_init(size_t order, struct slab_cache *cache, uint64_t obj_size,
               cache->obj_size, available);
 
     uint64_t n;
-    for (n = NON_SLAB_SPACE(cache) / obj_size; n > 0; n--) {
+    for (n = NON_SLAB_SPACE(cache) / ssc->size; n > 0; n--) {
         uint64_t bitmap_bytes = SLAB_BITMAP_BYTES_FOR(n);
         uintptr_t data_start =
             sizeof(struct slab) + bitmap_bytes + page_ptr_size;
-        data_start = SLAB_ALIGN_UP(data_start, align);
+        data_start = SLAB_ALIGN_UP(data_start, ssc->align);
         uintptr_t data_end = data_start + n * cache->obj_stride;
 
         if (data_end <= PAGE_SIZE)
@@ -262,8 +262,8 @@ void slab_cache_init(size_t order, struct slab_cache *cache, uint64_t obj_size,
         panic("Slab cache cannot hold any objects per slab!\n");
 
     cache->bitmap_bytes = SLAB_BITMAP_BYTES_FOR(cache->objs_per_slab);
-    cache->slab_metadata_size = sizeof(struct slab) + cache->bitmap_bytes +
-                                cache->pages_per_slab * sizeof(struct page *);
+    cache->slab_metadata_size =
+        sizeof(struct slab) + cache->bitmap_bytes + page_ptr_size;
 
     INIT_LIST_HEAD(&cache->slabs[SLAB_FREE]);
     INIT_LIST_HEAD(&cache->slabs[SLAB_PARTIAL]);
@@ -323,7 +323,7 @@ struct slab *slab_create(struct slab_cache *cache,
      * iteration through GC slabs may touch pageable slabs and
      * trigger a page fault, so we must be careful here */
     if (alloc_behavior_may_fault(behavior))
-        slab = slab_gc_get_newest(cache->parent_domain, cache->type);
+        slab = slab_gc_get_for_cache(cache);
 
     if (slab) {
         slab_stat_gc_object_reclaimed(local);
@@ -395,7 +395,8 @@ static void slab_bitmap_free(struct slab *slab, void *obj) {
     slab_index_and_mask(slab, obj, &byte_idx, &bit_mask);
 
     if (!SLAB_BITMAP_TEST(slab->bitmap[byte_idx], bit_mask))
-        panic("Possible UAF\n");
+        slab_warn("Possible UAF of addr %p for bitmap 0b%b with bitmask 0b%b\n",
+                  obj, slab->bitmap[byte_idx], bit_mask);
 
     SLAB_BITMAP_UNSET(slab->bitmap[byte_idx], bit_mask);
     slab->used -= 1;
@@ -519,6 +520,11 @@ static void log_dupes(const char *keep, const char *discard, size_t size) {
               discard, keep, size, discard, keep);
 }
 
+static struct slab_elcm_candidate
+slab_cand_for_size_constant(struct slab_size_constant *ssc) {
+    return slab_elcm(ssc->size, ssc->align);
+}
+
 void slab_allocator_init() {
     /* bootstrap VAS */
     slab_global.vas = vas_space_bootstrap(SLAB_HEAP_START, SLAB_HEAP_END);
@@ -538,6 +544,7 @@ void slab_allocator_init() {
 
     size_t idx = 0;
 
+    /* "Constant" ones */
     for (size_t i = 0; i < SLAB_CLASS_CONST_COUNT; i++) {
         tmp[idx++] = (struct slab_size_constant){
             .name = "default slab size",
@@ -546,6 +553,7 @@ void slab_allocator_init() {
         };
     }
 
+    /* "Dynamic" ones */
     for (struct slab_size_constant *ssc = start; ssc < end; ssc++) {
         tmp[idx++] = (struct slab_size_constant){
             .name = ssc->name,
@@ -581,20 +589,36 @@ void slab_allocator_init() {
     slab_global.caches.caches = slab_caches_alloc();
 
     for (uint64_t i = 0; i < slab_global.num_sizes; i++) {
-        slab_cache_init(i, &slab_global.caches.caches[i],
-                        slab_global.class_sizes[i].size,
-                        slab_global.class_sizes[i].align);
+        struct slab_size_constant *ssc = &slab_global.class_sizes[i];
+        struct slab_cache *sc = &slab_global.caches.caches[i];
 
-        slab_global.caches.caches[i].type = SLAB_TYPE_NONPAGEABLE;
-        slab_global.caches.caches[i].parent = &slab_global.caches;
+        ssc->internal.cand = slab_cand_for_size_constant(ssc);
+        slab_cache_init(i, sc, ssc);
 
-        slab_info(
-            "Slab cache s=%u a=%u \"%s\", o=%u, w=%u",
-            slab_global.class_sizes[i].size, slab_global.class_sizes[i].align,
-            slab_global.class_sizes[i].name,
-            slab_global.caches.caches[i].objs_per_slab,
-            slab_cache_wasted_space_per_slab(&slab_global.caches.caches[i]));
+        sc->type = SLAB_TYPE_NONPAGEABLE;
+        sc->parent = &slab_global.caches;
+
+        slab_info("Slab cache s=%u a=%u \"%s\", o=%u, p=%zu",
+                  slab_global.class_sizes[i].size,
+                  slab_global.class_sizes[i].align,
+                  slab_global.class_sizes[i].name,
+                  slab_global.caches.caches[i].objs_per_slab,
+                  slab_global.class_sizes[i].internal.cand.pages);
     }
+
+    simple_free(slab_global.vas, tmp, total_input * sizeof(*tmp));
+    slab_elcm_initialize();
+}
+
+struct slab *slab_for_ptr(void *ptr) {
+    slab_ptr_validate(ptr);
+    vaddr_t vp = (vaddr_t) ptr;
+    uint8_t pow2_order = slab_order_map_get(vp);
+    kassert(pow2_order != SLAB_POW2_ORDER_EMPTY &&
+            pow2_order != SLAB_POW2_ORDER_NONE);
+
+    size_t align = ipow(2, pow2_order) * PAGE_SIZE;
+    return (struct slab *) ALIGN_DOWN(vp, align);
 }
 
 size_t ksize(void *ptr) {
@@ -603,13 +627,16 @@ size_t ksize(void *ptr) {
 
     vaddr_t vp = (vaddr_t) ptr;
 
-    if (!(vp >= SLAB_HEAP_START && vp <= SLAB_HEAP_END))
-        panic("%p out of bounds\n", vp);
+    slab_ptr_validate(ptr);
 
-    struct slab_page_hdr *hdr = slab_page_hdr_for_addr(ptr);
+    uint8_t pow2_order = slab_order_map_get(vp);
+    kassert(pow2_order != SLAB_POW2_ORDER_EMPTY);
 
-    if (hdr->magic == KMALLOC_PAGE_MAGIC)
+    if (pow2_order == SLAB_POW2_ORDER_NONE) {
+        struct slab_page_hdr *hdr = slab_page_hdr_for_addr(ptr);
+        kassert(hdr->magic == KMALLOC_PAGE_MAGIC);
         return hdr->pages * PAGE_SIZE - sizeof(struct slab_page_hdr);
+    }
 
     return slab_for_ptr(ptr)->parent_cache->obj_size;
 }
@@ -623,7 +650,15 @@ void *kmalloc_pages_raw(struct slab_domain *parent, size_t size,
     uint64_t total_size = size + sizeof(struct slab_page_hdr);
     uint64_t pages = PAGES_NEEDED_FOR(total_size);
 
-    uintptr_t virt = vas_alloc(slab_global.vas, pages * PAGE_SIZE, PAGE_SIZE);
+    vaddr_t virt = vas_alloc(slab_global.vas, pages * PAGE_SIZE, PAGE_SIZE);
+
+    uint8_t map_nibble = slab_order_map_get(virt);
+    kassert(map_nibble == SLAB_POW2_ORDER_NONE ||
+            map_nibble == SLAB_POW2_ORDER_EMPTY);
+
+    if (map_nibble == SLAB_POW2_ORDER_EMPTY)
+        slab_order_map_set(virt, SLAB_POW2_ORDER_NONE);
+
     uintptr_t phys_pages[pages];
     uint64_t allocated = 0;
 
@@ -657,10 +692,6 @@ void *kmalloc_pages_raw(struct slab_domain *parent, size_t size,
     hdr->pages = pages;
     hdr->domain = parent;
     hdr->pageable = (flags & ALLOC_FLAG_PAGEABLE);
-
-    /* TODO: Do something about #defining the cacheline width */
-    if (flags & ALLOC_FLAG_PREFER_CACHE_ALIGNED)
-        return ((uint8_t *) hdr + 64);
 
     return (void *) (hdr + 1);
 }
@@ -708,9 +739,6 @@ void slab_free_addr_to_cache(void *addr) {
 }
 
 void kfree_old(void *ptr) {
-    if (!ptr)
-        return;
-
     slab_free_addr_to_cache(ptr);
 }
 
@@ -943,6 +971,7 @@ void *kmalloc_new(size_t size, enum alloc_flags flags,
                   enum alloc_behavior behavior) {
     kmalloc_validate_params(size, flags, behavior);
     void *ret = NULL;
+    enum irql outer = irql_raise(IRQL_DISPATCH_LEVEL);
 
     struct slab_domain *local_dom = slab_domain_local();
     struct slab_percpu_cache *pcpu = slab_percpu_cache_local();
@@ -1002,6 +1031,7 @@ exit:
     if (unlikely(!ret))
         slab_stat_alloc_failure(local_dom);
 
+    irql_lower(outer);
     return ret;
 }
 
@@ -1176,9 +1206,7 @@ static size_t slab_free_queue_drain_on_free(struct slab_domain *domain,
 }
 
 void kfree_new(void *ptr, enum alloc_behavior behavior) {
-    if (!ptr)
-        return;
-
+    enum irql outer = irql_raise(IRQL_DISPATCH_LEVEL);
     slab_ptr_validate(ptr);
 
     size_t size = ksize(ptr);
@@ -1196,7 +1224,7 @@ void kfree_new(void *ptr, enum alloc_behavior behavior) {
     /* nice, we freed it to the magazine and we are all good now -- fastpath,
      * so we don't try GC or any funny business */
     if (kfree_try_free_to_magazine(pcpu, ptr, size))
-        return;
+        goto done;
 
     /* did not free to magazine - this is an alloc from a slab */
     struct slab *slab = slab_for_ptr(ptr);
@@ -1205,10 +1233,10 @@ void kfree_new(void *ptr, enum alloc_behavior behavior) {
     /* did not enqueue into the freequeue... try putting it on
      * any magazine... we acquire the trylock() here... */
     if (kfree_try_put_on_percpu_caches(owner, ptr, size))
-        return;
+        goto done;
 
     if (kfree_free_queue_enqueue(owner, ptr))
-        return;
+        goto done;
 
     /* could not put on percpu cache or freequeue, now we free to
      * the slab cache that owns this data */
@@ -1224,6 +1252,9 @@ void kfree_new(void *ptr, enum alloc_behavior behavior) {
 garbage_collect:
 
     slab_free_queue_drain_on_free(local_domain, pcpu, behavior);
+
+done:
+    irql_lower(outer);
 }
 
 static void *kmalloc_init(size_t size, enum alloc_flags f,
@@ -1248,12 +1279,18 @@ void slab_switch_to_domain_allocations(void) {
 
 void *kmalloc_internal(size_t size, enum alloc_flags flags,
                        enum alloc_behavior behavior) {
-    return alloc(size, flags, behavior);
+    void *p = alloc(size, flags, behavior);
+    return p;
 }
 
 void kfree_internal(void *p, enum alloc_behavior behavior) {
-    if ((uint16_t) behavior == (uint16_t) ALLOC_FLAGS_DEFAULT)
+    if (unlikely(!p))
+        return;
+
+    if ((uint16_t) behavior == (uint16_t) ALLOC_FLAGS_DEFAULT) {
         slab_warn("Likely incorrect arguments passed into `kfree`");
+        return;
+    }
 
     memset(p, 0x67, ksize(p));
     free(p, behavior);

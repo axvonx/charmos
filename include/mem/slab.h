@@ -5,16 +5,21 @@
 #include <stddef.h>
 #include <structures/list.h>
 
+struct slab_elcm_candidate {
+    size_t pages;
+    size_t bitmap_size_bytes;
+    size_t obj_count;
+};
+
 /* provides the ability for different subsystems to be able to make a constant
  * slab size so frequently allocated objects can waste a little less memory */
-
 struct slab_size_constant {
     const char *name;
     size_t size;
     size_t align;
     struct list_head list;
     struct {
-        size_t page_count;
+        struct slab_elcm_candidate cand;
     } internal;
 } __linker_aligned;
 
@@ -25,7 +30,7 @@ struct slab_size_constant {
             .size = s,                                                         \
             .align = a,                                                        \
             .list = LIST_HEAD_INIT(slab_size_constant_##n.list),               \
-            .internal = {0},                                                   \
+            .internal = {{0}},                                                 \
     }
 
 /* convenience wrapper */

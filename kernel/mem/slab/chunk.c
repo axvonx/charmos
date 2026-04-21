@@ -1,5 +1,6 @@
 #include <math/bit_ops.h>
 #include <math/div.h>
+#include <math/ilog2.h>
 #include <math/to_bits_bytes.h>
 #include <mem/pmm.h>
 #include <mem/vaddr_alloc.h>
@@ -59,7 +60,12 @@ static void move_to(struct slab_chunks *sc, struct slab_chunk *c,
     c->state = s;
     list_add_tail(&c->list, &sc->lists[s]);
     if (s == SLAB_CHUNK_FREE) {
-        vas_free(slab_global.vas, base_addr_to_vaddr(c->base_addr), PAGE_2MB);
+        vaddr_t vaddr = base_addr_to_vaddr(c->base_addr);
+        uint8_t curr = slab_order_map_get(vaddr);
+        kassert(curr != SLAB_POW2_ORDER_EMPTY && curr != SLAB_POW2_ORDER_NONE);
+
+        vas_free(slab_global.vas, vaddr, PAGE_2MB);
+        slab_order_map_set(vaddr, SLAB_POW2_ORDER_EMPTY);
         c->base_addr = 0x0;
         memset(c->bitmap, 0, sc->bitmap_bytes);
     }
@@ -68,9 +74,13 @@ static void move_to(struct slab_chunks *sc, struct slab_chunk *c,
 static struct slab_chunk *alloc_chunk(struct slab_chunks *sc,
                                       enum irql *lirql) {
     vaddr_t base = vas_alloc(slab_global.vas, PAGE_2MB, PAGE_2MB);
+
     if (!base)
         return NULL;
 
+    uint8_t curr = slab_order_map_get(base);
+    kassert(curr == SLAB_POW2_ORDER_EMPTY || curr == SLAB_POW2_ORDER_NONE);
+    slab_order_map_set(base, sc->pow2_order);
     if (list_empty(&sc->freelist)) {
         if (!chunks_refill(sc, lirql)) {
             vas_free(slab_global.vas, base, PAGE_2MB);
@@ -198,4 +208,5 @@ void slab_chunks_init(struct slab_chunks *sc, struct slab_cache *parent) {
     }
 
     spinlock_init(&sc->lock);
+    sc->pow2_order = ilog2(sc->page_stride);
 }

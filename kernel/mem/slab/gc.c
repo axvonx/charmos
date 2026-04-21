@@ -1,3 +1,5 @@
+#include <math/bit_ops.h>
+#include <math/ilog2.h>
 #include <sch/sched.h>
 
 #include "gc_internal.h"
@@ -305,73 +307,54 @@ void slab_gc_enqueue(struct slab_domain *domain, struct slab *slab) {
     struct slab_gc *gc = &domain->slab_gc;
     enum irql irql = slab_gc_lock(gc);
 
+    /* Put it in the right order */
+    size_t order = slab_pow2_order(slab);
+
+    if (slab->type == SLAB_TYPE_PAGEABLE) {
+        list_add_tail(&slab->list, &domain->slab_gc.lists.pageable[order]);
+    } else {
+        list_add_tail(&slab->list, &domain->slab_gc.lists.nonpageable[order]);
+    }
+
     rbt_insert(&domain->slab_gc.rbt, &slab->rb);
     atomic_fetch_add(&gc->num_elements, 1);
 
     slab_gc_unlock(gc, irql);
 }
 
-void slab_gc_dequeue(struct slab_domain *domain, struct slab *slab) {
-    struct slab_gc *gc = &domain->slab_gc;
-    enum irql irql = slab_gc_lock(gc);
+static void slab_gc_dequeue(struct slab_gc *gc, struct slab *slab) {
+    SPINLOCK_ASSERT_HELD(&gc->lock);
 
-    rbt_delete(&domain->slab_gc.rbt, &slab->rb);
+    rbt_delete(&gc->rbt, &slab->rb);
     atomic_fetch_sub(&gc->num_elements, 1);
-
-    slab_gc_unlock(gc, irql);
 
     slab->gc_enqueue_time_ms = 0;
     slab->state = SLAB_FREE;
 }
 
-static struct slab *gc_do_op(struct slab_domain *domain,
-                             struct rbt_node *(*op)(const struct rbt *tree,
-                                                    enum slab_type),
-                             enum slab_type t) {
+struct slab *slab_gc_get_for_cache(struct slab_cache *sc) {
     struct slab *ret = NULL;
+    struct slab_gc *sgc = &sc->parent_domain->slab_gc;
+    size_t pow2_order = slab_cache_pow2_order(sc);
+    enum irql irql = slab_gc_lock(sgc);
 
-    struct slab_gc *gc = &domain->slab_gc;
-    enum irql irql = slab_gc_lock(gc);
+    struct list_head *lh;
+    if (sc->type == SLAB_TYPE_PAGEABLE) {
+        lh = &sgc->lists.pageable[pow2_order];
+    } else {
+        lh = &sgc->lists.nonpageable[pow2_order];
+    }
 
-    struct rbt_node *rb = op(&gc->rbt, t);
-    if (!rb)
+    struct list_head *got = list_pop_tail_init(lh);
+    if (!got)
         goto out;
 
-    rbt_delete(&gc->rbt, rb);
-    atomic_fetch_sub(&gc->num_elements, 1);
-    ret = slab_from_rbt_node(rb);
+    ret = slab_from_list_node(got);
+    slab_gc_dequeue(sgc, ret);
 
 out:
-    slab_gc_unlock(gc, irql);
+    slab_gc_unlock(sgc, irql);
     return ret;
-}
-
-static struct rbt_node *gc_search_for_first(const struct rbt *rbt,
-                                            enum slab_type type) {
-    struct rbt_node *iter = rbt_first(rbt);
-    while (iter) {
-        struct slab *slab = slab_from_rbt_node(iter);
-        if (slab->type == type)
-            break;
-
-        iter = rbt_next(iter);
-    }
-    return iter;
-}
-
-static struct rbt_node *rbt_first_wrapper(const struct rbt *rbt,
-                                          enum slab_type type) {
-    (void) type;
-    return rbt_first(rbt);
-}
-
-struct slab *slab_gc_get_newest(struct slab_domain *domain,
-                                enum slab_type type) {
-    return gc_do_op(domain, gc_search_for_first, type);
-}
-
-struct slab *slab_gc_get_oldest(struct slab_domain *domain) {
-    return gc_do_op(domain, rbt_first_wrapper, SLAB_TYPE_NONE);
 }
 
 size_t slab_gc_num_slabs(struct slab_domain *domain) {
@@ -387,14 +370,6 @@ static int32_t slab_cmp_slabs(const struct rbt_node *a,
     int32_t sa = slab_get_data((void *) a);
     int32_t sb = slab_get_data((void *) b);
     return sa - sb;
-}
-
-void slab_gc_init(struct slab_domain *dom) {
-    struct slab_gc *gc = &dom->slab_gc;
-    gc->num_elements = 0;
-    spinlock_init(&gc->lock);
-    rbt_init(&gc->rbt, slab_get_data, slab_cmp_slabs);
-    gc->parent = dom;
 }
 
 bool slab_should_enqueue_gc(struct slab *slab) {
@@ -431,4 +406,16 @@ bool slab_should_enqueue_gc(struct slab *slab) {
     bool exceeds_excess = class > excess_threshold;
 
     return exceeds_free_ratio || exceeds_excess || spike;
+}
+
+void slab_gc_init(struct slab_domain *dom) {
+    struct slab_gc *gc = &dom->slab_gc;
+    gc->num_elements = 0;
+    spinlock_init(&gc->lock);
+    rbt_init(&gc->rbt, slab_get_data, slab_cmp_slabs);
+    gc->parent = dom;
+    for (size_t i = 0; i < SLAB_POW2_ORDER_COUNT; i++) {
+        INIT_LIST_HEAD(&gc->lists.pageable[i]);
+        INIT_LIST_HEAD(&gc->lists.nonpageable[i]);
+    }
 }

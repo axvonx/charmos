@@ -24,14 +24,17 @@ static void prng_seed_core(uint64_t seed) {
     uint32_t core_id = smp_core()->id;
 
     for (int i = 0; i < 4; i++) {
-        key[i * 8 + 0] = (seed >> (i * 16)) & 0xff;
-        key[i * 8 + 1] = (seed >> (i * 16 + 8)) & 0xff;
-        key[i * 8 + 2] = (tsc >> (i * 16)) & 0xff;
-        key[i * 8 + 3] = (tsc >> (i * 16 + 8)) & 0xff;
-        key[i * 8 + 4] = (core_id >> (i * 8)) & 0xff;
+        key[i * 8 + 0] = (seed >> (i * 8 + 0)) & 0xff;
+        key[i * 8 + 1] = (seed >> (i * 8 + 8)) & 0xff;
+
+        key[i * 8 + 2] = (tsc >> (i * 8 + 32)) & 0xff;
+        key[i * 8 + 3] = (tsc >> (i * 8 + 32)) & 0xff;
+
+        key[i * 8 + 4] = (core_id >> (i * 8 + 0)) & 0xff;
         key[i * 8 + 5] = (core_id >> (i * 8 + 4)) & 0xff;
-        key[i * 8 + 6] = (tsc >> (i * 16 + 32)) & 0xff;
-        key[i * 8 + 7] = (tsc >> (i * 16 + 40)) & 0xff;
+
+        key[i * 8 + 6] = (tsc >> (i * 8 + 16)) & 0xff;
+        key[i * 8 + 7] = (tsc >> (i * 8 + 24)) & 0xff;
     }
 
     for (int i = 0; i < 4; i++)

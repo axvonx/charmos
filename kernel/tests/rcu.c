@@ -58,16 +58,16 @@ static void rcu_writer_thread(void *) {
 
     struct rcu_test_data *old = shared_ptr;
 
-    struct rcu_test_data *new = kmalloc(sizeof(*new));
+    struct rcu_test_data *new = kzalloc(sizeof(*new));
     new->value = 43;
     rcu_assign_pointer(shared_ptr, new);
 
     rcu_synchronize();
-    rcu_defer(kmalloc(sizeof(struct rcu_cb)), rcu_free_fn, old);
+    rcu_defer(kzalloc(sizeof(struct rcu_cb)), rcu_free_fn, old);
 }
 
 TEST_REGISTER(rcu_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
-    struct rcu_test_data *initial = kmalloc(sizeof(*initial));
+    struct rcu_test_data *initial = kzalloc(sizeof(*initial));
     initial->value = 42;
     shared_ptr = initial;
 
@@ -179,11 +179,11 @@ static void rcu_stress_writer(void *arg) {
     uint64_t local_iter = 0;
 
     while (!atomic_load(&stress_stop)) {
-        struct rcu_stress_node *new = kmalloc(sizeof(*new));
+        struct rcu_stress_node *new = kzalloc(sizeof(*new));
         if (!new) {
             /* allocation failure — mark as failure and exit */
             atomic_store(&stress_failed, true);
-            ADD_MESSAGE("RCU stress writer kmalloc failed");
+            ADD_MESSAGE("RCU stress writer kzalloc failed");
             break;
         }
 
@@ -202,7 +202,7 @@ static void rcu_stress_writer(void *arg) {
          * freed to assert correctness.
          */
         if (old)
-            rcu_defer(kmalloc(sizeof(struct rcu_cb)), stress_free_cb, old);
+            rcu_defer(kzalloc(sizeof(struct rcu_cb)), stress_free_cb, old);
 
         /*
          * Occasionally force a synchronize call to exercise explicit grace
@@ -230,7 +230,7 @@ static void rcu_stress_reclaimer(void *arg) {
 /* Test registration */
 TEST_REGISTER(rcu_stress_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
     /* initial object */
-    struct rcu_stress_node *initial = kmalloc(sizeof(*initial));
+    struct rcu_stress_node *initial = kzalloc(sizeof(*initial));
     TEST_ASSERT(initial != NULL);
     initial->seq = 1;
     initial->value = 42;

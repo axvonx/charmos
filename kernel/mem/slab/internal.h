@@ -2,6 +2,8 @@
 #include <containerof.h>
 #include <kassert.h>
 #include <math/align.h>
+#include <math/bit_ops.h>
+#include <math/ilog2.h>
 #include <mem/alloc.h>
 #include <mem/page.h>
 #include <mem/simple_alloc.h>
@@ -50,7 +52,10 @@ LOG_HANDLE_EXTERN(slab);
 #define SLAB_MIN_SIZE (sizeof(vaddr_t))
 #define SLAB_MAX_SIZE (PAGE_SIZE / 4)
 #define SLAB_MAX_PAGES 64
-#define SLAB_POW2_ORDER_COUNT 16
+#define SLAB_POW2_ORDER_COUNT 6 /* 2^6 max */
+#define SLAB_POW2_ORDER_NONE                                                   \
+    0xF /* Sentinel value, "this is not a slab region" */
+#define SLAB_POW2_ORDER_EMPTY 0xE /* Sentinel value, "Nothing here" */
 
 /* Bitmap */
 #define SLAB_BITMAP_BYTES_FOR(x) ((x + 7ull) / 8ull)
@@ -208,7 +213,7 @@ struct slab {
 #define slab_from_rbt_node(n) (container_of(n, struct slab, rb))
 #define slab_from_list_node(ln) (container_of(ln, struct slab, list))
 #define NON_SLAB_SPACE(c)                                                      \
-    (PAGE_SIZE - sizeof(struct slab) -                                         \
+    ((c)->pages_per_slab * PAGE_SIZE - sizeof(struct slab) -                   \
      (c)->pages_per_slab * sizeof(struct page *))
 
 /* Just a simple stack */
@@ -266,6 +271,7 @@ struct slab_chunks {
     struct slab_cache *parent;
     size_t bitmap_bytes;
     size_t page_stride;
+    size_t pow2_order;
     union {
         struct {
             struct list_head freelist;
@@ -410,7 +416,10 @@ enum slab_gc_flags : uint32_t {
 };
 
 struct slab_gc {
-    struct list_head pow2_order_lists[SLAB_POW2_ORDER_COUNT];
+    struct {
+        struct list_head pageable[SLAB_POW2_ORDER_COUNT];
+        struct list_head nonpageable[SLAB_POW2_ORDER_COUNT];
+    } lists;
     struct slab_domain *parent;
     struct rbt rbt;
     struct spinlock lock;
@@ -502,12 +511,6 @@ struct slab_page_hdr {
     struct slab_domain *domain;
 };
 
-struct slab_elcm_candidate {
-    size_t pages;
-    size_t bitmap_size_bytes;
-    size_t obj_count;
-};
-
 struct slab *slab_init(struct slab *slab, struct slab_cache *parent);
 void slab_destroy(struct slab *slab);
 void slab_domain_init_daemon(struct slab_domain *domain);
@@ -518,12 +521,13 @@ void slab_free_page_hdr(struct slab_page_hdr *hdr);
 size_t slab_allocation_size(vaddr_t addr);
 void slab_free(struct slab_domain *domain, void *obj);
 void *slab_cache_try_alloc_from_lists(struct slab_cache *c);
-void slab_cache_init(size_t order, struct slab_cache *cache, uint64_t obj_size,
-                     uint64_t obj_align);
+void slab_cache_init(size_t order, struct slab_cache *cache,
+                     struct slab_size_constant *ssc);
 void slab_cache_insert(struct slab_cache *cache, struct slab *slab);
 struct slab *slab_create(struct slab_cache *cache,
                          enum alloc_behavior behavior);
 void *slab_alloc(struct slab_cache *cache, enum alloc_behavior behavior);
+struct slab *slab_for_ptr(void *ptr);
 
 /* Magazine + percpu */
 bool slab_magazine_push(struct slab_magazine *mag, vaddr_t obj);
@@ -560,25 +564,24 @@ size_t slab_gc_run(struct slab_gc *gc, enum slab_gc_flags flags);
 struct slab *slab_reset(struct slab *slab);
 void slab_gc_init(struct slab_domain *dom);
 void slab_gc_enqueue(struct slab_domain *domain, struct slab *slab);
-void slab_gc_dequeue(struct slab_domain *domain, struct slab *slab);
-struct slab *slab_gc_get_newest(struct slab_domain *domain,
-                                enum slab_type type);
-struct slab *slab_gc_get_oldest(struct slab_domain *domain);
 size_t slab_gc_num_slabs(struct slab_domain *domain);
 bool slab_should_enqueue_gc(struct slab *slab);
+struct slab *slab_gc_get_for_cache(struct slab_cache *sc);
 
 void slab_switch_to_domain_allocations(void);
 
 /* ELCM for slab allocator */
 struct slab_elcm_candidate slab_elcm(size_t obj_size, size_t obj_alignment);
+void slab_elcm_initialize();
 
 /* Resizing */
 bool slab_resize(struct slab *slab, size_t new_size_pages);
 bool slab_can_resize_to(struct slab *slab, size_t new_size_pages);
 
 /* Order map */
-uint8_t slab_order_map_get(void *ptr);
-void slab_order_map_set(void *ptr, uint8_t order);
+uint8_t slab_order_map_get(vaddr_t addr);
+bool slab_order_map_none(vaddr_t addr);
+void slab_order_map_set(vaddr_t addr, uint8_t order);
 void slab_order_map_init(void);
 
 /* Chunks */
@@ -626,10 +629,6 @@ static inline size_t slab_object_size(struct slab *slab) {
     return slab->parent_cache->obj_size;
 }
 
-static inline struct slab *slab_for_ptr(void *ptr) {
-    return (struct slab *) PAGE_ALIGN_DOWN(ptr);
-}
-
 static inline struct slab_domain *slab_domain_local(void) {
     return smp_core()->domain->slab_domain;
 }
@@ -639,8 +638,11 @@ static inline struct slab_percpu_cache *slab_percpu_cache_local(void) {
 }
 
 static inline void slab_list_del(struct slab *slab) {
-    if (slab->state != SLAB_IN_GC)
-        kassert(spinlock_held(&slab->parent_cache->lock));
+    if (slab->state != SLAB_IN_GC) {
+        SPINLOCK_ASSERT_HELD(&slab->parent_cache->lock);
+    } else {
+        SPINLOCK_ASSERT_HELD(&slab->parent_cache->parent_domain->slab_gc.lock);
+    }
 
     enum slab_state state = slab->state;
     list_del_init(&slab->list);
@@ -701,21 +703,6 @@ static inline uint8_t *slab_get_bitmap_location(struct slab *s) {
     return base + sizeof(struct page *) * s->page_count;
 }
 
-static inline size_t
-slab_cache_wasted_space_per_slab(struct slab_cache *cache) {
-    size_t raw = PAGE_SIZE * cache->pages_per_slab;
-    size_t metadata = cache->slab_metadata_size;
-
-    /* Backpointers on non-base pages: */
-    metadata += (cache->pages_per_slab - 1) * sizeof(struct slab *);
-    metadata = SLAB_ALIGN_UP(metadata, cache->obj_align);
-
-    size_t usable = raw - metadata;
-    size_t used = cache->obj_stride * cache->objs_per_slab;
-
-    return usable - used;
-}
-
 static inline uint64_t slab_page_flags(enum slab_type type) {
     uint64_t pflags = PAGE_PRESENT | PAGE_WRITE;
     kassert(type != SLAB_TYPE_NONE);
@@ -732,4 +719,12 @@ static inline void slab_ptr_validate(void *ptr) {
 
 static inline size_t slab_chunks_per_page(struct slab_chunks *chunks) {
     return PAGE_SIZE / (sizeof(struct slab_chunk) + chunks->bitmap_bytes);
+}
+
+static inline size_t slab_cache_pow2_order(struct slab_cache *sc) {
+    return ilog2(next_pow2(sc->pages_per_slab));
+}
+
+static inline size_t slab_pow2_order(struct slab *slab) {
+    return slab_cache_pow2_order(slab->parent_cache);
 }

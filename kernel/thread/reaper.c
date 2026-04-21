@@ -44,13 +44,8 @@ void reaper_thread_main(void *unused) {
         while ((lh = list_pop_front_init(&local)) != NULL) {
             struct thread *t = container_of(lh, struct thread, reaper_list);
 
-            if (refcount_read(&t->refcount) != 1) {
-                locked_list_add(&reaper.list, &t->reaper_list);
-                break;
-            }
-
-            thread_set_state(t, THREAD_STATE_TERMINATED);
-            thread_put(t);
+            kassert(refcount_read(&t->refcount) == 0);
+            thread_free(t);
             reaper.reaped_threads++;
         }
 

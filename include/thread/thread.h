@@ -485,13 +485,13 @@ static inline void thread_set_runqueue(struct thread *t, struct scheduler *s) {
 
 REFCOUNT_GENERATE_GET_FOR_STRUCT_WITH_FAILURE_COND(thread, refcount, flags,
                                                    &THREAD_FLAG_DYING);
-
+void reaper_enqueue(struct thread *t);
 static inline void thread_put(struct thread *t) {
     if (refcount_dec_and_test(&t->refcount)) {
-        if (thread_get_state(t) != THREAD_STATE_TERMINATED)
-            panic("final ref dropped while thread not terminated\n");
+        if (thread_get_state(t) != THREAD_STATE_ZOMBIE)
+            panic("final ref dropped while thread not zombie\n");
 
-        thread_free(t);
+        reaper_enqueue(t);
     }
 }
 

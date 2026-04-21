@@ -1,10 +1,9 @@
-#include <errno.h>
 #include <kassert.h>
+#include <math/bit_ops.h>
 #include <math/div.h>
 #include <math/fixed.h>
 #include <math/fixed_extended.h>
 #include <math/gcd_lcm.h>
-#include <math/bit_ops.h>
 #include <math/sort.h>
 #include <math/to_bits_bytes.h>
 #include <mem/alloc.h>
@@ -38,7 +37,7 @@ static fx32_32_t pow2_proximity(size_t n) {
     return FX_ONE - fx_div(dist_fx, span_fx);
 }
 
-/* The closer to `min`, the closer to 1 the output will be 
+/* The closer to `min`, the closer to 1 the output will be
  *
  * m = min, M = max
  * r = M - m
@@ -156,7 +155,7 @@ static size_t max_objects_fit(size_t pages, size_t page_size,
         if (used <= total_bytes)
             low = mid;
         else
-            high = mid - 1; 
+            high = mid - 1;
     }
     return low;
 }
@@ -167,18 +166,21 @@ static size_t find_best(struct elcm_params *params) {
     size_t metadata_bits_per_obj = params->metadata_bits_per_obj;
     size_t page_size = PAGE_SIZE;
     size_t metadata_size_bytes = params->metadata_size_bytes;
+    size_t metadata_bytes_per_page = params->metadata_bytes_per_page;
     size_t aligned_obj_size = get_aligned_obj_size(obj_size, alignment);
 
     for (size_t i = 1; i <= SIZE_MAX; i++) {
+        size_t mdata_bytes = metadata_size_bytes + metadata_bytes_per_page * i;
+
         size_t obj_count =
-            max_objects_fit(i, page_size, metadata_size_bytes,
-                            metadata_bits_per_obj, obj_size, alignment);
+            max_objects_fit(i, page_size, mdata_bytes, metadata_bits_per_obj,
+                            obj_size, alignment);
 
         if (obj_count == 0)
             continue;
 
         size_t bmap_bytes = bitmap_bytes_for(obj_count, metadata_bits_per_obj);
-        size_t data_start = metadata_size_bytes + bmap_bytes;
+        size_t data_start = mdata_bytes + bmap_bytes;
         size_t aligned_start = ALIGN_UP(data_start, alignment);
         size_t used_bytes = aligned_start + obj_count * aligned_obj_size;
         size_t total_bytes = i * page_size;
@@ -222,8 +224,10 @@ enum errno elcm(struct elcm_params *params) {
     if (max_pages == 0 || max_pages > best_possible)
         max_pages = best_possible;
 
+    size_t size = max_pages * sizeof(struct elcm_candidate);
     struct elcm_candidate *candidates =
-        kmalloc(max_pages * sizeof(struct elcm_candidate));
+        params->alloc_fn ? params->alloc_fn(size)
+                         : kmalloc(max_pages * sizeof(struct elcm_candidate));
 
     if (!candidates)
         return ERR_NO_MEM;
@@ -236,14 +240,15 @@ enum errno elcm(struct elcm_params *params) {
         if (unlikely(i == best_possible))
             break;
 
+        size_t mdata_bytes = metadata_size_bytes + metadata_bytes_per_page * i;
+
         size_t obj_count =
-            max_objects_fit(i, page_size, metadata_size_bytes,
-                            metadata_bits_per_obj, obj_size, obj_alignment);
+            max_objects_fit(i, page_size, mdata_bytes, metadata_bits_per_obj,
+                            obj_size, obj_alignment);
 
         if (obj_count == 0)
             continue;
 
-        size_t mdata_bytes = metadata_size_bytes + metadata_bytes_per_page * i;
         size_t bmap_bytes = bitmap_bytes_for(obj_count, metadata_bits_per_obj);
         size_t data_start = mdata_bytes + bmap_bytes;
         size_t aligned_start = ALIGN_UP(data_start, obj_alignment);
@@ -261,7 +266,7 @@ enum errno elcm(struct elcm_params *params) {
                 .wastage = wastage,
                 .obj_count = obj_count,
                 .bitmap_bytes = bmap_bytes,
-                .metadata_bytes = metadata_size_bytes,
+                .metadata_bytes = mdata_bytes,
                 .obj_size = obj_size,
                 .obj_alignment = obj_alignment,
                 .distance = 0,
@@ -281,7 +286,7 @@ enum errno elcm(struct elcm_params *params) {
     }
 
     if (n_cands <= 1) {
-        kfree(candidates);
+        params->free_fn ? params->free_fn(candidates, size) : kfree(candidates);
         struct elcm_candidate c = degenerate;
         c.pages = best_possible;
         params->out = c;
@@ -318,7 +323,7 @@ enum errno elcm(struct elcm_params *params) {
             candidates[i].score_value = score_part + prox_part;
         } else {
             candidates[i].score_value = s;
-        } 
+        }
     }
 
     qsort(candidates, n_cands, sizeof(struct elcm_candidate), cmp_score_asc);
@@ -333,7 +338,7 @@ enum errno elcm(struct elcm_params *params) {
         }
     }
 
-    kfree(candidates);
+    params->free_fn ? params->free_fn(candidates, size) : kfree(candidates);
     params->out = best;
     return ERR_OK;
 }

@@ -1,6 +1,17 @@
 #include <mem/elcm.h>
+#include <mem/slab.h>
 
 #include "internal.h"
+
+static bool initialized = false;
+
+static void *elcm_simple_alloc(size_t size) {
+    return simple_alloc(slab_global.vas, size);
+}
+
+static void elcm_simple_free(void *ptr, size_t size) {
+    simple_free(slab_global.vas, ptr, size);
+}
 
 struct slab_elcm_candidate slab_elcm(size_t obj_size, size_t obj_alignment) {
     kassert(obj_size && obj_alignment);
@@ -13,6 +24,8 @@ struct slab_elcm_candidate slab_elcm(size_t obj_size, size_t obj_alignment) {
         .max_wastage_pct = SLAB_ELCM_DEFAULT_MAX_WASTAGE_PCT,
         .max_pages = SLAB_MAX_PAGES,
         .metadata_bytes_per_page = sizeof(struct page *),
+        .alloc_fn = initialized ? NULL : elcm_simple_alloc,
+        .free_fn = initialized ? NULL : elcm_simple_free,
     };
 
     if (elcm(&params) != ERR_OK)
@@ -22,4 +35,8 @@ struct slab_elcm_candidate slab_elcm(size_t obj_size, size_t obj_alignment) {
     return (struct slab_elcm_candidate){.pages = elc.pages,
                                         .bitmap_size_bytes = elc.bitmap_bytes,
                                         .obj_count = elc.obj_count};
+}
+
+void slab_elcm_initialize() {
+    initialized = true;
 }
