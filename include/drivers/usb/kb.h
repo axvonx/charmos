@@ -1,4 +1,5 @@
-#include <drivers/usb_generic/usb.h>
+#pragma once
+#include <drivers/usb/usb.h>
 #include <input/keyboard.h>
 
 struct usb_kbd_report {

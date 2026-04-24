@@ -127,7 +127,7 @@ TEST_REGISTER(bio_sched_delay_enqueue_test, SHOULD_NOT_FAIL,
         uint8_t *buf = kmalloc_aligned(PAGE_SIZE, PAGE_SIZE);
         struct bio_request *rq = kzalloc(sizeof(struct bio_request));
         TEST_ASSERT(rq && buf);
-        TEST_ASSERT(ALIGN_DOWN((vaddr_t) buf, PAGE_SIZE) == (vaddr_t) buf);
+        TEST_ASSERT(IS_ALIGNED((vaddr_t) buf, PAGE_SIZE));
 
         rq->disk = d;
         rq->lba = (i * 2) % 512;

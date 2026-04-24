@@ -3,6 +3,7 @@
 #include <mem/alloc.h>
 #include <mem/bitmap.h>
 #include <mem/buddy.h>
+#include <mem/hhdm.h>
 #include <mem/pmm.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -146,7 +147,7 @@ static void mid_init_buddy(size_t pages_needed) {
         uint64_t run_len = end > start ? (end - start) / PAGE_SIZE : 0;
 
         if (run_len >= pages_needed) {
-            global.page_array = (void *) (start + global.hhdm_offset);
+            global.page_array = hhdm_paddr_to_ptr(start);
             fast_memset(global.page_array, 0, pages_needed * PAGE_SIZE);
 
             for (uint64_t j = 0; j < pages_needed; j++)

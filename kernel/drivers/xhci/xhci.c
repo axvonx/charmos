@@ -3,8 +3,7 @@
 #include <compiler.h>
 #include <console/printf.h>
 #include <drivers/pci.h>
-#include <drivers/usb_generic/usb.h>
-#include <drivers/xhci.h>
+#include <drivers/usb/xhci.h>
 #include <irq/idt.h>
 #include <mem/alloc.h>
 #include <mem/page.h>
@@ -21,7 +20,7 @@ struct workqueue *xhci_wq;
 LOG_HANDLE_DECLARE_DEFAULT(xhci);
 LOG_SITE_DECLARE_DEFAULT(xhci);
 
-enum usb_status xhci_address_device(struct xhci_port *p, uint8_t slot_id,
+enum usb_error xhci_address_device(struct xhci_port *p, uint8_t slot_id,
                                     struct xhci_slot *publish_to) {
     struct xhci_device *xhci = p->dev;
     uint8_t speed = p->speed;
@@ -117,7 +116,7 @@ static uint8_t xhci_ep_to_input_ctx_idx(struct usb_endpoint *ep) {
     return ep->number * 2 - (ep->in ? 0 : 1);
 }
 
-enum usb_status xhci_configure_device_endpoints(struct usb_device *usb) {
+enum usb_error xhci_configure_device_endpoints(struct usb_device *usb) {
     struct xhci_slot *xslot = usb->slot;
     if (!xhci_slot_get(xslot))
         return USB_ERR_NO_DEVICE;
@@ -281,7 +280,7 @@ static void xhci_work_port_connect(void *arg1) {
 
         spin_lock_raw(&port->update_lock);
 
-        enum usb_status err = xhci_port_init(port);
+        enum usb_error err = xhci_port_init(port);
         if (err != USB_OK)
             goto nevermind;
 

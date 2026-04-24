@@ -42,9 +42,7 @@ LOG_HANDLE_EXTERN(slab);
 #define SLAB_HEAP_START 0xFFFFF00000000000ULL
 #define SLAB_HEAP_END 0xFFFFF10000000000ULL
 
-#define SLAB_BITMAP_TEST(__bitmap, __idx) (__bitmap & __idx)
-
-#define SLAB_MAG_ENTRIES 32
+#define SLAB_MAG_ENTRIES 64
 #define SLAB_MAG_WATERMARK_PCT                                                 \
     15 /* Leave 15% of magazine entries for nonpageable requests */
 #define SLAB_MAG_WATERMARK (SLAB_MAG_ENTRIES * SLAB_MAG_WATERMARK_PCT / 100)
@@ -60,6 +58,7 @@ LOG_HANDLE_EXTERN(slab);
 /* Bitmap */
 #define SLAB_BITMAP_BYTES_FOR(x) ((x + 7ull) / 8ull)
 #define SLAB_BITMAP_SET(bm, mask) (bm |= mask)
+#define SLAB_BITMAP_TEST(__bitmap, __idx) (__bitmap & __idx)
 #define SLAB_BITMAP_UNSET(bm, mask) (bm &= ~mask)
 
 #define SLAB_ALIGN_UP(x, a) ALIGN_UP(x, a)

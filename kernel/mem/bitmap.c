@@ -1,6 +1,7 @@
 #include <console/printf.h>
 #include <mem/alloc.h>
 #include <mem/bitmap.h>
+#include <mem/hhdm.h>
 #include <mem/pmm.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -90,7 +91,7 @@ void bitmap_free_pages(paddr_t addr, uint64_t count) {
             clear_bit(index);
         } else {
             printf("Page at 0x%zx was already free\n",
-                   global.hhdm_offset + (index * PAGE_SIZE));
+                   hhdm_paddr_to_vaddr(index * PAGE_SIZE));
         }
     }
 }

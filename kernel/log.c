@@ -324,6 +324,7 @@ void log_sites_init(void) {
         refcount_init(&s->refcount, 1);
         struct log_ringbuf *lrb = &s->rb;
         lrb->slots = kzalloc(sizeof(struct log_ring_slot) * s->capacity);
+        kassert(s->capacity);
         if (!lrb->slots)
             panic("OOM\n");
 

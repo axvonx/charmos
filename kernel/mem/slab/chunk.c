@@ -2,6 +2,7 @@
 #include <math/div.h>
 #include <math/ilog2.h>
 #include <math/to_bits_bytes.h>
+#include <mem/hhdm.h>
 #include <mem/pmm.h>
 #include <mem/vaddr_alloc.h>
 
@@ -30,7 +31,7 @@ static bool chunks_refill(struct slab_chunks *sc, enum irql *lirql) {
         return false;
     }
 
-    uintptr_t virt = phys + global.hhdm_offset;
+    uintptr_t virt = hhdm_paddr_to_vaddr(phys);
     uint8_t *chunks_base = (uint8_t *) virt;
     size_t stride = sizeof(struct slab_chunk) + sc->bitmap_bytes;
 

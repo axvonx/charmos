@@ -1,8 +1,8 @@
 #include <console/printf.h>
-#include <drivers/usb_generic/hid.h>
-#include <drivers/usb_generic/kb.h>
-#include <drivers/usb_generic/usb.h>
-#include <drivers/xhci.h>
+#include <drivers/usb/hid.h>
+#include <drivers/usb/kb.h>
+#include <drivers/usb/usb.h>
+#include <drivers/usb/xhci.h>
 #include <log.h>
 #include <mem/alloc.h>
 #include <mem/page.h>
@@ -123,7 +123,7 @@ void usb_kbd_process_report(struct usb_hid_keyboard *kbd,
     }
 }
 
-enum usb_status usb_keyboard_get_descriptor(struct usb_device *dev,
+enum usb_error usb_keyboard_get_descriptor(struct usb_device *dev,
                                             uint8_t interface_number,
                                             uint16_t len, void *buf) {
     uint8_t bm = usb_construct_rq_bitmap(USB_REQUEST_TRANS_DTH,
@@ -152,7 +152,7 @@ static void usb_kbd_worker(void *arg) {
     struct usb_hid_keyboard *kbd = arg;
 
     while (true) {
-        enum usb_status ret = usb_transfer_sync(
+        enum usb_error ret = usb_transfer_sync(
             kbd->dev->host->ops.submit_interrupt_transfer, &kbd->req, NULL);
         if (ret != USB_OK)
             break;
@@ -190,7 +190,7 @@ LOG_SITE_DECLARE_DEFAULT(usbkb);
 #define usbkb_log(log_level, fmt, ...)                                         \
     log(LOG_SITE(usbkb), LOG_HANDLE(usbkb), log_level, fmt, ##__VA_ARGS__)
 
-enum usb_status usb_keyboard_bringup(struct usb_device *dev) {
+enum usb_error usb_keyboard_bringup(struct usb_device *dev) {
     struct usb_interface_descriptor *intf =
         usb_find_interface(dev, USB_CLASS_HID, USB_SUBCLASS_HID_BOOT_INTERFACE,
                            USB_PROTOCOL_HID_KEYBOARD);
@@ -203,7 +203,7 @@ enum usb_status usb_keyboard_bringup(struct usb_device *dev) {
 
     uint8_t *report_buf = kzalloc_aligned(256, PAGE_SIZE);
 
-    enum usb_status err = USB_OK;
+    enum usb_error err = USB_OK;
     if ((err = usb_keyboard_get_descriptor(dev, iface_num, 256, report_buf)) !=
         USB_OK) {
         kfree_aligned(report_buf);

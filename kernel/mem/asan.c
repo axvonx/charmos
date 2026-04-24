@@ -1,5 +1,6 @@
 #include <global.h>
 #include <mem/asan.h>
+#include <mem/hhdm.h>
 #include <mem/page.h>
 #include <mem/pmm.h>
 #include <mem/vmm.h>
@@ -47,7 +48,7 @@ void asan_init(void) {
     if (!shadow_phys)
         panic("ASAN: could not allocate shadow memory\n");
 
-    asan_shadow_base = (uint8_t *) (shadow_phys + global.hhdm_offset);
+    asan_shadow_base = hhdm_paddr_to_ptr(shadow_phys);
 
     size_t remaining = asan_shadow_size;
     uint64_t phys = shadow_phys;

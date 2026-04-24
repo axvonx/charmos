@@ -1,7 +1,7 @@
 #include <asm.h>
 #include <console/printf.h>
-#include <drivers/usb_generic/usb.h>
-#include <drivers/xhci.h>
+#include <drivers/usb/usb.h>
+#include <drivers/usb/xhci.h>
 #include <sch/sched.h>
 #include <string.h>
 #include <thread/io_wait.h>
@@ -11,14 +11,14 @@ void xhci_nop(struct xhci_device *dev);
 void xhci_request_move(struct xhci_device *dev, struct xhci_request *req,
                        enum xhci_request_list new_list);
 void xhci_reset_slot(struct usb_device *dev);
-enum usb_status xhci_port_init(struct xhci_port *p);
+enum usb_error xhci_port_init(struct xhci_port *p);
 enum irq_result xhci_isr(void *ctx, uint8_t vector, struct irq_context *rsp);
 struct xhci_return xhci_wait_for_port_status_change(struct xhci_device *dev,
                                                     uint32_t port_id);
 void xhci_device_start_interrupts(uint8_t bus, uint8_t slot, uint8_t func,
                                   struct xhci_device *dev);
 void xhci_emit_singular(struct xhci_command *cmd, struct xhci_ring *ring);
-enum usb_status xhci_address_device(struct xhci_port *p, uint8_t slot_id,
+enum usb_error xhci_address_device(struct xhci_port *p, uint8_t slot_id,
                                     struct xhci_slot *publish_to);
 void xhci_teardown_slot(struct xhci_slot *me);
 void xhci_wake_waiter(struct xhci_device *dev, struct xhci_request *request);
@@ -35,8 +35,8 @@ void xhci_controller_enable_ints(struct xhci_device *dev);
 void xhci_setup_event_ring(struct xhci_device *dev);
 void xhci_setup_command_ring(struct xhci_device *dev);
 
-enum usb_status xhci_submit_interrupt_transfer(struct usb_request *r);
-enum usb_status xhci_control_transfer(struct usb_request *request);
+enum usb_error xhci_submit_interrupt_transfer(struct usb_request *r);
+enum usb_error xhci_control_transfer(struct usb_request *request);
 
 bool xhci_send_command(struct xhci_device *dev, struct xhci_command *cmd);
 
@@ -49,7 +49,7 @@ struct xhci_return xhci_wait_for_transfer_event(struct xhci_device *dev,
 uint8_t xhci_enable_slot(struct xhci_device *dev);
 void xhci_disable_slot(struct xhci_device *dev, uint8_t slot_id);
 void xhci_parse_ext_caps(struct xhci_device *dev);
-enum usb_status xhci_reset_port(struct xhci_device *dev, uint32_t port_index);
+enum usb_error xhci_reset_port(struct xhci_device *dev, uint32_t port_index);
 void xhci_detect_usb3_ports(struct xhci_device *dev);
 
 static inline void xhci_clear_interrupt_pending(struct xhci_device *dev) {
@@ -120,7 +120,7 @@ static inline void xhci_controller_restart(struct xhci_device *dev) {
     xhci_controller_start(dev);
 }
 
-static inline enum usb_status xhci_rq_to_usb_status(struct xhci_request *req) {
+static inline enum usb_error xhci_rq_to_usb_status(struct xhci_request *req) {
     /* These two meta-statuses are returned first if they are detected */
     if (req->status == XHCI_REQUEST_DISCONNECT)
         return USB_ERR_DISCONNECT;

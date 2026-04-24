@@ -1,6 +1,7 @@
 #include <global.h>
 #include <mem/alloc.h>
 #include <mem/domain.h>
+#include <mem/hhdm.h>
 #include <mem/movealloc.h>
 #include <mem/pmm.h>
 #include <mem/vmm.h>
@@ -32,10 +33,6 @@ void movealloc_exec_all(void) {
     }
 }
 
-static vaddr_t phys_get_virt(paddr_t phys) {
-    return phys + global.hhdm_offset;
-}
-
 static void change_slab_backing_page(void *ptr) {
     if (slab_size_to_index(ksize(ptr)) != -1)
         panic("Moved allocations cannot come from slab\n");
@@ -58,7 +55,7 @@ void movealloc(size_t new_domain, void *ptr, enum vmm_flags flags) {
         if (!new_phys)
             panic("movealloc failed!\n");
 
-        vaddr_t new_virt = phys_get_virt(new_phys);
+        vaddr_t new_virt = hhdm_paddr_to_vaddr(new_phys);
         void *pvaddr = (void *) vaddr;
         void *pnew_virt = (void *) new_virt;
         memcpy(pnew_virt, pvaddr, PAGE_SIZE);

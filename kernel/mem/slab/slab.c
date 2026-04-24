@@ -160,9 +160,10 @@ struct slab_globals slab_global = {0};
 LOG_HANDLE_DECLARE_DEFAULT(slab);
 LOG_SITE_DECLARE_DEFAULT(slab);
 
-static void *slab_map_new(struct slab_domain *domain, struct slab_cache *cache,
+static void *slab_map_new(struct slab_cache *cache,
                           paddr_t phys_out[SLAB_MAX_PAGES],
                           struct slab_chunk **out) {
+    struct slab_domain *domain = cache->parent_domain;
     size_t pages = cache->pages_per_slab;
     enum slab_type type = cache->type;
     kassert(pages <= SLAB_MAX_PAGES);
@@ -292,11 +293,10 @@ struct slab *slab_init(struct slab *slab, struct slab_cache *parent) {
     return slab;
 }
 
-static struct slab *slab_create_new(struct slab_domain *domain,
-                                    struct slab_cache *cache) {
+static struct slab *slab_create_new(struct slab_cache *cache) {
     paddr_t phys[SLAB_MAX_PAGES];
     struct slab_chunk *out;
-    void *page = slab_map_new(domain, cache, phys, &out);
+    void *page = slab_map_new(cache, phys, &out);
     if (!page)
         return NULL;
 
@@ -326,12 +326,16 @@ struct slab *slab_create(struct slab_cache *cache,
         slab = slab_gc_get_for_cache(cache);
 
     if (slab) {
-        slab_stat_gc_object_reclaimed(local);
-        return slab_init(slab, cache);
+        if (slab_resize(slab, cache->pages_per_slab)) {
+            slab_stat_gc_object_reclaimed(local);
+            return slab_init(slab, cache);
+        } else {
+            slab_gc_enqueue(local, slab);
+        }
     }
 
     if (behavior & SLAB_ALLOC_BEHAVIOR_FROM_ALLOC) {
-        slab = slab_create_new(cache->parent_domain, cache);
+        slab = slab_create_new(cache);
 
         if (slab && cache->parent_domain == local)
             slab_stat_alloc_new_slab(local);
@@ -394,9 +398,11 @@ static void slab_bitmap_free(struct slab *slab, void *obj) {
     uint8_t bit_mask;
     slab_index_and_mask(slab, obj, &byte_idx, &bit_mask);
 
-    if (!SLAB_BITMAP_TEST(slab->bitmap[byte_idx], bit_mask))
+    if (!SLAB_BITMAP_TEST(slab->bitmap[byte_idx], bit_mask)) {
         slab_warn("Possible UAF of addr %p for bitmap 0b%b with bitmask 0b%b\n",
                   obj, slab->bitmap[byte_idx], bit_mask);
+        return;
+    }
 
     SLAB_BITMAP_UNSET(slab->bitmap[byte_idx], bit_mask);
     slab->used -= 1;
@@ -474,7 +480,7 @@ void *slab_alloc_old(struct slab_cache *cache) {
         goto out;
 
     struct slab *slab;
-    slab = slab_create_new(/* domain = */ NULL, cache);
+    slab = slab_create_new(cache);
     if (!slab)
         goto out;
 
@@ -518,11 +524,6 @@ static void log_dupes(const char *keep, const char *discard, size_t size) {
     slab_info("Sizes of slab cache %s and %s are the same (%zu), ignoring %s, "
               "keeping %s",
               discard, keep, size, discard, keep);
-}
-
-static struct slab_elcm_candidate
-slab_cand_for_size_constant(struct slab_size_constant *ssc) {
-    return slab_elcm(ssc->size, ssc->align);
 }
 
 void slab_allocator_init() {
@@ -592,9 +593,10 @@ void slab_allocator_init() {
         struct slab_size_constant *ssc = &slab_global.class_sizes[i];
         struct slab_cache *sc = &slab_global.caches.caches[i];
 
-        ssc->internal.cand = slab_cand_for_size_constant(ssc);
+        ssc->internal.cand = slab_elcm(ssc->size, ssc->align);
         slab_cache_init(i, sc, ssc);
 
+        sc->parent_domain = NULL;
         sc->type = SLAB_TYPE_NONPAGEABLE;
         sc->parent = &slab_global.caches;
 

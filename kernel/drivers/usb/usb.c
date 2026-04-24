@@ -1,4 +1,4 @@
-#include <drivers/usb_generic/usb.h>
+#include <drivers/usb/usb.h>
 #include <log.h>
 #include <mem/alloc.h>
 #include <mem/page.h>
@@ -14,7 +14,7 @@
 LOG_SITE_DECLARE_DEFAULT(usb);
 LOG_HANDLE_DECLARE_DEFAULT(usb);
 
-enum usb_status usb_transfer_sync(enum usb_status (*fn)(struct usb_request *),
+enum usb_error usb_transfer_sync(enum usb_error (*fn)(struct usb_request *),
                                   struct usb_request *request,
                                   struct io_wait_token *tok) {
     struct thread *curr = thread_get_current();
@@ -31,7 +31,7 @@ enum usb_status usb_transfer_sync(enum usb_status (*fn)(struct usb_request *),
         io_wait_begin(&iowt, request->dev);
     }
 
-    enum usb_status ret = fn(request);
+    enum usb_error ret = fn(request);
     if (ret != USB_OK) {
         thread_wake_internal(curr, THREAD_WAKE_REASON_BLOCKING_MANUAL,
                              request->dev);
@@ -78,10 +78,10 @@ static uint8_t usb_get_desc_bitmap(void) {
                                    USB_REQUEST_RECIPIENT_DEVICE);
 }
 
-enum usb_status usb_get_string_descriptor(struct usb_device *dev,
+enum usb_error usb_get_string_descriptor(struct usb_device *dev,
                                           uint8_t string_idx, char *out,
                                           size_t max_len) {
-    enum usb_status err = USB_OK;
+    enum usb_error err = USB_OK;
     if (!string_idx)
         return USB_ERR_INVALID_ARGUMENT;
 
@@ -124,7 +124,7 @@ enum usb_status usb_get_string_descriptor(struct usb_device *dev,
     return err;
 }
 
-enum usb_status usb_get_device_descriptor(struct usb_device *dev) {
+enum usb_error usb_get_device_descriptor(struct usb_device *dev) {
     uint8_t *desc = kmalloc_aligned(PAGE_SIZE, PAGE_SIZE);
 
     struct usb_setup_packet setup = {
@@ -143,7 +143,7 @@ enum usb_status usb_get_device_descriptor(struct usb_device *dev) {
         .dev = dev,
     };
 
-    enum usb_status err;
+    enum usb_error err;
     if ((err = usb_transfer_sync(ctrl->ops.submit_control_transfer, &request,
                                  NULL)) != USB_OK) {
         return err;
@@ -242,7 +242,7 @@ static void setup_config_descriptor(struct usb_device *dev, uint8_t *ptr,
     }
 }
 
-enum usb_status usb_parse_config_descriptor(struct usb_device *dev) {
+enum usb_error usb_parse_config_descriptor(struct usb_device *dev) {
     uint8_t *desc = kmalloc_aligned(PAGE_SIZE, PAGE_SIZE);
 
     struct usb_setup_packet setup = {
@@ -261,7 +261,7 @@ enum usb_status usb_parse_config_descriptor(struct usb_device *dev) {
         .dev = dev,
     };
 
-    enum usb_status err;
+    enum usb_error err;
     struct io_wait_token iowt = IO_WAIT_TOKEN_EMPTY;
     if ((err = usb_transfer_sync(ctrl->ops.submit_control_transfer, &request,
                                  &iowt)) != USB_OK) {
@@ -292,7 +292,7 @@ enum usb_status usb_parse_config_descriptor(struct usb_device *dev) {
     return USB_OK;
 }
 
-enum usb_status usb_set_configuration(struct usb_device *dev) {
+enum usb_error usb_set_configuration(struct usb_device *dev) {
     struct usb_controller *ctrl = dev->host;
 
     uint8_t bitmap = usb_construct_rq_bitmap(USB_REQUEST_TRANS_HTD,
@@ -313,7 +313,7 @@ enum usb_status usb_set_configuration(struct usb_device *dev) {
         .dev = dev,
     };
 
-    enum usb_status err;
+    enum usb_error err;
     if ((err = usb_transfer_sync(ctrl->ops.submit_control_transfer, &request,
                                  NULL)) != USB_OK) {
         return err;
@@ -340,11 +340,11 @@ void usb_print_device(struct usb_device *dev) {
             dev->product, dev->manufacturer, dev->config_str);
 }
 
-enum usb_status usb_init_device(struct usb_device *dev) {
+enum usb_error usb_init_device(struct usb_device *dev) {
     if (!usb_device_get(dev))
         return USB_ERR_NO_DEVICE;
 
-    enum usb_status err = USB_OK;
+    enum usb_error err = USB_OK;
     usb_trace("get_device_descriptor");
     if ((err = usb_get_device_descriptor(dev)) != USB_OK) {
         goto out;

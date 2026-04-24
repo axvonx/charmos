@@ -1,8 +1,7 @@
 #include <asm.h>
 #include <compiler.h>
 #include <drivers/pci.h>
-#include <drivers/usb_generic/usb.h>
-#include <drivers/xhci.h>
+#include <drivers/usb/xhci.h>
 #include <mem/alloc.h>
 #include <mem/page.h>
 #include <mem/vmm.h>
@@ -122,7 +121,7 @@ void xhci_disable_slot(struct xhci_device *dev, uint8_t slot_id) {
     xhci_send_command_and_block(dev, &cmd, NULL);
 }
 
-static enum usb_status xhci_spin_wait_port_reset(uint32_t *portsc,
+static enum usb_error xhci_spin_wait_port_reset(uint32_t *portsc,
                                                  bool is_usb3) {
     const uint64_t timeout_us = 100 * 1000;
     uint64_t start = time_get_us();
@@ -153,7 +152,7 @@ static enum usb_status xhci_spin_wait_port_reset(uint32_t *portsc,
     return USB_ERR_TIMEOUT;
 }
 
-enum usb_status xhci_reset_port(struct xhci_device *dev, uint32_t portnum) {
+enum usb_error xhci_reset_port(struct xhci_device *dev, uint32_t portnum) {
     uint32_t *portsc = xhci_portsc_ptr(dev, portnum);
     bool is_usb3 = dev->port_info[portnum - 1].usb3;
 
@@ -182,7 +181,7 @@ enum usb_status xhci_reset_port(struct xhci_device *dev, uint32_t portnum) {
     }
 
     /* Spin-poll completion */
-    enum usb_status st = xhci_spin_wait_port_reset(portsc, is_usb3);
+    enum usb_error st = xhci_spin_wait_port_reset(portsc, is_usb3);
 
     if (st != USB_OK)
         return st;
@@ -338,10 +337,10 @@ void xhci_device_start_interrupts(uint8_t bus, uint8_t slot, uint8_t func,
     pci_program_msix_entry(bus, slot, func, 0, dev->irq, /*core=*/0);
 }
 
-enum usb_status xhci_port_init(struct xhci_port *p) {
+enum usb_error xhci_port_init(struct xhci_port *p) {
     struct xhci_device *dev = p->dev;
     uint8_t port = p->port_id;
-    enum usb_status err = USB_OK;
+    enum usb_error err = USB_OK;
     uint8_t slot_id;
     struct usb_device *usb;
     if (!(usb = kzalloc(sizeof(struct usb_device)))) {

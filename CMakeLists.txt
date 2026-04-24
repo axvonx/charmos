@@ -92,7 +92,7 @@ define_flag_group(
     "${TEST_NIGHTMARE_FLAGS}"
 )
 
-set(KERNEL_COMMON_FLAGS "-O3 -pipe -Wall -Wextra -Wno-unused-function -Wno-unused-parameter -Wpointer-sign -fno-optimize-sibling-calls -Wenum-compare -ffreestanding -mno-mmx -mno-sse -mno-sse2 -mno-sse3 -mno-3dnow -mno-red-zone -fno-stack-protector -fno-omit-frame-pointer -fno-stack-check -fno-PIC -ffunction-sections -fdata-sections  -m64 -mcmodel=kernel -mgeneral-regs-only -DLIMINE_API_REVISION=2 -Wno-address-of-packed-member -ggdb -DUACPI_DEFAULT_LOG_LEVEL=4")
+set(KERNEL_COMMON_FLAGS "-O3 -pipe -Wall -Wextra -Wno-unused-function -Wno-unused-parameter -Wpointer-sign -fno-optimize-sibling-calls -Wenum-compare -ffreestanding -mno-mmx -mno-sse -mno-sse2 -mno-sse3 -mno-3dnow -mno-red-zone -fno-stack-protector -fno-omit-frame-pointer -fno-stack-check -fno-PIC -ffunction-sections -fdata-sections  -m64 -mcmodel=kernel -mgeneral-regs-only -DLIMINE_API_REVISION=2 -Wno-address-of-packed-member -ggdb -DUACPI_DEFAULT_LOG_LEVEL=4 -fstack-usage")
 
 set(CMAKE_C_FLAGS "${KERNEL_COMMON_FLAGS} -std=gnu11")
 
@@ -190,7 +190,7 @@ set(QEMU_COMMON_FLAGS
     -device usb-mouse,bus=xhci.0,port=2,id=usbmouse
 
     -M q35
-
+    -device intel-iommu,intremap=on
     -drive id=nvme0,file=disk.img,format=raw,if=none
     -device nvme,serial=boom,drive=disk0,drive=nvme0#,num_queues=4
     -device isa-debug-exit,iobase=0xf4,iosize=0x04

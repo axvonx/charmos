@@ -189,7 +189,7 @@ enum usb_transfer_type {
     USB_TRANSFER_INTERRUPT,
 };
 
-enum usb_status {
+enum usb_error {
     USB_OK = 0,
     USB_ERR_STALL,
     USB_ERR_TIMEOUT,
@@ -319,11 +319,11 @@ struct usb_endpoint {
 };
 
 struct usb_controller_ops {
-    enum usb_status (*submit_control_transfer)(struct usb_request *);
-    enum usb_status (*submit_bulk_transfer)(struct usb_request *);
-    enum usb_status (*submit_interrupt_transfer)(struct usb_request *);
+    enum usb_error (*submit_control_transfer)(struct usb_request *);
+    enum usb_error (*submit_bulk_transfer)(struct usb_request *);
+    enum usb_error (*submit_interrupt_transfer)(struct usb_request *);
     void (*reset_slot)(struct usb_device *dev);
-    enum usb_status (*configure_endpoint)(struct usb_device *dev);
+    enum usb_error (*configure_endpoint)(struct usb_device *dev);
     void (*poll_ports)(struct usb_controller *);
 };
 
@@ -339,7 +339,7 @@ struct usb_driver {
     uint8_t subclass;
     uint8_t protocol;
 
-    enum usb_status (*bringup)(struct usb_device *dev); /* Called on connect */
+    enum usb_error (*bringup)(struct usb_device *dev); /* Called on connect */
     void (*teardown)(struct usb_device *dev); /* Called on disconnect */
     void (*free)(struct usb_device *dev);     /* Called on last ref drop */
 } __linker_aligned;
@@ -388,7 +388,7 @@ struct usb_request {
     void *buffer;
     size_t length;
 
-    volatile enum usb_status status;
+    volatile enum usb_error status;
 
     uint32_t flags;
     uint64_t timeout_ns;
@@ -416,16 +416,16 @@ static inline void usb_device_put(struct usb_device *dev) {
 }
 
 void usb_teardown_device(struct usb_device *dev);
-enum usb_status usb_get_string_descriptor(struct usb_device *dev,
+enum usb_error usb_get_string_descriptor(struct usb_device *dev,
                                           uint8_t string_idx, char *out,
                                           size_t max_len);
-enum usb_status usb_get_device_descriptor(struct usb_device *dev);
-enum usb_status usb_parse_config_descriptor(struct usb_device *dev);
-enum usb_status usb_set_configuration(struct usb_device *dev);
-enum usb_status usb_init_device(struct usb_device *dev);
+enum usb_error usb_get_device_descriptor(struct usb_device *dev);
+enum usb_error usb_parse_config_descriptor(struct usb_device *dev);
+enum usb_error usb_set_configuration(struct usb_device *dev);
+enum usb_error usb_init_device(struct usb_device *dev);
 void usb_try_bind_driver(struct usb_device *dev);
 uint8_t usb_construct_rq_bitmap(uint8_t transfer, uint8_t type, uint8_t recip);
-enum usb_status usb_transfer_sync(enum usb_status (*fn)(struct usb_request *),
+enum usb_error usb_transfer_sync(enum usb_error (*fn)(struct usb_request *),
                                   struct usb_request *request,
                                   struct io_wait_token *tok);
 void usb_print_device(struct usb_device *dev);

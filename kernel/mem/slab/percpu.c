@@ -164,6 +164,7 @@ void slab_percpu_free(struct slab_domain *dom, size_t class_idx, vaddr_t obj) {
     slab_percpu_flush(dom, pc, class_idx, obj);
 }
 
+/* TODO: memory locality */
 void slab_domain_percpu_init(struct slab_domain *domain) {
     size_t cpus = domain->domain->num_cores;
     domain->percpu_caches = kzalloc(sizeof(struct slab_percpu_cache *) * cpus);

@@ -84,6 +84,7 @@ __no_sanitize_address void k_main(void) {
 
     srat_init();
     slit_init();
+    dmar_init();
 
     domain_init();
     pmm_late_init();

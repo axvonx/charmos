@@ -1,8 +1,7 @@
 #include <asm.h>
 #include <compiler.h>
 #include <drivers/pci.h>
-#include <drivers/usb_generic/usb.h>
-#include <drivers/xhci.h>
+#include <drivers/usb/xhci.h>
 #include <mem/alloc.h>
 #include <mem/page.h>
 #include <mem/vmm.h>
@@ -60,11 +59,11 @@ bool xhci_send_command(struct xhci_device *dev, struct xhci_command *cmd) {
 }
 
 /* Submit a single interrupt IN transfer, blocking until completion */
-enum usb_status xhci_submit_interrupt_transfer(struct usb_request *req) {
+enum usb_error xhci_submit_interrupt_transfer(struct usb_request *req) {
     struct usb_device *dev = req->dev;
     struct xhci_device *xhci = dev->host->driver_data;
     struct xhci_slot *slot = dev->slot;
-    enum usb_status return_status = USB_OK;
+    enum usb_error return_status = USB_OK;
 
     /* we drop this ref in the callback to the urb */
     if (!usb_device_get(dev)) {
@@ -174,7 +173,7 @@ void xhci_emit_control(struct xhci_command *cmd, struct xhci_ring *ring) {
     cmd->request->trb_phys = xhci_get_trb_phys(ring, trb);
 }
 
-enum usb_status xhci_send_control_transfer(struct xhci_device *dev,
+enum usb_error xhci_send_control_transfer(struct xhci_device *dev,
                                            struct xhci_slot *slot,
                                            struct usb_request *req) {
     if (!req->setup)
@@ -229,7 +228,7 @@ enum usb_status xhci_send_control_transfer(struct xhci_device *dev,
     return USB_OK;
 }
 
-enum usb_status xhci_control_transfer(struct usb_request *request) {
+enum usb_error xhci_control_transfer(struct usb_request *request) {
     struct xhci_device *xhci = request->dev->host->driver_data;
     struct xhci_slot *slot = request->dev->slot;
 

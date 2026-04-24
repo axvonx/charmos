@@ -2,7 +2,7 @@
 #pragma once
 #include <compiler.h>
 #include <log.h>
-#include <math/bit_range.h>
+#include <math/bit.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <structures/list.h>

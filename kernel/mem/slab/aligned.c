@@ -12,7 +12,7 @@ void *kmalloc_aligned_internal(size_t size, size_t align, enum alloc_flags f,
     uintptr_t aligned = ALIGN_UP(raw + sizeof(uintptr_t), align);
     ((uintptr_t *) aligned)[-1] = raw;
 
-    kassert(aligned == ALIGN_DOWN(aligned, align));
+    kassert(IS_ALIGNED(aligned, align));
     return (void *) aligned;
 }
 
@@ -25,7 +25,7 @@ void *kzalloc_aligned_internal(size_t size, size_t align, enum alloc_flags f,
     uintptr_t aligned = ALIGN_UP(raw + sizeof(uintptr_t), align);
     ((uintptr_t *) aligned)[-1] = raw;
 
-    kassert(aligned == ALIGN_DOWN(aligned, align));
+    kassert(IS_ALIGNED(aligned, align));
     return (void *) aligned;
 }
 

@@ -2,6 +2,7 @@
 #include <kassert.h>
 #include <math/align.h>
 #include <mem/alloc.h>
+#include <mem/hhdm.h>
 #include <mem/page.h>
 #include <mem/pmm.h>
 #include <mem/vaddr_alloc.h>
@@ -29,7 +30,7 @@ static void vasrange_refill(struct vas_space *space) {
     if (!phys)
         panic("OOM allocating vas_range page");
 
-    uintptr_t virt = phys + global.hhdm_offset;
+    uintptr_t virt = hhdm_paddr_to_vaddr(phys);
     struct vas_range *ranges = (struct vas_range *) virt;
 
     for (uint64_t i = 0; i < VASRANGE_PER_PAGE; i++) {
@@ -60,7 +61,7 @@ struct vas_space *vas_space_bootstrap(vaddr_t base, vaddr_t limit) {
     if (!phys)
         panic("OOM creating vas_space");
 
-    uintptr_t virt = phys + global.hhdm_offset;
+    uintptr_t virt = hhdm_paddr_to_vaddr(phys);
     struct vas_space *vas = (struct vas_space *) virt;
 
     memset(vas, 0, sizeof(*vas));
