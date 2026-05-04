@@ -40,6 +40,11 @@ struct rbt { /* TODO: stop using get_data. for now it works
     struct rbt_node *root;
 };
 
+#define RBT_NODE_INIT                                                          \
+    (struct rbt_node) {                                                        \
+        .color = TREE_NODE_BLACK, .left = NULL, .right = NULL, .parent = NULL  \
+    }
+
 static inline struct rbt_node *rbt_last(const struct rbt *root) {
     struct rbt_node *node = root->root;
     if (!node)
@@ -93,6 +98,8 @@ void rbt_insert(struct rbt *tree, struct rbt_node *new_node);
 struct rbt_node *rbt_min(struct rbt *tree);
 struct rbt_node *rbt_max(struct rbt *tree);
 struct rbt_node *rbt_next(struct rbt_node *node);
+struct rbt_node *rbt_find_predecessor(struct rbt *tree, uint64_t data);
+struct rbt_node *rbt_find_successor(struct rbt *tree, uint64_t data);
 
 static inline bool rbt_empty(struct rbt *tree) {
     return !tree->root;

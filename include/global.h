@@ -10,7 +10,7 @@
 /* TODO: almost everything here is RO after init.
  *
  * I can clone these per-NUMA node and make backpointers
- * via the per-core 'struct core' in the G segment register 
+ * via the per-core 'struct core' in the G segment register
  *
  * AKA, split into global and rw_global
  */

@@ -1,6 +1,7 @@
 /* @title: Per-CPU dynamic objects */
 #pragma once
 #include <compiler.h>
+#include <linker/symbols.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -15,8 +16,7 @@ struct percpu_descriptor {
     percpu_descriptor_constructor constructor;
 } __linker_aligned;
 
-extern struct percpu_descriptor __skernel_percpu_desc[];
-extern struct percpu_descriptor __ekernel_percpu_desc[];
+LINKER_SECTION_DEFINE(percpu_desc, struct percpu_descriptor);
 
 #define PERCPU_DECLARE(__n, __type, __ctor)                                    \
     extern __type __percpu_##__n;                                              \

@@ -1,6 +1,7 @@
 /* @title: Slab allocator */
 #pragma once
 #include <compiler.h>
+#include <linker/symbols.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <structures/list.h>
@@ -44,5 +45,4 @@ void slab_domain_init(void);
 void slab_domains_print();
 void slab_domain_init_late();
 
-extern struct slab_size_constant __skernel_slab_sizes[];
-extern struct slab_size_constant __ekernel_slab_sizes[];
+LINKER_SECTION_DEFINE(slab_sizes, struct slab_size_constant);

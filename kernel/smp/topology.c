@@ -3,9 +3,9 @@
 #include <irq/idt.h>
 #include <kassert.h>
 #include <limine.h>
+#include <math/bit_ops.h>
 #include <math/div.h>
 #include <math/min_max.h>
-#include <math/bit_ops.h>
 #include <mem/alloc.h>
 #include <mem/numa.h>
 #include <smp/core.h>

@@ -1,6 +1,7 @@
 /* @title: Scheduler Periodic Work */
 #pragma once
 #include <compiler.h>
+#include <linker/symbols.h>
 #include <structures/list.h>
 #include <structures/pairing_heap.h>
 #include <types/types.h>
@@ -86,9 +87,8 @@ struct scheduler_periodic_work_percpu {
     bool executing;
 };
 
-extern struct scheduler_periodic_work_linker_object
-    __skernel_sched_periodic_work[],
-    __ekernel_sched_periodic_work[];
+LINKER_SECTION_DEFINE(sched_periodic_work,
+                      struct scheduler_periodic_work_linker_object);
 
 #define SCHEDULER_PERIODIC_WORK_REGISTER(_fn, _type, _prio, _interval)         \
     static struct scheduler_periodic_work_linker_object __spw_##_fn            \

@@ -1,6 +1,7 @@
 /* @title: Nightmare test framework */
 #include <asm.h>
 #include <crypto/prng.h>
+#include <linker/symbols.h>
 #include <mem/alloc.h>
 #include <sch/sched.h>
 #include <stdatomic.h>
@@ -177,8 +178,7 @@ static inline struct nightmare_thread *nightmare_get_thread() {
     return container_of(nightmare_get_local(), struct nightmare_thread, local);
 }
 
-extern struct nightmare_test __skernel_nightmare_tests[];
-extern struct nightmare_test __ekernel_nightmare_tests[];
+LINKER_SECTION_DEFINE(nightmare_tests, struct nightmare_test);
 
 #define NIGHTMARE_THREAD_ENTRY(__name) static void __name(void *__arg)
 #define NIGHTMARE_RESET_FN_NAME(__name) __name##_reset

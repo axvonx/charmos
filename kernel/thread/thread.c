@@ -1,4 +1,5 @@
 #include <log.h>
+#include <mem/address_range.h>
 #include <mem/alloc.h>
 #include <mem/pmm.h>
 #include <mem/slab.h>
@@ -25,6 +26,11 @@ SLAB_SIZE_REGISTER_FOR_STRUCT(thread, /*alignment*/ 32);
 #define THREAD_STACKS_HEAP_START 0xFFFFF10000000000ULL
 #define THREAD_STACKS_HEAP_END 0xFFFFF20000000000ULL
 
+ADDRESS_RANGE_DECLARE(thread_stacks, .name = "thread stacks",
+                      .base = THREAD_STACKS_HEAP_START,
+                      .size = THREAD_STACKS_HEAP_END - THREAD_STACKS_HEAP_START,
+                      .flags = ADDRESS_RANGE_STATIC);
+
 /* lol */
 static struct tid_space *global_tid_space = NULL;
 static struct vas_space *stacks_space = NULL;
@@ -32,7 +38,7 @@ struct locked_list thread_list;
 
 void thread_init_thread_ids(void) {
     stacks_space =
-        vas_space_init(THREAD_STACKS_HEAP_START, THREAD_STACKS_HEAP_END);
+        vas_space_create(THREAD_STACKS_HEAP_START, THREAD_STACKS_HEAP_END);
     global_tid_space = tid_space_init(UINT64_MAX);
     locked_list_init(&thread_list, LOCKED_LIST_INIT_IRQ_DISABLE);
 }

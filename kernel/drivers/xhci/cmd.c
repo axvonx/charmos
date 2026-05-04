@@ -174,8 +174,8 @@ void xhci_emit_control(struct xhci_command *cmd, struct xhci_ring *ring) {
 }
 
 enum usb_error xhci_send_control_transfer(struct xhci_device *dev,
-                                           struct xhci_slot *slot,
-                                           struct usb_request *req) {
+                                          struct xhci_slot *slot,
+                                          struct usb_request *req) {
     if (!req->setup)
         return USB_ERR_INVALID_ARGUMENT;
 

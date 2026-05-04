@@ -274,9 +274,18 @@ static void handle_format_specifier(struct printf_cursor *csr,
         format++;
     }
 
-    while (*format >= '0' && *format <= '9') {
-        width = width * 10 + (*format - '0');
+    if (*format == '*') {
+        width = va_arg(args, int);
+        if (width < 0) {
+            left_align = true;
+            width = -width;
+        }
         format++;
+    } else {
+        while (*format >= '0' && *format <= '9') {
+            width = width * 10 + (*format - '0');
+            format++;
+        }
     }
 
     if (*format == '.') {

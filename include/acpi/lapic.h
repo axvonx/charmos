@@ -1,10 +1,11 @@
 /* @title: LAPIC */
+#pragma once
 #include <asm.h>
 #include <console/printf.h>
+#include <drivers/mmio.h>
 #include <smp/core.h>
 #include <stdbool.h>
 #include <stdint.h>
-#pragma once
 
 #define LAPIC_ICR_LOW 0x300
 #define LAPIC_ICR_HIGH 0x310

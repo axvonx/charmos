@@ -24,8 +24,6 @@ struct log_globals {
 };
 
 static void log_site_free(struct log_site *site);
-static const char *log_level_str[] = {"TRACE", "DEBUG", "INFO", "WARN",
-                                      "ERROR"};
 
 struct log_globals log_global = {0};
 
@@ -83,12 +81,18 @@ static void k_printf_from_log(const char *fmt, const uint64_t *args,
     }
 }
 
-static void log_dump_record(const struct log_record *rec,
+static void log_dump_record(const struct log_site *site,
+                            const struct log_record *rec,
                             const struct log_dump_options opts) {
     size_t sec = MS_TO_SECONDS(rec->timestamp);
     size_t msec = rec->timestamp % 1000;
-    printf("[%llu.%03llu] %s%-5s%s ", sec, msec, log_level_color(rec->level),
-           log_level_str[rec->level], ANSI_RESET);
+    if (sec == 0 && msec == 0) {
+        printf("[X.XXX] %s%s%s: ", log_level_color(rec->level), site->name,
+               ANSI_RESET);
+    } else {
+        printf("[%llu.%03llu] %s%s%s: ", sec, msec, log_level_color(rec->level),
+               site->name, ANSI_RESET);
+    }
 
     if (opts.show_cpu)
         printf("cpu=%u ", rec->cpu);
@@ -194,7 +198,7 @@ void log_dump_site(struct log_site *site, struct log_dump_options opts) {
             printf("!! dropped %u log records !!\n", site->dropped);
         }
 
-        log_dump_record(&rec, opts);
+        log_dump_record(site, &rec, opts);
     }
 
     log_site_put(site);
@@ -208,8 +212,8 @@ void log_dump_site_default(struct log_site *site) {
     log_site_put(site);
 }
 
-void log_console_emit(const struct log_record *rec) {
-    log_dump_record(rec, LOG_DUMP_CONSOLE);
+void log_console_emit(struct log_site *site, const struct log_record *rec) {
+    log_dump_record(site, rec, LOG_DUMP_CONSOLE);
 }
 
 void log_emit_internal(struct log_site *site, struct log_handle *handle,
@@ -242,7 +246,7 @@ void log_emit_internal(struct log_site *site, struct log_handle *handle,
 
     if (global.current_bootstage < BOOTSTAGE_LATE)
         if (log_handle_should_print(handle, site, level))
-            return log_dump_record(&rec, dopts);
+            return log_dump_record(site, &rec, dopts);
 
     if (!log_site_accepts(site) ||
         (site->flags & LOG_SITE_NO_IRQ && irq_in_interrupt()))
@@ -293,7 +297,7 @@ void log_emit_internal(struct log_site *site, struct log_handle *handle,
 
             if (!queued) {
                 /* last-resort visibility */
-                log_dump_record(&rec, dopts);
+                log_dump_record(site, &rec, dopts);
             }
         } else {
             site->dropped++;
@@ -302,7 +306,7 @@ void log_emit_internal(struct log_site *site, struct log_handle *handle,
     }
 
     if (log_handle_should_print(handle, site, level)) {
-        log_dump_record(&rec, dopts);
+        log_dump_record(site, &rec, dopts);
     }
 
     if ((ll & LOG_PANIC) && level >= LOG_ERROR) {

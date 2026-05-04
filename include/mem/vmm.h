@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <limine.h>
 #include <stdint.h>
+#include <types/types.h>
 
 enum vmm_flags {
     VMM_FLAG_NONE = 0,
@@ -19,7 +20,10 @@ enum errno vmm_map_2mb_page(uintptr_t virt, uintptr_t phys, uint64_t flags,
 void vmm_unmap_2mb_page(uintptr_t virt, enum vmm_flags vflags);
 void vmm_unmap_page(uintptr_t virt, enum vmm_flags vflags);
 uintptr_t vmm_get_phys(uintptr_t virt, enum vmm_flags vflags);
-void *vmm_map_phys(uint64_t addr, uint64_t len, uint64_t flags,
+void vmm_unmap(void *addr, uint64_t len, enum vmm_flags vflags);
+void *vmm_map(paddr_t paddr, vaddr_t vaddr, uint64_t len, uint64_t flags,
+              enum vmm_flags vflags);
+void *vmm_map_bump(uint64_t addr, uint64_t len, uint64_t flags,
                    enum vmm_flags vflags);
 void vmm_unmap_virt(void *addr, uint64_t len, enum vmm_flags vflags);
 uintptr_t vmm_make_user_pml4(void);

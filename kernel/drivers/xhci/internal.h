@@ -19,7 +19,7 @@ void xhci_device_start_interrupts(uint8_t bus, uint8_t slot, uint8_t func,
                                   struct xhci_device *dev);
 void xhci_emit_singular(struct xhci_command *cmd, struct xhci_ring *ring);
 enum usb_error xhci_address_device(struct xhci_port *p, uint8_t slot_id,
-                                    struct xhci_slot *publish_to);
+                                   struct xhci_slot *publish_to);
 void xhci_teardown_slot(struct xhci_slot *me);
 void xhci_wake_waiter(struct xhci_device *dev, struct xhci_request *request);
 void xhci_cleanup(struct xhci_device *dev, struct xhci_request *req);

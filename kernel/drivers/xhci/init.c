@@ -1,5 +1,6 @@
 #include <asm.h>
 #include <compiler.h>
+#include <drivers/mmio.h>
 #include <drivers/pci.h>
 #include <drivers/usb/xhci.h>
 #include <mem/alloc.h>
@@ -122,7 +123,7 @@ void xhci_disable_slot(struct xhci_device *dev, uint8_t slot_id) {
 }
 
 static enum usb_error xhci_spin_wait_port_reset(uint32_t *portsc,
-                                                 bool is_usb3) {
+                                                bool is_usb3) {
     const uint64_t timeout_us = 100 * 1000;
     uint64_t start = time_get_us();
 
@@ -277,7 +278,7 @@ void *xhci_map_mmio(uint8_t bus, uint8_t slot, uint8_t func) {
     uint32_t size = ~(size_mask & ~0xF) + 1;
 
     uint32_t phys_addr = original_bar0 & ~0xF;
-    return vmm_map_phys(phys_addr, size, PAGE_UNCACHABLE, VMM_FLAG_NONE);
+    return mmio_map(phys_addr, size);
 }
 
 struct xhci_device *xhci_device_create(void *mmio) {

@@ -1,6 +1,7 @@
 #include <acpi/hpet.h>
 #include <asm.h>
 #include <console/printf.h>
+#include <drivers/mmio.h>
 #include <log.h>
 #include <mem/page.h>
 #include <mem/vmm.h>
@@ -133,8 +134,7 @@ void hpet_init(void) {
     struct acpi_hpet *hpet = hpet_table.ptr;
     uint64_t hpet_addr = hpet->address.address;
 
-    hpet_base =
-        vmm_map_phys(hpet_addr, PAGE_SIZE, PAGE_UNCACHABLE, VMM_FLAG_NONE);
+    hpet_base = mmio_map(hpet_addr, PAGE_SIZE);
 
     hpet_disable();
     hpet_write64(HPET_MAIN_COUNTER_OFFSET, 0);

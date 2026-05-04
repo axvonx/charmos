@@ -1,9 +1,11 @@
 /* @title: HPET */
-#include <asm.h>
-#include <compiler.h>
-#include <stdatomic.h>
-#include <stdint.h>
 #pragma once
+#include <compiler.h>
+#include <drivers/mmio.h>
+#include <stdatomic.h>
+#include <stdbool.h>
+#include <stdint.h>
+
 void hpet_init(void);
 uint64_t hpet_timestamp_ns(void);
 void hpet_program_oneshot(uint64_t future_ms);

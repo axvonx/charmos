@@ -4,6 +4,7 @@
 #include <block/generic.h>
 #include <block/sched.h>
 #include <console/printf.h>
+#include <drivers/mmio.h>
 #include <drivers/nvme.h>
 #include <irq/idt.h>
 #include <kassert.h>
@@ -210,8 +211,7 @@ uint16_t nvme_submit_admin_cmd(struct nvme_device *nvme,
 uint8_t *nvme_identify_controller(struct nvme_device *nvme) {
     uint64_t buffer_phys = pmm_alloc_page();
 
-    void *buffer =
-        vmm_map_phys(buffer_phys, PAGE_SIZE, PAGE_UNCACHABLE, VMM_FLAG_NONE);
+    void *buffer = mmio_map(buffer_phys, PAGE_SIZE);
 
     memset(buffer, 0, PAGE_SIZE);
 
@@ -260,8 +260,7 @@ uint32_t nvme_set_num_queues(struct nvme_device *nvme, uint16_t desired_sq,
 uint8_t *nvme_identify_namespace(struct nvme_device *nvme, uint32_t nsid) {
     uint64_t buffer_phys = pmm_alloc_page();
 
-    void *buffer =
-        vmm_map_phys(buffer_phys, PAGE_SIZE, PAGE_UNCACHABLE, VMM_FLAG_NONE);
+    void *buffer = mmio_map(buffer_phys, PAGE_SIZE);
 
     memset(buffer, 0, PAGE_SIZE);
 

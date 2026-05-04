@@ -2,6 +2,7 @@
 #pragma once
 #include <asm.h>
 #include <compiler.h>
+#include <linker/symbols.h>
 #include <log.h>
 #include <stdint.h>
 
@@ -32,8 +33,7 @@ struct pci_driver {
     void (*initialize)(uint8_t, uint8_t, uint8_t, struct pci_device *);
 } __linker_aligned;
 
-extern struct pci_driver __skernel_pci_devices[];
-extern struct pci_driver __ekernel_pci_devices[];
+LINKER_SECTION_DEFINE(pci_devices, struct pci_driver);
 
 #define PCI_DEV_REGISTER(n, cc, sc, pi, vi, init)                              \
     static struct pci_driver pci_device_##n __attribute__((                    \

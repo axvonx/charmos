@@ -16,12 +16,13 @@ enum iommu_perms {
 };
 
 enum iommu_error {
-    IOMMU_ERR_OK, /* TODO: add more as they come about */
+    IOMMU_ERR_OK,
+    IOMMU_ERR_NO_MEM,
+    IOMMU_ERR_UNSUPPORTED,
+    IOMMU_ERR_INVALID,
 };
 
-enum iommu_status {
-    IOMMU_
-};
+enum iommu_status { IOMMU_STATUS_INACTIVE, IOMMU_STATUS_ACTIVE };
 
 struct iommu_ops {
     enum iommu_error (*unit_init)(struct iommu *unit);
@@ -62,6 +63,8 @@ struct iommu_domain {
     iova_t iova_limit;
     struct vas_space *vas;
 };
+
+void iommu_init();
 
 enum iommu_error iommu_unit_init(struct iommu *unit);
 void iommu_unit_destroy(struct iommu *unit);

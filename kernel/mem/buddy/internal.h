@@ -14,9 +14,9 @@
 /* This must be 8 bytes, since struct page is 8 bytes */
 struct buddy_page {
     uint64_t next_pfn : (64 - PAGE_4K_SHIFT); /* 52 bits... */
-    uint64_t order : 8;                           /* 8 bits */
-    uint64_t is_free : 1;                         /* 1 bit */
-    uint64_t available : 3;                       /* leftover */
+    uint64_t order : 8;                       /* 8 bits */
+    uint64_t is_free : 1;                     /* 1 bit */
+    uint64_t available : 3;                   /* leftover */
 };
 static_assert_struct_size_eq(buddy_page, 8);
 

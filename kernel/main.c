@@ -11,6 +11,8 @@
 #include <compiler.h>
 #include <console/printf.h>
 #include <crypto/prng.h>
+#include <drivers/iommu/iommu.h>
+#include <drivers/mmio.h>
 #include <elf.h>
 #include <fs/vfs.h>
 #include <global.h>
@@ -18,6 +20,7 @@
 #include <limine.h>
 #include <log.h>
 #include <logo.h>
+#include <mem/address_range.h>
 #include <mem/alloc.h>
 #include <mem/asan.h>
 #include <mem/buddy.h>
@@ -64,6 +67,7 @@ __no_sanitize_address void k_main(void) {
     vmm_init(memmap_request.response, xa_request.response);
     pmm_mid_init();
 
+    address_ranges_init();
     slab_allocator_init();
     asan_init();
 
@@ -73,6 +77,7 @@ __no_sanitize_address void k_main(void) {
     syscall_setup(syscall_entry);
     smp_setup_bsp();
 
+    mmio_init();
     irq_init();
     uacpi_init(rsdp_request.response->address);
     x2apic_init();
@@ -84,7 +89,7 @@ __no_sanitize_address void k_main(void) {
 
     srat_init();
     slit_init();
-    dmar_init();
+    iommu_init();
 
     domain_init();
     pmm_late_init();

@@ -138,6 +138,7 @@
 #include <math/ilog2.h>
 #include <math/pow.h>
 #include <math/sort.h>
+#include <mem/address_range.h>
 #include <mem/alloc.h>
 #include <mem/domain.h>
 #include <mem/pmm.h>
@@ -155,6 +156,11 @@
 #include "internal.h"
 #include "mem/domain/internal.h"
 #include "stat_internal.h"
+
+ADDRESS_RANGE_DECLARE(
+    slab, .name = "slab", .base = SLAB_HEAP_START,
+    .size = SLAB_HEAP_END - SLAB_HEAP_START, .flags = ADDRESS_RANGE_STATIC
+    /* alignment does not need to be provided for static entries */);
 
 struct slab_globals slab_global = {0};
 LOG_HANDLE_DECLARE_DEFAULT(slab);

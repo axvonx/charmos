@@ -14,7 +14,7 @@ void scheduler_add_thread(struct scheduler *sched, struct thread *task,
                           bool lock_held) {
     kassert(task->state != THREAD_STATE_IDLE_THREAD);
 
-    enum irql irql;
+    enum irql irql = IRQL_NONE;
     if (!lock_held)
         irql = spin_lock_irq_disable(&sched->lock);
 
@@ -48,7 +48,7 @@ void scheduler_add_thread(struct scheduler *sched, struct thread *task,
 
 void scheduler_remove_thread(struct scheduler *sched, struct thread *t,
                              bool lock_held) {
-    enum irql irql;
+    enum irql irql = IRQL_NONE;
     if (!lock_held)
         irql = spin_lock_irq_disable(&sched->lock);
     else

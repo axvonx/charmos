@@ -1,6 +1,8 @@
 #include <console/panic.h>
 #include <kassert.h>
 #include <math/align.h>
+#include <math/div.h>
+#include <mem/address_range.h>
 #include <mem/alloc.h>
 #include <mem/hhdm.h>
 #include <mem/page.h>
@@ -85,7 +87,7 @@ struct vas_space *vas_space_bootstrap(vaddr_t base, vaddr_t limit) {
     return vas;
 }
 
-struct vas_space *vas_space_init(vaddr_t base, vaddr_t limit) {
+struct vas_space *vas_space_create(vaddr_t base, vaddr_t limit) {
     struct vas_space *vas =
         kzalloc(sizeof(struct vas_space), ALLOC_FLAGS_DEFAULT,
                 /* Prevent recursing into ourselves */
@@ -206,4 +208,28 @@ void vas_free(struct vas_space *vas, vaddr_t addr, size_t size) {
     rbt_insert(&vas->tree, &g->node);
 
     vas_space_unlock(vas, irql);
+}
+
+void *vas_map(struct vas_space *vas, paddr_t paddr, size_t len, uint64_t flags,
+              enum vmm_flags vflags) {
+    size_t pages = DIV_ROUND_UP(len, PAGE_SIZE);
+    vaddr_t vaddr = vas_alloc(vas, PAGE_SIZE * pages, PAGE_SIZE);
+    if (!vaddr)
+        return NULL;
+
+    void *ret = vmm_map(paddr, vaddr, len, flags, vflags);
+    if (!ret)
+        vas_free(vas, vaddr, PAGE_SIZE * pages);
+
+    return ret;
+}
+
+void vas_unmap(struct vas_space *vas, void *vaddr, size_t len) {
+    size_t pages = DIV_ROUND_UP(len, PAGE_SIZE);
+    vmm_unmap(vaddr, PAGE_SIZE * pages, VMM_FLAG_NONE);
+    vas_free(vas, (vaddr_t) vaddr, PAGE_SIZE * pages);
+}
+
+struct vas_space *vas_space_from_address_range(struct address_range *ar) {
+    return vas_space_create(ar->base, ar->base + ar->size);
 }

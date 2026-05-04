@@ -23,7 +23,8 @@ TEST_REGISTER(workqueue_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
     uint64_t times = 256;
 
     for (uint64_t i = 0; i < times; i++) {
-        enum workqueue_error err = workqueue_add_fast_oneshot(workqueue_fn, WORK_ARGS(NULL, NULL));
+        enum workqueue_error err =
+            workqueue_add_fast_oneshot(workqueue_fn, WORK_ARGS(NULL, NULL));
         (void) err;
     }
 

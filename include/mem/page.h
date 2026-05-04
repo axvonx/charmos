@@ -28,6 +28,7 @@
 #define PAGE_2MB_PHYS_MASK (~((uintptr_t) PAGE_2MB - 1))
 #define PAGE_ALIGN_DOWN(x) ALIGN_DOWN((uintptr_t) (x), PAGE_SIZE)
 #define PAGE_ALIGN_UP(x) ALIGN_UP((uintptr_t) (x), PAGE_SIZE)
+#define IS_PAGE_ALIGNED(x) IS_ALIGNED((uintptr_t) (x), PAGE_SIZE)
 #define PAGE_2MB_ALIGN_DOWN(x) ALIGN_DOWN((uintptr_t) (x), PAGE_2MB)
 #define PAGE_2MB_ALIGN_UP(x) ALIGN_UP((uintptr_t) (x), PAGE_2MB)
 #define PAGE_1GB_ALIGN_DOWN(x) ALIGN_DOWN((uintptr_t) (x), PAGE_1GB)

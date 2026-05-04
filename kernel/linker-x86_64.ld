@@ -8,12 +8,16 @@ PHDRS {
 }
 SECTIONS {
     . = 0xffffffff80000000;
+
+    /* Limine */
     .limine_requests : ALIGN(4K) {
         __slimine_requests = .;
         *(.limine_requests .limine_requests*)
         . = ALIGN(4K);
         __elimine_requests = .;
     } :limine_requests
+
+    /* Basic kernel sections */
     .text : ALIGN(4K) {
         __stext = .;
         *(.text .text.*)
@@ -32,6 +36,8 @@ SECTIONS {
         . = ALIGN(4K);
         __edata = .;
     } :data
+
+    /* Custom kernel sections */
     .kernel_tests : ALIGN(64) {
         __skernel_tests = .;
         KEEP(*(.kernel_tests))
@@ -44,6 +50,7 @@ SECTIONS {
         . = ALIGN(64);
         __ekernel_nightmare_tests = .;
     } :data
+
     .kernel_pci_devices : ALIGN(64) {
         __skernel_pci_devices = .;
         KEEP(*(.kernel_pci_devices))
@@ -56,23 +63,19 @@ SECTIONS {
         . = ALIGN(64);
         __ekernel_usb_drivers = .;
     } :data
+
     .kernel_profiling_data : ALIGN(64) {
         __skernel_profiling_data = .;
         KEEP(*(.kernel_profiling_data))
         . = ALIGN(64);
         __ekernel_profiling_data = .;
     } :data
+
     .kernel_movealloc_callbacks : ALIGN(64) {
         __skernel_movealloc_callbacks = .;
         KEEP(*(.kernel_movealloc_callbacks))
         . = ALIGN(64);
         __ekernel_movealloc_callbacks = .;
-    } :data
-    .kernel_sched_periodic_work : ALIGN(64) {
-        __skernel_sched_periodic_work = .;
-        KEEP(*(.kernel_sched_periodic_work))
-        . = ALIGN(64);
-        __ekernel_sched_periodic_work = .;
     } :data
     .kernel_slab_sizes : ALIGN(64) {
         __skernel_slab_sizes = .;
@@ -80,6 +83,13 @@ SECTIONS {
         . = ALIGN(64);
         __ekernel_slab_sizes = .;
     } :data
+    .kernel_address_ranges : ALIGN(64) {
+        __skernel_address_ranges = .;
+        KEEP(*(.kernel_address_ranges))
+        . = ALIGN(64);
+        __ekernel_address_ranges = .;
+    } :data
+
     .kernel_percpu_desc : ALIGN(64) {
         __skernel_percpu_desc = .;
         KEEP(*(.kernel_percpu_desc))
@@ -92,12 +102,29 @@ SECTIONS {
         . = ALIGN(64);
         __ekernel_perdomain_desc = .;
     } :data
+
+    .kernel_sched_periodic_work : ALIGN(64) {
+        __skernel_sched_periodic_work = .;
+        KEEP(*(.kernel_sched_periodic_work))
+        . = ALIGN(64);
+        __ekernel_sched_periodic_work = .;
+    } :data
+
     .kernel_log_sites : ALIGN(64) {
         __skernel_log_sites = .;
         KEEP(*(.kernel_log_sites))
         . = ALIGN(64);
         __ekernel_log_sites = .;
     } :data
+
+    .kernel_cmdline_entries : ALIGN(64) {
+        __skernel_cmdline_entries = .;
+        KEEP(*(.kernel_cmdline_entries))
+        . = ALIGN(64);
+        __ekernel_cmdline_entries = .;
+    } :data
+
+    /* BSS */
     .bss : ALIGN(4K) {
         __sbss = .;
         *(.bss .bss.*)

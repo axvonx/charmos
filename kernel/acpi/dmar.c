@@ -3,6 +3,7 @@
 #include <console/panic.h>
 #include <console/printf.h>
 #include <drivers/iommu/vt_d.h>
+#include <drivers/mmio.h>
 #include <log.h>
 #include <mem/page.h>
 #include <mem/vmm.h>
@@ -43,8 +44,7 @@ static void handle_drhd(const struct acpi_dmar_drhd *drhd) {
     dmar_info("DRHD base=0x%016llx size=0x%x seg=%u %s", drhd->address,
               reg_size, drhd->segment, include_all ? "(INCLUDE_ALL)" : "");
 
-    struct vtd_regs *regs = vmm_map_phys(
-        drhd->address, PAGE_SIZE, PAGE_WRITE | PAGE_UNCACHABLE, VMM_FLAG_NONE);
+    struct vtd_regs *regs = mmio_map(drhd->address, PAGE_SIZE);
 
     uint64_t cap = regs->capabilities;
     uint64_t ecap = regs->extended_capabilities;
@@ -53,18 +53,28 @@ static void handle_drhd(const struct acpi_dmar_drhd *drhd) {
               regs->version & 0xF, vtd_cap_domain_count(cap));
 
     dmar_info("  CAP:  SAGAW=%02x MGAW=%u FRO=0x%x NFR=%u CM=%u RWBF=%u",
-              CAP_SAGAW(cap), CAP_MGAW(cap), CAP_FRO(cap), CAP_NFR(cap),
-              CAP_CM(cap), CAP_RWBF(cap));
+              CAP_SUPPORTED_ADDR_WIDTHS(cap), CAP_MAX_ADDR_WIDTH(cap),
+              CAP_FAULT_RECORD_OFFSET(cap), CAP_NUM_FAULT_RECORDS(cap),
+              CAP_CACHING_MODE(cap), CAP_REQUIRES_WRITE_BUF_FLUSH(cap));
 
-    dmar_info("  ECAP: QI=%u IR=%u PT=%u SC=%u C=%u IRO=0x%x", ECAP_QI(ecap),
-              ECAP_IR(ecap), ECAP_PT(ecap), ECAP_SC(ecap), ECAP_C(ecap),
-              ECAP_IRO(ecap));
+    dmar_info("  ECAP: QI=%u IR=%u PT=%u SC=%u C=%u IRO=0x%x",
+              ECAP_QUEUED_INVALIDATION(ecap), ECAP_INTERRUPT_REMAPPING(ecap),
+              ECAP_PASS_THROUGH(ecap), ECAP_SNOOP_CONTROL(ecap),
+              ECAP_COHERENCY(ecap), ECAP_IOTLB_REGISTER_OFFSET(ecap));
 
-    if (!(CAP_SAGAW(cap) & SAGAW_48BIT))
+    if (!(CAP_SUPPORTED_ADDR_WIDTHS(cap) & ADDR_WIDTH_48BIT))
         dmar_warn("  WARNING: 4-level page tables not supported by this unit!");
 
     const uint8_t *scope_end = (const uint8_t *) drhd + drhd->hdr.length;
     print_device_scopes((void *) drhd->entries, scope_end);
+
+    struct iommu *unit =
+        vtd_unit_create(drhd->address, drhd->segment, drhd->size);
+    if (!unit) {
+        dmar_warn("failed to create VT-d unit for DRHD at 0x%llx",
+                  drhd->address);
+        return;
+    }
 }
 
 static void handle_rmrr(const struct acpi_dmar_rmrr *rmrr) {
@@ -80,12 +90,10 @@ static void handle_atsr(const struct acpi_dmar_atsr *atsr) {
     dmar_info((atsr->flags & 1) ? "(ALL_PORTS)" : "");
 }
 
-void dmar_init(void) {
+bool dmar_init(void) {
     struct uacpi_table dmar_table;
     if (uacpi_table_find_by_signature("DMAR", &dmar_table) != UACPI_STATUS_OK) {
-        log_warn_global(LOG_HANDLE(dmar),
-                        "DMAR table not found, VT-d unavailable");
-        return;
+        return false;
     }
 
     const struct acpi_dmar *dmar = dmar_table.ptr;
@@ -152,6 +160,7 @@ void dmar_init(void) {
     if (drhd_count == 0) {
         log_warn_global(LOG_HANDLE(dmar),
                         "no DRHD units found, nothing to initialize");
-        return;
     }
+
+    return true;
 }

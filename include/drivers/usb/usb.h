@@ -1,6 +1,7 @@
 /* @title: USB */
 #pragma once
 #include <compiler.h>
+#include <linker/symbols.h>
 #include <log.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -417,8 +418,8 @@ static inline void usb_device_put(struct usb_device *dev) {
 
 void usb_teardown_device(struct usb_device *dev);
 enum usb_error usb_get_string_descriptor(struct usb_device *dev,
-                                          uint8_t string_idx, char *out,
-                                          size_t max_len);
+                                         uint8_t string_idx, char *out,
+                                         size_t max_len);
 enum usb_error usb_get_device_descriptor(struct usb_device *dev);
 enum usb_error usb_parse_config_descriptor(struct usb_device *dev);
 enum usb_error usb_set_configuration(struct usb_device *dev);
@@ -426,8 +427,8 @@ enum usb_error usb_init_device(struct usb_device *dev);
 void usb_try_bind_driver(struct usb_device *dev);
 uint8_t usb_construct_rq_bitmap(uint8_t transfer, uint8_t type, uint8_t recip);
 enum usb_error usb_transfer_sync(enum usb_error (*fn)(struct usb_request *),
-                                  struct usb_request *request,
-                                  struct io_wait_token *tok);
+                                 struct usb_request *request,
+                                 struct io_wait_token *tok);
 void usb_print_device(struct usb_device *dev);
 struct usb_interface_descriptor *usb_find_interface(struct usb_device *dev,
                                                     uint8_t class,
@@ -465,5 +466,4 @@ usb_transfer_type_str(const enum usb_transfer_type type) {
     }
 }
 
-extern struct usb_driver __skernel_usb_drivers[];
-extern struct usb_driver __ekernel_usb_drivers[];
+LINKER_SECTION_DEFINE(usb_drivers, struct usb_driver);

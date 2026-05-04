@@ -15,8 +15,8 @@ LOG_SITE_DECLARE_DEFAULT(usb);
 LOG_HANDLE_DECLARE_DEFAULT(usb);
 
 enum usb_error usb_transfer_sync(enum usb_error (*fn)(struct usb_request *),
-                                  struct usb_request *request,
-                                  struct io_wait_token *tok) {
+                                 struct usb_request *request,
+                                 struct io_wait_token *tok) {
     struct thread *curr = thread_get_current();
     request->complete = usb_wake_waiter;
     request->context = curr;
@@ -79,8 +79,8 @@ static uint8_t usb_get_desc_bitmap(void) {
 }
 
 enum usb_error usb_get_string_descriptor(struct usb_device *dev,
-                                          uint8_t string_idx, char *out,
-                                          size_t max_len) {
+                                         uint8_t string_idx, char *out,
+                                         size_t max_len) {
     enum usb_error err = USB_OK;
     if (!string_idx)
         return USB_ERR_INVALID_ARGUMENT;

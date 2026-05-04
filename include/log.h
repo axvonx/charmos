@@ -1,6 +1,7 @@
 /* @title: Logging */
 #pragma once
 #include <colors.h>
+#include <linker/symbols.h>
 #include <sch/irql.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -266,8 +267,7 @@ void log_site_destroy(struct log_site *site);
 
 #define LOG_HANDLE(name) &(__log_handle_##name)
 
-extern struct log_site __skernel_log_sites[];
-extern struct log_site __ekernel_log_sites[];
+LINKER_SECTION_DEFINE(log_sites, struct log_site);
 
 LOG_HANDLE_EXTERN(global);
 LOG_SITE_EXTERN(global);

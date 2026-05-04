@@ -23,7 +23,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t ghcr.io/axvonx/charmos-x86-env:latest .
+          docker build -t ghcr.io/axvonx/charmos-x86-env:latest . -f scripts/Dockerfile
 
       - name: Push Docker image
         run: |

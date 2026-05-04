@@ -3,6 +3,7 @@
 #include <asm.h>
 #include <compiler.h>
 #include <console/printf.h>
+#include <drivers/mmio.h>
 #include <irq/idt.h>
 #include <mem/alloc.h>
 #include <mem/vmm.h>
@@ -52,7 +53,7 @@ uacpi_status uacpi_kernel_get_rsdp(uacpi_phys_addr *out_rsdp_address) {
 }
 
 void *uacpi_kernel_map(uacpi_phys_addr addr, uacpi_size len) {
-    void *ret = vmm_map_phys(addr, len, PAGE_UNCACHABLE, VMM_FLAG_NONE);
+    void *ret = mmio_map(addr, len);
     return ret;
 }
 

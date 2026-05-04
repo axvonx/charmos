@@ -21,7 +21,7 @@ LOG_HANDLE_DECLARE_DEFAULT(xhci);
 LOG_SITE_DECLARE_DEFAULT(xhci);
 
 enum usb_error xhci_address_device(struct xhci_port *p, uint8_t slot_id,
-                                    struct xhci_slot *publish_to) {
+                                   struct xhci_slot *publish_to) {
     struct xhci_device *xhci = p->dev;
     uint8_t speed = p->speed;
     uint8_t port = p->port_id;

@@ -124,8 +124,8 @@ void usb_kbd_process_report(struct usb_hid_keyboard *kbd,
 }
 
 enum usb_error usb_keyboard_get_descriptor(struct usb_device *dev,
-                                            uint8_t interface_number,
-                                            uint16_t len, void *buf) {
+                                           uint8_t interface_number,
+                                           uint16_t len, void *buf) {
     uint8_t bm = usb_construct_rq_bitmap(USB_REQUEST_TRANS_DTH,
                                          USB_REQUEST_TYPE_STANDARD,
                                          USB_REQUEST_RECIPIENT_INTERFACE);

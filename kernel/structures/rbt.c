@@ -53,6 +53,38 @@ struct rbt_node *rbt_next(struct rbt_node *node) {
     return parent;
 }
 
+struct rbt_node *rbt_find_predecessor(struct rbt *tree, uint64_t data) {
+    struct rbt_node *curr = tree->root;
+    struct rbt_node *pred = NULL;
+
+    while (curr) {
+        uint64_t curr_data = tree->get_data(curr);
+        if (curr_data < data) {
+            pred = curr;
+            curr = curr->right;
+        } else {
+            curr = curr->left;
+        }
+    }
+    return pred;
+}
+
+struct rbt_node *rbt_find_successor(struct rbt *tree, uint64_t data) {
+    struct rbt_node *curr = tree->root;
+    struct rbt_node *succ = NULL;
+
+    while (curr) {
+        uint64_t curr_data = tree->get_data(curr);
+        if (curr_data > data) {
+            succ = curr;
+            curr = curr->left;
+        } else {
+            curr = curr->right;
+        }
+    }
+    return succ;
+}
+
 static void rb_transplant(struct rbt *tree, struct rbt_node *u,
                           struct rbt_node *v) {
     if (u->parent == NULL)

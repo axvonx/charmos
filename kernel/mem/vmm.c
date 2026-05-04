@@ -1,9 +1,11 @@
 #include <acpi/lapic.h>
+#include <cmdline.h>
 #include <console/printf.h>
 #include <global.h>
 #include <irq/idt.h>
 #include <limine.h>
 #include <linker/symbols.h>
+#include <mem/address_range.h>
 #include <mem/asan.h>
 #include <mem/hhdm.h>
 #include <mem/page_table.h>
@@ -18,6 +20,8 @@
 #include <sync/spinlock.h>
 #define KERNEL_PML4_START_INDEX 256
 #define ENTRY_PRESENT(entry) (entry & PAGE_PRESENT)
+
+static void vmm_mem_cmdline_callback(const char *str);
 
 enum pt_level {
     PT_LEVEL_PML4 = 0,
@@ -39,10 +43,32 @@ struct pt_walk {
     int depth;
 };
 
+CMDLINE_ENTRY_DECLARE(mem, .callback = vmm_mem_cmdline_callback,
+                      .default_val = "0x700000000000", .required = false,
+                      .value = NULL);
+
+ADDRESS_RANGE_DECLARE(hhdm, .name = "hhdm", .base = 0xFFFF800000000000ULL,
+                      /* default size: from the base up to the slab heap */
+                      .size = 0xFFFFF00000000000ULL - 0xFFFF800000000000ULL);
+
 static struct pt_deferred_free *pt_free_list;
 static struct spinlock pt_free_lock = SPINLOCK_INIT;
 static struct page_table *kernel_pml4 = NULL;
 static uintptr_t vmm_map_top = VMM_MAP_BASE;
+
+static long string_to_int(const char *str) {
+    char *endptr;
+
+    if (str[0] == '0' && (str[1] == 'b' || str[1] == 'B')) {
+        return strtol(str + 2, &endptr, 2);
+    }
+
+    return strtol(str, &endptr, 0);
+}
+
+static void vmm_mem_cmdline_callback(const char *str) {
+    ADDRESS_RANGE(hhdm).size = string_to_int(str);
+}
 
 static inline struct page_table *alloc_pt(void) {
     paddr_t phys = pmm_alloc_page();
@@ -229,7 +255,7 @@ void vmm_init(struct limine_memmap_response *memmap,
             panic("Error %s whilst mapping kernel\n", errno_to_str(e));
     }
 
-    for (uint64_t addr = kernel_virt_start; addr < kernel_virt_end;
+    for (uintptr_t addr = kernel_virt_start; addr < kernel_virt_end;
          addr += PAGE_SIZE) {
         uint64_t shadow_addr = ASAN_SHADOW_OFFSET + (addr >> ASAN_SHADOW_SCALE);
         shadow_addr = PAGE_ALIGN_DOWN(shadow_addr);
@@ -565,8 +591,57 @@ err:
     return (uintptr_t) -1;
 }
 
-void *vmm_map_phys(uint64_t addr, uint64_t len, uint64_t flags,
+void *vmm_map(paddr_t paddr, vaddr_t vaddr, uint64_t len, uint64_t flags,
+              enum vmm_flags vflags) {
+    if (len == 0)
+        return NULL;
+
+    uintptr_t phys_start = PAGE_ALIGN_DOWN(paddr);
+    uintptr_t offset = paddr - phys_start;
+
+    uint64_t total_len = len + offset;
+    uint64_t total_pages = (total_len + PAGE_SIZE - 1) / PAGE_SIZE;
+
+    enum errno e = ERR_OK;
+    uint64_t mapped = 0;
+
+    for (; mapped < total_pages; mapped++) {
+        e = vmm_map_page(vaddr + mapped * PAGE_SIZE,
+                         phys_start + mapped * PAGE_SIZE,
+                         PAGE_PRESENT | PAGE_WRITE | flags, vflags);
+        if (e < 0)
+            goto unwind;
+    }
+
+    return (void *) (vaddr + offset);
+
+unwind:
+    for (uint64_t i = 0; i < mapped; i++)
+        vmm_unmap_page(vaddr + i * PAGE_SIZE, vflags);
+
+    return NULL;
+}
+
+void vmm_unmap(void *addr, uint64_t len, enum vmm_flags vflags) {
+    uintptr_t virt_addr = (uintptr_t) addr;
+    uintptr_t page_offset = virt_addr & (PAGE_SIZE - 1);
+    uintptr_t aligned_virt = PAGE_ALIGN_DOWN(virt_addr);
+
+    uint64_t total_len = len + page_offset;
+    uint64_t total_pages = PAGES_NEEDED_FOR(total_len);
+
+    for (uint64_t i = 0; i < total_pages; i++) {
+        vmm_unmap_page(aligned_virt + i * PAGE_SIZE, vflags);
+    }
+}
+
+void *vmm_map_bump(uintptr_t addr, uint64_t len, uint64_t flags,
                    enum vmm_flags vflags) {
+    if (global.current_bootstage >= BOOTSTAGE_LATE)
+        log_warn_once("vmm_map_bump called after BOOTSTAGE_LATE...");
+
+    if (len == 0)
+        return NULL;
 
     uintptr_t phys_start = PAGE_ALIGN_DOWN(addr);
     uintptr_t offset = addr - phys_start;
@@ -574,19 +649,35 @@ void *vmm_map_phys(uint64_t addr, uint64_t len, uint64_t flags,
     uint64_t total_len = len + offset;
     uint64_t total_pages = (total_len + PAGE_SIZE - 1) / PAGE_SIZE;
 
-    if (vmm_map_top + total_pages * PAGE_SIZE > VMM_MAP_LIMIT) {
+    uint64_t span = total_pages * PAGE_SIZE;
+    if (total_pages != 0 && span / PAGE_SIZE != total_pages)
         return NULL;
-    }
+    if (vmm_map_top > VMM_MAP_LIMIT || span > VMM_MAP_LIMIT - vmm_map_top)
+        return NULL;
 
     uintptr_t virt_start = vmm_map_top;
-    vmm_map_top += total_pages * PAGE_SIZE;
+    vmm_map_top += span;
 
-    for (uint64_t i = 0; i < total_pages; i++) {
-        vmm_map_page(virt_start + i * PAGE_SIZE, phys_start + i * PAGE_SIZE,
-                     PAGE_PRESENT | PAGE_WRITE | flags, vflags);
+    enum errno e = ERR_OK;
+    uint64_t mapped = 0;
+
+    for (; mapped < total_pages; mapped++) {
+        e = vmm_map_page(virt_start + mapped * PAGE_SIZE,
+                         phys_start + mapped * PAGE_SIZE,
+                         PAGE_PRESENT | PAGE_WRITE | flags, vflags);
+        if (e < 0)
+            goto unwind;
     }
 
     return (void *) (virt_start + offset);
+
+unwind:
+    for (uint64_t i = 0; i < mapped; i++)
+        vmm_unmap_page(virt_start + i * PAGE_SIZE, vflags);
+
+    vmm_map_top = virt_start;
+
+    return NULL;
 }
 
 void vmm_unmap_virt(void *addr, uint64_t len, enum vmm_flags vflags) {

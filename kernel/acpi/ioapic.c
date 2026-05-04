@@ -1,6 +1,6 @@
 #include <acpi/ioapic.h>
-#include <asm.h>
 #include <console/printf.h>
+#include <drivers/mmio.h>
 #include <mem/page.h>
 #include <mem/vmm.h>
 #include <stdint.h>
@@ -80,8 +80,7 @@ void ioapic_init(void) {
 
             ioapic.id = ioapic_entry->id;
             ioapic.gsi_base = ioapic_entry->gsi_base;
-            ioapic.mmio_base = vmm_map_phys(ioapic_entry->address, 0x20,
-                                            PAGE_UNCACHABLE, VMM_FLAG_NONE);
+            ioapic.mmio_base = mmio_map(ioapic_entry->address, 0x20);
 
             log_info_global(LOG_HANDLE(ioapic),
                             "ID: %u, GSI Base: %u, MMIO: %p", ioapic.id,

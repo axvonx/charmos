@@ -1,7 +1,7 @@
-#include <asm.h>
 #include <compiler.h>
 #include <console/printf.h>
 #include <drivers/e1000.h>
+#include <drivers/mmio.h>
 #include <drivers/pci.h>
 #include <mem/alloc.h>
 #include <mem/page.h>
@@ -26,8 +26,7 @@ static void e1000_reset(struct e1000_device *dev) {
 static void e1000_setup_tx_ring(struct e1000_device *dev) {
     uint64_t space = sizeof(struct e1000_tx_desc) * E1000_NUM_TX_DESC;
     dev->tx_descs_phys = pmm_alloc_page();
-    dev->tx_descs =
-        vmm_map_phys(dev->tx_descs_phys, space, PAGE_UNCACHABLE, VMM_FLAG_NONE);
+    dev->tx_descs = mmio_map(dev->tx_descs_phys, space);
     memset(dev->tx_descs, 0, space);
 
     for (int i = 0; i < E1000_NUM_TX_DESC; i++) {
@@ -59,8 +58,7 @@ static void e1000_setup_tx_ring(struct e1000_device *dev) {
 static void e1000_setup_rx_ring(struct e1000_device *dev) {
     uint64_t space = sizeof(struct e1000_rx_desc) * E1000_NUM_RX_DESC;
     dev->rx_descs_phys = pmm_alloc_page();
-    dev->rx_descs =
-        vmm_map_phys(dev->rx_descs_phys, space, PAGE_UNCACHABLE, VMM_FLAG_NONE);
+    dev->rx_descs = mmio_map(dev->rx_descs_phys, space);
     memset(dev->rx_descs, 0, space);
 
     for (int i = 0; i < E1000_NUM_RX_DESC; i++) {
@@ -200,8 +198,7 @@ bool e1000_init(struct pci_device *pci, struct e1000_device *dev) {
     if (mmio_size == 0 || mmio_size > (1 << 24))
         return false;
 
-    dev->regs =
-        vmm_map_phys(phys_addr, mmio_size, PAGE_UNCACHABLE, VMM_FLAG_NONE);
+    dev->regs = mmio_map(phys_addr, mmio_size);
     if (!dev->regs)
         return false;
 

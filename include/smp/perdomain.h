@@ -1,6 +1,7 @@
 /* @title: Per-Domain dynamic objects */
 #pragma once
 #include <compiler.h>
+#include <linker/symbols.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -15,8 +16,7 @@ struct perdomain_descriptor {
     perdomain_descriptor_constructor constructor;
 } __linker_aligned;
 
-extern struct perdomain_descriptor __skernel_perdomain_desc[];
-extern struct perdomain_descriptor __ekernel_perdomain_desc[];
+LINKER_SECTION_DEFINE(perdomain_desc, struct perdomain_descriptor);
 
 #define PERDOMAIN_DECLARE(__n, __type, __ctor)                                 \
     extern __type __perdomain_##__n;                                           \
