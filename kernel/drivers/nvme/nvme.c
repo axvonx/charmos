@@ -1,6 +1,6 @@
 #include <asm.h>
 #include <block/bcache.h>
-#include <block/generic.h>
+#include <block/block.h>
 #include <block/sched.h>
 #include <compiler.h>
 #include <console/printf.h>
@@ -158,7 +158,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
     return nvme;
 }
 
-void nvme_print_wrapper(struct generic_disk *d) {
+void nvme_print_wrapper(struct block_device *d) {
     struct nvme_device *dev = (struct nvme_device *) d->driver_data;
     uint8_t *n = nvme_identify_namespace(dev, 1);
     nvme_print_namespace((struct nvme_identify_namespace *) n);
@@ -191,8 +191,8 @@ static struct bio_scheduler_ops nvme_bio_sched_ops = {
     .tick_ms = 20,
 };
 
-struct generic_disk *nvme_create_generic(struct nvme_device *nvme) {
-    struct generic_disk *d = kzalloc(sizeof(struct generic_disk));
+struct block_device *nvme_create_generic(struct nvme_device *nvme) {
+    struct block_device *d = kzalloc(sizeof(struct block_device));
     if (!d)
         panic("Could not allocate space for NVMe device\n");
 
@@ -201,7 +201,7 @@ struct generic_disk *nvme_create_generic(struct nvme_device *nvme) {
     d->read_sector = nvme_read_sector_wrapper;
     d->write_sector = nvme_write_sector_wrapper;
     d->submit_bio_async = nvme_submit_bio_request;
-    d->flags = DISK_FLAG_NO_REORDER | DISK_FLAG_NO_COALESCE;
+    d->flags = BDEV_FLAG_NO_REORDER | BDEV_FLAG_NO_COALESCE;
     d->cache = kzalloc(sizeof(struct bcache));
     if (unlikely(!d->cache))
         panic("Could not allocate space for NVMe block cache\n");
@@ -209,22 +209,23 @@ struct generic_disk *nvme_create_generic(struct nvme_device *nvme) {
     d->scheduler = bio_sched_create(d, &nvme_bio_sched_ops);
 
     bcache_init(d->cache, DEFAULT_BLOCK_CACHE_SIZE);
-    d->type = G_NVME_DRIVE;
+    d->type = BDEV_NVME_DRIVE;
     nvme->generic_disk = d;
     return d;
 }
 
 static uint64_t nvme_cnt = 1;
 
-static void nvme_pci_init(uint8_t bus, uint8_t device, uint8_t function,
-                          struct pci_device *dev) {
-    (void) dev;
+static enum errno nvme_pci_init(struct device *d) {
+    struct pci_device *dev = d->driver_data;
+    uint8_t bus = dev->bus, device = dev->dev, function = dev->function;
 
-    struct nvme_device *d = nvme_discover_device(bus, device, function);
-    struct generic_disk *disk = nvme_create_generic(d);
+    struct nvme_device *nd = nvme_discover_device(bus, device, function);
+    struct block_device *disk = nvme_create_generic(nd);
     registry_mkname(disk, "nvme", nvme_cnt++);
     registry_register(disk);
     k_print_register(disk->name);
+    return ERR_OK;
 }
 
 PCI_DEV_REGISTER(nvme, PCI_CLASS_MASS_STORAGE, PCI_SUBCLASS_NVM,

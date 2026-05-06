@@ -8,9 +8,8 @@
 
 uint64_t PTRS_PER_BLOCK;
 
-bool ext2_read_superblock(struct generic_partition *p,
-                          struct ext2_sblock *sblock) {
-    struct generic_disk *d = p->disk;
+bool ext2_read_superblock(struct partition *p, struct ext2_sblock *sblock) {
+    struct block_device *d = p->disk;
     uint8_t *buffer = kmalloc_aligned(PAGE_SIZE, PAGE_SIZE);
     if (!buffer)
         return false;
@@ -38,7 +37,7 @@ bool ext2_write_group_desc(struct ext2_fs *fs) {
     return ext2_block_write(fs, fs->gdesc_cache_ent, EXT2_PRIO_SBLOCK);
 }
 
-struct vfs_node *ext2_g_mount(struct generic_partition *p) {
+struct vfs_node *ext2_g_mount(struct partition *p) {
     if (!p)
         return NULL;
 
@@ -60,7 +59,7 @@ struct vfs_node *ext2_g_mount(struct generic_partition *p) {
     return n;
 }
 
-void ext2_g_print(struct generic_partition *p) {
+void ext2_g_print(struct partition *p) {
     if (!p)
         return;
 }

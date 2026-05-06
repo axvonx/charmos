@@ -1,5 +1,5 @@
 #include <block/bio.h>
-#include <block/generic.h>
+#include <block/block.h>
 #include <block/sched.h>
 #include <mem/alloc.h>
 #include <mem/slab.h>
@@ -8,7 +8,7 @@
 
 SLAB_SIZE_REGISTER_FOR_STRUCT(bio_request, SLAB_OBJ_ALIGN_DEFAULT);
 
-static struct bio_request *create(struct generic_disk *d, uint64_t lba,
+static struct bio_request *create(struct block_device *d, uint64_t lba,
                                   uint64_t sec, uint64_t size,
                                   enum bio_request_priority p,
                                   void (*cb)(struct bio_request *), bool write,
@@ -38,7 +38,7 @@ static struct bio_request *create(struct generic_disk *d, uint64_t lba,
     return req;
 }
 
-struct bio_request *bio_create_read(struct generic_disk *d, uint64_t lba,
+struct bio_request *bio_create_read(struct block_device *d, uint64_t lba,
                                     uint64_t sectors, uint64_t size,
                                     void (*cb)(struct bio_request *),
                                     void *user, void *buffer) {
@@ -46,7 +46,7 @@ struct bio_request *bio_create_read(struct generic_disk *d, uint64_t lba,
                   buffer);
 }
 
-struct bio_request *bio_create_write(struct generic_disk *d, uint64_t lba,
+struct bio_request *bio_create_write(struct block_device *d, uint64_t lba,
                                      uint64_t sectors, uint64_t size,
                                      void (*cb)(struct bio_request *),
                                      void *user, void *buffer) {

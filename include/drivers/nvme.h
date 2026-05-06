@@ -1,6 +1,6 @@
 /* @title: nVME */
 #pragma once
-#include <block/generic.h>
+#include <block/block.h>
 #include <block/sched.h>
 #include <compiler.h>
 #include <stdatomic.h>
@@ -156,7 +156,7 @@ struct nvme_device {
 
     uint32_t sector_size;
     uint64_t max_transfer_size;
-    struct generic_disk *generic_disk;
+    struct block_device *generic_disk;
 
     _Atomic uint64_t total_outstanding;
 
@@ -281,38 +281,38 @@ void nvme_alloc_admin_queues(struct nvme_device *nvme);
 void nvme_alloc_io_queues(struct nvme_device *nvme, uint32_t qid);
 struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
                                          uint8_t func);
-struct generic_disk *nvme_create_generic(struct nvme_device *nvme);
+struct block_device *nvme_create_generic(struct nvme_device *nvme);
 void nvme_print_identify(const struct nvme_identify_controller *ctrl);
 void nvme_print_namespace(const struct nvme_identify_namespace *ns);
 
-bool nvme_read_sector_wrapper(struct generic_disk *disk, uint64_t lba,
+bool nvme_read_sector_wrapper(struct block_device *disk, uint64_t lba,
                               uint8_t *buf, uint64_t cnt);
 
-bool nvme_read_sector_async_wrapper(struct generic_disk *disk,
+bool nvme_read_sector_async_wrapper(struct block_device *disk,
                                     struct nvme_request *req);
 
-bool nvme_write_sector_async_wrapper(struct generic_disk *disk,
+bool nvme_write_sector_async_wrapper(struct block_device *disk,
                                      struct nvme_request *req);
 
-bool nvme_send_nvme_req(struct generic_disk *d, struct nvme_request *r);
+bool nvme_send_nvme_req(struct block_device *d, struct nvme_request *r);
 
-bool nvme_write_sector_wrapper(struct generic_disk *disk, uint64_t lba,
+bool nvme_write_sector_wrapper(struct block_device *disk, uint64_t lba,
                                const uint8_t *buf, uint64_t cnt);
 
 enum irq_result nvme_isr_handler(void *ctx, uint8_t vector,
                                  struct irq_context *rsp);
 
-bool nvme_submit_bio_request(struct generic_disk *disk,
+bool nvme_submit_bio_request(struct block_device *disk,
                              struct bio_request *bio);
 
-bool nvme_should_coalesce(struct generic_disk *disk,
+bool nvme_should_coalesce(struct block_device *disk,
                           const struct bio_request *a,
                           const struct bio_request *b);
 
-void nvme_do_coalesce(struct generic_disk *disk, struct bio_request *into,
+void nvme_do_coalesce(struct block_device *disk, struct bio_request *into,
                       struct bio_request *from);
 
-void nvme_reorder(struct generic_disk *disk);
+void nvme_reorder(struct block_device *disk);
 void nvme_work(void *rvoid, void *dvoid);
 
 SPINLOCK_GENERATE_LOCK_UNLOCK_FOR_STRUCT(nvme_waiting_requests, lock);

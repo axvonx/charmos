@@ -1,6 +1,6 @@
 #include <acpi/lapic.h>
 #include <asm.h>
-#include <block/generic.h>
+#include <block/block.h>
 #include <console/printf.h>
 #include <drivers/ata.h>
 #include <mem/alloc.h>
@@ -207,7 +207,7 @@ static struct ide_request *request_init(uint64_t lba, uint8_t *buffer,
     return req;
 }
 
-bool ide_submit_bio_async(struct generic_disk *disk, struct bio_request *bio) {
+bool ide_submit_bio_async(struct block_device *disk, struct bio_request *bio) {
     struct ata_drive *ide = disk->driver_data;
     uint64_t lba = bio->lba;
     uint8_t *buf = bio->buffer;
@@ -248,7 +248,7 @@ static bool rw_sync(struct ata_drive *d, uint64_t lba, uint8_t *b, uint8_t cnt,
     return ret;
 }
 
-static bool rw_sync_wrapper(struct generic_disk *d, uint64_t lba, uint8_t *buf,
+static bool rw_sync_wrapper(struct block_device *d, uint64_t lba, uint8_t *buf,
                             uint64_t cnt, sync_fn function) {
     struct ata_drive *ide = d->driver_data;
 
@@ -278,12 +278,12 @@ static bool ide_write_sector(struct ata_drive *d, uint64_t lba, uint8_t *b,
     return rw_sync(d, lba, b, count, true, tok);
 }
 
-bool ide_read_sector_wrapper(struct generic_disk *d, uint64_t lba, uint8_t *buf,
+bool ide_read_sector_wrapper(struct block_device *d, uint64_t lba, uint8_t *buf,
                              uint64_t cnt) {
     return rw_sync_wrapper(d, lba, buf, cnt, ide_read_sector);
 }
 
-bool ide_write_sector_wrapper(struct generic_disk *d, uint64_t lba,
+bool ide_write_sector_wrapper(struct block_device *d, uint64_t lba,
                               const uint8_t *buf, uint64_t cnt) {
     return rw_sync_wrapper(d, lba, (uint8_t *) buf, cnt, ide_write_sector);
 }

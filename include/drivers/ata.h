@@ -1,6 +1,6 @@
 /* @title: ATA */
 #pragma once
-#include <block/generic.h>
+#include <block/block.h>
 #include <compiler.h>
 #include <log.h>
 #include <stdbool.h>
@@ -115,10 +115,10 @@ struct ata_drive {
 
 #define IDE_RETRY_COUNT 3
 
-bool ide_read_sector_wrapper(struct generic_disk *d, uint64_t lba, uint8_t *buf,
+bool ide_read_sector_wrapper(struct block_device *d, uint64_t lba, uint8_t *buf,
                              uint64_t cnt);
 
-bool ide_write_sector_wrapper(struct generic_disk *d, uint64_t lba,
+bool ide_write_sector_wrapper(struct block_device *d, uint64_t lba,
                               const uint8_t *buf, uint64_t cnt);
 
 uint8_t ide_detect_drives();
@@ -126,10 +126,10 @@ uint8_t ide_detect_drives();
 bool ata_setup_drive(struct ata_drive *ide, struct pci_device *devices,
                      uint64_t count, int channel, bool is_slave);
 
-struct generic_disk *ide_create_generic(struct ata_drive *ide);
+struct block_device *ide_create_generic(struct ata_drive *ide);
 
 void ide_identify(struct ata_drive *drive);
-void ide_print_info(struct generic_disk *d);
+void ide_print_info(struct block_device *d);
 
 struct ata_identify {
     uint16_t config;
@@ -206,6 +206,6 @@ bool atapi_identify(struct ata_drive *ide);
 void ata_init(struct pci_device *devices, uint64_t count);
 enum irq_result ide_irq_handler(void *ctx, uint8_t irq_num,
                                 struct irq_context *ct);
-void ide_reorder(struct generic_disk *disk);
-bool ide_submit_bio_async(struct generic_disk *d, struct bio_request *b);
-struct generic_disk *atapi_create_generic(struct ata_drive *d);
+void ide_reorder(struct block_device *disk);
+bool ide_submit_bio_async(struct block_device *d, struct bio_request *b);
+struct block_device *atapi_create_generic(struct ata_drive *d);

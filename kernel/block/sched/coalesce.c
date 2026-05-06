@@ -1,4 +1,4 @@
-#include <block/generic.h>
+#include <block/block.h>
 #include <block/sched.h>
 #include <console/printf.h>
 #include <mem/alloc.h>
@@ -13,7 +13,7 @@ static inline void set_coalesced(struct bio_request *into,
     from->skip = true;
 }
 
-static bool try_do_coalesce(struct generic_disk *disk, struct bio_request *into,
+static bool try_do_coalesce(struct block_device *disk, struct bio_request *into,
                             struct bio_request *from) {
     if (disk->ops->should_coalesce(disk, into, from)) {
         disk->ops->do_coalesce(disk, into, from);
@@ -24,7 +24,7 @@ static bool try_do_coalesce(struct generic_disk *disk, struct bio_request *into,
 }
 
 /* Try to merge candidates in the same queue */
-static bool try_merge_candidates(struct generic_disk *disk,
+static bool try_merge_candidates(struct block_device *disk,
                                  struct bio_request *iter,
                                  struct bio_request *start,
                                  struct bio_rqueue *queue) {
@@ -55,7 +55,7 @@ static bool try_merge_candidates(struct generic_disk *disk,
 static bool check_higher_queue(struct bio_scheduler *sched,
                                struct bio_rqueue *higher,
                                struct bio_request *candidate) {
-    struct generic_disk *disk = sched->disk;
+    struct block_device *disk = sched->disk;
     struct bio_request *iter, *tmp;
 
     list_for_each_entry_safe(iter, tmp, &higher->list, list) {
@@ -70,7 +70,7 @@ static bool check_higher_queue(struct bio_scheduler *sched,
 }
 
 /* Cross-priority coalescing between two adjacent queues */
-static bool coalesce_adjacent_queues(struct generic_disk *disk,
+static bool coalesce_adjacent_queues(struct block_device *disk,
                                      struct bio_rqueue *lower,
                                      struct bio_rqueue *higher) {
     if (list_empty(&lower->list) || list_empty(&higher->list))
@@ -103,7 +103,7 @@ static bool coalesce_adjacent_queues(struct generic_disk *disk,
 }
 
 /* Coalesce requests inside a single priority queue */
-static bool coalesce_priority_queue(struct generic_disk *disk,
+static bool coalesce_priority_queue(struct block_device *disk,
                                     struct bio_rqueue *queue) {
     if (list_empty(&queue->list))
         return false;
@@ -133,8 +133,8 @@ static bool coalesce_priority_queue(struct generic_disk *disk,
 
 /* Try to coalesce across all queues and priorities */
 bool bio_sched_try_coalesce(struct bio_scheduler *sched) {
-    struct generic_disk *disk = sched->disk;
-    if (disk_skip_coalesce(disk))
+    struct block_device *disk = sched->disk;
+    if (bdev_skip_coalesce(disk))
         return false;
 
     bool coalesced_any = false;

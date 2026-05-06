@@ -1,4 +1,4 @@
-#include <block/generic.h>
+#include <block/block.h>
 #include <fs/ext2.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -8,7 +8,7 @@ uint32_t ext2_block_to_lba(struct ext2_fs *fs, uint32_t block_num) {
     if (!fs)
         return -1;
 
-    struct generic_partition *p = fs->partition;
+    struct partition *p = fs->partition;
 
     uint32_t base_lba = block_num * fs->sectors_per_block;
     uint32_t lba = base_lba + p->start_lba;
@@ -20,7 +20,7 @@ uint8_t *ext2_block_read(struct ext2_fs *fs, uint32_t block_num,
     if (!fs)
         return NULL;
 
-    struct generic_disk *d = fs->drive;
+    struct block_device *d = fs->drive;
 
     uint32_t lba = ext2_block_to_lba(fs, block_num);
     uint32_t spb = fs->sectors_per_block;
@@ -38,7 +38,7 @@ bool ext2_block_write(struct ext2_fs *fs, struct bcache_entry *ent,
     if (!fs || !ent)
         return false;
 
-    struct generic_disk *d = fs->drive;
+    struct block_device *d = fs->drive;
 
     bcache_write_queue(d, ent, fs->sectors_per_block, prio);
 

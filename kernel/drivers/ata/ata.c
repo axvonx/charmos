@@ -70,16 +70,16 @@ bool ata_setup_drive(struct ata_drive *ide, struct pci_device *devices,
         struct pci_device *curr = &devices[i];
 
         if (curr->class_code == 1 && curr->subclass == 1) {
-            uint32_t bar = pci_read_bar(curr->bus, curr->device, curr->function,
+            uint32_t bar = pci_read_bar(curr->bus, curr->dev, curr->function,
                                         channel * 2);
 
-            uint32_t ctrl_bar = pci_read_bar(curr->bus, curr->device,
+            uint32_t ctrl_bar = pci_read_bar(curr->bus, curr->dev,
                                              curr->function, channel * 2 + 1);
             ide->io_base = (bar & 1) ? (bar & 0xFFFFFFFC)
                                      : ((channel == 0) ? ATA_PRIMARY_IO
                                                        : ATA_SECONDARY_IO);
 
-            uint8_t prog_if = pci_read_config8(curr->bus, curr->device,
+            uint8_t prog_if = pci_read_config8(curr->bus, curr->dev,
                                                curr->function, PCI_PROG_IF);
             bool primary_native = (prog_if & 0x01);
             bool secondary_native = (prog_if & 0x04);
@@ -88,7 +88,7 @@ bool ata_setup_drive(struct ata_drive *ide, struct pci_device *devices,
                 (channel == 1 && !secondary_native)) {
                 ide->irq = (channel == 0) ? 14 : 15;
             } else {
-                ide->irq = pci_read_config8(curr->bus, curr->device,
+                ide->irq = pci_read_config8(curr->bus, curr->dev,
                                             curr->function, PCI_INTERRUPT_LINE);
             }
 
@@ -136,7 +136,7 @@ void ata_init(struct pci_device *devices, uint64_t count) {
         for (int j = 0; j < 2; j++) {
             int ind = i * 2 + j;
             if (ata_setup_drive(&drives[ind], devices, count, i, j)) {
-                struct generic_disk *d = NULL;
+                struct block_device *d = NULL;
 
                 if (drives[ind].type == IDE_TYPE_ATA) {
                     d = ide_create_generic(&drives[ind]);

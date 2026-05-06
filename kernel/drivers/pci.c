@@ -51,9 +51,10 @@ static void init_device(struct pci_device *dev) {
         subclass = dev->subclass == d->subclass;
         prog_if = d->prog_if == 0xFF ? true : dev->prog_if == d->prog_if;
         vendor = d->vendor_id == 0xFFFF ? true : dev->vendor_id == d->vendor_id;
+        dev->device.driver_data = dev;
 
         if (class && subclass && prog_if && vendor) {
-            d->initialize(dev->bus, dev->device, dev->function, dev);
+            d->driver.probe(&dev->device);
         }
     }
 }
@@ -123,7 +124,7 @@ void pci_scan_devices(struct pci_device **devices_out, uint64_t *count_out) {
 
                 pci_devices[pci_device_count++] =
                     (struct pci_device){.bus = bus,
-                                        .device = device,
+                                        .dev = device,
                                         .function = function,
                                         .vendor_id = vendor_id,
                                         .device_id = device_id,

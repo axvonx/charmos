@@ -154,7 +154,7 @@ static bool pt_walk_to_level(struct pt_walk *w, uintptr_t virt,
     return true;
 }
 
-/* TODO: */
+/* TODO: OOM */
 static void enqueue_pt_free(paddr_t phys) {
     if (global.current_bootstage < BOOTSTAGE_MID_MP)
         return pmm_free_page(phys);
@@ -189,7 +189,9 @@ void vmm_reclaim_page_tables(void) {
             min_epoch = seen;
     }
 
-    enum irql irql = spin_lock(&pt_free_lock);
+    enum irql irql = IRQL_NONE;
+    if (!spin_trylock(&pt_free_lock, &irql))
+        goto out;
 
     struct pt_deferred_free **pp = &pt_free_list;
     while (*pp) {
@@ -211,6 +213,7 @@ void vmm_reclaim_page_tables(void) {
 
     spin_unlock(&pt_free_lock, irql);
 
+out:
     smp_core()->reclaiming_page_tables = false;
 }
 

@@ -1,6 +1,6 @@
 #ifdef TEST_BIO
 #include <block/bio.h>
-#include <block/generic.h>
+#include <block/block.h>
 #include <fs/ext2.h>
 #include <fs/vfs.h>
 #include <global.h>
@@ -32,7 +32,7 @@ static void bio_callback(struct bio_request *req) {
 TEST_REGISTER(blkdev_bio_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
     EXT2_INIT;
     struct ext2_fs *fs = root->fs_data;
-    struct generic_disk *d = fs->drive;
+    struct block_device *d = fs->drive;
     uint64_t run_times = 1;
     enable_interrupts();
 

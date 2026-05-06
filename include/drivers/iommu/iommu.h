@@ -37,7 +37,7 @@ struct iommu_ops {
                           uint8_t bus, uint8_t dev, uint8_t fn);
 
     enum iommu_error (*map)(struct iommu_domain *domain, iova_t iova,
-                            paddr_t paddr, size_t size, uint32_t perm);
+                            paddr_t paddr, size_t size, enum iommu_perms perm);
     void (*unmap)(struct iommu_domain *domain, iova_t iova, size_t size);
 
     void (*flush_iotlb_domain)(struct iommu_domain *domain);
@@ -77,14 +77,5 @@ enum iommu_error iommu_attach_device(struct iommu_domain *domain,
 void iommu_detach_device(struct iommu_domain *domain, struct device *dev);
 
 enum iommu_error iommu_map(struct iommu_domain *domain, iova_t iova,
-                           uint64_t pa, size_t size, uint32_t perm);
+                           uint64_t pa, size_t size, enum iommu_perms perm);
 void iommu_unmap(struct iommu_domain *domain, iova_t iova, size_t size);
-
-struct dma_region {
-    iova_t iova; /* address the device uses */
-    void *virt;  /* address the CPU uses     */
-    size_t size;
-};
-
-struct dma_region dma_alloc(struct device *dev, size_t size);
-void dma_free(struct device *dev, struct dma_region region);

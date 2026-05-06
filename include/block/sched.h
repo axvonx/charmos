@@ -2,7 +2,7 @@
 #pragma once
 #include <block/bcache.h>
 #include <block/bio.h>
-#include <block/generic.h>
+#include <block/block.h>
 #include <fs/detect.h>
 #include <sch/sched.h>
 #include <stdatomic.h>
@@ -130,7 +130,7 @@ struct bio_rqueue {
 };
 
 struct bio_scheduler {
-    struct generic_disk *disk;
+    struct block_device *disk;
     struct mutex lock;
     uint64_t total_requests;
     struct bio_rqueue queues[BIO_SCHED_LEVELS];
@@ -138,14 +138,14 @@ struct bio_scheduler {
 };
 
 struct bio_scheduler_ops {
-    bool (*should_coalesce)(struct generic_disk *dev,
+    bool (*should_coalesce)(struct block_device *dev,
                             const struct bio_request *a,
                             const struct bio_request *b);
 
-    void (*do_coalesce)(struct generic_disk *dev, struct bio_request *into,
+    void (*do_coalesce)(struct block_device *dev, struct bio_request *into,
                         struct bio_request *from);
 
-    void (*reorder)(struct generic_disk *dev);
+    void (*reorder)(struct block_device *dev);
 
     /* maximum request wait time for each queue level before first boost */
     uint32_t max_wait_time[BIO_SCHED_LEVELS];
@@ -172,18 +172,18 @@ struct bio_scheduler_ops {
     uint64_t min_wait_ms;
 };
 
-bool noop_should_coalesce(struct generic_disk *disk,
+bool noop_should_coalesce(struct block_device *disk,
                           const struct bio_request *a,
                           const struct bio_request *b);
 
-void noop_do_coalesce(struct generic_disk *disk, struct bio_request *into,
+void noop_do_coalesce(struct block_device *disk, struct bio_request *into,
                       struct bio_request *from);
 
-void noop_reorder(struct generic_disk *disk);
+void noop_reorder(struct block_device *disk);
 
-void bio_sched_enqueue(struct generic_disk *disk, struct bio_request *req);
+void bio_sched_enqueue(struct block_device *disk, struct bio_request *req);
 
-void bio_sched_dequeue(struct generic_disk *disk, struct bio_request *req,
+void bio_sched_dequeue(struct block_device *disk, struct bio_request *req,
                        bool already_locked);
 
 void bio_sched_enqueue_internal(struct bio_scheduler *sched,
@@ -191,17 +191,17 @@ void bio_sched_enqueue_internal(struct bio_scheduler *sched,
 void bio_sched_dequeue_internal(struct bio_scheduler *sched,
                                 struct bio_request *req);
 
-void bio_sched_dispatch_partial(struct generic_disk *disk,
+void bio_sched_dispatch_partial(struct block_device *disk,
                                 enum bio_request_priority prio);
 
-void bio_sched_dispatch_all(struct generic_disk *disk);
+void bio_sched_dispatch_all(struct block_device *disk);
 
 void bio_sched_try_early_dispatch(struct bio_scheduler *sched);
 
 bool bio_sched_try_coalesce(struct bio_scheduler *sched);
 bool bio_sched_boost_starved(struct bio_scheduler *sched);
 
-struct bio_scheduler *bio_sched_create(struct generic_disk *disk,
+struct bio_scheduler *bio_sched_create(struct block_device *disk,
                                        struct bio_scheduler_ops *ops);
 
 static inline void update_request_timestamp(struct bio_request *req) {
@@ -228,7 +228,7 @@ static inline bool sched_is_empty(struct bio_scheduler *sched) {
 
 static inline bool submit_if_skip_sched(struct bio_scheduler *sched,
                                         struct bio_request *req) {
-    if (disk_skip_sched(sched->disk)) {
+    if (bdev_skip_sched(sched->disk)) {
         sched->disk->submit_bio_async(sched->disk, req);
         return true;
     }

@@ -746,7 +746,7 @@ void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
     struct usb_controller *ctrl = kzalloc(sizeof(struct usb_controller));
     ctrl->driver_data = dev;
     ctrl->type = USB_CONTROLLER_XHCI;
-    ctrl->ops = xhci_ctrl_ops;
+    ctrl->ops = &xhci_ctrl_ops;
     dev->controller = ctrl;
 
     thread_spawn("xhci_disconnect_worker", xhci_work_port_disconnect, dev);
@@ -769,12 +769,14 @@ void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
     xhci_info("Device initialized successfully");
 }
 
-static void xhci_pci_init(uint8_t bus, uint8_t slot, uint8_t func,
-                          struct pci_device *dev) {
+static enum errno xhci_pci_init(struct device *d) {
+    struct pci_device *dev = d->driver_data;
     switch (dev->prog_if) {
-    case 0x30: xhci_init(bus, slot, func, dev);
+    case 0x30: xhci_init(dev->bus, dev->dev, dev->function, dev);
     default: break;
     }
+
+    return ERR_OK;
 }
 
 PCI_DEV_REGISTER(xhci, 0x0C, 0x03, 0x030, 0xFFFF, xhci_pci_init)

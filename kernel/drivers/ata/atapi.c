@@ -1,6 +1,6 @@
 #include <asm.h>
 #include <block/bcache.h>
-#include <block/generic.h>
+#include <block/block.h>
 #include <console/printf.h>
 #include <drivers/ata.h>
 #include <mem/alloc.h>
@@ -37,7 +37,7 @@ bool atapi_identify(struct ata_drive *ide) {
     return true;
 }
 
-bool atapi_read_sector(struct generic_disk *disk, uint64_t lba, uint8_t *buffer,
+bool atapi_read_sector(struct block_device *disk, uint64_t lba, uint8_t *buffer,
                        uint64_t sector_count) {
     if (sector_count != 1)
         return false;
@@ -108,7 +108,7 @@ bool atapi_read_sector(struct generic_disk *disk, uint64_t lba, uint8_t *buffer,
     return true;
 }
 
-bool atapi_write_sector(struct generic_disk *disk, uint64_t lba,
+bool atapi_write_sector(struct block_device *disk, uint64_t lba,
                         const uint8_t *buffer, uint64_t sector_count) {
     (void) disk;
     (void) lba;
@@ -118,7 +118,7 @@ bool atapi_write_sector(struct generic_disk *disk, uint64_t lba,
     // TODO: newer CDs support write :boom:
 }
 
-bool atapi_read_sector_wrapper(struct generic_disk *disk, uint64_t start_lba,
+bool atapi_read_sector_wrapper(struct block_device *disk, uint64_t start_lba,
                                uint8_t *buffer, uint64_t sector_count) {
     uint8_t *buf_ptr = buffer;
     for (uint64_t i = 0; i < sector_count; i++) {
@@ -130,13 +130,13 @@ bool atapi_read_sector_wrapper(struct generic_disk *disk, uint64_t start_lba,
     return true;
 }
 
-void atapi_print_info(struct generic_disk *disk) {
+void atapi_print_info(struct block_device *disk) {
     struct ata_drive *d = disk->driver_data;
     ata_ident_print(d->identify_data);
 }
 
-struct generic_disk *atapi_create_generic(struct ata_drive *d) {
-    struct generic_disk *ret = kmalloc(sizeof(struct generic_disk));
+struct block_device *atapi_create_generic(struct ata_drive *d) {
+    struct block_device *ret = kmalloc(sizeof(struct block_device));
 
     if (!ret)
         panic("Could not allocate space for ATAPI device\n");
@@ -145,7 +145,7 @@ struct generic_disk *atapi_create_generic(struct ata_drive *d) {
     ret->sector_size = 2048;
     ret->read_sector = atapi_read_sector_wrapper;
     ret->write_sector = atapi_write_sector;
-    ret->type = G_ATAPI_DRIVE;
+    ret->type = BDEV_ATAPI_DRIVE;
     ret->cache = kmalloc(sizeof(struct bcache));
     if (!ret->cache)
         panic("Could not allocate space for ATAPI device block cache\n");

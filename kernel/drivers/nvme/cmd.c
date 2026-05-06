@@ -1,7 +1,7 @@
 #include <acpi/lapic.h>
 #include <asm.h>
 #include <block/bio.h>
-#include <block/generic.h>
+#include <block/block.h>
 #include <block/sched.h>
 #include <console/printf.h>
 #include <drivers/mmio.h>

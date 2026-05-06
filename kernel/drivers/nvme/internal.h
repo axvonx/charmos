@@ -36,10 +36,10 @@ LOG_HANDLE_EXTERN(nvme);
 #define NVME_STATUS_CONFLICTING_ATTRIBUTES 0x80
 #define NVME_STATUS_INVALID_PROT_INFO 0x81
 
-bool nvme_read_sector_async(struct generic_disk *disk,
+bool nvme_read_sector_async(struct block_device *disk,
                             struct nvme_request *req);
 
-bool nvme_write_sector_async(struct generic_disk *disk,
+bool nvme_write_sector_async(struct block_device *disk,
                              struct nvme_request *req);
 
 static inline enum workqueue_error nvme_work_enqueue(struct nvme_device *dev,

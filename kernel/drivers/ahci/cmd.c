@@ -1,7 +1,7 @@
 #include <acpi/lapic.h>
 #include <asm.h>
 #include <block/bio.h>
-#include <block/generic.h>
+#include <block/block.h>
 #include <drivers/ahci.h>
 #include <drivers/ata.h>
 #include <irq/idt.h>
@@ -213,7 +213,7 @@ static void ahci_on_bio_complete(struct ahci_request *req) {
     kfree(req);
 }
 
-bool ahci_submit_bio_request(struct generic_disk *disk,
+bool ahci_submit_bio_request(struct block_device *disk,
                              struct bio_request *bio) {
     struct ahci_disk *ahci_disk = (struct ahci_disk *) disk->driver_data;
     struct ahci_request *ahci_req = kzalloc(sizeof(struct ahci_request));

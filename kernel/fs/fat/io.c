@@ -39,7 +39,7 @@ bool fat_write_fat_entry(struct fat_fs *fs, uint32_t cluster, uint32_t value) {
 
 static bool fat12_write_fat_entry(struct fat_fs *fs, uint32_t cluster,
                                   uint32_t value) {
-    struct generic_disk *disk = fs->disk;
+    struct block_device *disk = fs->disk;
     uint32_t fat_offset = cluster + (cluster / 2);
     uint16_t offset = fat_offset % fs->bpb->bytes_per_sector;
     uint32_t fat_size = fs->fat_size;
@@ -107,7 +107,7 @@ static bool fat12_write_fat_entry(struct fat_fs *fs, uint32_t cluster,
 // TODO: we can combine these with fat32 too
 static bool fat16_write_fat_entry(struct fat_fs *fs, uint32_t cluster,
                                   uint32_t value) {
-    struct generic_disk *disk = fs->disk;
+    struct block_device *disk = fs->disk;
     uint32_t fat_offset = cluster * 2;
     uint32_t offset = fat_offset % fs->bpb->bytes_per_sector;
     uint32_t fat_size = fs->bpb->fat_size_16;
@@ -142,7 +142,7 @@ static bool fat16_write_fat_entry(struct fat_fs *fs, uint32_t cluster,
 
 static bool fat32_write_fat_entry(struct fat_fs *fs, uint32_t cluster,
                                   uint32_t value) {
-    struct generic_disk *disk = fs->disk;
+    struct block_device *disk = fs->disk;
     uint32_t fat_offset = cluster * 4;
     uint32_t offset = fat_offset % fs->bpb->bytes_per_sector;
     uint32_t fat_size = fs->fat_size;
@@ -206,7 +206,7 @@ uint32_t fat_read_fat_entry(struct fat_fs *fs, uint32_t cluster) {
 }
 
 static uint32_t fat12_read_fat_entry(struct fat_fs *fs, uint32_t cluster) {
-    struct generic_disk *disk = fs->disk;
+    struct block_device *disk = fs->disk;
     uint32_t fat_offset = cluster + (cluster / 2);
     uint16_t offset = fat_offset % fs->bpb->bytes_per_sector;
     uint32_t sector = fs->bpb->reserved_sector_count +
@@ -248,7 +248,7 @@ done:
 // TODO: These are kinda same-y, can combine into one function
 
 static uint32_t fat16_read_fat_entry(struct fat_fs *fs, uint32_t cluster) {
-    struct generic_disk *disk = fs->disk;
+    struct block_device *disk = fs->disk;
     uint32_t fat_offset = cluster * 2;
     uint32_t offset = fat_offset % fs->bpb->bytes_per_sector;
     uint32_t sector = fs->bpb->reserved_sector_count +
@@ -269,7 +269,7 @@ static uint32_t fat16_read_fat_entry(struct fat_fs *fs, uint32_t cluster) {
 }
 
 static uint32_t fat32_read_fat_entry(struct fat_fs *fs, uint32_t cluster) {
-    struct generic_disk *disk = fs->disk;
+    struct block_device *disk = fs->disk;
     uint32_t fat_offset = cluster * 4;
     uint32_t offset = fat_offset % fs->bpb->bytes_per_sector;
     uint32_t sector = fs->bpb->reserved_sector_count +

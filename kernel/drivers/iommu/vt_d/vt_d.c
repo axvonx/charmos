@@ -17,10 +17,9 @@ void vtd_write_gcmd(struct vtd_unit *u, uint32_t cmd) {
     uint32_t status = mmio_read_32(&u->regs->global_status);
 
     uint32_t preserved =
-        status &
-        (GSTS_TRANSLATION_ENABLED | GSTS_ROOT_TABLE_PTR_SET |
-         GSTS_QUEUED_INVAL_ENABLED | GSTS_INTERRUPT_REMAP_ENABLED |
-         GSTS_COMPAT_FORMAT_INTERRUPT_STATUS);
+        status & (GSTS_TRANSLATION_ENABLED | GSTS_ROOT_TABLE_PTR_SET |
+                  GSTS_QUEUED_INVAL_ENABLED | GSTS_INTERRUPT_REMAP_ENABLED |
+                  GSTS_COMPAT_FORMAT_INTERRUPT_STATUS);
 
     mmio_write_32(&u->regs->global_command, preserved | cmd);
 }
@@ -44,8 +43,7 @@ enum iommu_error vtd_iq_init(struct vtd_unit *u) {
         return IOMMU_ERR_UNSUPPORTED;
     }
 
-    if (mmio_read_32(&u->regs->global_status) &
-        GSTS_QUEUED_INVAL_ENABLED) {
+    if (mmio_read_32(&u->regs->global_status) & GSTS_QUEUED_INVAL_ENABLED) {
         vtd_info("QI already enabled, disabling before reset");
         vtd_write_gcmd(u, mmio_read_32(&u->regs->global_status) &
                               ~GCMD_QUEUED_INVAL_ENABLE);
@@ -112,7 +110,7 @@ enum iommu_error vtd_root_table_init(struct vtd_unit *u) {
     vtd_write_gcmd(u, GCMD_SET_ROOT_TABLE_PTR);
     vtd_wait_gsts(u, GSTS_ROOT_TABLE_PTR_SET, true);
 
-    vtd_iq_submit(u, CONTEXT_INVAL_DESC_GLOBAL);
+    vtd_iq_submit(u, CTX_INVAL_DESC_GLOBAL);
     vtd_iq_submit(u, IOTLB_INVAL_DESC_GLOBAL);
     vtd_iq_flush(u);
 
@@ -144,9 +142,8 @@ static paddr_t vtd_build_identity_sl(struct vtd_unit *u) {
 
     for (int i = 0; i < 512; i++) {
         pdpt[i] = ((uint64_t) i << 30) | SL_PTE_LARGE_PAGE |
-                  SL_PTE_MEMORY_TYPE_WRITE_BACK |
-                  SL_PTE_IGNORE_PAT | SL_PTE_READ |
-                  SL_PTE_WRITE;
+                  SL_PTE_MEMORY_TYPE_WRITE_BACK | SL_PTE_IGNORE_PAT |
+                  SL_PTE_READ | SL_PTE_WRITE;
     }
 
     /* SL_TABLE_ENTRY sets the physical address + PRESENT (R|W) */
@@ -169,10 +166,9 @@ static enum iommu_error vtd_passthrough_all_devices(struct vtd_unit *u) {
 
     const uint16_t domain_id = 1;
 
-    uint64_t ctx_lo = CTX_ENTRY_SET_LO(
-        sl_phys, CTX_ENTRY_TRANSLATION_TYPE_UNTRANSLATED);
-    uint64_t ctx_hi =
-        CTX_ENTRY_SET_HI(domain_id, CTX_ENTRY_ADDR_WIDTH_48BIT);
+    uint64_t ctx_lo =
+        CTX_ENTRY_SET_LO(sl_phys, CTX_ENTRY_TRANSLATION_TYPE_UNTRANSLATED);
+    uint64_t ctx_hi = CTX_ENTRY_SET_HI(domain_id, CTX_ENTRY_ADDR_WIDTH_48BIT);
 
     struct vtd_root_entry *root = (struct vtd_root_entry *) u->root_table;
 
@@ -198,7 +194,7 @@ static enum iommu_error vtd_passthrough_all_devices(struct vtd_unit *u) {
         }
     }
 
-    vtd_iq_submit(u, CONTEXT_INVAL_DESC_GLOBAL);
+    vtd_iq_submit(u, CTX_INVAL_DESC_GLOBAL);
     vtd_iq_submit(u, IOTLB_INVAL_DESC_GLOBAL);
     vtd_iq_flush(u);
 

@@ -38,7 +38,7 @@ static void check_bcache(void) {
 
 static void flush() {
     struct ext2_fs *fs = global.root_node->fs_data;
-    struct generic_disk *d = fs->drive;
+    struct block_device *d = fs->drive;
 
     bio_sched_dispatch_all(d);
 

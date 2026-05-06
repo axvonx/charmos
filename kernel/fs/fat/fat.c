@@ -1,4 +1,4 @@
-#include <block/generic.h>
+#include <block/block.h>
 #include <console/printf.h>
 #include <fs/fat.h>
 #include <fs/mbr.h>
@@ -50,7 +50,7 @@ uint32_t fat_cluster_to_lba(const struct fat_fs *fs, uint32_t cluster) {
            fs->volume_base_lba;
 }
 
-struct fat_bpb *fat_read_bpb(struct generic_disk *drive,
+struct fat_bpb *fat_read_bpb(struct block_device *drive,
                              enum fat_fstype *out_type, uint32_t *out_lba,
                              uint32_t base_lba) {
     uint8_t *sector = kmalloc(drive->sector_size);
@@ -127,7 +127,7 @@ struct fat_bpb *fat_read_bpb(struct generic_disk *drive,
     return NULL;
 }
 
-struct vfs_node *fat_g_mount(struct generic_partition *p) {
+struct vfs_node *fat_g_mount(struct partition *p) {
     if (!p || !p->disk)
         return NULL;
 
@@ -137,7 +137,7 @@ struct vfs_node *fat_g_mount(struct generic_partition *p) {
 
     enum fat_fstype type;
     uint32_t lba;
-    struct generic_disk *d = p->disk;
+    struct block_device *d = p->disk;
     struct fat_bpb *bpb = fat_read_bpb(d, &type, &lba, p->start_lba);
     if (!bpb) {
         kfree(fs);
@@ -212,7 +212,7 @@ struct vfs_node *fat_g_mount(struct generic_partition *p) {
     return NULL; // TODO: implement vfs here
 }
 
-void fat_g_print(struct generic_partition *d) {
+void fat_g_print(struct partition *d) {
     if (!d || !d->fs_data)
         return;
 

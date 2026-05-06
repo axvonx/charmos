@@ -1,4 +1,4 @@
-#include <block/generic.h>
+#include <block/block.h>
 #include <console/printf.h>
 #include <fs/iso9660.h>
 #include <mem/alloc.h>
@@ -20,13 +20,12 @@ bool iso9660_read_file(struct iso9660_fs *fs, uint32_t lba, uint32_t size,
     return true;
 }
 
-bool iso9660_parse_pvd(struct generic_partition *p,
-                       struct iso9660_pvd *out_pvd) {
+bool iso9660_parse_pvd(struct partition *p, struct iso9660_pvd *out_pvd) {
     uint8_t *buffer = kmalloc(ISO9660_SECTOR_SIZE);
     if (!buffer)
         return false;
 
-    struct generic_disk *disk = p->disk;
+    struct block_device *disk = p->disk;
 
     if (!disk->read_sector(disk, ISO9660_PVD_SECTOR + p->start_lba, buffer,
                            1)) {
@@ -81,9 +80,9 @@ void iso9660_pvd_print(const struct iso9660_pvd *pvd) {
            pvd->opt_m_path_table_loc);
 }
 
-struct vfs_node *iso9660_mount(struct generic_partition *p) {
+struct vfs_node *iso9660_mount(struct partition *p) {
     struct iso9660_pvd pvd;
-    struct generic_disk *disk = p->disk;
+    struct block_device *disk = p->disk;
     if (iso9660_parse_pvd(p, &pvd)) {
         struct iso9660_fs *fs = kzalloc(sizeof(struct iso9660_fs));
         struct iso9660_pvd *new_pvd = kzalloc(sizeof(struct iso9660_pvd));
@@ -148,7 +147,7 @@ void iso9660_ls(struct iso9660_fs *fs, uint32_t lba, uint32_t size) {
     kfree(dir_data);
 }
 
-void iso9660_print(struct generic_partition *disk) {
+void iso9660_print(struct partition *disk) {
     struct iso9660_pvd pvd;
     struct iso9660_fs *fs = disk->fs_data;
     if (!iso9660_parse_pvd(disk, &pvd)) {

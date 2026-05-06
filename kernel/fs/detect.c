@@ -1,4 +1,4 @@
-#include <block/generic.h>
+#include <block/block.h>
 #include <compiler.h>
 #include <console/printf.h>
 #include <fs/detect.h>
@@ -33,19 +33,19 @@ const char *detect_fstr(enum fs_type type) {
     }
 }
 
-struct vfs_node *dummy_mount(struct generic_partition *p) {
+struct vfs_node *dummy_mount(struct partition *p) {
     (void) p;
     return NULL;
 }
 
-void dummy_print(struct generic_partition *p) {
+void dummy_print(struct partition *p) {
     printf("error: filesystem \"%s\" not implemented\n",
            detect_fstr(p->disk->fs_type));
 }
 
-static void make_partition(struct generic_partition *part,
-                           struct generic_disk *disk, uint64_t start_lba,
-                           uint64_t sector_count, uint8_t idx) {
+static void make_partition(struct partition *part, struct block_device *disk,
+                           uint64_t start_lba, uint64_t sector_count,
+                           uint8_t idx) {
     part->disk = disk;
     part->start_lba = start_lba;
     part->sector_count = sector_count;
@@ -57,7 +57,7 @@ static void make_partition(struct generic_partition *part,
     part->mount = NULL;
 }
 
-static enum errno detect_mbr_partitions(struct generic_disk *disk,
+static enum errno detect_mbr_partitions(struct block_device *disk,
                                         uint8_t *sector) {
     struct mbr *mbr = (struct mbr *) sector;
 
@@ -75,7 +75,7 @@ static enum errno detect_mbr_partitions(struct generic_disk *disk,
         return ERR_FS_CORRUPT;
 
     disk->partition_count = count;
-    disk->partitions = kzalloc(sizeof(struct generic_partition) * count);
+    disk->partitions = kzalloc(sizeof(struct partition) * count);
     if (unlikely(!disk->partitions))
         return ERR_NO_MEM;
 
@@ -85,13 +85,13 @@ static enum errno detect_mbr_partitions(struct generic_disk *disk,
         if (p->type == 0)
             continue;
 
-        struct generic_partition *part = &disk->partitions[idx++];
+        struct partition *part = &disk->partitions[idx++];
         make_partition(part, disk, p->lba_start, p->sector_count, idx);
     }
     return ERR_OK;
 }
 
-static bool detect_gpt_partitions(struct generic_disk *disk, uint8_t *sector) {
+static bool detect_gpt_partitions(struct block_device *disk, uint8_t *sector) {
     if (!disk->read_sector(disk, 1, sector, 1))
         return false;
 
@@ -121,7 +121,7 @@ static bool detect_gpt_partitions(struct generic_disk *disk, uint8_t *sector) {
         return false;
 
     disk->partition_count = valid_count;
-    disk->partitions = kzalloc(sizeof(struct generic_partition) * valid_count);
+    disk->partitions = kzalloc(sizeof(struct partition) * valid_count);
 
     int idx = 0;
     for (uint32_t i = 0; i < count; i++) {
@@ -133,7 +133,7 @@ static bool detect_gpt_partitions(struct generic_disk *disk, uint8_t *sector) {
         entry = (void *) (sector + (i % entries_per_sector) * size);
 
         if (entry->first_lba && entry->last_lba) {
-            struct generic_partition *part = &disk->partitions[idx++];
+            struct partition *part = &disk->partitions[idx++];
             uint64_t sector_count = entry->last_lba - entry->first_lba + 1;
             make_partition(part, disk, entry->first_lba, sector_count, idx);
         }
@@ -141,8 +141,8 @@ static bool detect_gpt_partitions(struct generic_disk *disk, uint8_t *sector) {
     return true;
 }
 
-static enum fs_type detect_partition_fs(struct generic_disk *disk,
-                                        struct generic_partition *part,
+static enum fs_type detect_partition_fs(struct block_device *disk,
+                                        struct partition *part,
                                         uint8_t *sector) {
     if (!disk->read_sector(disk, part->start_lba, sector, 1))
         return FS_UNKNOWN;
@@ -185,7 +185,7 @@ static enum fs_type detect_partition_fs(struct generic_disk *disk,
     return FS_UNKNOWN;
 }
 
-static void assign_fs_ops(struct generic_partition *part) {
+static void assign_fs_ops(struct partition *part) {
     switch (part->fs_type) {
     case FS_EXT2: part->mount = ext2_g_mount; break;
     case FS_FAT12:
@@ -198,7 +198,7 @@ static void assign_fs_ops(struct generic_partition *part) {
     }
 }
 
-enum fs_type detect_fs(struct generic_disk *disk) {
+enum fs_type detect_fs(struct block_device *disk) {
     uint8_t *sector = kmalloc_aligned(PAGE_SIZE, PAGE_SIZE);
     if (!sector)
         return FS_UNKNOWN;
@@ -228,16 +228,16 @@ enum fs_type detect_fs(struct generic_disk *disk) {
     if (!found_partitions) {
         /* No partition table - create one big partition spanning the disk */
         disk->partition_count = 1;
-        disk->partitions = kzalloc(sizeof(struct generic_partition));
+        disk->partitions = kzalloc(sizeof(struct partition));
         if (!disk->partitions)
             return FS_UNKNOWN;
 
-        struct generic_partition *part = &disk->partitions[0];
+        struct partition *part = &disk->partitions[0];
         make_partition(part, disk, 0, disk->total_sectors, 1);
     }
 
     for (uint64_t i = 0; i < disk->partition_count; i++) {
-        struct generic_partition *part = &disk->partitions[i];
+        struct partition *part = &disk->partitions[i];
         part->disk = disk;
         part->fs_type = detect_partition_fs(disk, part, sector);
         assign_fs_ops(part);

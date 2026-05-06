@@ -39,7 +39,7 @@ struct bio_request {
 
     /* starting priority - can get boosted */
     enum bio_request_priority priority;
-    /* const */ struct generic_disk *disk;
+    /* const */ struct block_device *disk;
 
     /* starting logical block address */
     /* const */ uint64_t lba;
@@ -86,12 +86,12 @@ struct bio_request {
 #define bio_request_from_list_node(ln)                                         \
     (container_of(ln, struct bio_request, list))
 
-struct bio_request *bio_create_write(struct generic_disk *d, uint64_t lba,
+struct bio_request *bio_create_write(struct block_device *d, uint64_t lba,
                                      uint64_t sectors, uint64_t size,
                                      void (*cb)(struct bio_request *),
                                      void *user, void *buf);
 
-struct bio_request *bio_create_read(struct generic_disk *d, uint64_t lba,
+struct bio_request *bio_create_read(struct block_device *d, uint64_t lba,
                                     uint64_t sectors, uint64_t size,
                                     void (*cb)(struct bio_request *),
                                     void *user, void *buf);

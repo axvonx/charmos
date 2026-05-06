@@ -5,6 +5,7 @@
 #include <drivers/iommu/iommu.h>
 #include <log.h>
 #include <math/bit.h>
+#include <sync/spinlock.h>
 LOG_SITE_EXTERN(vtd);
 LOG_HANDLE_EXTERN(vtd);
 
@@ -83,6 +84,8 @@ struct vtd_unit {
     uint64_t ecap;
     uint16_t segment;
     uint32_t domain_count;
+    uint8_t *domain_bitmap;
+    struct spinlock domain_bitmap_lock;
 
     uint64_t *root_table;
     paddr_t root_table_phys;
@@ -308,18 +311,15 @@ _Static_assert(sizeof(struct vtd_context_entry) == 16, "ctx entry must be 16B");
 
 /*
  * Second-Level Page-Table Entry (PTE).
- * "SL" prefix abbreviates "Second-Level". Bit-field acronyms inlined below.
  */
 #define SL_PTE_READ BIT(0)
 #define SL_PTE_WRITE BIT(1)
-#define SL_PTE_PRESENT                                               \
-    (SL_PTE_READ | SL_PTE_WRITE)
+#define SL_PTE_PRESENT (SL_PTE_READ | SL_PTE_WRITE)
 #define SL_PTE_EXECUTE BIT(2)
 #define SL_PTE_MEMORY_TYPE_SHIFT 3 /* EMT - Extended Memory Type */
 #define SL_PTE_MEMORY_TYPE_WRITE_BACK (6ULL << 3)  /* WB */
 #define SL_PTE_MEMORY_TYPE_UNCACHEABLE (0ULL << 3) /* UC */
-#define SL_PTE_IGNORE_PAT                                            \
-    BIT(6) /* IPAT - Ignore Page Attribute Table */
+#define SL_PTE_IGNORE_PAT BIT(6) /* IPAT - Ignore Page Attribute Table */
 #define SL_PTE_LARGE_PAGE BIT(7) /* PS - Page Size */
 #define SL_PTE_SNOOP BIT(11)     /* SNP */
 #define SL_PTE_ADDR_MASK (~0xFFFULL & ((1ULL << 52) - 1))
@@ -328,13 +328,11 @@ _Static_assert(sizeof(struct vtd_context_entry) == 16, "ctx entry must be 16B");
 #define SL_PTE_MEMORY_TYPE(pte) BIT_RANGE((pte), 3, 5)
 #define SL_PTE_IS_LARGE(pte) BIT_RANGE((pte), 7, 7)
 
-#define SL_TABLE_ENTRY(phys)                                         \
-    (((phys) & SL_PTE_ADDR_MASK) | SL_PTE_PRESENT)
+#define SL_TABLE_ENTRY(phys) (((phys) & SL_PTE_ADDR_MASK) | SL_PTE_PRESENT)
 
-#define SL_PAGE_ENTRY(phys, perm)                                    \
-    (((phys) & SL_PTE_ADDR_MASK) |                                   \
-     SL_PTE_MEMORY_TYPE_WRITE_BACK | SL_PTE_IGNORE_PAT |   \
-     ((perm) & 0x3))
+#define SL_PAGE_ENTRY(phys, perm)                                              \
+    (((phys) & SL_PTE_ADDR_MASK) | SL_PTE_MEMORY_TYPE_WRITE_BACK |             \
+     SL_PTE_IGNORE_PAT | ((perm) & 0x3))
 
 /*
  * IOVA index helpers, identical breakdown to x86-64 VA.
@@ -345,6 +343,7 @@ _Static_assert(sizeof(struct vtd_context_entry) == 16, "ctx entry must be 16B");
 #define SL_PD_INDEX(iova) (((iova) >> 21) & 0x1FF)
 #define SL_PT_INDEX(iova) (((iova) >> 12) & 0x1FF)
 #define SL_PAGE_OFFSET(iova) ((iova) & 0xFFF)
+#define SL_ENTRY_COUNT 512
 
 /*
  * IQA - Invalidation Queue Address Register, and queue layout
@@ -380,20 +379,19 @@ _Static_assert(sizeof(struct vtd_context_entry) == 16, "ctx entry must be 16B");
 #define INVAL_DESC_GRANULARITY(lo) BIT_RANGE((lo), 4, 5)
 
 /* Context-cache invalidation descriptor */
-#define CONTEXT_INVAL_GRANULARITY_GLOBAL (1ULL << 4)
-#define CONTEXT_INVAL_GRANULARITY_DOMAIN (2ULL << 4)
-#define CONTEXT_INVAL_GRANULARITY_DEVICE (3ULL << 4)
-#define CONTEXT_INVAL_DOMAIN_ID_SHIFT 48
+#define CTX_INVAL_GRANULARITY_GLOBAL (1ULL << 4)
+#define CTX_INVAL_GRANULARITY_DOMAIN (2ULL << 4)
+#define CTX_INVAL_GRANULARITY_DEVICE (3ULL << 4)
+#define CTX_INVAL_DOMAIN_ID_SHIFT 48
 
-#define CONTEXT_INVAL_DESC_GLOBAL                                              \
+#define CTX_INVAL_DESC_GLOBAL                                                  \
     ((struct vtd_inv_desc) {.lo = INVAL_DESC_TYPE_CONTEXT_CACHE |              \
-                                  CONTEXT_INVAL_GRANULARITY_GLOBAL,            \
+                                  CTX_INVAL_GRANULARITY_GLOBAL,                \
                             .hi = 0})
-#define CONTEXT_INVAL_DESC_DOMAIN(did)                                         \
+#define CTX_INVAL_DESC_DOMAIN(did)                                             \
     ((struct vtd_inv_desc) {                                                   \
-        .lo = INVAL_DESC_TYPE_CONTEXT_CACHE |                                  \
-              CONTEXT_INVAL_GRANULARITY_DOMAIN |                               \
-              ((uint64_t) (did) << CONTEXT_INVAL_DOMAIN_ID_SHIFT),             \
+        .lo = INVAL_DESC_TYPE_CONTEXT_CACHE | CTX_INVAL_GRANULARITY_DOMAIN |   \
+              ((uint64_t) (did) << CTX_INVAL_DOMAIN_ID_SHIFT),                 \
         .hi = 0})
 
 /* IOTLB invalidation descriptor */
@@ -411,7 +409,8 @@ _Static_assert(sizeof(struct vtd_context_entry) == 16, "ctx entry must be 16B");
 
 #define IOTLB_INVAL_DOMAIN_ID(lo) BIT_RANGE((lo), 32, 47)
 #define IOTLB_INVAL_GRANULARITY(lo) BIT_RANGE((lo), 4, 5)
-
+#define IOTLB_REG_OFFSET(ecap) ((ECAP_IOTLB_REGISTER_OFFSET(ecap) << 4) + 8)
+#define IVA_REG_OFFSET(ecap) ((ECAP_IOTLB_REGISTER_OFFSET(ecap) << 4) + 0)
 #define IOTLB_INVAL_DESC_GLOBAL                                                \
     ((struct vtd_inv_desc) {                                                   \
         .lo = INVAL_DESC_TYPE_IOTLB | IOTLB_INVAL_GRANULARITY_GLOBAL |         \
@@ -430,6 +429,18 @@ _Static_assert(sizeof(struct vtd_context_entry) == 16, "ctx entry must be 16B");
               ((uint64_t) (did) << IOTLB_INVAL_DOMAIN_ID_SHIFT),               \
         .hi =                                                                  \
             ((iova) & ~0xFFFULL) | ((am) & IOTLB_INVAL_ADDR_MASK_FIELD_MASK)})
+
+#define IOTLB_REG_INVALIDATE BIT(63)   /* IVT - triggers invalidation */
+#define IOTLB_REG_DRAIN_READS BIT(49)  /* DR */
+#define IOTLB_REG_DRAIN_WRITES BIT(48) /* DW */
+#define IOTLB_REG_GLOBAL (1ULL << 60)  /* IIRG = 01 */
+#define IOTLB_REG_DOMAIN (2ULL << 60)  /* IIRG = 10 */
+#define IOTLB_REG_PAGE (3ULL << 60)    /* IIRG = 11 */
+#define IOTLB_REG_DOMAIN_ID_SHIFT 32
+
+#define IVA_REG_ADDR_MASK (~0xFFFULL)
+#define IVA_REG_HINT BIT(6) /* IH */
+#define IVA_REG_AM_SHIFT 0  /* address mask */
 
 /* Wait descriptor */
 #define WAIT_DESC_INTERRUPT_FLAG BIT(4) /* IF */
@@ -450,8 +461,6 @@ struct vtd_inv_desc {
 } __packed;
 
 _Static_assert(sizeof(struct vtd_inv_desc) == 16, "inv desc must be 16B");
-
-extern const struct iommu_ops vtd_iommu_ops;
 
 struct iommu *vtd_unit_create(uint64_t base_phys, uint16_t segment,
                               uint8_t size_field);

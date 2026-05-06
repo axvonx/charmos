@@ -1,6 +1,6 @@
 /* @title: AHCI */
 #pragma once
-#include <block/generic.h>
+#include <block/block.h>
 #include <block/sched.h>
 #include <compiler.h>
 #include <log.h>
@@ -307,45 +307,45 @@ struct ahci_disk *ahci_discover_device(uint8_t bus, uint8_t device,
                                        uint8_t function,
                                        uint32_t *out_disk_count);
 
-bool ahci_write_sector(struct generic_disk *disk, uint64_t lba,
+bool ahci_write_sector(struct block_device *disk, uint64_t lba,
                        const uint8_t *in_buf, uint16_t cnt);
-bool ahci_write_sector_async(struct generic_disk *disk, uint64_t lba,
+bool ahci_write_sector_async(struct block_device *disk, uint64_t lba,
                              uint8_t *in_buf, uint16_t count,
                              struct ahci_request *req);
 
-bool ahci_read_sector(struct generic_disk *disk, uint64_t lba, uint8_t *out_buf,
+bool ahci_read_sector(struct block_device *disk, uint64_t lba, uint8_t *out_buf,
                       uint16_t cnt);
-bool ahci_read_sector_async(struct generic_disk *disk, uint64_t lba,
+bool ahci_read_sector_async(struct block_device *disk, uint64_t lba,
                             uint8_t *buf, uint16_t count,
                             struct ahci_request *req);
 
-bool ahci_read_sector_wrapper(struct generic_disk *disk, uint64_t lba,
+bool ahci_read_sector_wrapper(struct block_device *disk, uint64_t lba,
                               uint8_t *buf, uint64_t cnt);
 
-bool ahci_read_sector_async_wrapper(struct generic_disk *disk, uint64_t lba,
+bool ahci_read_sector_async_wrapper(struct block_device *disk, uint64_t lba,
                                     uint8_t *buf, uint64_t cnt,
                                     struct ahci_request *req);
 
-bool ahci_write_sector_wrapper(struct generic_disk *disk, uint64_t lba,
+bool ahci_write_sector_wrapper(struct block_device *disk, uint64_t lba,
                                const uint8_t *buf, uint64_t cnt);
 
-bool ahci_write_sector_async_wrapper(struct generic_disk *disk, uint64_t lba,
+bool ahci_write_sector_async_wrapper(struct block_device *disk, uint64_t lba,
                                      const uint8_t *buf, uint64_t cnt,
                                      struct ahci_request *req);
 
-bool ahci_submit_bio_request(struct generic_disk *disk,
+bool ahci_submit_bio_request(struct block_device *disk,
                              struct bio_request *bio);
 
-void ahci_do_coalesce(struct generic_disk *disk, struct bio_request *into,
+void ahci_do_coalesce(struct block_device *disk, struct bio_request *into,
                       struct bio_request *from);
 
-bool ahci_should_coalesce(struct generic_disk *disk,
+bool ahci_should_coalesce(struct block_device *disk,
                           const struct bio_request *a,
                           const struct bio_request *b);
 
-void ahci_reorder(struct generic_disk *disk);
+void ahci_reorder(struct block_device *disk);
 
-struct generic_disk *ahci_create_generic(struct ahci_disk *disk);
+struct block_device *ahci_create_generic(struct ahci_disk *disk);
 enum irq_result ahci_isr_handler(void *ctx, uint8_t vector,
                                  struct irq_context *);
 

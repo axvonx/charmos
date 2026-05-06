@@ -177,10 +177,10 @@ bool e1000_init(struct pci_device *pci, struct e1000_device *dev) {
     memset(dev, 0, sizeof(*dev));
 
     dev->bus = pci->bus;
-    dev->device = pci->device;
+    dev->device = pci->dev;
     dev->function = pci->function;
 
-    e1000_log(LOG_INFO, "Found device at %02x:%02x.%02x", pci->bus, pci->device,
+    e1000_log(LOG_INFO, "Found device at %02x:%02x.%02x", pci->bus, pci->dev,
               pci->function);
 
     uint32_t bar = pci_read(dev->bus, dev->device, dev->function, PCI_BAR0);
@@ -211,18 +211,21 @@ bool e1000_init(struct pci_device *pci, struct e1000_device *dev) {
     return true;
 }
 
-static void e1000_pci_init(uint8_t bus, uint8_t d, uint8_t func,
-                           struct pci_device *db) {
+static enum errno e1000_pci_init(struct device *dev) {
+    struct pci_device *db = dev->driver_data;
+    uint8_t bus = db->bus, d = db->dev, func = db->function;
     uint16_t did = db->device_id;
     if (did == 0x1000 || did == 0x100E || did == 0x1010 || did == 0x1026 ||
         did == 0x10D3 || did == 0x10F5) {
-        struct pci_device dev = {.bus = bus, .device = d, .function = func};
+        struct pci_device dev = {.bus = bus, .dev = d, .function = func};
         struct e1000_device *device = kmalloc(sizeof(struct e1000_device));
         if (unlikely(!device))
             panic("e1000 device allocation failed!\n");
 
         e1000_init(&dev, device);
     }
+
+    return ERR_OK;
 }
 
 PCI_DEV_REGISTER(e1000, 2, 0, 0xff, 0x8086, e1000_pci_init);

@@ -23,7 +23,7 @@ struct globals {
     /* TODO: no more list */
     struct vfs_mount *mount_list_head;
     struct vfs_node *root_node;
-    struct generic_disk *root_node_disk;
+    struct block_device *root_node_disk;
 
     struct topology topology;
 

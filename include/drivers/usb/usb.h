@@ -330,7 +330,7 @@ struct usb_controller_ops {
 
 struct usb_controller { /* Generic USB controller */
     enum usb_controller_type type;
-    struct usb_controller_ops ops;
+    struct usb_controller_ops *ops;
     void *driver_data;
 };
 

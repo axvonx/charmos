@@ -12,11 +12,11 @@ typedef void (*test_fn_t)(void);
 struct kernel_test {
     const char *name;
     test_fn_t func;
-    bool is_integration;
+    bool is_integration : 1;
 
-    bool should_fail;
-    bool success;
-    bool skipped;
+    bool should_fail : 1;
+    bool success : 1;
+    bool skipped : 1;
 
     uint64_t message_count;
     char **messages;

@@ -45,10 +45,10 @@ void slab_domain_build_locality_lists(struct slab_domain *sdom) {
     }
 }
 
-void slab_init_caches(struct slab_caches *caches, bool pageable) {
+void slab_init_caches(struct slab_caches *caches, enum slab_type type) {
     for (size_t i = 0; i < slab_global.num_sizes; i++) {
         struct slab_cache *cache = &caches->caches[i];
-        cache->type = pageable ? SLAB_TYPE_PAGEABLE : SLAB_TYPE_NONPAGEABLE;
+        cache->type = type;
         slab_cache_init(i, cache, &slab_global.class_sizes[i]);
     }
 }
@@ -70,8 +70,8 @@ void slab_domain_init_caches(struct slab_domain *dom) {
     dom->local_pageable_cache->caches = slab_caches_alloc();
     dom->local_nonpageable_cache->caches = slab_caches_alloc();
 
-    slab_init_caches(dom->local_nonpageable_cache, /* pageable = */ false);
-    slab_init_caches(dom->local_pageable_cache, /* pageable = */ true);
+    slab_init_caches(dom->local_nonpageable_cache, SLAB_TYPE_NONPAGEABLE);
+    slab_init_caches(dom->local_pageable_cache, SLAB_TYPE_PAGEABLE);
     slab_domain_link_caches(dom, dom->local_pageable_cache);
     slab_domain_link_caches(dom, dom->local_nonpageable_cache);
 }

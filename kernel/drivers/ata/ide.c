@@ -1,7 +1,7 @@
 #include <acpi/ioapic.h>
 #include <asm.h>
 #include <block/bcache.h>
-#include <block/generic.h>
+#include <block/block.h>
 #include <block/sched.h>
 #include <compiler.h>
 #include <console/printf.h>
@@ -15,7 +15,7 @@
 LOG_SITE_DECLARE_DEFAULT(ide);
 LOG_HANDLE_DECLARE_DEFAULT(ide);
 
-void ide_print_info(struct generic_disk *d) {
+void ide_print_info(struct block_device *d) {
     struct ata_drive *drive = (struct ata_drive *) d->driver_data;
     if (!drive->actually_exists)
         return;
@@ -135,7 +135,7 @@ static struct bio_scheduler_ops ide_bio_ops = {
     .tick_ms = 25,
 };
 
-struct generic_disk *ide_create_generic(struct ata_drive *ide) {
+struct block_device *ide_create_generic(struct ata_drive *ide) {
     ide_identify(ide);
     if (!ide->actually_exists)
         return NULL;
@@ -149,7 +149,7 @@ struct generic_disk *ide_create_generic(struct ata_drive *ide) {
     irq_set_chip(irq, lapic_get_chip(), NULL);
     ide->channel.current_drive = ide;
 
-    struct generic_disk *d = kmalloc(sizeof(struct generic_disk));
+    struct block_device *d = kmalloc(sizeof(struct block_device));
     if (unlikely(!d))
         panic("IDE drive allocation failed!\n");
 
@@ -159,7 +159,7 @@ struct generic_disk *ide_create_generic(struct ata_drive *ide) {
     d->write_sector = ide_write_sector_wrapper;
     d->submit_bio_async = ide_submit_bio_async;
 
-    d->flags = DISK_FLAG_NO_COALESCE | DISK_FLAG_NO_REORDER;
+    d->flags = BDEV_FLAG_NO_COALESCE | BDEV_FLAG_NO_REORDER;
 
     d->cache = kzalloc(sizeof(struct bcache));
     if (!d->cache)
@@ -169,6 +169,6 @@ struct generic_disk *ide_create_generic(struct ata_drive *ide) {
 
     bcache_init(d->cache, DEFAULT_BLOCK_CACHE_SIZE);
 
-    d->type = G_IDE_DRIVE;
+    d->type = BDEV_IDE_DRIVE;
     return d;
 }

@@ -1,6 +1,6 @@
 /* @title: FAT */
 #include <block/bcache.h>
-#include <block/generic.h>
+#include <block/block.h>
 #include <compiler.h>
 #include <stdint.h>
 
@@ -129,8 +129,8 @@ _Static_assert(sizeof(struct fat_dirent) == 32, "");
 struct fat_fs {
     enum fat_fstype type;
     struct fat_bpb *bpb;
-    struct generic_partition *partition;
-    struct generic_disk *disk;
+    struct partition *partition;
+    struct block_device *disk;
     uint32_t volume_base_lba;
     uint32_t total_clusters;
     uint32_t root_cluster;
@@ -159,7 +159,7 @@ typedef bool (*fat_walk_callback)(struct fat_dirent *, uint32_t, void *);
 //
 //
 
-struct fat_bpb *fat32_read_bpb(struct generic_partition *);
+struct fat_bpb *fat32_read_bpb(struct partition *);
 void fat12_16_print_bpb(const struct fat_bpb *bpb);
 
 //
@@ -184,9 +184,9 @@ struct fat_time fat_get_current_time();
 //
 //
 
-struct vfs_node *fat_g_mount(struct generic_partition *p);
+struct vfs_node *fat_g_mount(struct partition *p);
 
-void fat_g_print(struct generic_partition *);
+void fat_g_print(struct partition *);
 void fat32_print_bpb(const struct fat_bpb *bpb);
 void fat_print_dirent(const struct fat_dirent *ent);
 void fat_list_root(struct fat_fs *fs);

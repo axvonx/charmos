@@ -1,4 +1,4 @@
-#include <block/generic.h>
+#include <block/block.h>
 #include <block/sched.h>
 #include <console/printf.h>
 #include <mem/alloc.h>
@@ -29,7 +29,7 @@ static bool try_dispatch_queue_head(struct bio_scheduler *sched,
     return false;
 }
 
-static void dispatch_queue(struct generic_disk *disk, struct bio_rqueue *q) {
+static void dispatch_queue(struct block_device *disk, struct bio_rqueue *q) {
     struct mutex *lock = &disk->scheduler->lock;
     mutex_lock(lock);
 
@@ -70,7 +70,7 @@ void bio_sched_try_early_dispatch(struct bio_scheduler *sched) {
         do_early_dispatch(sched);
 }
 
-void bio_sched_dispatch_partial(struct generic_disk *d,
+void bio_sched_dispatch_partial(struct block_device *d,
                                 enum bio_request_priority p) {
     /* no one in urgent queue */
     for (uint32_t i = BIO_RQ_HIGH; i > p; i--) {
@@ -78,6 +78,6 @@ void bio_sched_dispatch_partial(struct generic_disk *d,
     }
 }
 
-void bio_sched_dispatch_all(struct generic_disk *d) {
+void bio_sched_dispatch_all(struct block_device *d) {
     bio_sched_dispatch_partial(d, BIO_RQ_BACKGROUND);
 }

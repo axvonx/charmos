@@ -1,4 +1,4 @@
-#include <block/generic.h>
+#include <block/block.h>
 #include <block/sched.h>
 #include <console/printf.h>
 #include <mem/alloc.h>
@@ -6,8 +6,8 @@
 #include <thread/workqueue.h>
 
 static void try_rq_reorder(struct bio_scheduler *sched) {
-    struct generic_disk *disk = sched->disk;
-    if (disk_skip_reorder(disk))
+    struct block_device *disk = sched->disk;
+    if (bdev_skip_reorder(disk))
         return;
 
     disk->ops->reorder(disk);
@@ -45,7 +45,7 @@ static bool try_early_submit(struct bio_scheduler *sched,
     return false;
 }
 
-void bio_sched_enqueue(struct generic_disk *disk, struct bio_request *req) {
+void bio_sched_enqueue(struct block_device *disk, struct bio_request *req) {
     kassert(req->disk == disk);
 
     struct bio_scheduler *sched = disk->scheduler;
@@ -74,7 +74,7 @@ void bio_sched_enqueue(struct generic_disk *disk, struct bio_request *req) {
     }
 }
 
-void bio_sched_dequeue(struct generic_disk *disk, struct bio_request *req,
+void bio_sched_dequeue(struct block_device *disk, struct bio_request *req,
                        bool already_locked) {
     struct bio_scheduler *sched = disk->scheduler;
     if (!already_locked)
@@ -86,7 +86,7 @@ void bio_sched_dequeue(struct generic_disk *disk, struct bio_request *req,
         mutex_unlock(&sched->lock);
 }
 
-struct bio_scheduler *bio_sched_create(struct generic_disk *disk,
+struct bio_scheduler *bio_sched_create(struct block_device *disk,
                                        struct bio_scheduler_ops *ops) {
     struct bio_scheduler *sched = kzalloc(sizeof(struct bio_scheduler));
     if (!sched)

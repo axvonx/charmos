@@ -73,7 +73,6 @@ static inline enum pte_lock_result pte_lock_internal(pte_atomic_t *pte) {
                                                   memory_order_relaxed))
             return PTE_LOCK_OK;
 
-        /* CAS failed due to a benign race; retry. */
         cpu_relax();
     }
 }

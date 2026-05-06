@@ -1,6 +1,6 @@
 /* @title: Ext2 */
 #include <block/bcache.h>
-#include <block/generic.h>
+#include <block/block.h>
 #include <compiler.h>
 #include <errno.h>
 #include <fs/vfs.h>
@@ -215,8 +215,8 @@ struct ext2_dir_entry {
 } __packed;
 
 struct ext2_fs {
-    struct generic_partition *partition;
-    struct generic_disk *drive;
+    struct partition *partition;
+    struct block_device *drive;
     struct ext2_sblock *sblock;
     struct ext2_group_desc *group_desc;
     struct bcache_entry *sbcache_ent;
@@ -254,16 +254,15 @@ uint8_t *ext2_block_read(struct ext2_fs *fs, uint32_t block_num,
 bool ext2_block_write(struct ext2_fs *fs, struct bcache_entry *ent,
                       enum bio_request_priority prio);
 
-bool ext2_read_superblock(struct generic_partition *,
-                          struct ext2_sblock *sblock);
+bool ext2_read_superblock(struct partition *, struct ext2_sblock *sblock);
 
 bool ext2_write_superblock(struct ext2_fs *fs);
 bool ext2_write_group_desc(struct ext2_fs *fs);
 
-enum errno ext2_mount(struct generic_partition *, struct ext2_fs *fs,
+enum errno ext2_mount(struct partition *, struct ext2_fs *fs,
                       struct ext2_sblock *sblock, struct vfs_node *out_node);
 
-struct vfs_node *ext2_g_mount(struct generic_partition *);
+struct vfs_node *ext2_g_mount(struct partition *);
 
 struct ext2_inode *ext2_inode_read(struct ext2_fs *fs, uint32_t inode_idx,
                                    struct bcache_entry **out_ent);
@@ -414,7 +413,7 @@ void ext2_traverse_inode_blocks(struct ext2_fs *fs, struct ext2_inode *inode,
                                 ext2_block_visitor visitor, void *user_data,
                                 bool readahead);
 
-void ext2_g_print(struct generic_partition *);
+void ext2_g_print(struct partition *);
 
 void ext2_dump_file_data(struct ext2_fs *fs, const struct ext2_inode *inode,
                          uint32_t start_block_index, uint32_t length);

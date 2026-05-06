@@ -1,5 +1,5 @@
 #include <block/bcache.h>
-#include <block/generic.h>
+#include <block/block.h>
 #include <block/sched.h>
 #include <console/panic.h>
 #include <math/align.h>
@@ -15,11 +15,11 @@ static bool insert(struct bcache *cache, uint64_t key,
                    struct bcache_entry *value, bool already_locked);
 
 static struct bcache_entry *get(struct bcache *cache, uint64_t key);
-static bool write(struct generic_disk *d, struct bcache *cache,
+static bool write(struct block_device *d, struct bcache *cache,
                   struct bcache_entry *ent, uint64_t spb);
 
 /* prefetch is asynchronous */
-static enum errno prefetch(struct generic_disk *disk, struct bcache *cache,
+static enum errno prefetch(struct block_device *disk, struct bcache *cache,
                            uint64_t lba, uint64_t block_size, uint64_t spb);
 
 /* eviction must be explicitly and separately called */
@@ -165,7 +165,7 @@ static void prefetch_callback(struct bio_request *bio) {
     kfree(bio);
 }
 
-static enum errno prefetch(struct generic_disk *disk, struct bcache *cache,
+static enum errno prefetch(struct block_device *disk, struct bcache *cache,
                            uint64_t lba, uint64_t block_size, uint64_t spb) {
     uint64_t base_lba = ALIGN_DOWN(lba, spb);
 
@@ -264,7 +264,7 @@ static void stat(struct bcache *cache, uint64_t *total_dirty_out,
 }
 
 /* TODO: writeback */
-static bool write(struct generic_disk *d, struct bcache *cache,
+static bool write(struct block_device *d, struct bcache *cache,
                   struct bcache_entry *ent, uint64_t spb) {
     enum irql irql = spin_lock(&cache->lock);
 
@@ -287,7 +287,7 @@ static void write_enqueue_cb(struct bio_request *req) {
     kfree(req);
 }
 
-static void write_queue(struct generic_disk *d, struct bcache_entry *ent,
+static void write_queue(struct block_device *d, struct bcache_entry *ent,
                         uint64_t spb, enum bio_request_priority prio) {
 
     ent->dirty = true;
@@ -322,7 +322,7 @@ void bcache_destroy(struct bcache *cache) {
     cache->count = 0;
 }
 
-void *bcache_get(struct generic_disk *disk, uint64_t lba, uint64_t block_size,
+void *bcache_get(struct block_device *disk, uint64_t lba, uint64_t block_size,
                  uint64_t spb, bool no_evict, struct bcache_entry **out_entry) {
     uint64_t base_lba = ALIGN_DOWN(lba, spb);
     struct bcache_entry *ent = get(disk->cache, base_lba);
@@ -337,7 +337,7 @@ void *bcache_get(struct generic_disk *disk, uint64_t lba, uint64_t block_size,
     return ent->buffer + offset;
 }
 
-bool bcache_insert(struct generic_disk *disk, uint64_t lba,
+bool bcache_insert(struct block_device *disk, uint64_t lba,
                    struct bcache_entry *ent, uint64_t spb) {
     if (insert(disk->cache, lba, ent, false)) {
         return true;
@@ -347,27 +347,27 @@ bool bcache_insert(struct generic_disk *disk, uint64_t lba,
     }
 }
 
-bool bcache_evict(struct generic_disk *disk, uint64_t spb) {
+bool bcache_evict(struct block_device *disk, uint64_t spb) {
     return evict(disk->cache, spb);
 }
 
-bool bcache_writethrough(struct generic_disk *disk, struct bcache_entry *ent,
+bool bcache_writethrough(struct block_device *disk, struct bcache_entry *ent,
                          uint64_t spb) {
     return write(disk, disk->cache, ent, spb);
 }
 
-void bcache_write_queue(struct generic_disk *disk, struct bcache_entry *ent,
+void bcache_write_queue(struct block_device *disk, struct bcache_entry *ent,
                         uint64_t spb, enum bio_request_priority prio) {
     write_queue(disk, ent, spb, prio);
 }
 
-void bcache_stat(struct generic_disk *disk, uint64_t *total_dirty_out,
+void bcache_stat(struct block_device *disk, uint64_t *total_dirty_out,
                  uint64_t *total_present_out) {
     stat(disk->cache, total_dirty_out, total_present_out);
 }
 
 /* TODO: error code here */
-void *bcache_create_ent(struct generic_disk *disk, uint64_t lba,
+void *bcache_create_ent(struct block_device *disk, uint64_t lba,
                         uint64_t block_size, uint64_t sectors_per_block,
                         bool no_evict, struct bcache_entry **out_entry) {
     uint64_t base_lba = ALIGN_DOWN(lba, sectors_per_block);
@@ -405,7 +405,7 @@ void *bcache_create_ent(struct generic_disk *disk, uint64_t lba,
     return ent->buffer + offset;
 }
 
-enum errno bcache_prefetch_async(struct generic_disk *disk, uint64_t lba,
+enum errno bcache_prefetch_async(struct block_device *disk, uint64_t lba,
                                  uint64_t block_size, uint64_t spb) {
     return prefetch(disk, disk->cache, ALIGN_DOWN(lba, spb), block_size, spb);
 }

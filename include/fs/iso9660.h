@@ -1,6 +1,6 @@
 /* @title: ISO9660 */
 #pragma once
-#include <block/generic.h>
+#include <block/block.h>
 #include <compiler.h>
 #include <fs/vfs.h>
 #include <stdint.h>
@@ -62,16 +62,16 @@ struct iso9660_pvd {
 } __packed;
 
 struct iso9660_fs {
-    struct generic_partition *partition;
-    struct generic_disk *disk;
+    struct partition *partition;
+    struct block_device *disk;
     struct iso9660_pvd *pvd;
     uint32_t root_lba;
     uint32_t root_size;
     uint32_t block_size;
 };
 
-struct vfs_node *iso9660_mount(struct generic_partition *);
-void iso9660_print(struct generic_partition *);
+struct vfs_node *iso9660_mount(struct partition *);
+void iso9660_print(struct partition *);
 struct iso9660_datetime iso9660_get_current_date(void);
 
 #define ISO9660_PVD_SECTOR 16

@@ -2,7 +2,7 @@
 #pragma once
 #include <log.h>
 
-struct generic_disk;
+struct block_device;
 enum fs_type {
     FS_DEVTMPFS = -2,
     FS_TMPFS = -1,
@@ -19,7 +19,7 @@ enum fs_type {
 };
 
 const char *detect_fstr(enum fs_type type);
-enum fs_type detect_fs(struct generic_disk *drive);
+enum fs_type detect_fs(struct block_device *drive);
 
 LOG_SITE_EXTERN(fs_detect);
 LOG_HANDLE_EXTERN(fs_detect);

@@ -3,14 +3,14 @@
 #include <log.h>
 #include <stdint.h>
 
-struct generic_disk;
-void registry_register(struct generic_disk *disk);
-void registry_unregister(struct generic_disk *disk);
-struct generic_disk *registry_get_by_name(const char *name);
-struct generic_disk *registry_get_by_index(uint64_t index);
+struct block_device;
+void registry_register(struct block_device *disk);
+void registry_unregister(struct block_device *disk);
+struct block_device *registry_get_by_name(const char *name);
+struct block_device *registry_get_by_index(uint64_t index);
 uint64_t registry_get_disk_cnt(void);
 void registry_setup();
-void registry_mkname(struct generic_disk *disk, const char *prefix,
+void registry_mkname(struct block_device *disk, const char *prefix,
                      uint64_t counter);
 
 #define k_print_register(name)                                                 \

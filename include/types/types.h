@@ -22,6 +22,7 @@ typedef uint64_t page_flags_t;
 typedef uint32_t thread_prio_t;
 typedef int64_t fx32_32_t;
 typedef int32_t nice_t;
+typedef ptrdiff_t ssize_t;
 
 #define CPU_PERF_MAX INT8_MAX
 #define CPU_PERF_MIN INT8_MIN
@@ -73,3 +74,6 @@ typedef int32_t nice_t;
 
 #define NICE_MAX INT32_MAX
 #define NICE_MIN INT32_MIN
+
+#define SSIZE_MAX ((ssize_t) (SIZE_MAX >> 1))
+#define SSIZE_MIN ((ssize_t) (-SSIZE_MAX - 1))

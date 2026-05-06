@@ -336,7 +336,7 @@ static enum errno dir_entry_rename(struct ext2_fs *fs,
 //
 
 /* no locking necessary in mounting, duh */
-enum errno ext2_mount(struct generic_partition *p, struct ext2_fs *fs,
+enum errno ext2_mount(struct partition *p, struct ext2_fs *fs,
                       struct ext2_sblock *sblock, struct vfs_node *out_node) {
     if (!fs || !sblock)
         return ERR_INVAL;

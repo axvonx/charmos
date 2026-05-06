@@ -2,6 +2,7 @@
 #pragma once
 #include <asm.h>
 #include <compiler.h>
+#include <device.h>
 #include <linker/symbols.h>
 #include <log.h>
 #include <stdint.h>
@@ -11,8 +12,9 @@
 #define PCI_PROGIF_NVME 0x02
 
 struct pci_device {
+    struct device device;
     uint8_t bus;
-    uint8_t device;
+    uint8_t dev;
     uint8_t function;
 
     uint16_t vendor_id;
@@ -25,24 +27,23 @@ struct pci_device {
 };
 
 struct pci_driver {
-    char *name;
+    struct device_driver driver;
     uint8_t class_code;
     uint8_t subclass;
     uint8_t prog_if;
     uint16_t vendor_id;
-    void (*initialize)(uint8_t, uint8_t, uint8_t, struct pci_device *);
 } __linker_aligned;
 
 LINKER_SECTION_DEFINE(pci_devices, struct pci_driver);
 
 #define PCI_DEV_REGISTER(n, cc, sc, pi, vi, init)                              \
     static struct pci_driver pci_device_##n __attribute__((                    \
-        section(".kernel_pci_devices"), used)) = {.name = #n,                  \
+        section(".kernel_pci_devices"), used)) = {.driver.name = #n,           \
                                                   .class_code = cc,            \
                                                   .subclass = sc,              \
                                                   .prog_if = pi,               \
                                                   .vendor_id = vi,             \
-                                                  .initialize = init};
+                                                  .driver.probe = init};
 
 union pci_command_reg {
     uint16_t value;

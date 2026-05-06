@@ -103,7 +103,7 @@ enum usb_error usb_get_string_descriptor(struct usb_device *dev,
     };
 
     struct io_wait_token tok = IO_WAIT_TOKEN_EMPTY;
-    if ((err = usb_transfer_sync(ctrl->ops.submit_control_transfer, &req,
+    if ((err = usb_transfer_sync(ctrl->ops->submit_control_transfer, &req,
                                  &tok)) != USB_OK)
         return err;
 
@@ -144,7 +144,7 @@ enum usb_error usb_get_device_descriptor(struct usb_device *dev) {
     };
 
     enum usb_error err;
-    if ((err = usb_transfer_sync(ctrl->ops.submit_control_transfer, &request,
+    if ((err = usb_transfer_sync(ctrl->ops->submit_control_transfer, &request,
                                  NULL)) != USB_OK) {
         return err;
     }
@@ -263,7 +263,7 @@ enum usb_error usb_parse_config_descriptor(struct usb_device *dev) {
 
     enum usb_error err;
     struct io_wait_token iowt = IO_WAIT_TOKEN_EMPTY;
-    if ((err = usb_transfer_sync(ctrl->ops.submit_control_transfer, &request,
+    if ((err = usb_transfer_sync(ctrl->ops->submit_control_transfer, &request,
                                  &iowt)) != USB_OK) {
         kfree_aligned(desc);
         io_wait_end(&iowt, IO_WAIT_END_YIELD);
@@ -276,7 +276,7 @@ enum usb_error usb_parse_config_descriptor(struct usb_device *dev) {
     uint16_t total_len = cdesc->total_length;
     setup.length = total_len;
 
-    if ((err = usb_transfer_sync(ctrl->ops.submit_control_transfer, &request,
+    if ((err = usb_transfer_sync(ctrl->ops->submit_control_transfer, &request,
                                  NULL)) != USB_OK) {
         kfree_aligned(desc);
         io_wait_end(&iowt, IO_WAIT_END_YIELD);
@@ -314,7 +314,7 @@ enum usb_error usb_set_configuration(struct usb_device *dev) {
     };
 
     enum usb_error err;
-    if ((err = usb_transfer_sync(ctrl->ops.submit_control_transfer, &request,
+    if ((err = usb_transfer_sync(ctrl->ops->submit_control_transfer, &request,
                                  NULL)) != USB_OK) {
         return err;
     }
@@ -361,7 +361,7 @@ enum usb_error usb_init_device(struct usb_device *dev) {
     }
 
     usb_trace("configure_endpoint");
-    if ((err = dev->host->ops.configure_endpoint(dev)) != USB_OK) {
+    if ((err = dev->host->ops->configure_endpoint(dev)) != USB_OK) {
         goto out;
     }
 
@@ -372,7 +372,7 @@ enum usb_error usb_init_device(struct usb_device *dev) {
 out:
     if (err != USB_OK) {
         usb_log(LOG_TRACE, "reset_slot");
-        dev->host->ops.reset_slot(dev);
+        dev->host->ops->reset_slot(dev);
     }
 
     usb_device_put(dev);

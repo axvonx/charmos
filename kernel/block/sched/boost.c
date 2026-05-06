@@ -1,4 +1,4 @@
-#include <block/generic.h>
+#include <block/block.h>
 #include <block/sched.h>
 #include <console/printf.h>
 #include <mem/alloc.h>

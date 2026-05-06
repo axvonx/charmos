@@ -1,4 +1,4 @@
-#include <block/generic.h>
+#include <block/block.h>
 #include <console/printf.h>
 #include <drivers/ahci.h>
 #include <drivers/ata.h>
@@ -15,14 +15,14 @@
 #include <string.h>
 
 struct disk_node {
-    struct generic_disk *disk;
+    struct block_device *disk;
     struct disk_node *next;
 };
 
 static struct disk_node *disk_list = NULL;
 static uint64_t disk_count = 0;
 
-void registry_register(struct generic_disk *disk) {
+void registry_register(struct block_device *disk) {
     struct disk_node *node = kmalloc(sizeof(struct disk_node));
     if (!node)
         return;
@@ -33,7 +33,7 @@ void registry_register(struct generic_disk *disk) {
     disk_count++;
 }
 
-void registry_unregister(struct generic_disk *disk) {
+void registry_unregister(struct block_device *disk) {
     struct disk_node **indirect = &disk_list;
     while (*indirect) {
         if ((*indirect)->disk == disk) {
@@ -48,7 +48,7 @@ void registry_unregister(struct generic_disk *disk) {
     }
 }
 
-struct generic_disk *registry_get_by_name(const char *name) {
+struct block_device *registry_get_by_name(const char *name) {
     for (struct disk_node *node = disk_list; node; node = node->next) {
         if (strcmp(node->disk->name, name) == 0)
             return node->disk;
@@ -56,7 +56,7 @@ struct generic_disk *registry_get_by_name(const char *name) {
     return NULL;
 }
 
-struct generic_disk *registry_get_by_index(uint64_t index) {
+struct block_device *registry_get_by_index(uint64_t index) {
     struct disk_node *node = disk_list;
     for (uint64_t i = 0; node && i < index; i++)
         node = node->next;
@@ -78,7 +78,7 @@ static char *mkname(char *prefix, uint64_t counter) {
     return cat;
 }
 
-static void device_mkname(struct generic_disk *disk, const char *prefix,
+static void device_mkname(struct block_device *disk, const char *prefix,
                           uint64_t counter) {
     char diff_prefix[16] = {0};
     memcpy(diff_prefix, prefix, strlen(prefix));
@@ -88,7 +88,7 @@ static void device_mkname(struct generic_disk *disk, const char *prefix,
     memcpy(disk->name, fmtname, 16);
 }
 
-void registry_mkname(struct generic_disk *disk, const char *prefix,
+void registry_mkname(struct block_device *disk, const char *prefix,
                      uint64_t counter) {
     device_mkname(disk, prefix, counter);
 }
@@ -110,10 +110,10 @@ void registry_setup() {
 
     bool found_root = false;
     for (uint64_t i = 0; i < disk_count; i++) {
-        struct generic_disk *disk = registry_get_by_index(i);
+        struct block_device *disk = registry_get_by_index(i);
         detect_fs(disk);
         for (uint32_t j = 0; j < disk->partition_count; j++) {
-            struct generic_partition *p = &disk->partitions[j];
+            struct partition *p = &disk->partitions[j];
 
             if (strcmp(p->name, global.root_partition) == 0) {
                 struct vfs_node *root = p->mount(p);

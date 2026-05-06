@@ -253,7 +253,7 @@ static inline bool needs_migrate(struct rt_scheduler_static *rts,
     return !is_compatible(rts, t);
 }
 
-static size_t find_migration_target(struct thread *t) {
+static ssize_t find_migration_target(struct thread *t) {
     size_t iter;
     kassert(cpu_mask_popcount(&t->allowed_cpus));
     cpu_mask_for_each(iter, t->allowed_cpus) {
@@ -263,11 +263,11 @@ static size_t find_migration_target(struct thread *t) {
             return iter;
     }
 
-    return SIZE_MAX;
+    return -1;
 }
 
 static inline bool has_migration_target(struct thread *t) {
-    return find_migration_target(t) != SIZE_MAX;
+    return find_migration_target(t) != -1;
 }
 
 static void send_to_compatible_cpu(struct thread *t) {

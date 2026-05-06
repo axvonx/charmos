@@ -23,7 +23,7 @@ static void nvme_on_bio_complete(struct nvme_request *req) {
     kfree(req);
 }
 
-bool nvme_submit_bio_request(struct generic_disk *disk,
+bool nvme_submit_bio_request(struct block_device *disk,
                              struct bio_request *bio) {
     struct nvme_request *req = kzalloc(sizeof(struct nvme_request));
     if (!req)

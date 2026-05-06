@@ -1,5 +1,5 @@
 #ifdef TEST_BIO_SCHED
-#include <block/generic.h>
+#include <block/block.h>
 #include <block/sched.h>
 #include <crypto/prng.h>
 #include <fs/ext2.h>
@@ -57,7 +57,7 @@ static void bio_sch_callback2(struct bio_request *req) {
 TEST_REGISTER(bio_sched_coalesce_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
     EXT2_INIT;
     struct ext2_fs *fs = root->fs_data;
-    struct generic_disk *d = fs->drive;
+    struct block_device *d = fs->drive;
 
     struct bio_request *bio = kmalloc(sizeof(*bio));
     *bio = (struct bio_request){
@@ -118,7 +118,7 @@ TEST_REGISTER(bio_sched_delay_enqueue_test, SHOULD_NOT_FAIL,
     ABORT_IF_RAM_LOW();
 
     struct ext2_fs *fs = root->fs_data;
-    struct generic_disk *d = fs->drive;
+    struct block_device *d = fs->drive;
     kassert(d);
 
     prng_seed(time_get_us());
