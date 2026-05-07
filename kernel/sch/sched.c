@@ -347,6 +347,10 @@ void scheduler_switch_in() {
     us->drop_last_ref = NULL;
     if (drop)
         thread_put(drop);
+
+    scheduler_periodic_work_execute(PERIODIC_WORK_PERIOD_BASED);
+    vmm_reclaim_page_tables();
+    atomic_store(&smp_core()->pt_seen_epoch, atomic_load(&global.pt_epoch));
 }
 
 void scheduler_yield() {
@@ -359,12 +363,8 @@ void scheduler_yield() {
     schedule();
 
     scheduler_switch_in();
-    scheduler_periodic_work_execute(PERIODIC_WORK_PERIOD_BASED);
 
     scheduler_mark_self_in_resched(false);
-
-    vmm_reclaim_page_tables();
-    smp_core()->pt_seen_epoch = atomic_load(&global.pt_epoch);
 
     irql_lower(irql);
 }

@@ -3,7 +3,7 @@
 #include <global.h>
 #include <log.h>
 
-static const char *bootstage_str[BOOTSTAGE_COUNT] = {
+const char *bootstage_str[BOOTSTAGE_COUNT] = {
     [BOOTSTAGE_NONE] = "None",
     [BOOTSTAGE_EARLY_FB] = "Early - Framebuffer",
     [BOOTSTAGE_EARLY_ALLOCATORS] = "Early - Allocators",

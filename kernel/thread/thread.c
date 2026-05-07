@@ -77,11 +77,9 @@ void thread_entry_wrapper(void) {
 
     scheduler_switch_in();
 
-    scheduler_periodic_work_execute(PERIODIC_WORK_PERIOD_BASED);
-
     scheduler_mark_self_in_resched(false);
-    irql_lower(IRQL_PASSIVE_LEVEL);
 
+    irql_lower(IRQL_PASSIVE_LEVEL);
     kassert(entry);
     entry(arg);
     thread_exit();

@@ -63,12 +63,6 @@ LOG_HANDLE_EXTERN(slab);
 
 #define SLAB_ALIGN_UP(x, a) ALIGN_UP(x, a)
 
-static const size_t slab_class_sizes_const[] = {
-    SLAB_MIN_SIZE, 16, 32, 64, 96, 128, 192, 256, 512, SLAB_MAX_SIZE};
-
-#define SLAB_CLASS_CONST_COUNT                                                 \
-    (sizeof(slab_class_sizes_const) / sizeof(*slab_class_sizes_const))
-
 /* GC */
 #define SLAB_GC_FLAG_DESTROY_BIAS_SHIFT 4ull
 #define SLAB_GC_FLAG_DESTROY_BIAS_MASK 0xF

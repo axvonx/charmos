@@ -40,6 +40,8 @@
 
 #define __malloc_like __attribute__((malloc))
 
+#define __nullable __attribute__((nullable))
+
 #define __printf_like(fmt_idx, arg_idx)                                        \
     __attribute__((format(printf, fmt_idx, arg_idx)))
 

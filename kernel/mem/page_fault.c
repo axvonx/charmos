@@ -1,3 +1,4 @@
+#include <mem/address_range.h>
 #include <console/printf.h>
 #include <irq/irq.h>
 #include <sch/sched.h>
@@ -23,9 +24,12 @@ enum irq_result page_fault_handler(void *context, uint8_t vector,
 
     asm volatile("mov %%cr2, %0" : "=r"(fault_addr));
 
+    struct address_range *ar = address_range_for_addr(fault_addr);
+    const char *name = ar ? ar->name : "UNKNOWN";
+
     spin_lock_raw(&pf_lock);
     printf("\n=== PAGE FAULT ===\n");
-    printf("Faulting Address (CR2): %p\n", fault_addr);
+    printf("Faulting Address (CR2): %p (ar: %s)\n", fault_addr, name);
     printf("Error Code: %p\n", error_code);
     printf("  - Page not Present (P): %s\n",
            (error_code & 0x01) ? "Yes" : "No");

@@ -1,5 +1,6 @@
 /* @title: Logging */
 #pragma once
+#include <bootstage.h>
 #include <colors.h>
 #include <linker/symbols.h>
 #include <sch/irql.h>
@@ -65,6 +66,7 @@ struct log_record {
 
     const struct log_handle *handle;
     enum log_level level;
+    enum bootstage boostage;
 
     uint16_t msg_len;
 

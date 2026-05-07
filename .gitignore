@@ -1,7 +1,7 @@
 kernel/uACPI
 limine
 build/
-syms/fullsyms.c
+kernel/syms/fullsyms.c
 kernel/flanterm
 *.log
 compile_commands.json

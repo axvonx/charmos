@@ -54,9 +54,6 @@ build_domain_for_level(enum topology_level lvl) {
         d->groups[i].topo_index = i;
 
         d->groups[i].parent_index = -1;
-
-        /* dummy capacity for now */
-        d->groups[i].capacity = 1;
     }
 
     return d;
@@ -138,6 +135,7 @@ void scheduler_domains_dump(void) {
 
             cpu_mask_print(&grp->idle, buf2, sizeof(buf2));
 
+            grp->capacity = cpu_mask_popcount(&grp->cpus);
             printf(
                 "  Group %zu: CPUs = %s Idle = %s Parent = %d Capacity = %d\n",
                 g, buf1, buf2, grp->parent_index, grp->capacity);
@@ -197,10 +195,15 @@ void scheduler_domain_mark_self_idle(bool idle) {
         kassert(c->group_index[lvl] >= 0);
         kassert((size_t) c->group_index[lvl] < d->ngroups);
 
+        struct scheduler_group *grp = &d->groups[g];
+
+        kassert(cpu < grp->idle.nbits);
+        kassert(cpu_mask_test(&grp->cpus, cpu));
+
         if (idle)
-            cpu_mask_set(&d->groups[g].idle, cpu);
+            cpu_mask_set(&grp->idle, cpu);
         else
-            cpu_mask_clear(&d->groups[g].idle, cpu);
+            cpu_mask_clear(&grp->idle, cpu);
     }
 }
 

@@ -23,14 +23,13 @@ static int32_t vas_range_cmp(const struct rbt_node *a,
     return (l > r) - (l < r);
 }
 
-static void vasrange_refill(struct vas_space *space) {
+static bool vasrange_refill(struct vas_space *space) {
     SPINLOCK_ASSERT_HELD(&space->lock);
 
     uintptr_t phys = pmm_alloc_page();
 
-    /* TODO: */
     if (!phys)
-        panic("OOM allocating vas_range page");
+        return false;
 
     uintptr_t virt = hhdm_paddr_to_vaddr(phys);
     struct vas_range *ranges = (struct vas_range *) virt;
@@ -39,13 +38,17 @@ static void vasrange_refill(struct vas_space *space) {
         INIT_LIST_HEAD(&ranges[i].free_list_node);
         list_add_tail(&ranges[i].free_list_node, &space->freelist);
     }
+
+    return true;
 }
 
 static struct vas_range *vasrange_alloc(struct vas_space *space) {
     SPINLOCK_ASSERT_HELD(&space->lock);
 
-    if (list_empty(&space->freelist))
-        vasrange_refill(space);
+    if (list_empty(&space->freelist)) {
+        if (!vasrange_refill(space))
+            return NULL;
+    }
 
     struct list_head *pop = list_pop_front_init(&space->freelist);
     struct vas_range *r = container_of(pop, struct vas_range, free_list_node);
@@ -59,9 +62,13 @@ static void vasrange_free(struct vas_space *space, struct vas_range *r) {
 }
 
 struct vas_space *vas_space_bootstrap(vaddr_t base, vaddr_t limit) {
+    if (global.current_bootstage >= BOOTSTAGE_LATE)
+        log_warn_once("vas_space_bootstrap called after bootstage %s",
+                      bootstage_str[BOOTSTAGE_LATE]);
+
     uintptr_t phys = pmm_alloc_page();
     if (!phys)
-        panic("OOM creating vas_space");
+        panic("OOM creating vas_space\n");
 
     uintptr_t virt = hhdm_paddr_to_vaddr(phys);
     struct vas_space *vas = (struct vas_space *) virt;
@@ -78,6 +85,9 @@ struct vas_space *vas_space_bootstrap(vaddr_t base, vaddr_t limit) {
     enum irql irql = vas_space_lock(vas);
 
     struct vas_range *g = vasrange_alloc(vas);
+    if (!g)
+        panic("OOM\n");
+
     g->start = base;
     g->length = limit - base;
 
@@ -105,6 +115,9 @@ struct vas_space *vas_space_create(vaddr_t base, vaddr_t limit) {
     enum irql irql = vas_space_lock(vas);
 
     struct vas_range *g = vasrange_alloc(vas);
+    if (!g)
+        return NULL;
+
     g->start = base;
     g->length = limit - base;
 
@@ -132,6 +145,9 @@ vaddr_t vas_alloc(struct vas_space *vas, size_t size, size_t align) {
             /* left split */
             if (aligned > gap->start) {
                 struct vas_range *left = vasrange_alloc(vas);
+                if (!left)
+                    goto out;
+
                 left->start = gap->start;
                 left->length = aligned - gap->start;
                 rbt_insert(&vas->tree, &left->node);
@@ -140,6 +156,9 @@ vaddr_t vas_alloc(struct vas_space *vas, size_t size, size_t align) {
             /* right split */
             if (end < gap->start + gap->length) {
                 struct vas_range *right = vasrange_alloc(vas);
+                if (!right)
+                    goto out;
+
                 right->start = end;
                 right->length = (gap->start + gap->length) - end;
                 rbt_insert(&vas->tree, &right->node);
@@ -149,6 +168,11 @@ vaddr_t vas_alloc(struct vas_space *vas, size_t size, size_t align) {
 
             vas_space_unlock(vas, irql);
             return aligned;
+
+        out:
+            rbt_insert(&vas->tree, &gap->node);
+            vas_space_unlock(vas, irql);
+            return 0;
         }
 
         node = rbt_next(node);
@@ -184,12 +208,13 @@ void vas_free(struct vas_space *vas, vaddr_t addr, size_t size) {
     }
 
     /* merge with previous */
+    struct vas_range *reuse = NULL;
     if (prev && prev->start + prev->length == start) {
         start = prev->start;
         size += prev->length;
 
         rbt_delete(&vas->tree, &prev->node);
-        vasrange_free(vas, prev);
+        reuse = prev;
     }
 
     /* merge with next */
@@ -197,15 +222,22 @@ void vas_free(struct vas_space *vas, vaddr_t addr, size_t size) {
         size += next->length;
 
         rbt_delete(&vas->tree, &next->node);
-        vasrange_free(vas, next);
+
+        if (reuse) {
+            vasrange_free(vas, next);
+        } else {
+            reuse = next;
+        }
     }
 
-    /* insert merged gap */
-    struct vas_range *g = vasrange_alloc(vas);
-    g->start = start;
-    g->length = size;
+    if (!reuse)
+        reuse = vasrange_alloc(vas);
 
-    rbt_insert(&vas->tree, &g->node);
+    /* insert merged gap */
+    reuse->start = start;
+    reuse->length = size;
+
+    rbt_insert(&vas->tree, &reuse->node);
 
     vas_space_unlock(vas, irql);
 }

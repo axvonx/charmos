@@ -157,6 +157,12 @@
 #include "mem/domain/internal.h"
 #include "stat_internal.h"
 
+const size_t slab_class_sizes_const[] = {
+    SLAB_MIN_SIZE, 16, 32, 64, 96, 128, 192, 256, 512, SLAB_MAX_SIZE};
+
+#define SLAB_CLASS_SIZES_CONST_COUNT                                           \
+    sizeof(slab_class_sizes_const) / sizeof(*slab_class_sizes_const)
+
 ADDRESS_RANGE_DECLARE(
     slab, .name = "slab", .base = SLAB_HEAP_START,
     .size = SLAB_HEAP_END - SLAB_HEAP_START, .flags = ADDRESS_RANGE_STATIC
@@ -500,11 +506,23 @@ out:
 }
 
 int32_t slab_size_to_index(size_t size) {
-    for (size_t i = 0; i < slab_global.num_sizes; i++)
-        if (slab_global.class_sizes[i].size >= size)
-            return i;
+    size_t lo = 0;
+    size_t hi = slab_global.num_sizes;
 
-    return -1;
+    while (lo < hi) {
+        size_t mid = lo + (hi - lo) / 2;
+
+        if (slab_global.class_sizes[mid].size >= size) {
+            hi = mid;
+        } else {
+            lo = mid + 1;
+        }
+    }
+
+    if (lo >= slab_global.num_sizes)
+        return -1;
+
+    return (int32_t) lo;
 }
 
 static inline bool kmalloc_size_fits_in_slab(size_t size) {
@@ -542,7 +560,7 @@ void slab_allocator_init() {
     struct slab_size_constant *end = __ekernel_slab_sizes;
 
     size_t dyn_count = end - start;
-    size_t total_input = dyn_count + SLAB_CLASS_CONST_COUNT;
+    size_t total_input = dyn_count + SLAB_CLASS_SIZES_CONST_COUNT;
 
     struct slab_size_constant *tmp =
         simple_alloc(slab_global.vas, total_input * sizeof(*tmp));
@@ -552,7 +570,7 @@ void slab_allocator_init() {
     size_t idx = 0;
 
     /* "Constant" ones */
-    for (size_t i = 0; i < SLAB_CLASS_CONST_COUNT; i++) {
+    for (size_t i = 0; i < SLAB_CLASS_SIZES_CONST_COUNT; i++) {
         tmp[idx++] = (struct slab_size_constant){
             .name = "default slab size",
             .size = slab_class_sizes_const[i],

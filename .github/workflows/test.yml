@@ -37,7 +37,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Compile
-        run: ./scripts/build.sh
+        run: ./scripts/build.sh -t Release
 
       - name: Run tests
         run: |
@@ -45,9 +45,6 @@ jobs:
           export TERM=dumb
           for i in $(seq 1 5); do
             echo "[INFO] Test iteration $i/5"
-
-            dd if=/dev/zero of=disk.img bs=10M count=1
-            mkfs.ext2 -F disk.img
 
             set +e
             make tests | tee qemu.log &
@@ -59,7 +56,7 @@ jobs:
               pkill -f qemu-system-x86_64
             else
               echo "[FAIL] Iteration $i failed, collecting GDB backtrace..."
-              gdb -batch -x "../.gdb_script" kernel/kernel || true
+              gdb -batch -x "../scripts/gdb_script" kernel/kernel || true
               pkill -f qemu-system-x86_64
               exit 1
             fi
