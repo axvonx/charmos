@@ -697,7 +697,7 @@ static inline uint8_t *slab_get_bitmap_location(struct slab *s) {
 }
 
 static inline uint64_t slab_page_flags(enum slab_type type) {
-    uint64_t pflags = PAGE_PRESENT | PAGE_WRITE;
+    uint64_t pflags = PAGE_PRESENT | PAGE_WRITE | PAGE_XD;
     kassert(type != SLAB_TYPE_NONE);
     if (type == SLAB_TYPE_PAGEABLE)
         pflags |= PAGE_PAGEABLE;

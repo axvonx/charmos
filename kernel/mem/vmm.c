@@ -87,13 +87,12 @@ static enum errno pte_init(pte_t *entry, uint64_t flags) {
 
     uintptr_t new_table_phys = hhdm_ptr_to_paddr(new_table);
     memset(new_table, 0, PAGE_SIZE);
-    *entry = new_table_phys | PAGE_PRESENT | PAGE_WRITE | flags;
+    *entry = new_table_phys | PAGE_PRESENT | PAGE_WRITE | PTE_LOCK_BIT | flags;
     return ERR_OK;
 }
 
 enum irql pte_lock(pte_t *pt) {
-    enum pte_lock_result out;
-    return pte_lock_irql((void *) pt, &out);
+    return pte_lock_irql((void *) pt);
 }
 
 void pte_unlock(pte_t *pt, enum irql irql) {
@@ -116,18 +115,6 @@ static inline struct page_table *pt_next_table(pte_t entry) {
     return hhdm_paddr_to_ptr(entry & PAGE_PHYS_MASK);
 }
 
-static inline pte_t pt_make_table(paddr_t phys, uint64_t flags) {
-    return phys | PAGE_PRESENT | PAGE_WRITE | flags;
-}
-
-static inline pte_t pt_make_page(paddr_t phys, uint64_t flags) {
-    return (phys & PAGE_PHYS_MASK) | flags | PAGE_PRESENT;
-}
-
-static inline pte_t pt_make_2mb(paddr_t phys, uint64_t flags) {
-    return (phys & PAGE_PHYS_MASK) | flags | PAGE_PRESENT | PAGE_2MB_page;
-}
-
 static inline void pt_walk_enter(void) {
     if (global.current_bootstage >= BOOTSTAGE_MID_MP) {
         uint64_t e =
@@ -144,14 +131,12 @@ static inline void pt_walk_exit(void) {
     }
 }
 
-/* TODO: OOM */
 static void enqueue_pt_free(paddr_t phys) {
     if (global.current_bootstage < BOOTSTAGE_MID_MP)
         return pmm_free_page(phys);
 
-    struct pt_deferred_free *n = kmalloc(sizeof(*n));
-    if (!n)
-        panic("OOM freeing page table");
+    struct pt_deferred_free *n =
+        (struct pt_deferred_free *) hhdm_paddr_to_ptr(phys);
 
     uint64_t e =
         atomic_fetch_add_explicit(&global.pt_epoch, 1, memory_order_acq_rel) +
@@ -159,7 +144,7 @@ static void enqueue_pt_free(paddr_t phys) {
     n->phys = phys;
     n->epoch = e;
 
-    enum irql irql = spin_lock(&pt_free_lock);
+    enum irql irql = spin_lock_irq_disable(&pt_free_lock);
     n->next = pt_free_list;
     pt_free_list = n;
     spin_unlock(&pt_free_lock, irql);
@@ -173,42 +158,42 @@ void vmm_reclaim_page_tables(void) {
         return;
 
     kassert(irql_get() == IRQL_DISPATCH_LEVEL);
-
-    /* recursion prevention */
     smp_core()->reclaiming_page_tables = true;
 
     uint64_t min_epoch = UINT64_MAX;
-
     struct core *cpu;
     for_each_cpu_struct(cpu) {
-        uint64_t seen = atomic_load(&cpu->pt_seen_epoch);
+        uint64_t seen =
+            atomic_load_explicit(&cpu->pt_seen_epoch, memory_order_acquire);
         if (seen < min_epoch)
             min_epoch = seen;
     }
 
     enum irql irql = IRQL_NONE;
-    if (!spin_trylock(&pt_free_lock, &irql))
+    if (!spin_trylock_irq_disable(&pt_free_lock, &irql))
         goto out;
 
+    struct pt_deferred_free *to_free = NULL;
     struct pt_deferred_free **pp = &pt_free_list;
     while (*pp) {
         struct pt_deferred_free *n = *pp;
-
         if (n->epoch >= min_epoch) {
             pp = &n->next;
-            continue;
+        } else {
+            *pp = n->next;
+            n->next = to_free;
+            to_free = n;
         }
-
-        *pp = n->next;
-        spin_unlock(&pt_free_lock, irql);
-
-        pmm_free_pages(n->phys, 1);
-        kfree(n);
-
-        irql = spin_lock(&pt_free_lock);
     }
 
     spin_unlock(&pt_free_lock, irql);
+
+    while (to_free) {
+        struct pt_deferred_free *n = to_free;
+        paddr_t phys = n->phys;
+        to_free = n->next;
+        pmm_free_pages(phys, 1);
+    }
 
 out:
     smp_core()->reclaiming_page_tables = false;
@@ -274,7 +259,7 @@ void vmm_init(struct limine_memmap_response *memmap,
         uint64_t base = entry->base;
         uint64_t len = entry->length;
         uint64_t end = base + len;
-        uint64_t flags = PAGE_PRESENT | PAGE_WRITE;
+        uint64_t flags = PAGE_PRESENT | PAGE_WRITE | PAGE_XD;
 
         if (entry->type == LIMINE_MEMMAP_FRAMEBUFFER) {
             flags |= PAGE_WRITETHROUGH;
@@ -332,9 +317,12 @@ enum errno vmm_map_2mb_page(uintptr_t virt, uintptr_t phys, uint64_t flags,
         irqls[level] = pte_lock(entry);
         ptes[level] = entry;
 
-        if (!ENTRY_PRESENT(*entry))
-            if ((ret = pte_init(entry, 0)) < 0)
+        if (!ENTRY_PRESENT(*entry)) {
+            if ((ret = pte_init(entry, 0)) < 0) {
+                level++;
                 goto out;
+            }
+        }
 
         tables[level + 1] = pt_next_table(*entry);
     }
@@ -346,8 +334,8 @@ enum errno vmm_map_2mb_page(uintptr_t virt, uintptr_t phys, uint64_t flags,
     if (ENTRY_PRESENT(*last_entry))
         barrier_and_shootdown(vflags, virt);
 
-    *last_entry =
-        (phys & PAGE_PHYS_MASK) | flags | PAGE_PRESENT | PAGE_2MB_page;
+    *last_entry = (phys & PAGE_PHYS_MASK) | flags | PAGE_PRESENT |
+                  PAGE_2MB_page | PTE_LOCK_BIT;
 
     pte_unlock(last_entry, last_irql);
 
@@ -366,7 +354,7 @@ void vmm_unmap_2mb_page(uintptr_t virt, enum vmm_flags vflags) {
     pt_walk_enter();
     struct page_table *tables[3];
     pte_t *entries[2];
-    enum irql irqls[2];
+    enum irql irqls[2] = {0};
 
     tables[0] = kernel_pml4;
 
@@ -377,29 +365,30 @@ void vmm_unmap_2mb_page(uintptr_t virt, enum vmm_flags vflags) {
         irqls[level] = pte_lock(entry);
         entries[level] = entry;
 
-        if (!ENTRY_PRESENT(*entries[level]))
+        if (!ENTRY_PRESENT(*entries[level])) {
+            level++;
             goto out;
+        }
 
         tables[level + 1] = pt_next_table(*entries[level]);
     }
 
     uint64_t L2 = (virt >> 21) & 0x1FF;
-
     pte_t *last_entry = &tables[2]->entries[L2];
-
     enum irql last_irql = pte_lock(last_entry);
 
     *last_entry &= ~PAGE_PRESENT;
-
     barrier_and_shootdown(vflags, virt);
 
     pte_unlock(last_entry, last_irql);
 
+    paddr_t to_free[2] = {0};
+    int free_count = 0;
+
     for (int level_inner = 2; level_inner > 0; level_inner--) {
         if (vmm_is_table_empty(tables[level_inner])) {
-            uintptr_t phys = hhdm_ptr_to_paddr(tables[level_inner]);
-            *entries[level_inner - 1] = 0;
-            enqueue_pt_free(phys);
+            to_free[free_count++] = hhdm_ptr_to_paddr(tables[level_inner]);
+            *entries[level_inner - 1] = PTE_LOCK_BIT;
         } else {
             break;
         }
@@ -408,6 +397,9 @@ void vmm_unmap_2mb_page(uintptr_t virt, enum vmm_flags vflags) {
 out:
     for (int i = level - 1; i >= 0; i--)
         pte_unlock(entries[i], irqls[i]);
+
+    for (int i = 0; i < free_count; i++)
+        enqueue_pt_free(to_free[i]);
 
     pt_walk_exit();
 }
@@ -419,7 +411,7 @@ enum errno vmm_map_page(uintptr_t virt, uintptr_t phys, uint64_t flags,
 
     pt_walk_enter();
     enum errno ret = ERR_OK;
-    struct page_table *tables[4]; // PML4, PDPT, PD, PT
+    struct page_table *tables[4];
     enum irql irqls[3];
     pte_t *entries[3];
 
@@ -432,9 +424,12 @@ enum errno vmm_map_page(uintptr_t virt, uintptr_t phys, uint64_t flags,
         entries[level] = entry;
         irqls[level] = pte_lock(entry);
 
-        if (!ENTRY_PRESENT(*entry))
-            if ((ret = pte_init(entry, 0)) < 0)
+        if (!ENTRY_PRESENT(*entry)) {
+            if ((ret = pte_init(entry, 0)) < 0) {
+                level++;
                 goto out;
+            }
+        }
 
         tables[level + 1] = pt_next_table(*entry);
     }
@@ -447,7 +442,7 @@ enum errno vmm_map_page(uintptr_t virt, uintptr_t phys, uint64_t flags,
     if (ENTRY_PRESENT(*last_entry))
         barrier_and_shootdown(vflags, virt);
 
-    *last_entry = (phys & PAGE_PHYS_MASK) | flags | PAGE_PRESENT;
+    *last_entry = (phys & PAGE_PHYS_MASK) | flags | PAGE_PRESENT | PTE_LOCK_BIT;
 
     pte_unlock(last_entry, last_irql);
 
@@ -463,7 +458,7 @@ void vmm_unmap_page(uintptr_t virt, enum vmm_flags vflags) {
     pt_walk_enter();
     struct page_table *tables[4];
     pte_t *entries[3];
-    enum irql irqls[3];
+    enum irql irqls[3] = {0};
 
     tables[0] = kernel_pml4;
     int level = 0;
@@ -474,8 +469,10 @@ void vmm_unmap_page(uintptr_t virt, enum vmm_flags vflags) {
         irqls[level] = pte_lock(entry);
         entries[level] = entry;
 
-        if (!ENTRY_PRESENT(*entries[level]))
+        if (!ENTRY_PRESENT(*entries[level])) {
+            level++;
             goto out;
+        }
 
         tables[level + 1] = pt_next_table(*entries[level]);
     }
@@ -489,11 +486,13 @@ void vmm_unmap_page(uintptr_t virt, enum vmm_flags vflags) {
 
     pte_unlock(last_entry, last_irql);
 
+    paddr_t to_free[3] = {0};
+    int free_count = 0;
+
     for (int level_inner = 3; level_inner > 0; level_inner--) {
         if (vmm_is_table_empty(tables[level_inner])) {
-            uintptr_t phys = hhdm_ptr_to_paddr(tables[level_inner]);
-            *entries[level_inner - 1] = 0;
-            enqueue_pt_free(phys);
+            to_free[free_count++] = hhdm_ptr_to_paddr(tables[level_inner]);
+            *entries[level_inner - 1] = PTE_LOCK_BIT;
         } else {
             break;
         }
@@ -502,6 +501,9 @@ void vmm_unmap_page(uintptr_t virt, enum vmm_flags vflags) {
 out:
     for (int i = level - 1; i >= 0; i--)
         pte_unlock(entries[i], irqls[i]);
+
+    for (int i = 0; i < free_count; i++)
+        enqueue_pt_free(to_free[i]);
 
     pt_walk_exit();
 }

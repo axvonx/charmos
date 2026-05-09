@@ -12,6 +12,7 @@ void scheduler_idle_main(void *nop) {
     while (true) {
         enable_interrupts();
         scheduler_resched_if_needed();
+        kassert(are_interrupts_enabled());
         wait_for_interrupt();
     }
 }

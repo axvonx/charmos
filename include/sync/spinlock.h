@@ -1,12 +1,12 @@
 #pragma once
 #include <asm.h>
 #include <console/panic.h>
-#include <global.h>
 #include <irq/irq.h>
 #include <kassert.h>
 #include <sch/irql.h>
 #include <smp/core.h>
 #include <stdatomic.h>
+#include <bootstage.h>
 #include <stdbool.h>
 
 struct spinlock {
@@ -49,7 +49,7 @@ static inline void spin_unlock(struct spinlock *lock, enum irql old) {
 }
 
 static inline enum irql spin_lock(struct spinlock *lock) {
-    if (global.current_bootstage >= BOOTSTAGE_MID_MP && irq_in_interrupt())
+    if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_interrupt())
         panic("Attempted to take non-ISR safe spinlock from an ISR!\n");
 
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);

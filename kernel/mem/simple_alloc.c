@@ -12,7 +12,8 @@ void *simple_alloc(struct vas_space *space, size_t size) {
         vaddr_t virt = virt_base + (i * PAGE_SIZE);
         paddr_t phys = pmm_alloc_page();
         kassert(phys);
-        vmm_map_page(virt, phys, PAGE_PRESENT | PAGE_WRITE, VMM_FLAG_NONE);
+        vmm_map_page(virt, phys, PAGE_PRESENT | PAGE_WRITE | PAGE_XD,
+                     VMM_FLAG_NONE);
     }
 
     memset((void *) virt_base, 0, size);

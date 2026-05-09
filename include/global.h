@@ -1,5 +1,6 @@
 /* @title: Global Variables */
 #pragma once
+#include <structures/locked_list.h>
 #include <bootstage.h>
 #include <mem/buddy.h>
 #include <mem/movealloc.h>
@@ -64,6 +65,7 @@ struct globals {
     struct workqueue **workqueues;
 
     struct turnstile_hash_table *turnstiles;
+    struct locked_list thread_list;
 
     /* Conditional compilation globals go down here */
 #ifdef PROFILING_ENABLED

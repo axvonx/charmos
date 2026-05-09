@@ -22,3 +22,7 @@ void bootstage_advance(enum bootstage new) {
                     bootstage_str[new]);
     atomic_thread_fence(memory_order_seq_cst);
 }
+
+enum bootstage bootstage_get() {
+    return global.current_bootstage;
+}

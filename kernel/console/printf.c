@@ -1,4 +1,5 @@
 #include <asm.h>
+#include <global.h>
 #include <limine.h>
 #include <limits.h>
 #include <logo.h>

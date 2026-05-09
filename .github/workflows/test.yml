@@ -37,7 +37,14 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Compile
-        run: ./scripts/build.sh -t Release
+        run: ./scripts/build.sh -t RelWithDebInfo -C
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: build/charmos-x86_64.iso
+          retention-days: 7
 
       - name: Run tests
         run: |

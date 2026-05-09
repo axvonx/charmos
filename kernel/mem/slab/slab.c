@@ -688,7 +688,7 @@ void *kmalloc_pages_raw(struct slab_domain *parent, size_t size,
     uintptr_t phys_pages[pages];
     uint64_t allocated = 0;
 
-    page_flags_t page_flags = PAGE_PRESENT | PAGE_WRITE;
+    page_flags_t page_flags = PAGE_PRESENT | PAGE_WRITE | PAGE_XD;
     if (flags & ALLOC_FLAG_PAGEABLE)
         page_flags |= PAGE_PAGEABLE;
 

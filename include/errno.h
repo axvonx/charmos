@@ -4,7 +4,7 @@
 
 #define ERR_IS_FATAL(e) (e != ERR_OK && e != ERR_AGAIN)
 
-enum errno : int32_t {
+enum errno {
     ERR_OK = 0,          // Success
     ERR_UNKNOWN = -1,    // Unknown or unspecified error
     ERR_NO_MEM = -2,     // Out of memory

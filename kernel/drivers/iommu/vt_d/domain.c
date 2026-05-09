@@ -1,4 +1,5 @@
 #include <drivers/iommu/vt_d.h>
+#include <global.h>
 #include <math/div.h>
 
 static inline int bit_is_used(const uint8_t *bitmap, size_t bit_index) {

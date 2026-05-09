@@ -5,7 +5,11 @@
 #include <thread/dpc.h>
 
 enum irql irql_get(void) {
-    return smp_core()->current_irql;
+    return atomic_load(&smp_core()->current_irql);
+}
+
+static enum irql irql_set(enum irql irql) {
+    return atomic_exchange(&smp_core()->current_irql, irql);
 }
 
 static inline uint32_t scheduler_preemption_disable(void) {
@@ -42,10 +46,9 @@ enum irql irql_raise(enum irql new_level) {
     bool iflag = are_interrupts_enabled();
     disable_interrupts();
 
-    struct core *cpu = smp_core();
-    enum irql old = cpu->current_irql;
+    enum irql old = irql_get();
 
-    cpu->current_irql = new_level;
+    irql_set(new_level);
     if (new_level > old) {
         if (old < IRQL_APC_LEVEL && new_level >= IRQL_APC_LEVEL)
             scheduler_preemption_disable();
@@ -69,18 +72,17 @@ void irql_lower(enum irql new_level) {
     if (global.current_bootstage < BOOTSTAGE_LATE || new_level == IRQL_NONE)
         return;
 
-    struct core *cpu = smp_core();
-    enum irql old = cpu->current_irql;
+    enum irql old = irql_get();
 
     /* hook into here */
     if (old == IRQL_DISPATCH_LEVEL && new_level == IRQL_PASSIVE_LEVEL &&
         !scheduler_in_periodic_work())
         scheduler_periodic_work_execute(PERIODIC_WORK_TIME_BASED);
 
-    struct thread *curr = cpu->current_thread;
-    bool in_thread = !cpu->in_interrupt;
+    struct thread *curr = thread_get_current();
+    bool in_thread = irq_in_thread_context();
 
-    cpu->current_irql = new_level;
+    irql_set(new_level);
     if (new_level < old) {
         if (in_thread && old >= IRQL_HIGH_LEVEL && new_level < IRQL_HIGH_LEVEL)
             enable_interrupts();

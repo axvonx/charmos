@@ -34,13 +34,12 @@ ADDRESS_RANGE_DECLARE(thread_stacks, .name = "thread stacks",
 /* lol */
 static struct tid_space *global_tid_space = NULL;
 static struct vas_space *stacks_space = NULL;
-struct locked_list thread_list;
 
 void thread_init_thread_ids(void) {
     stacks_space =
         vas_space_create(THREAD_STACKS_HEAP_START, THREAD_STACKS_HEAP_END);
     global_tid_space = tid_space_init(UINT64_MAX);
-    locked_list_init(&thread_list, LOCKED_LIST_INIT_IRQ_DISABLE);
+    locked_list_init(&global.thread_list, LOCKED_LIST_INIT_IRQ_DISABLE);
 }
 
 APC_EVENT_CREATE(thread_exit_apc_event, "THREAD_EXIT");
@@ -54,7 +53,7 @@ void thread_exit() {
 
     climb_thread_remove(self);
 
-    locked_list_del(&thread_list, &self->thread_list);
+    locked_list_del(&global.thread_list, &self->thread_list);
 
     atomic_fetch_sub(&global.thread_count, 1);
 
@@ -95,7 +94,8 @@ void *thread_allocate_stack(size_t pages) {
         vaddr_t virt = virt_base + (i * PAGE_SIZE);
         paddr_t phys = pmm_alloc_page();
         kassert(phys);
-        vmm_map_page(virt, phys, PAGE_PRESENT | PAGE_WRITE, VMM_FLAG_NONE);
+        vmm_map_page(virt, phys, PAGE_PRESENT | PAGE_WRITE | PAGE_XD,
+                     VMM_FLAG_NONE);
     }
     return (void *) virt_base;
 }
@@ -186,7 +186,7 @@ static struct thread *thread_init(struct thread *thread,
     rbt_init_node(&thread->rq_tree_node);
     rbt_init_node(&thread->wq_tree_node);
 
-    locked_list_add(&thread_list, &thread->thread_list);
+    locked_list_add(&global.thread_list, &thread->thread_list);
 
     return thread;
 }

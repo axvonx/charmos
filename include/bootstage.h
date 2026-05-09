@@ -28,4 +28,5 @@ enum bootstage : uint8_t {
 
 extern const char *bootstage_str[BOOTSTAGE_COUNT];
 
+enum bootstage bootstage_get();
 void bootstage_advance(enum bootstage new);

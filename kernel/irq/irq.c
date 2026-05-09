@@ -2,6 +2,7 @@
 #include <asm.h>
 #include <compiler.h>
 #include <console/printf.h>
+#include <dbg.h>
 #include <global.h>
 #include <irq/idt.h>
 #include <mem/alloc.h>

@@ -1,5 +1,6 @@
 #include <asm.h>
 #include <console/printf.h>
+#include <global.h>
 #include <irq/idt.h>
 #include <kassert.h>
 #include <limine.h>

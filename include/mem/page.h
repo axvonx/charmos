@@ -1,13 +1,14 @@
 /* @title: Page */
 #pragma once
 #include <compiler.h>
+#include <global.h>
 #include <math/align.h>
 #include <stdint.h>
 #include <sync/spinlock.h>
 
 #define PAGE_SIZE 4096ULL
-#define PAGE_2MB 0x200000
-#define PAGE_1GB 0x40000000
+#define PAGE_2MB 0x200000ULL
+#define PAGE_1GB 0x40000000ULL
 
 #define PAGE_PRESENT (0x1UL)
 #define PAGE_WRITE (0x2UL)

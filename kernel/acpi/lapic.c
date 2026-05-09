@@ -73,9 +73,14 @@ bool lapic_timer_is_enabled() {
 }
 
 static void lapic_send_ipi(uint8_t apic_id, uint8_t vector) {
+    enum irql irql = irql_raise(IRQL_HIGH_LEVEL);
+    while (lapic_read(LAPIC_ICR_LOW) & LAPIC_IPI_IN_FLIGHT)
+        cpu_relax();
+
     lapic_write(LAPIC_ICR_HIGH, apic_id << LAPIC_DEST_SHIFT);
     lapic_write(LAPIC_ICR_LOW, vector | LAPIC_DELIVERY_FIXED |
                                    LAPIC_LEVEL_ASSERT | LAPIC_DEST_PHYSICAL);
+    irql_lower(irql);
 }
 
 void x2apic_send_ipi(uint32_t apic_id, uint8_t vector) {
@@ -123,8 +128,7 @@ void nmi_send(uint32_t apic_id) {
     lapic_write(LAPIC_ICR_HIGH, hi);
     lapic_write(LAPIC_ICR_LOW, lo);
 
-    /* Poll delivery status bit to avoid siccing two NMIs at once */
-    while (lapic_read(LAPIC_ICR_LOW) & (1u << 12))
+    while (lapic_read(LAPIC_ICR_LOW) & LAPIC_IPI_IN_FLIGHT)
         cpu_relax();
 }
 

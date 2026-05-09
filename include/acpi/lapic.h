@@ -20,6 +20,7 @@
 #define LAPIC_LEVEL_ASSERT (1 << 14)
 #define LAPIC_TRIGGER_EDGE (0 << 15)
 #define LAPIC_TRIGGER_LEVEL (1 << 15)
+#define LAPIC_IPI_IN_FLIGHT (1u << 12)
 #define LAPIC_DEST_PHYSICAL (0 << 11)
 #define LAPIC_DEST_LOGICAL (1 << 11)
 

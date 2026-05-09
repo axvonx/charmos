@@ -12,7 +12,6 @@
 
 #include "sch/internal.h" /* for tick_enabled */
 
-extern struct locked_list thread_list;
 static struct rcu_buckets rcu_buckets;
 
 static uint64_t rcu_advance_gp() {
@@ -51,15 +50,15 @@ void rcu_synchronize(void) {
     while (true) {
         bool all_done = true;
 
-        enum irql irql = spin_lock(&thread_list.lock);
+        enum irql irql = spin_lock_irq_disable(&global.thread_list.lock);
         struct thread *t, *tmp;
-        list_for_each_entry_safe(t, tmp, &thread_list.list, thread_list) {
+        list_for_each_entry_safe(t, tmp, &global.thread_list.list, thread_list) {
             if (thread_rcu_not_reached_target(t, target)) {
                 all_done = false;
                 break;
             }
         }
-        spin_unlock(&thread_list.lock, irql);
+        spin_unlock(&global.thread_list.lock, irql);
 
         if (all_done)
             break;
@@ -138,15 +137,15 @@ static void rcu_detach_bucket(struct rcu_buckets *bkts, size_t bucket,
 static bool thread_list_has_pending_readers(uint64_t gen) {
     bool pending = false;
 
-    enum irql irql = spin_lock(&thread_list.lock);
+    enum irql irql = spin_lock_irq_disable(&global.thread_list.lock);
     struct thread *t, *tmp;
-    list_for_each_entry_safe(t, tmp, &thread_list.list, thread_list) {
+    list_for_each_entry_safe(t, tmp, &global.thread_list.list, thread_list) {
         if (thread_rcu_not_reached_target(t, gen)) {
             pending = true;
             break;
         }
     }
-    spin_unlock(&thread_list.lock, irql);
+    spin_unlock(&global.thread_list.lock, irql);
 
     return pending;
 }
@@ -205,15 +204,15 @@ static void rcu_gp_worker(void *unused) {
         while (true) {
             bool everybody_ok = true;
 
-            enum irql irql = spin_lock(&thread_list.lock);
+            enum irql irql = spin_lock_irq_disable(&global.thread_list.lock);
             struct thread *t, *tmp;
-            list_for_each_entry_safe(t, tmp, &thread_list.list, thread_list) {
+            list_for_each_entry_safe(t, tmp, &global.thread_list.list, thread_list) {
                 if (thread_rcu_not_reached_target(t, target)) {
                     everybody_ok = false;
                     break;
                 }
             }
-            spin_unlock(&thread_list.lock, irql);
+            spin_unlock(&global.thread_list.lock, irql);
 
             if (everybody_ok)
                 break;

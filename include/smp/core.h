@@ -67,7 +67,7 @@ struct core {
     atomic_bool idle;
 
     bool in_interrupt;
-    enum irql current_irql;
+    _Atomic enum irql current_irql;
 
     enum dpc_event dpc_event;
 

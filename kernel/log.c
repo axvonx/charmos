@@ -451,3 +451,39 @@ void debug_print_memory(void *addr, uint64_t size) {
     }
     printf("\n");
 }
+
+void debug_print_stack_from(uint64_t *start, size_t max_scan) {
+    int hits = 0;
+    uint8_t *last_checked_page = NULL;
+
+    if (!max_scan)
+        max_scan = 64 * 1024;
+
+    printf("Stack unwind from %p:\n", (uint64_t)start);
+
+    for (size_t offset = 0; offset < max_scan; offset += sizeof(uint64_t)) {
+        uint8_t *addr = (uint8_t *)start + offset;
+        uint8_t *page_base = (uint8_t *)PAGE_ALIGN_DOWN(addr);
+
+        if (page_base != last_checked_page) {
+            if (vmm_get_phys_unsafe((vaddr_t)page_base) == (uintptr_t)-1)
+                break;
+            last_checked_page = page_base;
+        }
+
+        uint64_t val = *(uint64_t *)addr;
+
+        if (val >= 0xffffffff80000000ULL && val <= 0xffffffffffffffffULL) {
+            uint64_t sym_addr;
+            const char *sym = find_symbol(val, &sym_addr);
+            if (sym) {
+                printf("    [0x%016lx] %s+0x%lx (sp=0x%016lx)\n",
+                       val, sym, val - sym_addr, (uint64_t)addr);
+                hits++;
+            }
+        }
+    }
+
+    if (hits == 0)
+        printf("  <no kernel symbols found>\n");
+}

@@ -9,6 +9,10 @@
 #define IDLE_LONG_ENOUGH 10   /* if the other core is idle for 10ms */
 #define IDLE_MIN_MIGRATABLE 3 /* and we have 3 migratable */
 
+static inline bool can_push_thread(size_t caller, struct thread *t) {
+    return scheduler_can_take_thread(caller, t) && t != thread_get_current();
+}
+
 /* fraction = remote_scale * (1 / (1 + dist))
  *
  * using integer math:
@@ -22,7 +26,7 @@ static size_t migratable_in_tree(size_t caller, struct rbt *rbt) {
     size_t agg = 0;
     rbt_for_each(rb, rbt) {
         struct thread *t = thread_from_rq_rbt_node(rb);
-        if (scheduler_can_take_thread(caller, t))
+        if (can_push_thread(caller, t))
             agg++;
     }
     return agg;
@@ -33,7 +37,7 @@ static size_t migratable_in_list(size_t caller, struct list_head *tq) {
     size_t agg = 0;
     list_for_each(ln, tq) {
         struct thread *t = thread_from_rq_list_node(ln);
-        if (scheduler_can_take_thread(caller, t))
+        if (can_push_thread(caller, t))
             agg++;
     }
     return agg;
@@ -92,7 +96,7 @@ static size_t migrate_from_tree(struct scheduler *to,
 
         /* we are on a thread we will give priority to migrating */
         if (!prev_migrated) {
-            if (scheduler_can_take_thread(to->core_id, t)) {
+            if (can_push_thread(to->core_id, t)) {
                 move_ts_thread_raw(to, from_sched, from, t);
                 prev_migrated = true;
                 migrated++;
@@ -130,7 +134,7 @@ static size_t migrate_from_prio_class(struct scheduler *to,
                 break;
 
             struct thread *t = thread_from_rq_list_node(ln);
-            if (scheduler_can_take_thread(to->core_id, t)) {
+            if (can_push_thread(to->core_id, t)) {
 
                 list_del_init(ln);
                 scheduler_decrement_thread_count(from, t);
