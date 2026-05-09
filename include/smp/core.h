@@ -67,13 +67,13 @@ struct core {
     atomic_bool idle;
 
     bool in_interrupt;
-    _Atomic enum irql current_irql;
+    enum irql current_irql;
 
     enum dpc_event dpc_event;
 
     atomic_bool needs_resched;
     atomic_bool in_resched; /* in scheduler_yield() */
-    atomic_uint scheduler_preemption_disable_depth;
+    uint32_t scheduler_preemption_disable_depth;
 
     struct domain *domain;
     struct domain_arena *domain_arena;

@@ -5,37 +5,36 @@
 #include <thread/dpc.h>
 
 enum irql irql_get(void) {
-    return atomic_load(&smp_core()->current_irql);
+    return smp_core()->current_irql;
 }
 
 static enum irql irql_set(enum irql irql) {
-    return atomic_exchange(&smp_core()->current_irql, irql);
+    return smp_core()->current_irql = irql;
 }
 
 static inline uint32_t scheduler_preemption_disable(void) {
     kassert(!are_interrupts_enabled());
     struct core *cpu = smp_core();
 
-    uint32_t old =
-        atomic_fetch_add(&cpu->scheduler_preemption_disable_depth, 1);
+    uint32_t old = cpu->scheduler_preemption_disable_depth;
 
-    if (old == UINT32_MAX) {
+    if (old == UINT32_MAX)
         panic("overflow\n");
-    }
 
+    cpu->scheduler_preemption_disable_depth++;
     return old + 1;
 }
 
 static inline uint32_t scheduler_preemption_enable(void) {
     struct core *cpu = smp_core();
 
-    uint32_t old =
-        atomic_fetch_sub(&cpu->scheduler_preemption_disable_depth, 1);
+    uint32_t old = cpu->scheduler_preemption_disable_depth;
 
     if (old == 0) {
         panic("underflow\n");
     }
 
+    cpu->scheduler_preemption_disable_depth--;
     return old - 1;
 }
 

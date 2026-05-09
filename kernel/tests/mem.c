@@ -281,12 +281,12 @@ TEST_REGISTER(kmalloc_new_behavior_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
 #define MAX_LIVE_ALLOCS 1024
 #define SHOULD_FREE true
 
+static atomic_bool all_ready = false;
+
 struct stress_arg {
     int id;
     volatile int *done_flag;
 };
-
-static atomic_bool all_ready = false;
 
 static void stress_worker(void *) {
     struct stress_arg *a = NULL;

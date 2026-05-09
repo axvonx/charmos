@@ -213,13 +213,15 @@ struct slab {
 struct slab_magazine {
     vaddr_t objs[SLAB_MAG_ENTRIES];
     size_t count;
-    struct spinlock lock;
 };
 
 struct slab_percpu_cache {
     /* Magazines are always nonpageable */
     struct slab_magazine *mag; /* the size of this is slab_num_sizes */
     struct slab_domain *domain;
+    vaddr_t shadow_objs[SLAB_MAG_ENTRIES + 1]; /* Used in magazine internal
+                                                * to mitigate risk of
+                                                * stack allocations */
 };
 
 struct slab_free_slot {
@@ -521,11 +523,11 @@ struct slab *slab_for_ptr(void *ptr);
 
 /* Magazine + percpu */
 bool slab_magazine_push(struct slab_magazine *mag, vaddr_t obj);
-bool slab_magazine_push_internal(struct slab_magazine *mag, vaddr_t obj);
 vaddr_t slab_magazine_pop(struct slab_magazine *mag);
-void slab_percpu_free(struct slab_domain *dom, size_t class_idx, vaddr_t obj);
 void slab_free_addr_to_cache(void *addr);
 void slab_domain_percpu_init(struct slab_domain *domain);
+void slab_percpu_flush(struct slab_domain *dom, struct slab_percpu_cache *pc,
+                       size_t class_idx, vaddr_t overflow_obj);
 void slab_percpu_refill(struct slab_domain *dom,
                         struct slab_percpu_cache *cache,
                         enum alloc_behavior behavior);

@@ -140,7 +140,7 @@ SLIST_HEAD(free_queue_list_tmp, entry);
 
 size_t slab_free_queue_drain(struct slab_percpu_cache *cache,
                              struct slab_free_queue *queue, size_t target) {
-
+    kassert(cache == slab_percpu_cache_local());
     size_t drained_to_magazine = 0; /* Return value */
     size_t addrs_dequeued = 0;      /* Used to check against `target` */
 

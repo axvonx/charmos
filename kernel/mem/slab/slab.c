@@ -1170,34 +1170,6 @@ static bool kfree_try_free_to_magazine(struct slab_percpu_cache *pcpu,
     return ret;
 }
 
-static bool kfree_magazine_push_trylock(struct slab_magazine *mag, void *ptr) {
-    vaddr_t vptr = (vaddr_t) ptr;
-    enum irql irql;
-    if (!spin_trylock(&mag->lock, &irql))
-        return false;
-
-    bool ret = slab_magazine_push_internal(mag, vptr);
-
-    spin_unlock(&mag->lock, irql);
-
-    return ret;
-}
-
-static bool kfree_try_put_on_percpu_caches(struct slab_domain *domain,
-                                           void *ptr, size_t size) {
-    int32_t idx = slab_size_to_index(size);
-    for (size_t i = 0; i < domain->domain->num_cores; i++) {
-        struct slab_percpu_cache *try = domain->percpu_caches[i];
-        struct slab_magazine *mag = &try->mag[idx];
-        if (kfree_magazine_push_trylock(mag, ptr)) {
-            slab_stat_free_to_percpu(domain);
-            return true;
-        }
-    }
-
-    return false;
-}
-
 void slab_free(struct slab_domain *domain, void *obj) {
     struct slab *slab = slab_for_ptr(obj);
     struct slab_cache *cache = slab->parent_cache;
@@ -1255,11 +1227,6 @@ void kfree_new(void *ptr, enum alloc_behavior behavior) {
     /* did not free to magazine - this is an alloc from a slab */
     struct slab *slab = slab_for_ptr(ptr);
     struct slab_domain *owner = slab->parent_cache->parent_domain;
-
-    /* did not enqueue into the freequeue... try putting it on
-     * any magazine... we acquire the trylock() here... */
-    if (kfree_try_put_on_percpu_caches(owner, ptr, size))
-        goto done;
 
     if (kfree_free_queue_enqueue(owner, ptr))
         goto done;
