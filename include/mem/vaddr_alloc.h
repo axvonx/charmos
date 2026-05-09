@@ -57,5 +57,3 @@ void *vas_map(struct vas_space *vas, paddr_t paddr, size_t len, uint64_t flags,
 void vas_unmap(struct vas_space *vas, void *vaddr, size_t len);
 
 void vas_reclaim_freelist_pages(struct vas_local_tree *lt);
-
-SPINLOCK_GENERATE_LOCK_UNLOCK_FOR_STRUCT(vas_local_tree, lock);

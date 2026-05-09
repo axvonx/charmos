@@ -299,35 +299,33 @@ void thread_queue_init(struct thread_queue *q) {
     spinlock_init(&q->lock);
 }
 
-SPINLOCK_GENERATE_LOCK_UNLOCK_FOR_STRUCT(thread_queue, lock);
-
 void thread_queue_push_back(struct thread_queue *q, struct thread *t) {
-    enum irql irql = thread_queue_lock_irq_disable(q);
+    enum irql irql = spin_lock_irq_disable(&q->lock);
     list_add_tail(&t->wq_list_node, &q->list);
-    thread_queue_unlock(q, irql);
+    spin_unlock(&q->lock, irql);
 }
 
 bool thread_queue_remove(struct thread_queue *q, struct thread *t) {
-    enum irql irql = thread_queue_lock_irq_disable(q);
+    enum irql irql = spin_lock_irq_disable(&q->lock);
     struct list_head *pos;
 
     list_for_each(pos, &q->list) {
         struct thread *thread = thread_from_wq_list_node(pos);
         if (thread == t) {
             list_del_init(&t->wq_list_node);
-            thread_queue_unlock(q, irql);
+            spin_unlock(&q->lock, irql);
             return true;
         }
     }
 
-    thread_queue_unlock(q, irql);
+    spin_unlock(&q->lock, irql);
     return false;
 }
 
 struct thread *thread_queue_pop_front(struct thread_queue *q) {
-    enum irql irql = thread_queue_lock_irq_disable(q);
+    enum irql irql = spin_lock_irq_disable(&q->lock);
     struct list_head *lhead = list_pop_front_init(&q->list);
-    thread_queue_unlock(q, irql);
+    spin_unlock(&q->lock, irql);
     if (!lhead)
         return NULL;
 
@@ -338,10 +336,10 @@ void thread_block_on(struct thread_queue *q, enum thread_wait_type type,
                      void *wake_src) {
     struct thread *current = thread_get_current();
 
-    enum irql irql = thread_queue_lock_irq_disable(q);
+    enum irql irql = spin_lock_irq_disable(&q->lock);
     thread_block(current, THREAD_BLOCK_REASON_MANUAL, type, wake_src);
     list_add_tail(&current->wq_list_node, &q->list);
-    thread_queue_unlock(q, irql);
+    spin_unlock(&q->lock, irql);
 }
 
 static void wake_thread(void *a, void *unused) {

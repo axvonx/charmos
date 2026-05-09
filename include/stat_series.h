@@ -34,7 +34,6 @@ struct stat_series {
     void *private;                     /* private, per subsystem */
     struct spinlock lock;
 };
-SPINLOCK_GENERATE_LOCK_UNLOCK_FOR_STRUCT(stat_series, lock);
 
 struct stat_series *stat_series_create(uint32_t nbuckets, time_t bucket_us,
                                        stat_series_callback bucket_reset,

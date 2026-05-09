@@ -100,6 +100,9 @@ struct workqueue *workqueue_create_internal(struct workqueue_attributes *attrs,
         goto err;
 
     spinlock_init(&wq->lock);
+    spinlock_init(&wq->worker_array_lock);
+    spinlock_init(&wq->worker_lock);
+    spinlock_init(&wq->work_lock);
 
     if (attrs->worker_cpu_mask.nbits == 0)
         panic("please set a CPU mask before creating the workqueue\n");

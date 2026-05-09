@@ -40,7 +40,7 @@ struct stat_series *stat_series_create(uint32_t nbuckets, time_t bucket_us,
 }
 
 void stat_series_reset(struct stat_series *s) {
-    enum irql irql = stat_series_lock(s);
+    enum irql irql = spin_lock(&s->lock);
 
     struct stat_bucket *bucket;
 
@@ -50,7 +50,7 @@ void stat_series_reset(struct stat_series *s) {
         s->bucket_reset(bucket);
     }
 
-    stat_series_unlock(s, irql);
+    spin_unlock(&s->lock, irql);
 }
 
 void stat_series_advance_internal(struct stat_series *s, time_t now_us,
@@ -70,7 +70,7 @@ void stat_series_advance_internal(struct stat_series *s, time_t now_us,
 
     /* Take lock and re-check/recompute using the protected fields */
     if (!already_locked) {
-        irql = stat_series_lock(s);
+        irql = spin_lock(&s->lock);
     } else {
         SPINLOCK_ASSERT_HELD(&s->lock);
     }
@@ -102,7 +102,7 @@ void stat_series_advance_internal(struct stat_series *s, time_t now_us,
 
 out:
     if (!already_locked)
-        stat_series_unlock(s, irql);
+        spin_unlock(&s->lock, irql);
 }
 
 void stat_series_advance(struct stat_series *s, time_t now_us) {

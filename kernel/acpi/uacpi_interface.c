@@ -163,6 +163,7 @@ uacpi_kernel_uninstall_interrupt_handler(uacpi_interrupt_handler handler,
 
 uacpi_handle uacpi_kernel_create_spinlock(void) {
     struct spinlock *lock = kzalloc(sizeof(struct spinlock));
+    spinlock_init(lock);
     return lock;
 }
 

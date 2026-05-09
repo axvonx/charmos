@@ -34,19 +34,19 @@ static struct pairing_node *pairing_merge(struct pairing_heap *h,
 }
 
 void pairing_heap_insert(struct pairing_heap *h, struct pairing_node *node) {
-    enum irql irql = pairing_heap_lock(h);
+    enum irql irql = spin_lock(&h->lock);
     node->parent = NULL;
     node->child = NULL;
     node->sibling = NULL;
 
     h->root = pairing_merge(h, h->root, node);
-    pairing_heap_unlock(h, irql);
+    spin_unlock(&h->lock, irql);
 }
 
 struct pairing_node *pairing_heap_peek(struct pairing_heap *h) {
-    enum irql irql = pairing_heap_lock(h);
+    enum irql irql = spin_lock(&h->lock);
     struct pairing_node *n = h->root;
-    pairing_heap_unlock(h, irql);
+    spin_unlock(&h->lock, irql);
     return n;
 }
 
@@ -68,7 +68,7 @@ static struct pairing_node *pairing_two_pass(struct pairing_heap *h,
 }
 
 struct pairing_node *pairing_heap_pop(struct pairing_heap *h) {
-    enum irql irql = pairing_heap_lock(h);
+    enum irql irql = spin_lock(&h->lock);
     struct pairing_node *root = h->root;
 
     if (!root)
@@ -84,13 +84,13 @@ struct pairing_node *pairing_heap_pop(struct pairing_heap *h) {
     root->parent = NULL;
 
 out:
-    pairing_heap_unlock(h, irql);
+    spin_unlock(&h->lock, irql);
     return root;
 }
 
 void pairing_heap_decrease(struct pairing_heap *h, struct pairing_node *node) {
     /* If already root, nothing to do */
-    enum irql irql = pairing_heap_lock(h);
+    enum irql irql = spin_lock(&h->lock);
     if (node == h->root)
         goto out;
 
@@ -113,5 +113,5 @@ void pairing_heap_decrease(struct pairing_heap *h, struct pairing_node *node) {
     /* Merge back with root */
     h->root = pairing_merge(h, h->root, node);
 out:
-    pairing_heap_unlock(h, irql);
+    spin_unlock(&h->lock, irql);
 }

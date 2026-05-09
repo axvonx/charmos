@@ -125,10 +125,6 @@ void domain_enqueue_flush_worker(struct domain_flush_worker *worker);
          (arena_ptr = ((domain)->arenas[__i]), __i < (domain)->core_count);    \
          __i++)
 
-SPINLOCK_GENERATE_LOCK_UNLOCK_FOR_STRUCT(domain_buddy, lock);
-SPINLOCK_GENERATE_LOCK_UNLOCK_FOR_STRUCT(domain_free_queue, lock);
-SPINLOCK_GENERATE_LOCK_UNLOCK_FOR_STRUCT(domain_arena, lock);
-
 static inline struct domain_buddy *domain_buddy_for_addr(paddr_t addr) {
     for (size_t i = 0; i < global.domain_count; i++) {
         struct domain_buddy *d = &global.domain_buddies[i];
@@ -200,13 +196,13 @@ static inline struct buddy_page *buddy_page_for_addr(paddr_t address) {
 static inline void free_from_buddy_internal(struct domain_buddy *target,
                                             paddr_t address,
                                             size_t page_count) {
-    enum irql irql = domain_buddy_lock(target);
+    enum irql irql = spin_lock(&target->lock);
     buddy_free_pages(address, page_count, target->free_area,
                      target->total_pages);
     domain_stat_free(target);
     atomic_fetch_sub(&target->pages_used, page_count);
 
-    domain_buddy_unlock(target, irql);
+    spin_unlock(&target->lock, irql);
 }
 
 struct domain *domain_alloc_pick_best_domain(struct domain *local, size_t pages,

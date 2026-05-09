@@ -12,16 +12,15 @@
          (node_ptr = ((heap)->nodes[__i]), __i < (heap)->size); __i++)
 
 struct minheap_node {
-    struct spinlock lock;
     _Atomic uint64_t key;
     _Atomic uint32_t index;
 };
-SPINLOCK_GENERATE_LOCK_UNLOCK_FOR_STRUCT(minheap_node, lock);
 
 struct minheap {
     struct minheap_node **nodes;
     _Atomic uint32_t capacity;
     _Atomic uint32_t size;
+    struct spinlock lock;
 };
 
 struct minheap *minheap_create(void);
@@ -52,8 +51,6 @@ static inline struct minheap_node *minheap_peek(struct minheap *heap) {
 struct minheap_node *minheap_pop(struct minheap *heap);
 
 static inline bool minheap_node_valid(struct minheap_node *node) {
-    enum irql irql = minheap_node_lock_irq_disable(node);
     bool valid = MINHEAP_NODE_INDEX(node) != MINHEAP_INDEX_INVALID;
-    minheap_node_unlock(node, irql);
     return valid;
 }

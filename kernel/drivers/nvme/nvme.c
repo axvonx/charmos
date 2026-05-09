@@ -126,6 +126,8 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
     INIT_LIST_HEAD(&nvme->work.list_node);
     nvme->work.args = WORK_ARGS(nvme, NULL);
     nvme->work.func = nvme_work;
+    spinlock_init(&nvme->waiting_requests.lock);
+    spinlock_init(&nvme->finished_requests.lock);
 
     struct cpu_mask mask;
     if (!cpu_mask_init(&mask, global.core_count))

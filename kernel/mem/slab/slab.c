@@ -423,7 +423,7 @@ static void slab_bitmap_free(struct slab *slab, void *obj) {
 void slab_free_old(struct slab *slab, void *obj) {
     struct slab_cache *cache = slab->parent_cache;
 
-    enum irql slab_cache_irql = slab_cache_lock(cache);
+    enum irql slab_cache_irql = spin_lock(&cache->lock);
 
     slab_bitmap_free(slab, obj);
 
@@ -431,7 +431,7 @@ void slab_free_old(struct slab *slab, void *obj) {
         slab_move(cache, slab, SLAB_FREE);
         if (slab_should_enqueue_gc(slab)) {
             slab_list_del(slab);
-            slab_cache_unlock(cache, slab_cache_irql);
+            spin_unlock(&cache->lock, slab_cache_irql);
 
             slab_free_virt_and_phys(slab);
             return;
@@ -441,7 +441,7 @@ void slab_free_old(struct slab *slab, void *obj) {
     }
 
     slab_check_assert(slab);
-    slab_cache_unlock(cache, slab_cache_irql);
+    spin_unlock(&cache->lock, slab_cache_irql);
 }
 
 static void *slab_try_alloc_from_slab_list(struct slab_cache *cache,
@@ -464,12 +464,12 @@ out:
 }
 
 void slab_cache_insert(struct slab_cache *cache, struct slab *slab) {
-    enum irql irql = slab_cache_lock(cache);
+    enum irql irql = spin_lock(&cache->lock);
 
     slab_init(slab, cache);
     slab_list_add(cache, slab);
 
-    slab_cache_unlock(cache, irql);
+    spin_unlock(&cache->lock, irql);
 }
 
 void *slab_cache_try_alloc_from_lists(struct slab_cache *c) {
@@ -485,9 +485,9 @@ void *slab_cache_try_alloc_from_lists(struct slab_cache *c) {
 void *slab_alloc_old(struct slab_cache *cache) {
     void *ret = NULL;
 
-    enum irql irql = slab_cache_lock(cache);
+    enum irql irql = spin_lock(&cache->lock);
     ret = slab_cache_try_alloc_from_lists(cache);
-    slab_cache_unlock(cache, irql);
+    spin_unlock(&cache->lock, irql);
     if (ret)
         goto out;
 
@@ -496,10 +496,10 @@ void *slab_alloc_old(struct slab_cache *cache) {
     if (!slab)
         goto out;
 
-    irql = slab_cache_lock(cache);
+    irql = spin_lock(&cache->lock);
     slab_list_add(cache, slab);
     ret = slab_alloc_from(cache, slab);
-    slab_cache_unlock(cache, irql);
+    spin_unlock(&cache->lock, irql);
 
 out:
     return ret;
@@ -927,7 +927,7 @@ void *slab_alloc(struct slab_cache *cache, enum alloc_behavior behavior) {
         cache->type == SLAB_TYPE_PAGEABLE)
         panic("picked pageable cache with non-fault tolerant behavior\n");
 
-    enum irql irql = slab_cache_lock(cache);
+    enum irql irql = spin_lock(&cache->lock);
 
     /* First try from lists */
     ret = slab_cache_try_alloc_from_lists(cache);
@@ -938,11 +938,11 @@ void *slab_alloc(struct slab_cache *cache, enum alloc_behavior behavior) {
     }
 
     /* Drop the lock since we are going to do the expensive thing */
-    slab_cache_unlock(cache, irql);
+    spin_unlock(&cache->lock, irql);
 
     struct slab *slab = slab_create(cache, behavior);
 
-    irql = slab_cache_lock(cache);
+    irql = spin_lock(&cache->lock);
 
     if (!slab)
         goto out;
@@ -951,7 +951,7 @@ void *slab_alloc(struct slab_cache *cache, enum alloc_behavior behavior) {
     ret = slab_alloc_from(cache, slab);
 
 out:
-    slab_cache_unlock(cache, irql);
+    spin_unlock(&cache->lock, irql);
     return ret;
 }
 
@@ -1173,12 +1173,12 @@ static bool kfree_try_free_to_magazine(struct slab_percpu_cache *pcpu,
 static bool kfree_magazine_push_trylock(struct slab_magazine *mag, void *ptr) {
     vaddr_t vptr = (vaddr_t) ptr;
     enum irql irql;
-    if (!slab_magazine_trylock(mag, &irql))
+    if (!spin_trylock(&mag->lock, &irql))
         return false;
 
     bool ret = slab_magazine_push_internal(mag, vptr);
 
-    slab_magazine_unlock(mag, irql);
+    spin_unlock(&mag->lock, irql);
 
     return ret;
 }
@@ -1202,7 +1202,7 @@ void slab_free(struct slab_domain *domain, void *obj) {
     struct slab *slab = slab_for_ptr(obj);
     struct slab_cache *cache = slab->parent_cache;
 
-    enum irql slab_cache_irql = slab_cache_lock(cache);
+    enum irql slab_cache_irql = spin_lock(&cache->lock);
     slab_bitmap_free(slab, obj);
 
     if (slab->used == 0) {
@@ -1211,7 +1211,7 @@ void slab_free(struct slab_domain *domain, void *obj) {
             slab_list_del(slab);
             slab_stat_gc_collection(domain);
             slab_gc_enqueue(domain, slab);
-            slab_cache_unlock(cache, slab_cache_irql);
+            spin_unlock(&cache->lock, slab_cache_irql);
             return;
         }
     } else if (slab->state == SLAB_FULL) {
@@ -1219,7 +1219,7 @@ void slab_free(struct slab_domain *domain, void *obj) {
     }
 
     slab_check_assert(slab);
-    slab_cache_unlock(cache, slab_cache_irql);
+    spin_unlock(&cache->lock, slab_cache_irql);
 }
 
 static size_t slab_free_queue_drain_on_free(struct slab_domain *domain,

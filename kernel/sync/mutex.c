@@ -81,6 +81,7 @@ void mutex_simple_unlock(struct mutex_simple *m) {
 }
 
 void mutex_simple_init(struct mutex_simple *m) {
+    spinlock_init(&m->lock);
     thread_queue_init(&m->waiters);
 }
 

@@ -53,6 +53,7 @@ struct minheap *minheap_create(void) {
     heap->capacity = MINHEAP_INIT_CAP;
     heap->size = 0;
     heap->nodes = kzalloc(sizeof(struct minheap_node *) * heap->capacity);
+    spinlock_init(&heap->lock);
     return heap;
 }
 
@@ -76,7 +77,7 @@ void minheap_expand(struct minheap *heap, uint32_t new_size) {
 
 void minheap_insert(struct minheap *heap, struct minheap_node *node,
                     uint64_t key) {
-    enum irql irql = minheap_node_lock(node);
+    enum irql irql = spin_lock(&heap->lock);
     if (heap->size >= heap->capacity) {
         uint32_t new_cap = heap->capacity * 2;
         struct minheap_node **new_nodes =
@@ -98,15 +99,15 @@ void minheap_insert(struct minheap *heap, struct minheap_node *node,
     heap->nodes[heap->size++] = node;
 
     minheap_sift_up(heap, node->index);
-    minheap_node_unlock(node, irql);
+    spin_unlock(&heap->lock, irql);
 }
 
 void minheap_remove(struct minheap *heap, struct minheap_node *node) {
-    enum irql irql = minheap_node_lock(node);
+    enum irql irql = spin_lock(&heap->lock);
     uint32_t idx = MINHEAP_NODE_INDEX(node);
 
     if (idx >= MINHEAP_SIZE(heap)) {
-        minheap_node_unlock(node, irql);
+        spin_unlock(&heap->lock, irql);
         return;
     }
 
@@ -119,7 +120,7 @@ void minheap_remove(struct minheap *heap, struct minheap_node *node) {
     }
 
     MINHEAP_MARK_NODE_INVALID(node);
-    minheap_node_unlock(node, irql);
+    spin_unlock(&heap->lock, irql);
 }
 
 struct minheap_node *minheap_pop(struct minheap *heap) {

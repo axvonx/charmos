@@ -23,6 +23,10 @@ elseif(_BUILD_TYPE_UPPER STREQUAL "RELWITHDEBINFO")
     add_compile_definitions(BUILD_RELEASE)
 endif()
 
+set(DEBUG_FLAGS
+    DEBUG_LOCK
+)
+
 set(PROFILING_FLAGS
     PROFILING_SCHED
     PROFILING_VFS
@@ -72,6 +76,7 @@ endfunction()
 define_flag_group(PROFILING       PROFILING_ALL       OFF "${PROFILING_FLAGS}")
 define_flag_group(TEST            TEST_ALL            ON  "${TEST_FLAGS}")
 define_flag_group(TEST_NIGHTMARE  TEST_NIGHTMARE_ALL  ON  "${TEST_NIGHTMARE_FLAGS}")
+define_flag_group(DEBUG DEBUG_ALL ON  "${DEBUG_FLAGS}")
 
 option(QEMU_KVM         "Enable KVM acceleration"                         OFF)
 option(QEMU_IOMMU       "Attach intel-iommu device with intremap"         ON)
@@ -114,10 +119,10 @@ set(KERNEL_DEFINES
     -DUACPI_DEFAULT_LOG_LEVEL=4
 )
 
-set(CMAKE_C_FLAGS_DEBUG          "-O0 -ggdb -g3 -DDEBUG")
-set(CMAKE_C_FLAGS_RELEASE        "-O3 -DNDEBUG")
-set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -ggdb -g3 -DNDEBUG")
-set(CMAKE_C_FLAGS_MINSIZEREL     "-Os -DNDEBUG")
+set(CMAKE_C_FLAGS_DEBUG          "-O0 -ggdb -g3")
+set(CMAKE_C_FLAGS_RELEASE        "-O3")
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -ggdb -g3")
+set(CMAKE_C_FLAGS_MINSIZEREL     "-Os")
 
 option(KERNEL_STACK_USAGE "Emit .su files with -fstack-usage" ON)
 if(KERNEL_STACK_USAGE)

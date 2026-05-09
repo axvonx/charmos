@@ -314,5 +314,3 @@ void nvme_do_coalesce(struct block_device *disk, struct bio_request *into,
 
 void nvme_reorder(struct block_device *disk);
 void nvme_work(void *rvoid, void *dvoid);
-
-SPINLOCK_GENERATE_LOCK_UNLOCK_FOR_STRUCT(nvme_waiting_requests, lock);

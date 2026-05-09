@@ -138,9 +138,9 @@ void slab_domain_move_slabs(void) {
             struct slab *slab, *tmp;
             list_for_each_entry_safe(slab, tmp, &c->slabs[j], list) {
                 struct slab_cache *dest = slab_domain_cache_for_slab(slab);
-                enum irql irql = slab_cache_lock(c);
+                enum irql irql = spin_lock(&c->lock);
                 slab_list_del(slab);
-                slab_cache_unlock(c, irql);
+                spin_unlock(&c->lock, irql);
 
                 slab_list_add(dest, slab);
             }

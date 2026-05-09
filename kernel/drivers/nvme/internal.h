@@ -1,11 +1,10 @@
 #include <drivers/nvme.h>
 #include <log.h>
+#include <math/div.h>
 
 #define NVME_CMD_TIMEOUT_MS 2000    // Normal command timeout
 #define NVME_ADMIN_TIMEOUT_MS 5000  // Admin commands
 #define NVME_RESET_TIMEOUT_MS 30000 // Controller reset or format NVM
-SPINLOCK_GENERATE_LOCK_UNLOCK_FOR_STRUCT(nvme_queue, lock);
-#define DIV_ROUND_UP(x, y) (((x) + (y) - 1) / (y))
 #define THIS_QID(nvme) (1 + (smp_core_id() % (nvme->queue_count)))
 
 LOG_SITE_EXTERN(nvme);

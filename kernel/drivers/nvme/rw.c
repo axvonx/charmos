@@ -20,11 +20,11 @@ typedef bool (*async_fn)(struct block_device *, struct nvme_request *);
 static void enqueue_request(struct nvme_device *dev, struct nvme_request *req) {
     struct nvme_waiting_requests *q = &dev->waiting_requests;
 
-    enum irql irql = nvme_waiting_requests_lock_irq_disable(q);
+    enum irql irql = spin_lock_irq_disable(&q->lock);
 
     list_add_tail(&req->list_node, &q->list);
 
-    nvme_waiting_requests_unlock(q, irql);
+    spin_unlock(&q->lock, irql);
 }
 
 static bool nvme_bio_fill_prps(struct nvme_bio_data *data, const void *buffer,

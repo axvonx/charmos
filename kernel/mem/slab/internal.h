@@ -215,7 +215,6 @@ struct slab_magazine {
     size_t count;
     struct spinlock lock;
 };
-SPINLOCK_GENERATE_LOCK_UNLOCK_FOR_STRUCT(slab_magazine, lock);
 
 struct slab_percpu_cache {
     /* Magazines are always nonpageable */
@@ -300,7 +299,6 @@ struct slab_cache {
     struct spinlock lock;
     struct slab_chunks chunks;
 };
-SPINLOCK_GENERATE_LOCK_UNLOCK_FOR_STRUCT(slab_cache, lock);
 
 /* works for both `struct slab_cache` and `struct slab_caches` */
 #define SLAB_CACHE_COUNT_FOR(cache, state)                                     \
@@ -418,7 +416,6 @@ struct slab_gc {
     struct spinlock lock;
     atomic_size_t num_elements;
 };
-SPINLOCK_GENERATE_LOCK_UNLOCK_FOR_STRUCT(slab_gc, lock);
 
 /* NOTE: Every element in this structure must be `size_t`.
  *

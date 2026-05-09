@@ -85,7 +85,7 @@ bool defer_enqueue(work_function func, struct work_args args,
     ev->args = args;
 
     struct deferred_event_queue *queue = this_defer_queue();
-    enum irql irql = spin_lock(&queue->lock);
+    enum irql irql = spin_lock_irq_disable(&queue->lock);
 
     if (!queue->head || ev->timestamp_ms < queue->head->timestamp_ms) {
 

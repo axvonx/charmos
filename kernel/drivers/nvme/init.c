@@ -171,4 +171,5 @@ void nvme_alloc_io_queues(struct nvme_device *nvme, uint32_t qid) {
         return;
     }
     nvme_log(LOG_INFO, "NVMe QID %u created - ISR %u", qid, this_isr);
+    spinlock_init(&this_queue->lock);
 }

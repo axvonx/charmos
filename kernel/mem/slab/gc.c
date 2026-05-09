@@ -257,7 +257,7 @@ static inline size_t slab_gc_get_max_unfit_slabs(size_t target,
  * This is a slow function! The slab cache lock must not be held when
  * calling this function because this will lock the slab cache */
 size_t slab_gc_run(struct slab_gc *gc, enum slab_gc_flags flags) {
-    enum irql irql = slab_gc_lock(gc);
+    enum irql irql = spin_lock(&gc->lock);
 
     size_t slabs_recycled[slab_global.num_sizes];
     memset(slabs_recycled, 0, sizeof(size_t) * slab_global.num_sizes);
@@ -292,7 +292,7 @@ size_t slab_gc_run(struct slab_gc *gc, enum slab_gc_flags flags) {
         node = next;
     }
 
-    slab_gc_unlock(gc, irql);
+    spin_unlock(&gc->lock, irql);
     return reclaimed;
 }
 
@@ -305,7 +305,7 @@ void slab_gc_enqueue(struct slab_domain *domain, struct slab *slab) {
     slab->gc_enqueue_time_ms = time_get_ms();
 
     struct slab_gc *gc = &domain->slab_gc;
-    enum irql irql = slab_gc_lock(gc);
+    enum irql irql = spin_lock(&gc->lock);
 
     /* Put it in the right order */
     size_t order = slab_pow2_order(slab);
@@ -319,7 +319,7 @@ void slab_gc_enqueue(struct slab_domain *domain, struct slab *slab) {
     rbt_insert(&domain->slab_gc.rbt, &slab->rb);
     atomic_fetch_add(&gc->num_elements, 1);
 
-    slab_gc_unlock(gc, irql);
+    spin_unlock(&gc->lock, irql);
 }
 
 static void slab_gc_dequeue(struct slab_gc *gc, struct slab *slab) {
@@ -336,7 +336,7 @@ struct slab *slab_gc_get_for_cache(struct slab_cache *sc) {
     struct slab *ret = NULL;
     struct slab_gc *sgc = &sc->parent_domain->slab_gc;
     size_t pow2_order = slab_cache_pow2_order(sc);
-    enum irql irql = slab_gc_lock(sgc);
+    enum irql irql = spin_lock(&sgc->lock);
 
     struct list_head *lh;
     if (sc->type == SLAB_TYPE_PAGEABLE) {
@@ -353,7 +353,7 @@ struct slab *slab_gc_get_for_cache(struct slab_cache *sc) {
     slab_gc_dequeue(sgc, ret);
 
 out:
-    slab_gc_unlock(sgc, irql);
+    spin_unlock(&sgc->lock, irql);
     return ret;
 }
 

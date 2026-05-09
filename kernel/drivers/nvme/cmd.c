@@ -33,7 +33,7 @@ static void nvme_send_waiters(struct nvme_device *dev) {
     struct nvme_waiting_requests *waiters = &dev->waiting_requests;
     struct nvme_request *next = NULL;
 
-    enum irql irql = nvme_waiting_requests_lock_irq_disable(waiters);
+    enum irql irql = spin_lock_irq_disable(&waiters->lock);
 
     struct list_head *pop = list_pop_front_init(&waiters->list);
     if (!pop)
@@ -42,7 +42,7 @@ static void nvme_send_waiters(struct nvme_device *dev) {
     next = container_of(pop, struct nvme_request, list_node);
 
 done:
-    nvme_waiting_requests_unlock(waiters, irql);
+    spin_unlock(&waiters->lock, irql);
 
     if (next)
         nvme_send_nvme_req(dev->generic_disk, next);
@@ -66,12 +66,11 @@ static void nvme_process_one(struct nvme_device *dev,
 }
 
 static struct nvme_request *nvme_finished_pop_front(struct nvme_device *dev) {
-    enum irql irql =
-        nvme_waiting_requests_lock_irq_disable(&dev->finished_requests);
+    enum irql irql = spin_lock_irq_disable(&dev->finished_requests.lock);
 
     struct list_head *lh = list_pop_front_init(&dev->finished_requests.list);
 
-    nvme_waiting_requests_unlock(&dev->finished_requests, irql);
+    spin_unlock(&dev->finished_requests.lock, irql);
 
     if (!lh)
         return NULL;
@@ -98,7 +97,7 @@ void nvme_work(void *dvoid, void *nothing) {
 void nvme_process_completions(struct nvme_device *dev, uint32_t qid) {
     struct nvme_queue *queue = dev->io_queues[qid];
 
-    enum irql irql = nvme_queue_lock_irq_disable(queue);
+    enum irql irql = spin_lock_irq_disable(&queue->lock);
 
     while (true) {
         struct nvme_completion *entry = &queue->cq[queue->cq_head];
@@ -113,12 +112,11 @@ void nvme_process_completions(struct nvme_device *dev, uint32_t qid) {
 
         req->status = status;
 
-        enum irql irql2 =
-            nvme_waiting_requests_lock_irq_disable(&dev->finished_requests);
+        enum irql irql2 = spin_lock_irq_disable(&dev->finished_requests.lock);
 
         list_add_tail(&req->list_node, &dev->finished_requests.list);
 
-        nvme_waiting_requests_unlock(&dev->finished_requests, irql2);
+        spin_unlock(&dev->finished_requests.lock, irql2);
 
         atomic_fetch_sub(&queue->outstanding, 1);
         atomic_fetch_sub(&dev->total_outstanding, 1);
@@ -130,7 +128,7 @@ void nvme_process_completions(struct nvme_device *dev, uint32_t qid) {
         mmio_write_32(queue->cq_db, queue->cq_head);
     }
 
-    nvme_queue_unlock(queue, irql);
+    spin_unlock(&queue->lock, irql);
 
     semaphore_post(&dev->sem);
 }
@@ -150,7 +148,7 @@ void nvme_submit_io_cmd(struct nvme_device *nvme, struct nvme_command *cmd,
     atomic_fetch_add(&this_queue->outstanding, 1);
     atomic_fetch_add(&nvme->total_outstanding, 1);
 
-    enum irql irql = nvme_queue_lock_irq_disable(this_queue);
+    enum irql irql = spin_lock_irq_disable(&this_queue->lock);
 
     uint16_t tail = this_queue->sq_tail;
     uint16_t next_tail = (tail + 1) % this_queue->sq_depth;
@@ -166,7 +164,7 @@ void nvme_submit_io_cmd(struct nvme_device *nvme, struct nvme_command *cmd,
 
     mmio_write_32(this_queue->sq_db, next_tail);
 
-    nvme_queue_unlock(this_queue, irql);
+    spin_unlock(&this_queue->lock, irql);
 }
 
 uint16_t nvme_submit_admin_cmd(struct nvme_device *nvme,

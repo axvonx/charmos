@@ -40,16 +40,16 @@ static bool ts_busy(struct daemon *d) {
 
 static void daemon_list_add(struct daemon *daemon,
                             struct daemon_thread *thread) {
-    enum irql irql = daemon_lock(daemon);
+    enum irql irql = spin_lock(&daemon->lock);
     list_add(&thread->list_node, &daemon->timesharing_threads);
-    daemon_unlock(daemon, irql);
+    spin_unlock(&daemon->lock, irql);
 }
 
 static void daemon_list_del(struct daemon *daemon,
                             struct daemon_thread *thread) {
-    enum irql irql = daemon_lock(daemon);
+    enum irql irql = spin_lock(&daemon->lock);
     list_del_init(&thread->list_node);
-    daemon_unlock(daemon, irql);
+    spin_unlock(&daemon->lock, irql);
 }
 
 static void daemon_thread_exit(struct daemon *daemon,

@@ -97,6 +97,6 @@ struct bio_scheduler *bio_sched_create(struct block_device *disk,
     }
     sched->disk = disk;
     disk->ops = ops;
-
+    mutex_init(&sched->lock);
     return sched;
 }

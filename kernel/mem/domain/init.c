@@ -240,6 +240,7 @@ static void domain_structs_init(struct domain_buddy *dom, size_t arena_capacity,
     dom->free_queue->tail = 0;
     dom->free_queue->capacity = fq_capacity;
     spinlock_init(&dom->free_queue->lock);
+    spinlock_init(&dom->lock);
 }
 
 static void init_after_smp() {

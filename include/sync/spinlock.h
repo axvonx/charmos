@@ -1,25 +1,52 @@
 #pragma once
 #include <asm.h>
+#include <bootstage.h>
 #include <console/panic.h>
 #include <irq/irq.h>
 #include <kassert.h>
 #include <sch/irql.h>
 #include <smp/core.h>
 #include <stdatomic.h>
-#include <bootstage.h>
 #include <stdbool.h>
+
+#ifdef DEBUG_LOCK
+#define SPINLOCK_COOKIE_MAGIC 0xBEEB00
+#endif
 
 struct spinlock {
     _Atomic uint8_t state;
+
+#ifdef DEBUG_LOCK
+    bool acquired_high;
+    uint32_t initialized_magic;
+#endif
 };
 
+#ifdef DEBUG_LOCK
+#define SPINLOCK_INIT                                                          \
+    {.state = ATOMIC_VAR_INIT(0),                                              \
+     .acquired_high = false,                                                   \
+     .initialized_magic = SPINLOCK_COOKIE_MAGIC}
+#else
 #define SPINLOCK_INIT {ATOMIC_VAR_INIT(0)}
+#endif
 
 static inline void spinlock_init(struct spinlock *lock) {
+
+#ifdef DEBUG_LOCK
+    lock->initialized_magic = SPINLOCK_COOKIE_MAGIC;
+    lock->acquired_high = false;
+#endif
+
     atomic_store(&lock->state, 0);
 }
 
 static inline bool spin_trylock_raw(struct spinlock *lock) {
+
+#ifdef DEBUG_LOCK
+    kassert(lock->initialized_magic == SPINLOCK_COOKIE_MAGIC);
+#endif
+
     uint8_t expected = 0;
     return atomic_compare_exchange_strong_explicit(
         &lock->state, &expected, 1, memory_order_acquire, memory_order_relaxed);
@@ -52,18 +79,32 @@ static inline enum irql spin_lock(struct spinlock *lock) {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_interrupt())
         panic("Attempted to take non-ISR safe spinlock from an ISR!\n");
 
+#ifdef DEBUG_LOCK
+    kassert(!lock->acquired_high);
+#endif
+
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
     spin_lock_raw(lock);
     return irql;
 }
 
 static inline enum irql spin_lock_irq_disable(struct spinlock *lock) {
+
+#ifdef DEBUG_LOCK
+    lock->acquired_high = true;
+#endif
+
     enum irql irql = irql_raise(IRQL_HIGH_LEVEL);
     spin_lock_raw(lock);
     return irql;
 }
 
 static inline bool spin_trylock(struct spinlock *lock, enum irql *out) {
+
+#ifdef DEBUG_LOCK
+    kassert(!lock->acquired_high);
+#endif
+
     *out = irql_raise(IRQL_DISPATCH_LEVEL);
     if (spin_trylock_raw(lock))
         return true;
@@ -74,6 +115,11 @@ static inline bool spin_trylock(struct spinlock *lock, enum irql *out) {
 
 static inline bool spin_trylock_irq_disable(struct spinlock *lock,
                                             enum irql *out) {
+
+#ifdef DEBUG_LOCK
+    lock->acquired_high = true;
+#endif
+
     *out = irql_raise(IRQL_HIGH_LEVEL);
     if (spin_trylock_raw(lock))
         return true;
@@ -86,24 +132,3 @@ static inline bool spinlock_held(struct spinlock *lock) {
     return atomic_load(&lock->state);
 }
 #define SPINLOCK_ASSERT_HELD(l) kassert(spinlock_held(l))
-
-/* Keep these static inline so you only "pay for what you need" (e.g. if you
- * never call trylock() you don't pay the cost of having that dead function
- * in the object file/binary) */
-
-#define SPINLOCK_GENERATE_LOCK_UNLOCK_FOR_STRUCT(type, member)                 \
-    static inline enum irql type##_lock(struct type *obj) {                    \
-        return spin_lock(&obj->member);                                        \
-    }                                                                          \
-                                                                               \
-    static inline enum irql type##_lock_irq_disable(struct type *obj) {        \
-        return spin_lock_irq_disable(&obj->member);                            \
-    }                                                                          \
-                                                                               \
-    static inline void type##_unlock(struct type *obj, enum irql irql) {       \
-        spin_unlock(&obj->member, irql);                                       \
-    }                                                                          \
-                                                                               \
-    static inline bool type##_trylock(struct type *obj, enum irql *out) {      \
-        return spin_trylock(&obj->member, out);                                \
-    }

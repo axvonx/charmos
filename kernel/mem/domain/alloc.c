@@ -49,7 +49,7 @@ static void flush_freequeue_into_local_arena(struct domain_buddy *domain,
 
 static paddr_t alloc_from_buddy_internal(struct domain_buddy *this,
                                          size_t pages) {
-    enum irql irql = domain_buddy_lock(this);
+    enum irql irql = spin_lock(&this->lock);
 
     paddr_t ret = buddy_alloc_pages(this->free_area, pages);
 
@@ -61,7 +61,7 @@ static paddr_t alloc_from_buddy_internal(struct domain_buddy *this,
     if (ret)
         atomic_fetch_add(&this->pages_used, pages);
 
-    domain_buddy_unlock(this, irql);
+    spin_unlock(&this->lock, irql);
     return ret;
 }
 

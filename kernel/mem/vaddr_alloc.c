@@ -209,7 +209,7 @@ static bool vas_pull_chunk(struct vas_space *vas, struct vas_local_tree *lt) {
     struct vas_local_tree *gl = &vas->global;
     size_t chunk = vas->chunk_size;
 
-    enum irql irql = vas_local_tree_lock(gl);
+    enum irql irql = spin_lock(&gl->lock);
 
     /* Try to allocate a full chunk from the global tree */
     vaddr_t base = tree_alloc(gl, chunk, chunk);
@@ -234,18 +234,18 @@ static bool vas_pull_chunk(struct vas_space *vas, struct vas_local_tree *lt) {
             gl->total_free -= take;
             vasrange_free(gl, best);
 
-            vas_local_tree_unlock(gl, irql);
+            spin_unlock(&gl->lock, irql);
 
             /* Insert into local tree */
-            enum irql lirql = vas_local_tree_lock(lt);
+            enum irql lirql = spin_lock(&lt->lock);
 
             struct vas_range *nr = vasrange_alloc(lt);
             if (!nr) {
-                vas_local_tree_unlock(lt, lirql);
+                spin_unlock(&lt->lock, lirql);
                 /* Return the chunk back to global */
-                irql = vas_local_tree_lock(gl);
+                irql = spin_lock(&gl->lock);
                 tree_free(gl, base, take);
-                vas_local_tree_unlock(gl, irql);
+                spin_unlock(&gl->lock, irql);
                 return false;
             }
 
@@ -254,26 +254,26 @@ static bool vas_pull_chunk(struct vas_space *vas, struct vas_local_tree *lt) {
             rbt_insert(&lt->tree, &nr->node);
             lt->total_free += take;
 
-            vas_local_tree_unlock(lt, lirql);
+            spin_unlock(&lt->lock, lirql);
             return true;
         }
 
-        vas_local_tree_unlock(gl, irql);
+        spin_unlock(&gl->lock, irql);
         return false;
     }
 
-    vas_local_tree_unlock(gl, irql);
+    spin_unlock(&gl->lock, irql);
 
     /* Insert the chunk as a single gap into the local tree */
-    enum irql lirql = vas_local_tree_lock(lt);
+    enum irql lirql = spin_lock(&lt->lock);
 
     struct vas_range *nr = vasrange_alloc(lt);
     if (!nr) {
-        vas_local_tree_unlock(lt, lirql);
+        spin_unlock(&lt->lock, lirql);
         /* Return chunk to global */
-        irql = vas_local_tree_lock(gl);
+        irql = spin_lock(&gl->lock);
         tree_free(gl, base, chunk);
-        vas_local_tree_unlock(gl, irql);
+        spin_unlock(&gl->lock, irql);
         return false;
     }
 
@@ -282,7 +282,7 @@ static bool vas_pull_chunk(struct vas_space *vas, struct vas_local_tree *lt) {
     rbt_insert(&lt->tree, &nr->node);
     lt->total_free += chunk;
 
-    vas_local_tree_unlock(lt, lirql);
+    spin_unlock(&lt->lock, lirql);
     return true;
 }
 
@@ -292,7 +292,7 @@ static ssize_t vas_find_owner(struct vas_space *vas, vaddr_t addr) {
     size_t i;
     for_each_cpu_id(i) {
         struct vas_local_tree *lt = &vas->local[i];
-        enum irql irql = vas_local_tree_lock(lt);
+        enum irql irql = spin_lock(&lt->lock);
 
         struct rbt_node *node = lt->tree.root;
         bool found = false;
@@ -322,7 +322,7 @@ static ssize_t vas_find_owner(struct vas_space *vas, vaddr_t addr) {
             }
         }
 
-        vas_local_tree_unlock(lt, irql);
+        spin_unlock(&lt->lock, irql);
 
         if (found)
             return (ssize_t) i;
@@ -336,9 +336,9 @@ vaddr_t vas_alloc(struct vas_space *vas, size_t size, size_t align) {
     struct vas_local_tree *lt = &vas->local[cpu];
     vaddr_t result;
 
-    enum irql irql = vas_local_tree_lock(lt);
+    enum irql irql = spin_lock(&lt->lock);
     result = tree_alloc(lt, size, align);
-    vas_local_tree_unlock(lt, irql);
+    spin_unlock(&lt->lock, irql);
 
     if (result)
         return result;
@@ -346,9 +346,9 @@ vaddr_t vas_alloc(struct vas_space *vas, size_t size, size_t align) {
     if (!vas_pull_chunk(vas, lt))
         return 0;
 
-    irql = vas_local_tree_lock(lt);
+    irql = spin_lock(&lt->lock);
     result = tree_alloc(lt, size, align);
-    vas_local_tree_unlock(lt, irql);
+    spin_unlock(&lt->lock, irql);
 
     return result;
 }
@@ -364,9 +364,9 @@ void vas_free(struct vas_space *vas, vaddr_t addr, size_t size) {
         lt = &vas->local[vas_cpu_id()];
     }
 
-    enum irql irql = vas_local_tree_lock(lt);
+    enum irql irql = spin_lock(&lt->lock);
     tree_free(lt, addr, size);
-    vas_local_tree_unlock(lt, irql);
+    spin_unlock(&lt->lock, irql);
 }
 
 static void vas_space_init_common(struct vas_space *vas, vaddr_t base,
@@ -378,7 +378,7 @@ static void vas_space_init_common(struct vas_space *vas, vaddr_t base,
     /* Init global tree */
     vas_local_tree_init(&vas->global);
 
-    enum irql irql = vas_local_tree_lock(&vas->global);
+    enum irql irql = spin_lock(&vas->global.lock);
 
     struct vas_range *g = vasrange_alloc(&vas->global);
     if (!g)
@@ -389,7 +389,7 @@ static void vas_space_init_common(struct vas_space *vas, vaddr_t base,
     rbt_insert(&vas->global.tree, &g->node);
     vas->global.total_free = limit - base;
 
-    vas_local_tree_unlock(&vas->global, irql);
+    spin_unlock(&vas->global.lock, irql);
 
     for (uint32_t i = 0; i < global.core_count; i++)
         vas_local_tree_init(&vas->local[i]);

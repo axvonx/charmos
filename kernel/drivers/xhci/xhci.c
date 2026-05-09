@@ -716,6 +716,7 @@ void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
               offsetof(struct xhci_request, list));
 
     semaphore_init(&dev->sem, 0, SEMAPHORE_INIT_IRQ_DISABLE);
+    spinlock_init(&dev->lock);
     thread_spawn("xhci_worker", xhci_worker, dev);
 
     /* Wait till we know our worker is on the sem */

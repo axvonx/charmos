@@ -124,5 +124,3 @@ void daemon_wake_background_worker(struct daemon *daemon);
 void daemon_wake_timesharing_worker(struct daemon *daemon);
 
 #define DAEMON_FLAG_TEST(daemon, flag) (daemon->attrs.flags & flag)
-
-SPINLOCK_GENERATE_LOCK_UNLOCK_FOR_STRUCT(daemon, lock);

@@ -31,7 +31,7 @@ void semaphore_wait(struct semaphore *s) {
         condvar_wait(&s->cv, &s->lock, irql, &irql);
 
     dec_count(s);
-    semaphore_unlock(s, irql);
+    spin_unlock(&s->lock, irql);
 }
 
 bool semaphore_timedwait(struct semaphore *s, time_t timeout_ms) {
@@ -40,13 +40,13 @@ bool semaphore_timedwait(struct semaphore *s, time_t timeout_ms) {
     while (get_count(s) == 0) {
         enum irql out;
         if (!condvar_wait_timeout(&s->cv, &s->lock, timeout_ms, irql, &out)) {
-            semaphore_unlock(s, out);
+            spin_unlock(&s->lock, irql);
             return false;
         }
     }
 
     dec_count(s);
-    semaphore_unlock(s, irql);
+    spin_unlock(&s->lock, irql);
 
     return true;
 }
@@ -58,7 +58,7 @@ void semaphore_post(struct semaphore *s) {
 
     condvar_signal(&s->cv);
 
-    semaphore_unlock(s, irql);
+    spin_unlock(&s->lock, irql);
 }
 
 void semaphore_postn(struct semaphore *s, int n) {
@@ -68,7 +68,7 @@ void semaphore_postn(struct semaphore *s, int n) {
     for (int i = 0; i < n; i++)
         condvar_signal(&s->cv);
 
-    semaphore_unlock(s, irql);
+    spin_unlock(&s->lock, irql);
 }
 
 void semaphore_post_callback(struct semaphore *s, thread_action_callback cb) {
@@ -78,7 +78,7 @@ void semaphore_post_callback(struct semaphore *s, thread_action_callback cb) {
 
     condvar_signal_callback(&s->cv, cb);
 
-    semaphore_unlock(s, irql);
+    spin_unlock(&s->lock, irql);
 }
 
 void semaphore_postn_callback(struct semaphore *s, int n,
@@ -89,5 +89,5 @@ void semaphore_postn_callback(struct semaphore *s, int n,
     for (int i = 0; i < n; i++)
         condvar_signal_callback(&s->cv, cb);
 
-    semaphore_unlock(s, irql);
+    spin_unlock(&s->lock, irql);
 }
