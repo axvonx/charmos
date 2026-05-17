@@ -6,9 +6,9 @@
 #include "internal.h"
 
 bool slab_can_resize_to(struct slab *slab, size_t new_size_pages) {
-    size_t max_pages = next_pow2(slab->page_count);
-    size_t min_pages = prev_pow2(max_pages - 1);
-    return new_size_pages >= min_pages && new_size_pages <= max_pages;
+    size_t cap = next_pow2(slab->page_count);
+    size_t min = (cap >> 1) + 1;
+    return new_size_pages >= min && new_size_pages <= cap;
 }
 
 static void slab_shrink(struct slab *slab, size_t start, size_t end,
@@ -32,15 +32,12 @@ static void slab_shrink(struct slab *slab, size_t start, size_t end,
 }
 
 bool slab_resize(struct slab *slab, size_t new_size_pages) {
-    kassert(slab->state == SLAB_IN_GC);
     kassert(slab_can_resize_to(slab, new_size_pages));
     size_t old = slab->page_count;
 
-    /* Nothing to do */
     if (old == new_size_pages)
         return true;
 
-    slab->page_count = new_size_pages;
     struct slab_domain *parent = slab->parent_cache->parent_domain;
 
     /* Grow */
@@ -53,13 +50,17 @@ bool slab_resize(struct slab *slab, size_t new_size_pages) {
             if (!phys)
                 goto grow_err;
 
-            slab->backing_pages[i] = page_for_pfn(PAGE_TO_PFN(phys));
             vaddr_t virt = (vaddr_t) slab + i * PAGE_SIZE;
             uint64_t flags = slab_page_flags(slab->type);
-            if (unlikely(vmm_map_page(virt, phys, flags, VMM_FLAG_NONE) < 0))
+            if (unlikely(vmm_map_page(virt, phys, flags, VMM_FLAG_NONE) < 0)) {
+                pmm_free_page(phys); /* not yet recorded, free directly */
                 goto grow_err;
+            }
+
+            slab->backing_pages[i] = page_for_pfn(PAGE_TO_PFN(phys));
         }
 
+        slab->page_count = new_size_pages;
         return true;
 
     grow_err:
@@ -67,9 +68,6 @@ bool slab_resize(struct slab *slab, size_t new_size_pages) {
         return false;
     }
 
-    /* Shrink */
-    size_t start = new_size_pages - 1;
-    size_t end = old - 1;
-    slab_shrink(slab, start, end, /* assert_nonnull = */ true);
+    slab_shrink(slab, new_size_pages, old, /* assert_nonnull = */ true);
     return true;
 }

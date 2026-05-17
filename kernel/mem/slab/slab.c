@@ -157,6 +157,11 @@
 #include "mem/domain/internal.h"
 #include "stat_internal.h"
 
+/* const size_t slab_class_sizes_const[] = {
+    SLAB_MIN_SIZE, 16,  24,  32,  40,  48,           56,  64,  80,  96,
+    112,           128, 144, 160, 176, 192,          224, 256, 320, 384,
+    448,           512, 640, 768, 896, SLAB_MAX_SIZE}; */
+
 const size_t slab_class_sizes_const[] = {
     SLAB_MIN_SIZE, 16, 32, 64, 96, 128, 192, 256, 512, SLAB_MAX_SIZE};
 
@@ -530,18 +535,20 @@ static inline bool kmalloc_size_fits_in_slab(size_t size) {
 }
 
 static int slab_class_sort_cmp(const void *a, const void *b) {
-    /* no duplicates */
-    const struct slab_size_constant *sca = a;
-    const struct slab_size_constant *scb = b;
+    const struct slab_size_constant *sa = a;
+    const struct slab_size_constant *sb = b;
 
-    size_t l = sca->size;
-    size_t r = scb->size;
+    if (sa->size < sb->size)
+        return -1;
+    if (sa->size > sb->size)
+        return 1;
 
-    if (l == r)
-        panic("slab size %u from %s is the same as slab size %u from %s\n", l,
-              sca->name, r, scb->name);
+    if (sa->align > sb->align)
+        return -1;
+    if (sa->align < sb->align)
+        return 1;
 
-    return l - r;
+    return 0;
 }
 
 static void log_dupes(const char *keep, const char *discard, size_t size) {
@@ -555,75 +562,68 @@ void slab_allocator_init() {
     slab_global.vas = vas_space_bootstrap(SLAB_HEAP_START, SLAB_HEAP_END);
     if (!slab_global.vas)
         panic("Could not initialize slab VAS\n");
-
     struct slab_size_constant *start = __skernel_slab_sizes;
     struct slab_size_constant *end = __ekernel_slab_sizes;
-
     size_t dyn_count = end - start;
     size_t total_input = dyn_count + SLAB_CLASS_SIZES_CONST_COUNT;
 
-    struct slab_size_constant *tmp =
-        simple_alloc(slab_global.vas, total_input * sizeof(*tmp));
-    kassert(tmp);
+    struct slab_size_constant *staging =
+        simple_alloc(slab_global.vas, total_input * sizeof(*staging));
+    kassert(staging);
     slab_order_map_init();
 
-    size_t idx = 0;
-
+    size_t sidx = 0;
     /* "Constant" ones */
     for (size_t i = 0; i < SLAB_CLASS_SIZES_CONST_COUNT; i++) {
-        tmp[idx++] = (struct slab_size_constant){
+        staging[sidx++] = (struct slab_size_constant){
             .name = "default slab size",
             .size = slab_class_sizes_const[i],
             .align = SLAB_OBJ_ALIGN_DEFAULT,
         };
     }
-
     /* "Dynamic" ones */
     for (struct slab_size_constant *ssc = start; ssc < end; ssc++) {
-        tmp[idx++] = (struct slab_size_constant){
+        staging[sidx++] = (struct slab_size_constant){
             .name = ssc->name,
             .size = ssc->size,
             .align = ssc->align,
         };
     }
+    kassert(sidx == total_input);
 
-    kassert(idx == total_input);
+    qsort(staging, total_input, sizeof(*staging), slab_class_sort_cmp);
 
-    qsort(tmp, total_input, sizeof(*tmp), slab_class_sort_cmp);
+    struct slab_size_constant *tmp =
+        simple_alloc(slab_global.vas, total_input * sizeof(*tmp));
+    kassert(tmp);
 
     size_t out = 0;
-
     for (size_t i = 0; i < total_input; i++) {
-        if (out == 0 || tmp[i].size != tmp[out - 1].size) {
-            tmp[out++] = tmp[i];
+        if (out == 0 || staging[i].size != tmp[out - 1].size) {
+            tmp[out++] = staging[i];
         } else {
-            log_dupes(tmp[out - 1].name, tmp[i].name, tmp[i].size);
+            log_dupes(tmp[out - 1].name, staging[i].name, staging[i].size);
         }
     }
 
-    slab_global.num_sizes = out;
+    simple_free(slab_global.vas, staging, total_input * sizeof(*staging));
 
+    slab_global.num_sizes = out;
     slab_global.class_sizes =
         simple_alloc(slab_global.vas,
                      slab_global.num_sizes * sizeof(*slab_global.class_sizes));
     kassert(slab_global.class_sizes);
-
     memcpy(slab_global.class_sizes, tmp,
            slab_global.num_sizes * sizeof(*slab_global.class_sizes));
-
     slab_global.caches.caches = slab_caches_alloc();
-
     for (uint64_t i = 0; i < slab_global.num_sizes; i++) {
         struct slab_size_constant *ssc = &slab_global.class_sizes[i];
         struct slab_cache *sc = &slab_global.caches.caches[i];
-
         ssc->internal.cand = slab_elcm(ssc->size, ssc->align);
         slab_cache_init(i, sc, ssc);
-
         sc->parent_domain = NULL;
         sc->type = SLAB_TYPE_NONPAGEABLE;
         sc->parent = &slab_global.caches;
-
         slab_info("Slab cache s=%u a=%u \"%s\", o=%u, p=%zu",
                   slab_global.class_sizes[i].size,
                   slab_global.class_sizes[i].align,
@@ -631,7 +631,6 @@ void slab_allocator_init() {
                   slab_global.caches.caches[i].objs_per_slab,
                   slab_global.class_sizes[i].internal.cand.pages);
     }
-
     simple_free(slab_global.vas, tmp, total_input * sizeof(*tmp));
     slab_elcm_initialize();
 }
