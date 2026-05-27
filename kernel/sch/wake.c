@@ -2,34 +2,44 @@
 
 #include "internal.h"
 
+struct scheduler *scheduler_select_best_for_thread(struct thread *t) {
+    struct scheduler *sched = NULL;
+    size_t i, min_load = SIZE_MAX;
+    cpu_mask_for_each(i, t->allowed_cpus) {
+        size_t this_load = global.schedulers[i]->total_thread_count;
+
+        if (global.cores && global.cores[i] &&
+            !scheduler_core_idle(global.cores[i]))
+            this_load++;
+
+        if (this_load < min_load) {
+            min_load = this_load;
+            sched = global.schedulers[i];
+        }
+    }
+
+    kassert(sched);
+    return sched;
+}
+
 bool thread_wake(struct thread *t, enum thread_wake_reason reason,
                  enum thread_prio_class prio, void *wake_src) {
     kassert(t);
-    enum irql outer = irql_raise(IRQL_HIGH_LEVEL);
 
-    enum irql lirql;
-    struct scheduler *sch = thread_get_scheduler(t, &lirql);
+    enum irql birql, lirql;
 
-    while (sch != smp_core_scheduler()) {
-        bool entered = false;
-        while (!(thread_get_flags(t) & THREAD_FLAG_YIELDED_AFTER_WAKE)) {
-            entered = true;
-            break;
-        }
+    struct scheduler *best = scheduler_select_best_for_thread(t);
+    struct scheduler *last_sch;
 
-        if (!entered)
-            break;
-
-        /* Drop the lock, spin again */
-        spin_unlock(&sch->lock, lirql);
-        sch = thread_get_scheduler(t, &lirql);
-    }
+    /* Lock the thread's runqueue and the best one. If the thread
+     * can be placed on the best one, we put it over there */
+    thread_lock_thread_and_rq(t, best, &last_sch, &lirql, &birql);
 
     /* this is a fun one. because threads can sleep/block in modes
      * that aren't just wakeable in one way, we must take care here.
      *
      * first, we acquire the scheduler lock so the thread doesn't enter/exit
-     * the runqueues. then we acquire the thread lock (via thread_wake)
+     * the runqueues. then we acquire the thread lock
      * so it doesn't decide to block/sleep (this is because of
      * wait_for_wake_match -- the yield() loop will abort if it sees
      * that someone else has set wake_matched).
@@ -39,7 +49,6 @@ bool thread_wake(struct thread *t, enum thread_wake_reason reason,
      */
 
     bool woke = false;
-    bool yielded = thread_get_flags(t) & THREAD_FLAG_YIELDED_AFTER_WAKE;
     bool ok;
     enum irql tirql = thread_acquire(t, &ok);
     if (!ok)
@@ -61,9 +70,11 @@ bool thread_wake(struct thread *t, enum thread_wake_reason reason,
 
     /* we get the earlier state here */
     enum thread_state state = thread_get_state(t);
+    bool yielded = thread_get_flags(t) & THREAD_FLAG_YIELDED;
 
-    thread_wake_locked(t, reason, wake_src);
+    thread_prepare_to_wake_locked(t, reason, wake_src);
     thread_apply_wake_boost(t);
+    t->perceived_prio_class = prio;
 
     /* if the thread has NOT yielded after it set itself blocked it is
      * completely unsafe to put it back on the runqueues as it is currently
@@ -73,16 +84,15 @@ bool thread_wake(struct thread *t, enum thread_wake_reason reason,
      * but wanting to block/sleep but has not yielded */
     if (yielded && state != THREAD_STATE_RUNNING &&
         state != THREAD_STATE_READY) {
-        t->perceived_prio_class = prio;
-        scheduler_add_thread(sch, t, /* lock_held = */ true);
-        scheduler_force_resched(sch);
+        scheduler_add_thread(best, t, /* lock_held = */ true);
+        scheduler_force_resched(best);
     }
 
 out:
     thread_release(t, tirql);
 end:
-    spin_unlock(&sch->lock, lirql);
-    irql_lower(outer);
+
+    thread_unlock_thread_and_rq(last_sch, best, lirql, birql);
     return woke;
 }
 

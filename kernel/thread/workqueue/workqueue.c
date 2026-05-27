@@ -196,8 +196,7 @@ struct workqueue *workqueue_create_default(const char *fmt, ...) {
     cpu_mask_set_all(&cmask);
     struct workqueue_attributes attrs = {
         .capacity = WORKQUEUE_DEFAULT_CAPACITY,
-        .idle_check.max = WORKQUEUE_DEFAULT_MAX_IDLE_CHECK,
-        .idle_check.min = WORKQUEUE_DEFAULT_MIN_IDLE_CHECK,
+        .idle_check = WORKQUEUE_DEFAULT_IDLE_CHECK,
         .max_workers = WORKQUEUE_DEFAULT_MAX_WORKERS,
         .min_workers = 1,
         .spawn_delay = WORKQUEUE_DEFAULT_SPAWN_DELAY,
@@ -307,10 +306,7 @@ void workqueues_permanent_init(void) {
             .capacity = WORKQUEUE_DEFAULT_CAPACITY,
             .max_workers = WORKQUEUE_DEFAULT_MAX_WORKERS,
             .spawn_delay = WORKQUEUE_DEFAULT_SPAWN_DELAY,
-
-            .idle_check.min = WORKQUEUE_DEFAULT_MIN_IDLE_CHECK,
-            .idle_check.max = WORKQUEUE_DEFAULT_MAX_IDLE_CHECK,
-
+            .idle_check = WORKQUEUE_DEFAULT_IDLE_CHECK,
             .flags = WORKQUEUE_FLAG_PERMANENT | WORKQUEUE_FLAG_AUTO_SPAWN |
                      WORKQUEUE_FLAG_NO_WORKER_GC,
             .worker_cpu_mask = mask,

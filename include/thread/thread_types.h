@@ -32,9 +32,15 @@ enum thread_wait_type : uint8_t {
  *
  *      ┌───────────────────────────────────────────────────────────┐
  * Bits │ 31..28  27..24  23..20  19..16  15..12  11..8  7..4  3..0 │
- * Use  │  ****    ****    ****    ****    ****    ****  ****  **** │
+ * Use  │  AAAA    ****    ****    ****    ****    ****  *RWY  DEFP │
  *      └───────────────────────────────────────────────────────────┘
- *
+ * P - Pinned - Thread is pinned to current CPU
+ * F - Flexible RT - realtime scheduler related stuff
+ * E - Executing APC
+ * D - Dying
+ * Y - Yielded after a wait (block, sleep)
+ * W - Wake matched
+ * r - Realtime fault tolerance
  * A - Unused (Available)
  * * - Unused (Unavailable)
  *
@@ -44,7 +50,7 @@ enum thread_flags : uint32_t {
     THREAD_FLAG_FLEXIBLE_RT = 1 << 1,
     THREAD_FLAG_EXECUTING_APC = 1 << 2,
     THREAD_FLAG_DYING = 1 << 3,
-    THREAD_FLAG_YIELDED_AFTER_WAKE = 1 << 4,
+    THREAD_FLAG_YIELDED = 1 << 4,
     THREAD_FLAG_WAKE_MATCHED = 1 << 5,
     THREAD_FLAG_RT_FAULT_TOLERANCE = 1 << 6,
 };
@@ -74,7 +80,6 @@ enum thread_block_reason : uint8_t {
 
 enum thread_sleep_reason : uint8_t {
     THREAD_SLEEP_REASON_MANUAL = 7,
-
 };
 
 /* Used in condvars, totally separate from thread_wake_reason */

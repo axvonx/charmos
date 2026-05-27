@@ -60,7 +60,18 @@ struct climb_thread_state {
 
     /* scheduler integration */
     bool on_climb_tree; /* Used to logically verify things */
-    struct rbt_node climb_node;
+
+    union {
+        struct rbt_node climb_node;
+        struct list_head
+            tmp_list_node; /* Bit of a funny field: This node exists because
+                            * we need to call thread_put() when removing
+                            * a thread from the tree, however, this
+                            * cannot happen under the scheduler lock
+                            * because it wakes the reaper thread
+                            * which has the chance to acquire an
+                            * arbitrary scheduler lock */
+    };
 
     /* if this thread becomes a CLIMB source,
      * what would it "apply"? */

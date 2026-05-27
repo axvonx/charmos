@@ -696,8 +696,7 @@ void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
     cpu_mask_set_all(&cmask);
     struct workqueue_attributes attrs = {
         .capacity = WORKQUEUE_DEFAULT_CAPACITY,
-        .idle_check.min = WORKQUEUE_DEFAULT_MIN_IDLE_CHECK,
-        .idle_check.max = WORKQUEUE_DEFAULT_MAX_IDLE_CHECK,
+        .idle_check = WORKQUEUE_DEFAULT_IDLE_CHECK,
         .min_workers = 1,
         .max_workers = 1,
         .spawn_delay = WORKQUEUE_DEFAULT_SPAWN_DELAY,

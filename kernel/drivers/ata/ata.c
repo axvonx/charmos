@@ -70,8 +70,8 @@ bool ata_setup_drive(struct ata_drive *ide, struct pci_device *devices,
         struct pci_device *curr = &devices[i];
 
         if (curr->class_code == 1 && curr->subclass == 1) {
-            uint32_t bar = pci_read_bar(curr->bus, curr->dev, curr->function,
-                                        channel * 2);
+            uint32_t bar =
+                pci_read_bar(curr->bus, curr->dev, curr->function, channel * 2);
 
             uint32_t ctrl_bar = pci_read_bar(curr->bus, curr->dev,
                                              curr->function, channel * 2 + 1);

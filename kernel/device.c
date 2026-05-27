@@ -1,5 +1,3 @@
 #include <device.h>
 
-void device_init(struct device *dev) {
-
-}
+void device_init(struct device *dev) {}

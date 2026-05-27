@@ -187,10 +187,10 @@ static void apc_enqueue_thread(void *) {
 static void sleeping_thread(void *) {
     atomic_store(&si_started, true);
 
-    thread_sleep(thread_get_current(), THREAD_SLEEP_REASON_MANUAL,
-                 THREAD_WAIT_INTERRUPTIBLE, (void *) 4);
+    thread_prepare_to_sleep(thread_get_current(), THREAD_SLEEP_REASON_MANUAL,
+                            THREAD_WAIT_INTERRUPTIBLE, (void *) 4);
 
-    thread_wait_for_wake_match();
+    thread_yield_until_wake_match();
 
     atomic_store(&si_ok, true);
 }

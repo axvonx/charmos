@@ -23,7 +23,9 @@
 typedef _Atomic uint64_t pte_atomic_t;
 
 static inline void pte_unlock_internal(pte_atomic_t *pte) {
-    kassert(atomic_fetch_and_explicit(pte, ~PTE_LOCK_BIT, memory_order_release) & PTE_LOCK_BIT);
+    kassert(
+        atomic_fetch_and_explicit(pte, ~PTE_LOCK_BIT, memory_order_release) &
+        PTE_LOCK_BIT);
 }
 
 static inline void pte_lock_internal(pte_atomic_t *pte) {

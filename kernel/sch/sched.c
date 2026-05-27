@@ -123,10 +123,7 @@ static inline void save_thread(struct scheduler *sched, struct thread *curr,
  * so the caller knows if it needs to acquire it */
 static inline bool migrate_to_destination(struct thread *t, time_t time) {
     int64_t dst;
-    if (!t)
-        return false;
-
-    if ((dst = thread_set_migration_target(t, -1)) == -1)
+    if (!t || (dst = thread_set_migration_target(t, -1)) == -1)
         return false;
 
     if (dst == (int64_t) smp_core_id())
@@ -260,7 +257,7 @@ static void change_tick(struct scheduler *sched, struct thread *next) {
 
 static inline void context_switch(struct thread *curr, struct thread *next) {
     if (curr)
-        thread_or_flags(curr, THREAD_FLAG_YIELDED_AFTER_WAKE);
+        thread_or_flags(curr, THREAD_FLAG_YIELDED);
 
     if (curr != next)
         next->context_switches++;

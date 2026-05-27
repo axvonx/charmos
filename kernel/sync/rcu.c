@@ -52,7 +52,8 @@ void rcu_synchronize(void) {
 
         enum irql irql = spin_lock_irq_disable(&global.thread_list.lock);
         struct thread *t, *tmp;
-        list_for_each_entry_safe(t, tmp, &global.thread_list.list, thread_list) {
+        list_for_each_entry_safe(t, tmp, &global.thread_list.list,
+                                 thread_list) {
             if (thread_rcu_not_reached_target(t, target)) {
                 all_done = false;
                 break;
@@ -206,7 +207,8 @@ static void rcu_gp_worker(void *unused) {
 
             enum irql irql = spin_lock_irq_disable(&global.thread_list.lock);
             struct thread *t, *tmp;
-            list_for_each_entry_safe(t, tmp, &global.thread_list.list, thread_list) {
+            list_for_each_entry_safe(t, tmp, &global.thread_list.list,
+                                     thread_list) {
                 if (thread_rcu_not_reached_target(t, target)) {
                     everybody_ok = false;
                     break;

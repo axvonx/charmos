@@ -259,3 +259,4 @@ void *kzalloc_aligned_internal(size_t size, size_t align,
                                enum alloc_flags flags,
                                enum alloc_behavior behavior);
 void kfree_aligned_internal(void *ptr, enum alloc_behavior behavior);
+void kfree_defer_irq(void *ptr);

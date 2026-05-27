@@ -337,7 +337,8 @@ void thread_block_on(struct thread_queue *q, enum thread_wait_type type,
     struct thread *current = thread_get_current();
 
     enum irql irql = spin_lock_irq_disable(&q->lock);
-    thread_block(current, THREAD_BLOCK_REASON_MANUAL, type, wake_src);
+    thread_prepare_to_block(current, THREAD_BLOCK_REASON_MANUAL, type,
+                            wake_src);
     list_add_tail(&current->wq_list_node, &q->list);
     spin_unlock(&q->lock, irql);
 }
@@ -352,13 +353,13 @@ static void wake_thread(void *a, void *unused) {
 void thread_sleep_for_ms(uint64_t ms) {
     struct thread *curr = thread_get_current();
     defer_enqueue(wake_thread, WORK_ARGS(curr, NULL), ms);
-    thread_sleep(curr, THREAD_SLEEP_REASON_MANUAL, THREAD_WAIT_UNINTERRUPTIBLE,
-                 curr);
+    thread_prepare_to_sleep(curr, THREAD_SLEEP_REASON_MANUAL,
+                            THREAD_WAIT_UNINTERRUPTIBLE, curr);
 
-    thread_wait_for_wake_match();
+    thread_yield_until_wake_match();
 }
 
-void thread_wake_manual(struct thread *t, void *wake_src) {
+void scheduler_wake_manual(struct thread *t, void *wake_src) {
     enum thread_state s = thread_get_state(t);
 
     if (s == THREAD_STATE_BLOCKED)

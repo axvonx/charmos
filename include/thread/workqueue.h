@@ -163,6 +163,9 @@ struct workqueue_attributes {
 #define WORKQUEUE_DEFAULT_SPAWN_DELAY 150
 #define WORKQUEUE_DEFAULT_MIN_IDLE_CHECK SECONDS_TO_MS(2)
 #define WORKQUEUE_DEFAULT_MAX_IDLE_CHECK SECONDS_TO_MS(40)
+#define WORKQUEUE_DEFAULT_IDLE_CHECK                                           \
+    {.max = WORKQUEUE_DEFAULT_MAX_IDLE_CHECK,                                  \
+     .min = WORKQUEUE_DEFAULT_MIN_IDLE_CHECK}
 
 struct workqueue {
     char *name;

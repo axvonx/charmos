@@ -612,4 +612,65 @@ TEST_REGISTER(elcm_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
     SET_SUCCESS();
 }
 
+#define KFREE_IRQ_TEST_ALLOC_COUNT 2048
+#define KFREE_IRQ_TEST_FREES_PER_IRQ_MIDRANGE (KFREE_IRQ_TEST_ALLOC_COUNT / 128)
+#define KFREE_IRQ_TEST_SPIN_MASK UINT8_MAX
+
+static void *kfree_irq_allocs[KFREE_IRQ_TEST_ALLOC_COUNT] = {0};
+static atomic_size_t kfree_irq_test_consumed = 0;
+
+static enum irq_result kfree_irq_test_irq(void *arg, uint8_t irq,
+                                          struct irq_context *irqc) {
+    /* Non-ordered load here is OK, we are the only modifier (this CPU) */
+    uint8_t seed = prng_next() & 0xF;
+    int delta = seed > 0x7 ? -(seed & 0x7) : (seed & 0x7);
+    int possible = KFREE_IRQ_TEST_FREES_PER_IRQ_MIDRANGE + delta;
+    if (possible < 0)
+        possible = KFREE_IRQ_TEST_FREES_PER_IRQ_MIDRANGE;
+
+    if (possible + kfree_irq_test_consumed > KFREE_IRQ_TEST_ALLOC_COUNT)
+        possible = KFREE_IRQ_TEST_ALLOC_COUNT - kfree_irq_test_consumed;
+
+    for (int i = 0; i < possible; i++) {
+        kassert(kfree_irq_test_consumed < KFREE_IRQ_TEST_ALLOC_COUNT);
+        int idx = atomic_fetch_add(&kfree_irq_test_consumed, 1);
+        kfree_defer_irq(kfree_irq_allocs[idx]);
+        int spins = prng_next() & KFREE_IRQ_TEST_SPIN_MASK;
+
+        while (spins) {
+            cpu_relax();
+            spins--;
+        }
+    }
+
+    return IRQ_HANDLED;
+}
+
+TEST_REGISTER(kfree_defer_irq_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
+    if (global.core_count < 4) {
+        SET_SKIP();
+        return;
+    }
+
+    uint8_t irq = irq_alloc_entry();
+    irq_register("kfree_defer_irq_test", irq, kfree_irq_test_irq, NULL,
+                 IRQ_FLAG_NONE);
+    irq_set_chip(irq, lapic_get_chip(), NULL);
+
+    for (int i = 0; i < KFREE_IRQ_TEST_ALLOC_COUNT; i++) {
+        kfree_irq_allocs[i] = kmalloc(64);
+    }
+
+    while (atomic_load(&kfree_irq_test_consumed) < KFREE_IRQ_TEST_ALLOC_COUNT) {
+        ipi_send(3, irq);
+        int spins = prng_next() & KFREE_IRQ_TEST_SPIN_MASK;
+
+        while (spins) {
+            cpu_relax();
+            spins--;
+        }
+    }
+    SET_SUCCESS();
+}
+
 #endif

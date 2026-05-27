@@ -373,7 +373,7 @@ void thread_update_effective_priority(struct thread *t);
 void thread_apply_cpu_penalty(struct thread *t);
 
 void thread_add_wake_reason(struct thread *t, uint8_t reason);
-void thread_wake_manual(struct thread *t, void *wake_src);
+void scheduler_wake_manual(struct thread *t, void *wake_src);
 void thread_calculate_activity_data(struct thread *t);
 
 void thread_add_block_reason(struct thread *t, uint8_t reason);
@@ -381,21 +381,25 @@ void thread_add_sleep_reason(struct thread *t, uint8_t reason);
 
 /* these two functions return if the thread had `wake_matched`
  * satisfied on return */
-void thread_block(struct thread *t, enum thread_block_reason r,
-                  enum thread_wait_type wait_type, void *expect_wake_src);
-void thread_sleep(struct thread *t, enum thread_sleep_reason r,
-                  enum thread_wait_type wait_type, void *expect_wake_src);
+void thread_prepare_to_block(struct thread *t, enum thread_block_reason r,
+                             enum thread_wait_type wait_type,
+                             void *expect_wake_src);
+void thread_prepare_to_sleep(struct thread *t, enum thread_sleep_reason r,
+                             enum thread_wait_type wait_type,
+                             void *expect_wake_src);
 
 /* Turnstile wants this */
-void thread_block_locked(struct thread *t, enum thread_block_reason r,
-                         enum thread_wait_type type, void *expect_wake_src);
+void thread_prepare_to_block_locked(struct thread *t,
+                                    enum thread_block_reason r,
+                                    enum thread_wait_type type,
+                                    void *expect_wake_src);
 
 void thread_set_timesharing(struct thread *t);
 void thread_set_background(struct thread *t);
-void thread_wake_internal(struct thread *t, enum thread_wake_reason r,
+void thread_wake_unlocked(struct thread *t, enum thread_wake_reason r,
                           void *wake_src);
 void thread_migrate(struct thread *t, size_t dest_core);
-void thread_wait_for_wake_match();
+void thread_yield_until_wake_match();
 enum thread_prio_class thread_unboost_self();
 enum thread_prio_class thread_boost_self(enum thread_prio_class new);
 struct scheduler *thread_get_scheduler(struct thread *t, enum irql *sirql_out);

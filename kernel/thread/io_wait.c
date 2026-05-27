@@ -14,8 +14,8 @@ void io_wait_begin(struct io_wait_token *out, void *io_object) {
     INIT_LIST_HEAD(&out->list);
     list_add_tail(&out->list, &t->io_wait_tokens);
 
-    thread_block(t, THREAD_BLOCK_REASON_IO, THREAD_WAIT_UNINTERRUPTIBLE,
-                 io_object);
+    thread_prepare_to_block(t, THREAD_BLOCK_REASON_IO,
+                            THREAD_WAIT_UNINTERRUPTIBLE, io_object);
 }
 
 void io_wait_end(struct io_wait_token *t, enum io_wait_end_action act) {

@@ -125,11 +125,7 @@ void defer_init(void) {
         .flags = WORKQUEUE_FLAG_ON_DEMAND | WORKQUEUE_FLAG_NO_WORKER_GC,
         .max_workers = 1,
         .min_workers = 1,
-        .idle_check =
-            {
-                .min = WORKQUEUE_DEFAULT_MIN_IDLE_CHECK,
-                .max = WORKQUEUE_DEFAULT_MAX_IDLE_CHECK,
-            },
+        .idle_check = WORKQUEUE_DEFAULT_IDLE_CHECK,
         .spawn_delay = WORKQUEUE_DEFAULT_SPAWN_DELAY,
         .worker_cpu_mask = mask,
     };

@@ -145,7 +145,7 @@ static bool rw_sync(struct block_device *disk, uint64_t lba, uint8_t *buffer,
     irql_lower(irql);
 
     /* Go run something else now */
-    thread_wait_for_wake_match();
+    thread_yield_until_wake_match();
 
     return !req.status;
 }

@@ -192,7 +192,7 @@ static inline bool xhci_send_command_and_block(struct xhci_device *dev,
         *iot = tok;
 
     if (!xhci_send_command(dev, cmd)) {
-        thread_wake_internal(thread_get_current(),
+        thread_wake_unlocked(thread_get_current(),
                              THREAD_WAKE_REASON_BLOCKING_MANUAL, dev);
 
         if (iot) {
@@ -207,7 +207,7 @@ static inline bool xhci_send_command_and_block(struct xhci_device *dev,
 
     irql_lower(irql);
 
-    thread_wait_for_wake_match();
+    thread_yield_until_wake_match();
 
     if (!iot)
         io_wait_end(&tok, IO_WAIT_END_YIELD);

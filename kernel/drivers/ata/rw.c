@@ -240,7 +240,7 @@ static bool rw_sync(struct ata_drive *d, uint64_t lba, uint8_t *b, uint8_t cnt,
     struct ide_request *req = request_init(lba, b, cnt, write);
 
     submit_and_wait(d, req, tk);
-    thread_wait_for_wake_match();
+    thread_yield_until_wake_match();
 
     bool ret = !req->status;
 

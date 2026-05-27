@@ -1,5 +1,5 @@
 #pragma once
-#include <containerof.h>
+#include <container_of.h>
 #include <kassert.h>
 #include <math/align.h>
 #include <math/bit_ops.h>
@@ -13,8 +13,10 @@
 #include <stdatomic.h>
 #include <stdint.h>
 #include <structures/list.h>
+#include <structures/mpsc_list.h>
 #include <structures/rbt.h>
 #include <sync/spinlock.h>
+#include <thread/workqueue.h>
 #include <time.h>
 
 LOG_SITE_EXTERN(slab);
@@ -47,7 +49,7 @@ LOG_HANDLE_EXTERN(slab);
     15 /* Leave 15% of magazine entries for nonpageable requests */
 #define SLAB_MAG_WATERMARK (SLAB_MAG_ENTRIES * SLAB_MAG_WATERMARK_PCT / 100)
 
-#define SLAB_MIN_SIZE (sizeof(vaddr_t))
+#define SLAB_MIN_SIZE (sizeof(uintptr_t))
 #define SLAB_MAX_SIZE (PAGE_SIZE / 4)
 #define SLAB_MAX_PAGES 64
 #define SLAB_POW2_ORDER_COUNT 6 /* 2^6 max */
@@ -216,6 +218,9 @@ struct slab_magazine {
 };
 
 struct slab_percpu_cache {
+    struct mpsc_slist defer_frees;
+    struct dpc defer_dpc;
+
     /* Magazines are always nonpageable */
     struct slab_magazine *mag; /* the size of this is slab_num_sizes */
     struct slab_domain *domain;

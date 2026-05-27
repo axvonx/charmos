@@ -323,8 +323,8 @@ static void turnstile_block_on(struct turnstile *ts, size_t queue_num) {
 
     atomic_store(&curr->blocked_ts, ts);
 
-    thread_block(curr, THREAD_BLOCK_REASON_MANUAL, THREAD_WAIT_UNINTERRUPTIBLE,
-                 ts);
+    thread_prepare_to_block(curr, THREAD_BLOCK_REASON_MANUAL,
+                            THREAD_WAIT_UNINTERRUPTIBLE, ts);
 
     rbt_insert(&ts->queues[queue_num], &curr->wq_tree_node);
 }
@@ -369,7 +369,7 @@ struct turnstile *turnstile_block(struct turnstile *ts, size_t queue_num,
 
     /* it is the waking thread's job to decrement waiters and
      * mark me as no longer being blocked on the lock object */
-    thread_wait_for_wake_match();
+    thread_yield_until_wake_match();
 
     thread_remove_boost();
 

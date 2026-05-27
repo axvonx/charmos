@@ -85,7 +85,7 @@ static bool rw_sync(struct block_device *disk, uint64_t lba, uint8_t *buf,
     }
 
     spin_unlock(&dev->lock, irql);
-    thread_wait_for_wake_match();
+    thread_yield_until_wake_match();
 
     dev->io_waiters[ahci_disk->port][req.slot] = NULL;
 

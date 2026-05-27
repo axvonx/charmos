@@ -45,7 +45,7 @@ ${BOLD}Targets:${NC} (passed to make)
   headless    Build and run in QEMU without graphics
   tests       Build and run test suite
   debug       Build and run QEMU paused for gdb
-  regen-syms[118;1:3u  Regenerate symbol table from built kernel
+  regen-syms  Regenerate symbol table from built kernel
   clean-full  Wipe ISO, limine, ovmf, syms, etc.
 
 ${BOLD}Examples:${NC}

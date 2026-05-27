@@ -72,26 +72,7 @@ void thread_enqueue(struct thread *t) {
 
     kassert(!cpu_mask_empty(&t->allowed_cpus));
 
-    struct scheduler *s = global.schedulers[0];
-    uint64_t min_load = UINT64_MAX;
-
-    size_t i;
-    for_each_cpu_id(i) {
-        /* skip */
-        if (!cpu_mask_test(&t->allowed_cpus, i))
-            continue;
-
-        size_t this_load = global.schedulers[i]->total_thread_count;
-
-        if (global.cores && global.cores[i] &&
-            !scheduler_core_idle(global.cores[i]))
-            this_load++;
-
-        if (this_load < min_load) {
-            min_load = this_load;
-            s = global.schedulers[i];
-        }
-    }
+    struct scheduler *s = scheduler_select_best_for_thread(t);
 
     /* hold the lock to prevent that thread from being ran
      * while we are going to signal the other core */

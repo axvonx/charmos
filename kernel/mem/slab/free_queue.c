@@ -131,13 +131,6 @@ void slab_free_queue_free(struct slab_domain *d, void *ptr) {
  * If this is turned off, the addresses that are not successfully freed
  * will simply be re-enqueued to the free_queue so that in a future drain
  * attempt/free attempt, these addresses may be freed. */
-
-struct entry {
-    SLIST_ENTRY(entry) data;
-};
-
-SLIST_HEAD(free_queue_list_tmp, entry);
-
 size_t slab_free_queue_drain(struct slab_percpu_cache *cache,
                              struct slab_free_queue *queue, size_t target) {
     kassert(cache == slab_percpu_cache_local());

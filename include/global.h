@@ -1,12 +1,12 @@
 /* @title: Global Variables */
 #pragma once
-#include <structures/locked_list.h>
 #include <bootstage.h>
 #include <mem/buddy.h>
 #include <mem/movealloc.h>
 #include <smp/topology.h>
 #include <stdatomic.h>
 #include <structures/list.h>
+#include <structures/locked_list.h>
 
 /* TODO: almost everything here is RO after init.
  *

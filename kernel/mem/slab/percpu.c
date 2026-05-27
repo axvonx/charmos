@@ -132,6 +132,7 @@ void slab_domain_percpu_init(struct slab_domain *domain) {
             panic("Could not allocate domain's percpu caches\n");
 
         domain->percpu_caches[i]->domain = domain;
+        mpsc_slist_init(&domain->percpu_caches[i]->defer_frees);
         for (size_t j = 0; j < slab_global.num_sizes; j++) {
             struct slab_magazine *mag = &domain->percpu_caches[i]->mag[j];
             mag->count = 0;

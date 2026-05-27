@@ -1,7 +1,7 @@
 /* @title: Linked list */
 #pragma once
 #include <compiler.h>
-#include <containerof.h>
+#include <container_of.h>
 #include <stddef.h>
 
 struct list_head {
@@ -156,42 +156,78 @@ static inline void list_splice_tail_init(struct list_head *list,
          &pos->member != (head);                                               \
          pos = n, n = list_entry(n->member.next, typeof(*n), member))
 
-#define SLIST_HEAD(name, type)                                                 \
-    struct name {                                                              \
-        struct type *slh_first;                                                \
-    }
-
-#define SLIST_EMPTY(head) ((head)->slh_first == NULL)
-
-#define SLIST_HEAD_INIT(head) {.slh_first = NULL}
-
-#define SLIST_INIT(head)                                                       \
-    do {                                                                       \
-        (head)->slh_first = NULL;                                              \
-    } while (0)
-
-#define SLIST_ENTRY(type)                                                      \
-    struct {                                                                   \
-        struct type *sle_next;                                                 \
-    }
-
-#define SLIST_FIRST(head) ((head)->slh_first)
-
-#define SLIST_NEXT(elm, field) ((elm)->field.sle_next)
-
-#define SLIST_INSERT_HEAD(head, elm, field)                                    \
-    do {                                                                       \
-        (elm)->field.sle_next = (head)->slh_first;                             \
-        (head)->slh_first = (elm);                                             \
-    } while (0)
-
-#define SLIST_REMOVE_HEAD(head, field)                                         \
-    do {                                                                       \
-        (head)->slh_first = (head)->slh_first->field.sle_next;                 \
-    } while (0)
-
-#define SLIST_FOREACH(var, head, field)                                        \
-    for ((var) = (head)->slh_first; (var); (var) = (var)->field.sle_next)
-
 void list_sort(struct list_head *head,
                int (*cmp)(struct list_head *, struct list_head *));
+
+struct slist_node {
+    struct slist_node *next;
+};
+
+struct slist_head {
+    struct slist_node *first;
+    struct slist_node *last;
+};
+
+static inline void slist_head_init(struct slist_head *h) {
+    h->first = NULL;
+    h->last = NULL;
+}
+
+static inline int slist_empty(const struct slist_head *h) {
+    return h->first == NULL;
+}
+
+static inline void slist_push_head(struct slist_head *h, struct slist_node *n) {
+    n->next = h->first;
+    h->first = n;
+    if (h->last == NULL)
+        h->last = n;
+}
+
+static inline void slist_push_tail(struct slist_head *h, struct slist_node *n) {
+    n->next = NULL;
+
+    if (h->last != NULL) {
+        h->last->next = n;
+    } else {
+        h->first = n;
+    }
+
+    h->last = n;
+}
+
+static inline struct slist_node *slist_pop_head(struct slist_head *h) {
+    struct slist_node *n = h->first;
+    if (!n)
+        return NULL;
+
+    h->first = n->next;
+    if (h->first == NULL)
+        h->last = NULL;
+
+    n->next = NULL;
+    return n;
+}
+
+static inline void slist_remove_node_after(struct slist_head *h,
+                                           struct slist_node *prev,
+                                           struct slist_node *target) {
+
+    if (!prev) {
+        if (h->first != target)
+            return;
+
+        slist_pop_head(h);
+        return;
+    }
+
+    if (prev->next != target)
+        return;
+
+    prev->next = target->next;
+
+    if (h->last == target)
+        h->last = prev;
+
+    target->next = NULL;
+}

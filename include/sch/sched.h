@@ -92,6 +92,7 @@ struct scheduler {
 
 void scheduler_init();
 
+struct scheduler *scheduler_select_best_for_thread(struct thread *t);
 void scheduler_add_thread(struct scheduler *sched, struct thread *thread,
                           bool lock_held);
 void scheduler_remove_thread(struct scheduler *sched, struct thread *t,

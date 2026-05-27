@@ -15,8 +15,7 @@ static bool addr_is_mapped(uint64_t addr) {
            (uintptr_t) -1;
 }
 
-static void dump_slab_exec_fault(struct thread *curr,
-                                 struct irq_context *rsp) {
+static void dump_slab_exec_fault(struct thread *curr, struct irq_context *rsp) {
     printf("\n=== SLAB EXEC FAULT DEBUG ===\n");
 
     printf("Faulting RIP (from CPU): %p\n", rsp->rip);
@@ -61,8 +60,7 @@ static void dump_slab_exec_fault(struct thread *curr,
     if (addr_is_mapped((uint64_t) prev_obj)) {
         debug_print_memory(prev_obj + 992 - 256, 256);
     } else {
-        printf("  Preceding object at %p is not mapped\n",
-               (uint64_t) prev_obj);
+        printf("  Preceding object at %p is not mapped\n", (uint64_t) prev_obj);
     }
 
     printf("\n--- Stack at fault RSP (%p) ---\n", rsp->rsp);
@@ -87,16 +85,12 @@ static void dump_slab_exec_fault(struct thread *curr,
     struct scheduler *sched = global.schedulers[smp_core_id()];
     printf("\n--- Scheduler state (core %u) ---\n", smp_core_id());
     printf("  sched->current = %p\n", (uint64_t) sched->current);
-    printf("  sched->drop_last_ref = %p\n",
-           (uint64_t) sched->drop_last_ref);
-    printf("  sched->other_locked = %p\n",
-           (uint64_t) sched->other_locked);
-    printf("  sched->stealing_work = %u\n",
-           (uint32_t) sched->stealing_work);
+    printf("  sched->drop_last_ref = %p\n", (uint64_t) sched->drop_last_ref);
+    printf("  sched->other_locked = %p\n", (uint64_t) sched->other_locked);
+    printf("  sched->stealing_work = %u\n", (uint32_t) sched->stealing_work);
 
     printf("\n--- Thread migration info ---\n");
-    printf("  migrate_to = %ld\n",
-           (int64_t) atomic_load(&curr->migrate_to));
+    printf("  migrate_to = %ld\n", (int64_t) atomic_load(&curr->migrate_to));
     printf("  migration_gen = 0x%lx\n", curr->migration_generation);
     printf("  scheduler = %p\n", (uint64_t) atomic_load(&curr->scheduler));
 }
@@ -145,8 +139,7 @@ enum irq_result page_fault_handler(void *context, uint8_t vector,
         (error_code & 0x10) && ar && strcmp(ar->name, "slab") == 0;
 
     if (!is_slab_exec && (error_code & 0x10)) {
-        struct address_range *rip_ar =
-            address_range_for_addr(rsp->rip);
+        struct address_range *rip_ar = address_range_for_addr(rsp->rip);
         if (rip_ar && strcmp(rip_ar->name, "slab") == 0)
             is_slab_exec = true;
     }
@@ -156,8 +149,8 @@ enum irq_result page_fault_handler(void *context, uint8_t vector,
 
     if (!(error_code & 0x04)) {
         spin_unlock_raw(&pf_lock);
-        panic("KERNEL PAGE FAULT ON CORE %llu under thread %s\n",
-              smp_core_id(), thread_get_current()->name);
+        panic("KERNEL PAGE FAULT ON CORE %llu under thread %s\n", smp_core_id(),
+              thread_get_current()->name);
         while (true) {
             disable_interrupts();
             wait_for_interrupt();

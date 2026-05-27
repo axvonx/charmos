@@ -87,16 +87,16 @@ void thread_migrate(struct thread *t, size_t dest_core) {
     }
 
     /* finally, we can do something here. */
-    if (thread_get_state(t) == THREAD_STATE_RUNNING) {
+    if (thread_get_state(t) == THREAD_STATE_RUNNING ||
+        !(thread_get_flags(t) & THREAD_FLAG_YIELDED)) {
         thread_set_migration_target(t, dest_core);
         scheduler_force_resched(dst);
     } else if (thread_get_state(t) == THREAD_STATE_READY) {
         scheduler_remove_thread(src, t, /* lock_held = */ true);
         scheduler_add_thread(dst, t, /* lock_held = */ true);
-        thread_set_runqueue(t, dst);
     }
 
-    thread_post_migrate(t, src->core_id, dst->core_id);
+    thread_set_runqueue(t, dst);
 
 out:
 

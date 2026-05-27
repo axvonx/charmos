@@ -1,6 +1,6 @@
 /* @title: Red black tree */
 #pragma once
-#include <containerof.h>
+#include <container_of.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -87,6 +87,9 @@ static inline struct rbt_node *rbt_first(const struct rbt *root) {
     return node;
 }
 
+void rbt_link_node(struct rbt_node *node, struct rbt_node *parent,
+                   struct rbt_node **link);
+void rbt_insert_color(struct rbt *tree, struct rbt_node *node);
 struct rbt *rbt_init(struct rbt *t, rbt_get_data get_data, rbt_compare compare);
 struct rbt *rbt_create(rbt_get_data get, rbt_compare compare);
 struct rbt_node *rbt_find_min(struct rbt_node *node);

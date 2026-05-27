@@ -33,7 +33,7 @@ enum usb_error usb_transfer_sync(enum usb_error (*fn)(struct usb_request *),
 
     enum usb_error ret = fn(request);
     if (ret != USB_OK) {
-        thread_wake_internal(curr, THREAD_WAKE_REASON_BLOCKING_MANUAL,
+        thread_wake_unlocked(curr, THREAD_WAKE_REASON_BLOCKING_MANUAL,
                              request->dev);
 
         if (tok) {
@@ -48,7 +48,7 @@ enum usb_error usb_transfer_sync(enum usb_error (*fn)(struct usb_request *),
 
     irql_lower(irql);
 
-    thread_wait_for_wake_match();
+    thread_yield_until_wake_match();
 
     if (!tok)
         io_wait_end(&iowt, IO_WAIT_END_YIELD);

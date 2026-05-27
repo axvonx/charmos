@@ -110,3 +110,19 @@ static inline fx32_32_t fx_sqrt(fx32_32_t x) {
     }
     return r;
 }
+
+static inline fx32_32_t fx_ceil(fx32_32_t x) {
+    if (x >= 0) {
+        return (x + FX_ONE - 1) & ~(FX_ONE - 1);
+    } else {
+        return x & ~(FX_ONE - 1);
+    }
+}
+
+static inline fx32_32_t fx_floor(fx32_32_t x) {
+    if (x >= 0) {
+        return x & ~(FX_ONE - 1);
+    } else {
+        return (x - FX_ONE + 1) & ~(FX_ONE - 1);
+    }
+}

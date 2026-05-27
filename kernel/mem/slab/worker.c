@@ -11,10 +11,39 @@
 /* We first want to go ahead and flush our freequeue. We'll trylock
  * the individual per-cpu caches to see if we can sneak some of the
  * elements in there */
-enum daemon_thread_command slab_background_work(struct daemon_work *work,
-                                                struct daemon_thread *thread,
-                                                void *a, void *b) {
+static enum daemon_thread_command
+slab_background_work(struct daemon_work *work, struct daemon_thread *thread,
+                     void *a, void *b) {
+    /* TODO: */
     return DAEMON_THREAD_COMMAND_DEFAULT;
+}
+
+/* Aside on deferred frees:
+ *
+ * We can guarantee that any slab object is at minimum pointer sized
+ *
+ * This means we can embed a *next pointer in every object to another
+ * object. The idea is this:
+ *
+ * The address of every node is what we free. We use the *next at the
+ * node to get to the next one to free it too. SLIST semantics
+ * mean that this can be MPSC, which is what we're looking to be
+ * able to pull off here.
+ */
+static void slab_defer_free_dpc(struct dpc *unused, void *unused_arg) {
+    (void) unused_arg;
+    struct slab_percpu_cache *c = slab_percpu_cache_local();
+    /* Enter a loop here of stealing the defer free list,
+     * and so long as we actually steal something, we
+     * drain whatever is on that list */
+
+    struct mpsc_slist_node *tmp, *iter, *got = NULL;
+    while ((got = mpsc_slist_drain(&c->defer_frees))) {
+        got = mpsc_slist_reverse(got);
+        mpsc_slist_for_each_safe(iter, tmp, got) {
+            kfree(iter);
+        }
+    }
 }
 
 static struct daemon_work bg =
@@ -60,8 +89,25 @@ void slab_domain_init_workqueue(struct slab_domain *domain) {
         .min_workers = 1,
         .spawn_delay = WORKQUEUE_DEFAULT_SPAWN_DELAY,
         .worker_cpu_mask = mask,
+        .worker_niceness = 0,
+        .idle_check = WORKQUEUE_DEFAULT_IDLE_CHECK,
     };
 
     domain->workqueue =
         workqueue_create("slab_domain_%u_wq", &attrs, domain->domain->id);
+    for (size_t i = 0; i < domain->domain->num_cores; i++) {
+        struct dpc *defer_dpc = &domain->percpu_caches[i]->defer_dpc;
+        dpc_init(defer_dpc, slab_defer_free_dpc, NULL);
+    }
+}
+
+void kfree_defer_irq(void *ptr) {
+    kassert(irq_in_interrupt());
+    if (!ptr)
+        return;
+
+    struct slab_percpu_cache *pc = slab_percpu_cache_local();
+    struct mpsc_slist_node *n = ptr;
+    mpsc_slist_push(&pc->defer_frees, n);
+    dpc_enqueue_local(&pc->defer_dpc, DPC_NONE);
 }

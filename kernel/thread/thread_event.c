@@ -493,7 +493,7 @@ static bool set_state_and_update_reason(
             thread_or_flags(t, THREAD_FLAG_WAKE_MATCHED);
         }
     } else {
-        thread_and_flags(t, ~THREAD_FLAG_YIELDED_AFTER_WAKE);
+        thread_and_flags(t, ~THREAD_FLAG_YIELDED);
         atomic_store_explicit(&t->wait_type, type, memory_order_release);
         t->last_action_reason = reason;
         t->last_action = state;
@@ -507,10 +507,9 @@ static bool set_state_and_update_reason(
           thread_get_state(t) == THREAD_STATE_RUNNING))
         atomic_store(&t->state, state);
 
-    /* NOTE: special case: this is if we are waking ourselves after deciding to
-     * not block */
-    if ((!(thread_get_flags(t) & THREAD_FLAG_YIELDED_AFTER_WAKE)) &&
-        t == thread_get_current() && state == THREAD_STATE_READY)
+    /* NOTE: special case: the thread has not re-entered runqueues yet */
+    if ((!(thread_get_flags(t) & THREAD_FLAG_YIELDED)) &&
+        state == THREAD_STATE_READY)
         atomic_store(&t->state, THREAD_STATE_RUNNING);
 
     callback(t, reason);
@@ -527,7 +526,7 @@ out:
     return ok;
 }
 
-void thread_wake_internal(struct thread *t, enum thread_wake_reason r,
+void thread_wake_unlocked(struct thread *t, enum thread_wake_reason r,
                           void *wake_src) {
     set_state_and_update_reason(
         t, r, THREAD_STATE_READY, thread_add_wake_reason, wake_src,
@@ -536,8 +535,8 @@ void thread_wake_internal(struct thread *t, enum thread_wake_reason r,
         /* exit_if_match = */ false);
 }
 
-void thread_wake_locked(struct thread *t, enum thread_wake_reason r,
-                        void *wake_src) {
+void thread_prepare_to_wake_locked(struct thread *t, enum thread_wake_reason r,
+                                   void *wake_src) {
     set_state_and_update_reason(
         t, r, THREAD_STATE_READY, thread_add_wake_reason, wake_src,
         /*already_locked=*/true, /* type = */ 0, /* exit_if_match = */ false);
@@ -553,22 +552,26 @@ void thread_set_background(struct thread *t) {
     t->perceived_prio_class = THREAD_PRIO_CLASS_BACKGROUND;
 }
 
-void thread_block(struct thread *t, enum thread_block_reason r,
-                  enum thread_wait_type type, void *expect_wake_src) {
+void thread_prepare_to_block(struct thread *t, enum thread_block_reason r,
+                             enum thread_wait_type type,
+                             void *expect_wake_src) {
     set_state_and_update_reason(
         t, r, THREAD_STATE_BLOCKED, thread_add_block_reason, expect_wake_src,
         /*already_locked=*/false, type, /* exit_if_match = */ false);
 }
 
-void thread_block_locked(struct thread *t, enum thread_block_reason r,
-                         enum thread_wait_type type, void *expect_wake_src) {
+void thread_prepare_to_block_locked(struct thread *t,
+                                    enum thread_block_reason r,
+                                    enum thread_wait_type type,
+                                    void *expect_wake_src) {
     set_state_and_update_reason(
         t, r, THREAD_STATE_BLOCKED, thread_add_block_reason, expect_wake_src,
         /*already_locked=*/true, type, /* exit_if_match = */ false);
 }
 
-void thread_sleep(struct thread *t, enum thread_sleep_reason r,
-                  enum thread_wait_type type, void *expect_wake_src) {
+void thread_prepare_to_sleep(struct thread *t, enum thread_sleep_reason r,
+                             enum thread_wait_type type,
+                             void *expect_wake_src) {
     set_state_and_update_reason(
         t, r, THREAD_STATE_SLEEPING, thread_add_sleep_reason, expect_wake_src,
         /*already_locked=*/false, type, /* exit_if_match = */ false);
@@ -590,10 +593,14 @@ static bool sleep_interruptible(struct thread *t, enum thread_block_reason r,
         /*already_locked=*/false, type, /* exit_if_match = */ true);
 }
 
-void thread_wait_for_wake_match() {
-    scheduler_yield();
-
+void thread_yield_until_wake_match() {
     struct thread *curr = thread_get_current();
+
+    /* If our wake has matched we take the fast path down
+     * and out of the function */
+    if (!(thread_get_flags(curr) & THREAD_FLAG_WAKE_MATCHED))
+        scheduler_yield();
+
     if (curr->last_action != THREAD_STATE_BLOCKED &&
         curr->last_action != THREAD_STATE_SLEEPING)
         return;

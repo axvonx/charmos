@@ -304,6 +304,7 @@ static bool climb_get_ref(struct thread *t) {
     return true;
 }
 
+/* Fine to thread_put here since we don't hold the scheduler lock */
 static void climb_drop_ref(struct thread *t) {
     if (t != thread_get_current())
         thread_put(t);
@@ -381,6 +382,8 @@ void climb_thread_remove(struct thread *t) {
     }
 
     spin_unlock(&sched->lock, irql_out);
+
+    /* OK outside of the scheduler lock */
     if (put)
         thread_put(t);
 }
@@ -449,8 +452,8 @@ static void climb_apply_budget(struct scheduler *sched,
  *     removed. (CLIMB_MAX_DECAY_PERIODS)
  *
  */
-static void maybe_remove_node(struct rbt *tree,
-                              struct climb_thread_state *cts) {
+static void maybe_remove_node(struct rbt *tree, struct climb_thread_state *cts,
+                              struct list_head *tlh) {
     struct rbt_node *node = &cts->climb_node;
     bool remove = false;
 
@@ -465,13 +468,14 @@ static void maybe_remove_node(struct rbt *tree,
         rbt_delete(tree, node);
         cts->pressure_periods = 0;
         cts->on_climb_tree = false;
-        thread_put(container_of(cts, struct thread, climb_state));
+        list_add_tail(&cts->tmp_list_node, tlh);
     } else {
         cts->pressure_periods--;
     }
 }
 
-static struct climb_summary summarize_and_advance(struct rbt *tree) {
+static struct climb_summary summarize_and_advance(struct rbt *tree,
+                                                  struct list_head *tlh) {
     struct climb_summary ret = {0};
     struct climb_thread_state *iter;
     struct rbt_node *node, *tmp;
@@ -488,7 +492,7 @@ static struct climb_summary summarize_and_advance(struct rbt *tree) {
             ret.total_periods_spent += iter->pressure_periods;
             iter->pressure_periods++;
         } else {
-            maybe_remove_node(tree, iter);
+            maybe_remove_node(tree, iter, tlh);
         }
     }
 
@@ -499,14 +503,24 @@ void climb_per_period_hook() {
     if (rbt_empty(climb_tree_local()))
         return;
 
+    LIST_HEAD(threads_to_drop);
+
     struct scheduler *sched = smp_core_scheduler();
     enum irql irql = spin_lock_irq_disable(&sched->lock);
 
-    struct climb_summary summary = summarize_and_advance(climb_tree_local());
+    struct climb_summary summary =
+        summarize_and_advance(climb_tree_local(), &threads_to_drop);
     struct climb_budget budget = climb_budget_from_summary(&summary);
     climb_apply_budget(smp_core_scheduler(), &budget);
 
     spin_unlock(&sched->lock, irql);
+
+    struct thread *tmp, *iter;
+    list_for_each_entry_safe(iter, tmp, &threads_to_drop,
+                             climb_state.tmp_list_node) {
+        list_del_init(&iter->climb_state.tmp_list_node);
+        thread_put(iter);
+    }
 }
 
 void climb_thread_init(struct thread *t) {
