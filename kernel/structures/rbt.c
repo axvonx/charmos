@@ -274,6 +274,7 @@ static void fix_deletion(struct rbt *tree, struct rbt_node *x) {
 }
 
 void rbt_delete(struct rbt *tree, struct rbt_node *z) {
+    kassert(rbt_has_node(tree, z));
     rbt_check_cycle(tree->root, __func__);
     struct rbt_node *y = z;
     struct rbt_node *x = NULL;

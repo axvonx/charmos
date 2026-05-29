@@ -461,6 +461,14 @@ static inline void thread_set_flags(struct thread *t, enum thread_flags new) {
     atomic_store(&t->flags, new);
 }
 
+static inline bool thread_pin(struct thread *t) {
+    return atomic_fetch_or(&t->flags, THREAD_FLAG_PINNED) & THREAD_FLAG_PINNED;
+}
+
+static inline void thread_unpin(struct thread *t) {
+    atomic_fetch_and(&t->flags, ~THREAD_FLAG_PINNED);
+}
+
 static inline enum thread_flags thread_or_flags(struct thread *t,
                                                 enum thread_flags flags) {
     return atomic_fetch_or(&t->flags, flags);

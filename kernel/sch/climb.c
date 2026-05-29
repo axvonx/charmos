@@ -297,7 +297,7 @@ static void climb_handle_act_other(struct thread *t, struct climb_handle *ch,
         spin_unlock(&sch->lock, irql);
 }
 
-static bool climb_get_ref(struct thread *t) {
+static bool climb_get_ref_not_curr(struct thread *t) {
     if (t != thread_get_current())
         return thread_get(t);
 
@@ -305,7 +305,7 @@ static bool climb_get_ref(struct thread *t) {
 }
 
 /* Fine to thread_put here since we don't hold the scheduler lock */
-static void climb_drop_ref(struct thread *t) {
+static void climb_drop_ref_not_curr(struct thread *t) {
     if (t != thread_get_current())
         thread_put(t);
 }
@@ -335,12 +335,12 @@ static void climb_handle_remove_internal(struct climb_handle *h, bool lock) {
     struct thread *t = h->given_to;
     climb_handle_act(t, h, remove_handle, lock);
     h->given_to = NULL;
-    climb_drop_ref(t);
+    climb_drop_ref_not_curr(t);
 }
 
 static void climb_handle_apply_internal(struct thread *t,
                                         struct climb_handle *h, bool lock) {
-    if (!climb_get_ref(t))
+    if (!climb_get_ref_not_curr(t))
         return;
 
     climb_handle_act(t, h, apply_handle, lock);
@@ -391,6 +391,7 @@ void climb_thread_remove(struct thread *t) {
 static struct climb_budget climb_budget_from_summary(struct climb_summary *s) {
     struct climb_budget b;
 
+    kassert(s->nthreads);
     size_t boost_scale = CLIMB_GLOBAL_BOOST_SCALE(s->nthreads);
     b.max_boost_levels =
         fx_to_int(fx_mul(s->total_pressure_ewma, fx_from_int(boost_scale)));
@@ -468,6 +469,8 @@ static void maybe_remove_node(struct rbt *tree, struct climb_thread_state *cts,
         rbt_delete(tree, node);
         cts->pressure_periods = 0;
         cts->on_climb_tree = false;
+        cts->was_pinned =
+            thread_pin(container_of(cts, struct thread, climb_state));
         list_add_tail(&cts->tmp_list_node, tlh);
     } else {
         cts->pressure_periods--;
@@ -500,13 +503,15 @@ static struct climb_summary summarize_and_advance(struct rbt *tree,
 }
 
 void climb_per_period_hook() {
-    if (rbt_empty(climb_tree_local()))
-        return;
-
-    LIST_HEAD(threads_to_drop);
-
     struct scheduler *sched = smp_core_scheduler();
     enum irql irql = spin_lock_irq_disable(&sched->lock);
+
+    if (rbt_empty(climb_tree_local())) {
+        spin_unlock(&sched->lock, irql);
+        return;
+    }
+
+    LIST_HEAD(threads_to_drop);
 
     struct climb_summary summary =
         summarize_and_advance(climb_tree_local(), &threads_to_drop);
@@ -519,6 +524,9 @@ void climb_per_period_hook() {
     list_for_each_entry_safe(iter, tmp, &threads_to_drop,
                              climb_state.tmp_list_node) {
         list_del_init(&iter->climb_state.tmp_list_node);
+        if (!iter->climb_state.was_pinned)
+            thread_unpin(iter);
+
         thread_put(iter);
     }
 }

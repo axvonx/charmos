@@ -85,6 +85,10 @@ bool thread_wake(struct thread *t, enum thread_wake_reason reason,
     if (yielded && state != THREAD_STATE_RUNNING &&
         state != THREAD_STATE_READY) {
         scheduler_add_thread(best, t, /* lock_held = */ true);
+        if (last_sch != best) {
+            thread_post_migrate(t, last_sch->core_id, best->core_id);
+        }
+
         scheduler_force_resched(best);
     }
 
