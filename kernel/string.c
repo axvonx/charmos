@@ -72,6 +72,16 @@ char *strcpy(char *dest, const char *src) {
     return original_dest;
 }
 
+size_t strlcpy(char *dest, const char *src, size_t size) {
+    size_t src_len = strlen(src);
+    if (size > 0) {
+        size_t copy_len = src_len < size - 1 ? src_len : size - 1;
+        memcpy(dest, src, copy_len);
+        dest[copy_len] = '\0';
+    }
+    return src_len;
+}
+
 char *strcat(char *dest, const char *src) {
     char *original_dest = dest;
     while (*dest) {
