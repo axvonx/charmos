@@ -25,6 +25,15 @@ static inline void locked_list_unlock(struct locked_list *ll, enum irql irql) {
     spin_unlock(&ll->lock, irql);
 }
 
+#define LOCKED_LIST_INIT(ll, irq_disable)                                      \
+    (struct locked_list) {                                                     \
+        .list = LIST_HEAD_INIT(ll.list), .lock = SPINLOCK_INIT,                \
+        .num_elems = ATOMIC_VAR_INIT(0), .lock_irq_disable = irq_disable       \
+    }
+
+#define LOCKED_LIST_DEFINE(name, irq_disable)                                  \
+    struct locked_list name = LOCKED_LIST_INIT(name, irq_disable)
+
 #define LOCKED_LIST_INIT_IRQ_DISABLE true
 #define LOCKED_LIST_INIT_NORMAL false
 #define LOCKED_LIST_SET_NUM_ELEMS(ll, c) atomic_store(&ll->num_elems, c)

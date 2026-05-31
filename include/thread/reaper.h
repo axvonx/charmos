@@ -7,14 +7,13 @@
 #include <thread/queue.h>
 #include <thread/thread.h>
 
-struct thread_reaper {
+struct reaper_thread {
     struct locked_list list;
     struct semaphore sem;
-    uint64_t reaped_threads;
+    struct thread *thread;
 };
 
 void reaper_enqueue(struct thread *t);
 void reaper_thread_main(void *nothing);
 void reaper_init(void);
 uint64_t reaper_get_reaped_thread_count(void);
-void reaper_signal();
