@@ -89,7 +89,7 @@ static inline uint8_t usb_to_xhci_ep_type(bool in, uint8_t type) {
             return XHCI_ENDPOINT_TYPE_ISOCH_IN;
 
         default:
-            xhci_log(LOG_ERROR, "Invalid type detected: %u\n", type);
+            xhci_log(LOG_ERROR, "Invalid type detected: %u", type);
             return 0;
         }
     }
@@ -105,7 +105,7 @@ static inline uint8_t usb_to_xhci_ep_type(bool in, uint8_t type) {
     case USB_ENDPOINT_ATTR_TRANS_TYPE_ISOCHRONOUS:
         return XHCI_ENDPOINT_TYPE_ISOCH_OUT;
 
-    default: xhci_log(LOG_ERROR, "Invalid type detected: %u\n", type); return 0;
+    default: xhci_log(LOG_ERROR, "Invalid type detected: %u", type); return 0;
     }
 }
 
@@ -143,10 +143,11 @@ static inline enum usb_error xhci_rq_to_usb_status(struct xhci_request *req) {
     }
 }
 
-static inline void xhci_request_init_blocking(struct xhci_request *req,
-                                              struct xhci_command *cmd,
-                                              uint8_t port) {
+static inline void
+xhci_request_init_blocking(struct xhci_request *req, struct xhci_command *cmd,
+                           uint8_t port, enum xhci_request_command_type t) {
     req->status = XHCI_REQUEST_SENDING;
+    req->type = t;
     req->completion_code = 0;
     req->command = cmd;
     req->private = thread_get_current();
@@ -158,10 +159,12 @@ static inline void xhci_request_init_blocking(struct xhci_request *req,
 
 static inline void xhci_request_init(struct xhci_request *req,
                                      struct xhci_command *cmd,
-                                     struct usb_request *rq) {
+                                     struct usb_request *rq,
+                                     enum xhci_request_command_type t) {
     req->list_owner = XHCI_REQ_LIST_NONE;
     req->status = XHCI_REQUEST_SENDING;
     req->completion_code = 0;
+    req->type = t;
     req->command = cmd;
     INIT_LIST_HEAD(&req->list);
     req->urb = rq;
@@ -187,9 +190,6 @@ static inline bool xhci_send_command_and_block(struct xhci_device *dev,
     } else {
         io_wait_begin(&tok, dev);
     }
-
-    if (iot)
-        *iot = tok;
 
     if (!xhci_send_command(dev, cmd)) {
         thread_wake_unlocked(thread_get_current(),

@@ -67,6 +67,7 @@ void xhci_controller_enable_ints(struct xhci_device *dev) {
 }
 
 void xhci_wake_waiter(struct xhci_device *dev, struct xhci_request *req) {
+    printf("wake waiter for %s", xhci_request_command_type_str(req->type));
     thread_wake_from_io_block(req->private, dev);
 }
 
@@ -157,7 +158,8 @@ void xhci_reset_slot(struct usb_device *dev) {
     struct xhci_request request = {0};
     struct xhci_command cmd = {0};
 
-    xhci_request_init_blocking(&request, &cmd, /* port = */ 0);
+    xhci_request_init_blocking(&request, &cmd, /* port = */ 0,
+                               XHCI_CMD_TYPE_RESET_DEVICE);
 
     request.slot_reset = true;
 

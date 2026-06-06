@@ -232,19 +232,21 @@ void log_site_destroy(struct log_site *site);
 /* For static ones */
 #define LOG_SITE_LEVEL(l) (1u << l)
 #define LOG_SITE_ALL UINT32_MAX
+
 #define LOG_SITE_DECLARE(_name, ...)                                           \
     __attribute__((                                                            \
         section(".kernel_log_sites"))) struct log_site __log_site_##_name = {  \
         .name = #_name, __VA_ARGS__}
 
-#define LOG_SITE_DECLARE_DEFAULT(_name)                                        \
+#define LOG_SITE_DECLARE_DEFAULT(_name, ...)                                   \
     __attribute__((                                                            \
         section(".kernel_log_sites"))) struct log_site __log_site_##_name = {  \
         .name = #_name,                                                        \
         .flags = LOG_SITE_DEFAULT,                                             \
         .capacity = LOG_SITE_CAPACITY_DEFAULT,                                 \
         .enabled_mask = LOG_SITE_ALL,                                          \
-        .dump_opts = LOG_DUMP_CONSOLE} /* Rest will get initialized at boot */
+        .dump_opts = LOG_DUMP_CONSOLE,                                         \
+        __VA_ARGS__} /* Rest will get initialized at boot */
 
 #define LOG_SITE(name) &(__log_site_##name)
 
@@ -261,11 +263,12 @@ void log_site_destroy(struct log_site *site);
     struct log_handle __log_handle_##_name = {                                 \
         .msg = #_name, .seen_internal = 0, .last_ts_internal = 0, __VA_ARGS__}
 
-#define LOG_HANDLE_DECLARE_DEFAULT(n)                                          \
+#define LOG_HANDLE_DECLARE_DEFAULT(n, ...)                                     \
     struct log_handle __log_handle_##n = {.msg = #n,                           \
                                           .flags = LOG_PRINT,                  \
                                           .seen_internal = 0,                  \
-                                          .last_ts_internal = 0}
+                                          .last_ts_internal = 0,               \
+                                          __VA_ARGS__}
 
 #define LOG_HANDLE(name) &(__log_handle_##name)
 

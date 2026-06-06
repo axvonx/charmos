@@ -109,7 +109,14 @@ void thread_wake_from_io_block(struct thread *t, void *wake_src) {
         if (iter->wait_object == wake_src)
             found = true;
     }
-    kassert(found);
+    if (!found) {
+        printf("Problem with %s %p\n", t->name, t);
+        list_for_each_entry(iter, &t->io_wait_tokens, list) {
+            printf("wait obj %p src %p\n", iter->wait_object, wake_src);
+        }
+    }
+
+    kassert(found, "On thread %p", t);
 
     thread_wake(t, THREAD_WAKE_REASON_BLOCKING_IO, THREAD_PRIO_CLASS_URGENT,
                 wake_src);

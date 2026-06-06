@@ -11,7 +11,12 @@
 
 #include "internal.h"
 
+#ifdef DEBUG_USB
 LOG_SITE_DECLARE_DEFAULT(usb);
+#else
+LOG_SITE_DECLARE_DEFAULT(usb, .flags = LOG_SITE_LEVEL(LOG_ERROR));
+#endif
+
 LOG_HANDLE_DECLARE_DEFAULT(usb);
 
 enum usb_error usb_transfer_sync(enum usb_error (*fn)(struct usb_request *),
@@ -23,8 +28,9 @@ enum usb_error usb_transfer_sync(enum usb_error (*fn)(struct usb_request *),
 
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
 
-    struct io_wait_token iowt;
+    struct io_wait_token iowt = IO_WAIT_TOKEN_EMPTY;
 
+    /* Begin it regardless */
     if (tok) {
         io_wait_begin(tok, request->dev);
     } else {
@@ -33,9 +39,12 @@ enum usb_error usb_transfer_sync(enum usb_error (*fn)(struct usb_request *),
 
     enum usb_error ret = fn(request);
     if (ret != USB_OK) {
+        usb_warn("ret != USB_OK");
+
         thread_wake_unlocked(curr, THREAD_WAKE_REASON_BLOCKING_MANUAL,
                              request->dev);
 
+        /* Always end it */
         if (tok) {
             io_wait_end(tok, IO_WAIT_END_NO_OP);
         } else {
@@ -50,8 +59,9 @@ enum usb_error usb_transfer_sync(enum usb_error (*fn)(struct usb_request *),
 
     thread_yield_until_wake_match();
 
+    /* Only end if the wait is local */
     if (!tok)
-        io_wait_end(&iowt, IO_WAIT_END_YIELD);
+        io_wait_end(&iowt, IO_WAIT_END_NO_OP);
 
     return request->status;
 }
@@ -266,7 +276,6 @@ enum usb_error usb_parse_config_descriptor(struct usb_device *dev) {
     if ((err = usb_transfer_sync(ctrl->ops->submit_control_transfer, &request,
                                  &iowt)) != USB_OK) {
         kfree_aligned(desc);
-        io_wait_end(&iowt, IO_WAIT_END_YIELD);
         return err;
     }
 
@@ -283,8 +292,13 @@ enum usb_error usb_parse_config_descriptor(struct usb_device *dev) {
         return err;
     }
 
-    usb_get_string_descriptor(dev, cdesc->configuration, dev->config_str,
-                              sizeof(dev->config_str));
+    if ((err = usb_get_string_descriptor(dev, cdesc->configuration,
+                                         dev->config_str,
+                                         sizeof(dev->config_str))) != USB_OK) {
+        kfree_aligned(desc);
+        io_wait_end(&iowt, IO_WAIT_END_YIELD);
+        return err;
+    }
 
     setup_config_descriptor(dev, desc, desc + total_len);
     kfree_aligned(desc);
@@ -371,7 +385,7 @@ enum usb_error usb_init_device(struct usb_device *dev) {
 
 out:
     if (err != USB_OK) {
-        usb_log(LOG_TRACE, "reset_slot");
+        usb_trace("reset_slot");
         dev->host->ops->reset_slot(dev);
     }
 

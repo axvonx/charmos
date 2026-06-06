@@ -46,7 +46,8 @@ void xhci_setup_command_ring(struct xhci_device *dev) {
 void xhci_nop(struct xhci_device *dev) {
     struct xhci_request request = {0};
     struct xhci_command cmd = {0};
-    xhci_request_init_blocking(&request, &cmd, /* port = */ 0);
+    xhci_request_init_blocking(&request, &cmd, /* port = */ 0,
+                               XHCI_CMD_TYPE_NO_OP);
 
     struct xhci_trb outgoing = {
         .parameter = 0,
@@ -71,7 +72,8 @@ void xhci_nop(struct xhci_device *dev) {
 uint8_t xhci_enable_slot(struct xhci_device *dev) {
     struct xhci_request request = {0};
     struct xhci_command cmd = {0};
-    xhci_request_init_blocking(&request, &cmd, /* port = */ 0);
+    xhci_request_init_blocking(&request, &cmd, /* port = */ 0,
+                               XHCI_CMD_TYPE_ENABLE_SLOT);
 
     struct xhci_trb outgoing = {
         .parameter = 0,
@@ -99,7 +101,8 @@ void xhci_disable_slot(struct xhci_device *dev, uint8_t slot_id) {
     struct xhci_request request = {0};
     struct xhci_command cmd = {0};
 
-    xhci_request_init_blocking(&request, &cmd, /* port = */ 0);
+    xhci_request_init_blocking(&request, &cmd, /* port = */ 0,
+                               XHCI_CMD_TYPE_DISABLE_SLOT);
 
     struct xhci_trb outgoing = {
         .parameter = 0,

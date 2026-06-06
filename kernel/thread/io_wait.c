@@ -11,7 +11,6 @@ void io_wait_begin(struct io_wait_token *out, void *io_object) {
                                   .active = true,
                                   .magic = atomic_fetch_add(&io_wait_magic, 1),
                                   .owner = t};
-    INIT_LIST_HEAD(&out->list);
     list_add_tail(&out->list, &t->io_wait_tokens);
 
     thread_prepare_to_block(t, THREAD_BLOCK_REASON_IO,

@@ -25,6 +25,8 @@ endif()
 
 set(DEBUG_FLAGS
     DEBUG_LOCK
+    DEBUG_USB
+    DEBUG_USB_XHCI
 )
 
 set(PROFILING_FLAGS
@@ -76,7 +78,7 @@ endfunction()
 define_flag_group(PROFILING       PROFILING_ALL       OFF "${PROFILING_FLAGS}")
 define_flag_group(TEST            TEST_ALL            ON  "${TEST_FLAGS}")
 define_flag_group(TEST_NIGHTMARE  TEST_NIGHTMARE_ALL  ON  "${TEST_NIGHTMARE_FLAGS}")
-define_flag_group(DEBUG DEBUG_ALL ON  "${DEBUG_FLAGS}")
+define_flag_group(DEBUG DEBUG_ALL OFF  "${DEBUG_FLAGS}")
 
 option(QEMU_KVM         "Enable KVM acceleration"                         OFF)
 option(QEMU_IOMMU       "Attach intel-iommu device with intremap"         ON)
@@ -94,7 +96,7 @@ set(QEMU_SMP_TOPO  "sockets=2,cores=2,threads=2"
 
 set(KERNEL_WARNINGS
     -Wall -Wextra
-    -Wno-unused-function -Wno-unused-parameter
+    -Wno-unused-function -Wno-unused-parameter -Wno-initializer-overrides
     -Wpointer-sign -Wenum-compare
     -Wno-address-of-packed-member
 )

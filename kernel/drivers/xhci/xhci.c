@@ -18,7 +18,12 @@
 
 struct workqueue *xhci_wq;
 LOG_HANDLE_DECLARE_DEFAULT(xhci);
+
+#ifdef DEBUG_USB_XHCI
 LOG_SITE_DECLARE_DEFAULT(xhci);
+#else
+LOG_SITE_DECLARE_DEFAULT(xhci, .flags = LOG_SITE_LEVEL(LOG_ERROR));
+#endif
 
 enum usb_error xhci_address_device(struct xhci_port *p, uint8_t slot_id,
                                    struct xhci_slot *publish_to) {
@@ -80,7 +85,8 @@ enum usb_error xhci_address_device(struct xhci_port *p, uint8_t slot_id,
 
     struct xhci_request request = {0};
     struct xhci_command cmd = {0};
-    xhci_request_init_blocking(&request, &cmd, port);
+    xhci_request_init_blocking(&request, &cmd, port,
+                               XHCI_CMD_TYPE_ADDRESS_DEVICE);
 
     struct xhci_trb outgoing = {
         .control = control,
@@ -169,7 +175,8 @@ enum usb_error xhci_configure_device_endpoints(struct usb_device *usb) {
 
     struct xhci_request request = {0};
     struct xhci_command cmd = {0};
-    xhci_request_init_blocking(&request, &cmd, /* port = */ 0);
+    xhci_request_init_blocking(&request, &cmd, /* port = */ 0,
+                               XHCI_CMD_TYPE_CONFIGURE_ENDPOINT);
 
     struct xhci_trb outgoing = {
         .parameter = input_ctx_phys,
@@ -201,7 +208,7 @@ enum usb_error xhci_configure_device_endpoints(struct usb_device *usb) {
     xhci_slot_put(xslot);
 
     if (!xhci_request_ok(&request)) {
-        xhci_warn("Failed to configure endpoints for slot %u\n",
+        xhci_warn("Failed to configure endpoints for slot %u",
                   local_copy.slot_id);
         return xhci_rq_to_usb_status(&request);
     }
@@ -480,7 +487,7 @@ xhci_make_request_status(struct xhci_device *dev,
         struct xhci_port *port = &dev->port_info[request->port - 1];
 
         if (request->generation && request->generation != port->generation) {
-            xhci_warn("gen mismatch\n");
+            xhci_warn("gen mismatch");
             return XHCI_REQUEST_DISCONNECT;
         }
     }
@@ -589,7 +596,7 @@ static void xhci_process_port_connect(struct xhci_device *dev,
 
 static void xhci_process_port_disconnect(struct xhci_device *dev,
                                          struct xhci_trb *trb) {
-    xhci_warn("dsc\n");
+    xhci_warn("dsc");
     struct xhci_port *port = xhci_port_for_trb(dev, trb);
     xhci_port_set_state(port, XHCI_PORT_STATE_DISCONNECTING);
 
@@ -622,7 +629,7 @@ static void xhci_process_port_status_change(struct xhci_device *dev,
     case PORT_NONE:
     case PORT_CONNECT: xhci_process_port_connect(dev, evt); break;
     default:
-        xhci_warn("Unknown port %u status change, PORTSC state %p\n", port_id,
+        xhci_warn("Unknown port %u status change, PORTSC state %p", port_id,
                   portsc);
         break;
     }
@@ -691,7 +698,7 @@ void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
                struct pci_device *pci) {
     struct cpu_mask cmask;
     if (!cpu_mask_init(&cmask, global.core_count))
-        panic("OOM\n");
+        panic("OOM");
 
     cpu_mask_set_all(&cmask);
     struct workqueue_attributes attrs = {
@@ -765,6 +772,13 @@ void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
     list_for_each_entry(usb, &dev->devices, hc_list) {
         usb_init_device(usb);
     }
+
+#ifdef DEBUG_USB_XHCI
+
+    while (1)
+        wait_for_interrupt();
+
+#endif
 
     xhci_info("Device initialized successfully");
 }

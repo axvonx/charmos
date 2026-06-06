@@ -34,6 +34,7 @@ bool xhci_send_command(struct xhci_device *dev, struct xhci_command *cmd) {
     if (!xhci_ring_can_reserve(ring, cmd->num_trbs)) {
         xhci_request_move(dev, rq, XHCI_REQ_LIST_WAITING);
         spin_unlock(&dev->lock, irql);
+        return true;
     }
 
     if (cmd->slot) {
@@ -107,7 +108,7 @@ enum usb_error xhci_submit_interrupt_transfer(struct usb_request *req) {
         goto out;
     }
 
-    xhci_request_init(xreq, cmd, req);
+    xhci_request_init(xreq, cmd, req, XHCI_CMD_TYPE_INTERRUPT_TRANSFER);
 
     struct xhci_trb outgoing = {
         .parameter = parameter,
@@ -173,19 +174,24 @@ void xhci_emit_control(struct xhci_command *cmd, struct xhci_ring *ring) {
     cmd->request->trb_phys = xhci_get_trb_phys(ring, trb);
 }
 
+static inline enum usb_error fail_control_transfer(enum usb_error err) {
+    xhci_warn("control transfer failed with %s", usb_error_str(err));
+    return err;
+}
+
 enum usb_error xhci_send_control_transfer(struct xhci_device *dev,
                                           struct xhci_slot *slot,
                                           struct usb_request *req) {
     if (!req->setup)
-        return USB_ERR_INVALID_ARGUMENT;
+        return fail_control_transfer(USB_ERR_INVALID_ARGUMENT);
 
     /* request is responsible for dropping this */
     if (!usb_device_get(req->dev))
-        return USB_ERR_NO_DEVICE;
+        return fail_control_transfer(USB_ERR_NO_DEVICE);
 
     if (!xhci_slot_get(slot)) {
         usb_device_put(req->dev);
-        return USB_ERR_NO_DEVICE;
+        return fail_control_transfer(USB_ERR_NO_DEVICE);
     }
 
     struct xhci_request *xreq = kzalloc(sizeof(*xreq));
@@ -199,7 +205,7 @@ enum usb_error xhci_send_control_transfer(struct xhci_device *dev,
         kfree(xreq);
         kfree(cmd);
         kfree(emit);
-        return USB_ERR_OOM;
+        return fail_control_transfer(USB_ERR_OOM);
     }
 
     emit->setup = req->setup;
@@ -207,7 +213,7 @@ enum usb_error xhci_send_control_transfer(struct xhci_device *dev,
     emit->buffer_phys =
         emit->length ? vmm_get_phys((vaddr_t) req->buffer, VMM_FLAG_NONE) : 0;
 
-    xhci_request_init(xreq, cmd, req);
+    xhci_request_init(xreq, cmd, req, XHCI_CMD_TYPE_CONTROL_TRANSFER);
 
     *cmd = (struct xhci_command){
         .ring = slot->ep_rings[0],
@@ -221,7 +227,7 @@ enum usb_error xhci_send_control_transfer(struct xhci_device *dev,
 
     if (!xhci_send_command(dev, cmd)) {
         xhci_slot_put(slot);
-        return USB_ERR_NO_DEVICE;
+        return fail_control_transfer(USB_ERR_NO_DEVICE);
     }
 
     xhci_slot_put(slot);

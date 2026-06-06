@@ -466,4 +466,23 @@ usb_transfer_type_str(const enum usb_transfer_type type) {
     }
 }
 
+static inline const char *usb_error_str(const enum usb_error err) {
+    switch (err) {
+    case USB_OK: return "USB OK";
+    case USB_ERR_STALL: return "USB ERR STALL";
+    case USB_ERR_TIMEOUT: return "USB ERR TIMEOUT";
+    case USB_ERR_DISCONNECT: return "USB ERR DISCONNECT";
+    case USB_ERR_OVERFLOW: return "USB ERR OVERFLOW";
+    case USB_ERR_CRC: return "USB ERR CRC";
+    case USB_ERR_IO: return "USB ERR IO";
+    case USB_ERR_PROTO: return "USB ERR PROTO";
+    case USB_ERR_NO_DEVICE: return "USB ERR NO DEVICE";
+    case USB_ERR_CANCELLED: return "USB ERR CANCELLED";
+    case USB_ERR_OOM: return "USB ERR OOM";
+    case USB_ERR_INVALID_ARGUMENT: return "USB ERR INVALID ARGUMENT";
+    case USB_ERR_NO_ENDPOINT: return "USB ERR NO ENDPOINT";
+    default: return "UNKNOWN ERROR";
+    }
+}
+
 LINKER_SECTION_DEFINE(usb_drivers, struct usb_driver);

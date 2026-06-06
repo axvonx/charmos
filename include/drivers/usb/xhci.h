@@ -650,6 +650,24 @@ enum xhci_request_list {
     XHCI_REQ_LIST_MAX,
 };
 
+enum xhci_request_command_type { /* Abstract command types, not 1:1 */
+    XHCI_CMD_TYPE_NONE,
+    XHCI_CMD_TYPE_ENABLE_SLOT,
+    XHCI_CMD_TYPE_DISABLE_SLOT,
+    XHCI_CMD_TYPE_ADDRESS_DEVICE,
+    XHCI_CMD_TYPE_CONFIGURE_ENDPOINT,
+    XHCI_CMD_TYPE_EVALUATE_CONTEXT,
+    XHCI_CMD_TYPE_RESET_ENDPOINT,
+    XHCI_CMD_TYPE_STOP_ENDPOINT,
+    XHCI_CMD_TYPE_SET_TR_DEQUEUE_POINTER,
+    XHCI_CMD_TYPE_RESET_DEVICE,
+    XHCI_CMD_TYPE_FORCE_EVENT,
+    XHCI_CMD_TYPE_INTERRUPT_TRANSFER,
+    XHCI_CMD_TYPE_CONTROL_TRANSFER,
+    XHCI_CMD_TYPE_NO_OP,
+    XHCI_CMD_TYPE_NORMAL, /* 'misc.' */
+};
+
 struct xhci_device {
     uint8_t irq; /* What IRQ line have we routed to this? */
     struct pci_device *pci;
@@ -695,6 +713,7 @@ struct xhci_command {
 
 struct xhci_request {
     /* Tied back to the USB request */
+    enum xhci_request_command_type type;
     enum xhci_request_list list_owner;
     struct usb_request *urb;
     struct xhci_command *command;
@@ -723,5 +742,27 @@ struct xhci_return {
     uint32_t control;
     uint32_t status;
 };
+
+static inline const char *
+xhci_request_command_type_str(enum xhci_request_command_type t) {
+    switch (t) {
+    case XHCI_CMD_TYPE_NONE: return "CMD NONE";
+    case XHCI_CMD_TYPE_ENABLE_SLOT: return "CMD ENABLE SLOT";
+    case XHCI_CMD_TYPE_DISABLE_SLOT: return "CMD DISABLE SLOT";
+    case XHCI_CMD_TYPE_ADDRESS_DEVICE: return "CMD ADDRESS DEVICE";
+    case XHCI_CMD_TYPE_CONFIGURE_ENDPOINT: return "CMD CONFIGURE ENDPOINT";
+    case XHCI_CMD_TYPE_EVALUATE_CONTEXT: return "CMD EVALUATE CONTEXT";
+    case XHCI_CMD_TYPE_RESET_ENDPOINT: return "CMD RESET ENDPOINT";
+    case XHCI_CMD_TYPE_STOP_ENDPOINT: return "CMD STOP ENDPOINT";
+    case XHCI_CMD_TYPE_SET_TR_DEQUEUE_POINTER: return "CMD SET TR DEQUEUE PTR";
+    case XHCI_CMD_TYPE_RESET_DEVICE: return "CMD RESET DEVICE";
+    case XHCI_CMD_TYPE_FORCE_EVENT: return "CMD FORCE EVENT";
+    case XHCI_CMD_TYPE_INTERRUPT_TRANSFER: return "CMD INTERRUPT TRANSFER";
+    case XHCI_CMD_TYPE_CONTROL_TRANSFER: return "CMD CONTROL TRANSFER";
+    case XHCI_CMD_TYPE_NO_OP: return "CMD NO OP";
+    case XHCI_CMD_TYPE_NORMAL: return "CMD NORMAL";
+    default: return "CMD UNKNOWN";
+    }
+}
 
 void xhci_init(uint8_t bus, uint8_t slot, uint8_t func, struct pci_device *dev);
