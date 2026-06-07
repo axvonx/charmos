@@ -161,13 +161,10 @@ void xhci_reset_slot(struct usb_device *dev) {
     xhci_request_init_blocking(&request, &cmd, /* port = */ 0,
                                XHCI_CMD_TYPE_RESET_DEVICE);
 
-    request.slot_reset = true;
-
     struct xhci_trb outgoing = {
         .parameter = 0,
         .status = 0,
         .control = TRB_SET_TYPE(TRB_TYPE_RESET_DEVICE) |
-                   TRB_SET_CYCLE(xdev->cmd_ring->cycle) |
                    TRB_SET_SLOT_ID(slot_id),
     };
 

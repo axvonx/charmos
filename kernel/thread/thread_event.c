@@ -493,7 +493,7 @@ static bool set_state_and_update_reason(
             thread_or_flags(t, THREAD_FLAG_WAKE_MATCHED);
         }
     } else {
-        thread_and_flags(t, ~THREAD_FLAG_YIELDED);
+        thread_and_flags(t, ~(THREAD_FLAG_YIELDED | THREAD_FLAG_WAKE_MATCHED));
         atomic_store_explicit(&t->wait_type, type, memory_order_release);
         t->last_action_reason = reason;
         t->last_action = state;

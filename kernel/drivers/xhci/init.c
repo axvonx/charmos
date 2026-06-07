@@ -51,8 +51,7 @@ void xhci_nop(struct xhci_device *dev) {
 
     struct xhci_trb outgoing = {
         .parameter = 0,
-        .control =
-            TRB_SET_TYPE(TRB_TYPE_NO_OP) | TRB_SET_CYCLE(dev->cmd_ring->cycle),
+        .control = TRB_SET_TYPE(TRB_TYPE_NO_OP),
         .status = 0,
     };
 
@@ -77,8 +76,7 @@ uint8_t xhci_enable_slot(struct xhci_device *dev) {
 
     struct xhci_trb outgoing = {
         .parameter = 0,
-        .control = TRB_SET_TYPE(TRB_TYPE_ENABLE_SLOT) |
-                   TRB_SET_CYCLE(dev->cmd_ring->cycle),
+        .control = TRB_SET_TYPE(TRB_TYPE_ENABLE_SLOT),
         .status = 0,
     };
 
@@ -108,7 +106,6 @@ void xhci_disable_slot(struct xhci_device *dev, uint8_t slot_id) {
         .parameter = 0,
         .status = 0,
         .control = TRB_SET_TYPE(TRB_TYPE_DISABLE_SLOT) |
-                   TRB_SET_CYCLE(dev->cmd_ring->cycle) |
                    TRB_SET_SLOT_ID(slot_id),
     };
 

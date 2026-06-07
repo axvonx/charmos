@@ -206,7 +206,8 @@ static inline bool xhci_send_command_and_block(struct xhci_device *dev,
     }
 
     irql_lower(irql);
-
+    
+    kassert(!list_empty(&thread_get_current()->io_wait_tokens));
     thread_yield_until_wake_match();
 
     if (!iot)

@@ -59,9 +59,12 @@ enum usb_error usb_transfer_sync(enum usb_error (*fn)(struct usb_request *),
 
     thread_yield_until_wake_match();
 
-    /* Only end if the wait is local */
-    if (!tok)
+    /* Only end if the wait is local OR it was fatal */
+    if (!tok) {
         io_wait_end(&iowt, IO_WAIT_END_NO_OP);
+    } else if (tok && request->status != USB_OK) {
+        io_wait_end(tok, IO_WAIT_END_NO_OP);
+    }
 
     return request->status;
 }
@@ -385,6 +388,8 @@ enum usb_error usb_init_device(struct usb_device *dev) {
 
 out:
     if (err != USB_OK) {
+        kassert(thread_get_current()->perceived_prio_class ==
+                THREAD_PRIO_CLASS_TIMESHARE);
         usb_trace("reset_slot");
         dev->host->ops->reset_slot(dev);
     }

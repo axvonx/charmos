@@ -80,7 +80,6 @@ enum usb_error xhci_address_device(struct xhci_port *p, uint8_t slot_id,
 
     uint32_t control = 0;
     control |= TRB_SET_TYPE(TRB_TYPE_ADDRESS_DEVICE);
-    control |= TRB_SET_CYCLE(xhci->cmd_ring->cycle);
     control |= TRB_SET_SLOT_ID(slot_id);
 
     struct xhci_request request = {0};
@@ -170,7 +169,6 @@ enum usb_error xhci_configure_device_endpoints(struct usb_device *usb) {
     input_ctx->slot_ctx.context_entries = max_ep_index;
 
     uint32_t control = TRB_SET_TYPE(TRB_TYPE_CONFIGURE_ENDPOINT);
-    control |= TRB_SET_CYCLE(xhci->cmd_ring->cycle);
     control |= TRB_SET_SLOT_ID(xslot->slot_id);
 
     struct xhci_request request = {0};
@@ -516,10 +514,11 @@ xhci_make_request_status(struct xhci_device *dev,
 
     case CC_BABBLE_DETECTED:
     case CC_USB_TRANSACTION_ERROR:
-        xhci_warn("Babble detected/transaction error. Check hardware");
+        xhci_warn("Babble detected/transaction error");
         return XHCI_REQUEST_ERR;
     }
 
+    xhci_warn("Other error");
     return XHCI_REQUEST_ERR;
 }
 
