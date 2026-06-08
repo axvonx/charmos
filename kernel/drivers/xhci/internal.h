@@ -7,6 +7,14 @@
 #include <thread/io_wait.h>
 #include <thread/thread.h>
 
+#define XHCI_PORTSC_CHANGE_MASK                                                \
+    (PORTSC_CSC | PORTSC_PEC | PORTSC_WRC | PORTSC_OCC | PORTSC_PRC |          \
+     PORTSC_PLC | PORTSC_CEC)
+
+/* Bits in PORTSC that trigger an action when written as 1 */
+#define XHCI_PORTSC_ACTION_MASK                                                \
+    (PORTSC_PED | PORTSC_PR | PORTSC_WPR | PORTSC_LWS)
+
 void xhci_nop(struct xhci_device *dev);
 void xhci_request_move(struct xhci_device *dev, struct xhci_request *req,
                        enum xhci_request_list new_list);
@@ -206,8 +214,7 @@ static inline bool xhci_send_command_and_block(struct xhci_device *dev,
     }
 
     irql_lower(irql);
-    
-    kassert(!list_empty(&thread_get_current()->io_wait_tokens));
+
     thread_yield_until_wake_match();
 
     if (!iot)

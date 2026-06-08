@@ -19,7 +19,6 @@ void xhci_emit_singular(struct xhci_command *cmd, struct xhci_ring *ring) {
     dst->parameter = src->parameter;
     dst->status = src->status;
     dst->control |= src->control;
-    dst->control |= ring->cycle;
 
     /* Track completion TRB */
     cmd->request->trb_phys = xhci_get_trb_phys(ring, dst);
@@ -94,7 +93,6 @@ enum usb_error xhci_submit_interrupt_transfer(struct usb_request *req) {
 
     uint32_t control = TRB_SET_TYPE(TRB_TYPE_NORMAL);
     control |= TRB_IOC_BIT;
-    control |= TRB_SET_CYCLE(ring->cycle);
 
     struct xhci_request *xreq = kzalloc(sizeof(struct xhci_request));
     if (!xreq) {
@@ -155,21 +153,20 @@ void xhci_emit_control(struct xhci_command *cmd, struct xhci_ring *ring) {
 
     trb->status = 8;
     trb->control |= TRB_IDT_BIT | TRB_SET_TYPE(TRB_TYPE_SETUP_STAGE);
-    trb->control |= (XHCI_SETUP_TRANSFER_TYPE_OUT << 16) | ring->cycle;
+    trb->control |= (XHCI_SETUP_TRANSFER_TYPE_OUT << 16);
 
     if (c->length) {
         trb = xhci_ring_next_trb(ring);
         trb->parameter = c->buffer_phys;
         trb->status = c->length;
         trb->control |= TRB_SET_TYPE(TRB_TYPE_DATA_STAGE);
-        trb->control |= (XHCI_SETUP_TRANSFER_TYPE_IN << 16) | ring->cycle;
+        trb->control |= (XHCI_SETUP_TRANSFER_TYPE_IN << 16);
     }
 
     trb = xhci_ring_next_trb(ring);
     trb->parameter = 0;
     trb->status = 0;
-    trb->control |=
-        TRB_SET_TYPE(TRB_TYPE_STATUS_STAGE) | TRB_IOC_BIT | ring->cycle;
+    trb->control |= TRB_SET_TYPE(TRB_TYPE_STATUS_STAGE) | TRB_IOC_BIT;
 
     /* Completion on status stage */
     cmd->request->last_trb = trb;

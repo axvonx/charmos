@@ -95,31 +95,62 @@ uint8_t xhci_enable_slot(struct xhci_device *dev) {
     return TRB_SLOT(request.return_control);
 }
 
+/* kmalloc state for DISABLE SLOT command because lifetime requires this
+ * outlives the caller */
+struct xhci_disable_slot_async {
+    struct xhci_request req;
+    struct xhci_command cmd;
+    struct xhci_trb trb;
+};
+
+static void xhci_disable_slot_done(struct xhci_device *dev,
+                                   struct xhci_request *req) {
+    (void) dev;
+    kfree(container_of(req, struct xhci_disable_slot_async, req));
+}
+
+/* DISABLE SLOT is issued asynchronously: its completion result is never
+ * consumed, and it can be triggered by xhci_slot_put() dropping
+ * the last slot reference from inside xhci_process_single(), which runs on the
+ * single command-completion worker
+ *
+ * If that worker blocked here waiting for the DISABLE SLOT completion,
+ * it would deadlock against itself, stranding every other pending request
+ *
+ * Fire-and-forget semantics keep the completion path non-blocking
+ *
+ * Command-ring FIFO ordering guarantees this disable is processed
+ * before any later ENABLE SLOT, so slot reuse is
+ * still safe. */
 void xhci_disable_slot(struct xhci_device *dev, uint8_t slot_id) {
-    struct xhci_request request = {0};
-    struct xhci_command cmd = {0};
+    struct xhci_disable_slot_async *a = kzalloc(sizeof(*a));
+    if (!a)
+        return;
 
-    xhci_request_init_blocking(&request, &cmd, /* port = */ 0,
-                               XHCI_CMD_TYPE_DISABLE_SLOT);
+    xhci_request_init(&a->req, &a->cmd, NULL, XHCI_CMD_TYPE_DISABLE_SLOT);
 
-    struct xhci_trb outgoing = {
+    a->req.callback = xhci_disable_slot_done;
+    a->req.port = 0;
+
+    a->trb = (struct xhci_trb){
         .parameter = 0,
         .status = 0,
-        .control = TRB_SET_TYPE(TRB_TYPE_DISABLE_SLOT) |
-                   TRB_SET_SLOT_ID(slot_id),
+        .control =
+            TRB_SET_TYPE(TRB_TYPE_DISABLE_SLOT) | TRB_SET_SLOT_ID(slot_id),
     };
 
-    cmd = (struct xhci_command){
-        .private = &outgoing,
+    a->cmd = (struct xhci_command){
+        .private = &a->trb,
         .emit = xhci_emit_singular,
         .ep_id = 0,
         .slot = NULL,
         .ring = dev->cmd_ring,
-        .request = &request,
+        .request = &a->req,
         .num_trbs = 1,
     };
 
-    xhci_send_command_and_block(dev, &cmd, NULL);
+    if (!xhci_send_command(dev, &a->cmd))
+        kfree(a);
 }
 
 static enum usb_error xhci_spin_wait_port_reset(uint32_t *portsc,
@@ -351,6 +382,7 @@ enum usb_error xhci_port_init(struct xhci_port *p) {
     xhci_trace("reset_port sent");
     if ((err = xhci_reset_port(dev, port)) != USB_OK) {
         xhci_trace("reset_port fail");
+        kfree(usb);
         return err;
     }
 
@@ -359,6 +391,7 @@ enum usb_error xhci_port_init(struct xhci_port *p) {
     xhci_trace("enable_slot sent");
     if ((slot_id = xhci_enable_slot(dev)) == 0) {
         xhci_trace("enable_slot fail");
+        kfree(usb);
         return USB_ERR_NO_DEVICE;
     }
     xhci_trace("enable_slot returned");
@@ -368,12 +401,28 @@ enum usb_error xhci_port_init(struct xhci_port *p) {
     temp_slot.slot_id = slot_id;
     temp_slot.dev = dev;
 
+    /* The device can be yanked from the port in the window between Enable Slot
+     * completing and Address Device being processed... Once the device is gone
+     * the controller releases the port, so Address Device is rejected with a
+     * TRB Error */
+    if (!(xhci_read_portsc(dev, port) & PORTSC_CCS)) {
+        xhci_debug("port %u departed before address_device; aborting", port);
+        xhci_disable_slot(dev, slot_id);
+        kfree(usb);
+        return USB_ERR_NO_DEVICE;
+    }
+
     xhci_trace("address_device sent");
     if ((err = xhci_address_device(p, slot_id, &temp_slot)) != USB_OK) {
         xhci_trace("address_device fail");
+        if (!(xhci_read_portsc(dev, port) & PORTSC_CCS))
+            xhci_trace("address_device aborted: port %u departed", port);
+        else
+            xhci_warn("address_device failed on port %u: %d", port, err);
         xhci_trace("disable_slot sent");
         xhci_disable_slot(dev, slot_id);
         xhci_trace("disable_slot returned");
+        kfree(usb);
         return err;
     }
     xhci_trace("address_device returned");

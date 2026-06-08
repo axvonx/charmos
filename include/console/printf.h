@@ -1,5 +1,6 @@
 #pragma once
 #include <colors.h>
+#include <sch/irql.h>
 #include <stdarg.h>
 
 struct printf_cursor;
@@ -9,3 +10,6 @@ void printf(const char *format, ...);
 void vprintf(struct printf_cursor *csr, const char *format, va_list args);
 void serial_init();
 void printf_init(struct limine_framebuffer *fb);
+void printf_unlocked(const char *format, ...);
+void printf_unlock(enum irql i);
+enum irql printf_lock();

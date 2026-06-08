@@ -58,63 +58,64 @@ static const char *find_symbol(uint64_t addr, uint64_t *out_sym_addr) {
 }
 
 static void k_printf_from_log(const char *fmt, const uint64_t *args,
-                              uint8_t nargs) {
+                              uint8_t nargs, void (*print)(const char *, ...)) {
     switch (nargs) {
-    case 0: printf(fmt); break;
-    case 1: printf(fmt, args[0]); break;
-    case 2: printf(fmt, args[0], args[1]); break;
-    case 3: printf(fmt, args[0], args[1], args[2]); break;
-    case 4: printf(fmt, args[0], args[1], args[2], args[3]); break;
-    case 5: printf(fmt, args[0], args[1], args[2], args[3], args[4]); break;
+    case 0: print(fmt); break;
+    case 1: print(fmt, args[0]); break;
+    case 2: print(fmt, args[0], args[1]); break;
+    case 3: print(fmt, args[0], args[1], args[2]); break;
+    case 4: print(fmt, args[0], args[1], args[2], args[3]); break;
+    case 5: print(fmt, args[0], args[1], args[2], args[3], args[4]); break;
     case 6:
-        printf(fmt, args[0], args[1], args[2], args[3], args[4], args[5]);
+        print(fmt, args[0], args[1], args[2], args[3], args[4], args[5]);
         break;
     case 7:
-        printf(fmt, args[0], args[1], args[2], args[3], args[4], args[5],
-               args[6]);
+        print(fmt, args[0], args[1], args[2], args[3], args[4], args[5],
+              args[6]);
         break;
     case 8:
-        printf(fmt, args[0], args[1], args[2], args[3], args[4], args[5],
-               args[6], args[7]);
+        print(fmt, args[0], args[1], args[2], args[3], args[4], args[5],
+              args[6], args[7]);
         break;
-    default: printf("<invalid nargs>");
+    default: print("<invalid nargs>");
     }
 }
 
 static void log_dump_record(const struct log_site *site,
                             const struct log_record *rec,
-                            const struct log_dump_options opts) {
+                            const struct log_dump_options opts,
+                            void (*print)(const char *f, ...)) {
     size_t sec = MS_TO_SECONDS(rec->timestamp);
     size_t msec = rec->timestamp % 1000;
     if (sec == 0 && msec == 0) {
-        printf("[X.XXX] %s%s%s: ", log_level_color(rec->level), site->name,
-               ANSI_RESET);
+        print("[X.XXX] %s%s%s: ", log_level_color(rec->level), site->name,
+              ANSI_RESET);
     } else {
-        printf("[%llu.%03llu] %s%s%s: ", sec, msec, log_level_color(rec->level),
-               site->name, ANSI_RESET);
+        print("[%llu.%03llu] %s%s%s: ", sec, msec, log_level_color(rec->level),
+              site->name, ANSI_RESET);
     }
 
     if (opts.show_cpu)
-        printf("cpu=%u ", rec->cpu);
+        print("cpu=%u ", rec->cpu);
 
     if (opts.show_tid)
-        printf("tid=%u ", rec->tid);
+        print("tid=%u ", rec->tid);
 
     if (opts.show_irql)
-        printf("irql=%d ", rec->logged_at_irql);
+        print("irql=%d ", rec->logged_at_irql);
 
     /* message */
     if (opts.show_args && rec->fmt) {
-        k_printf_from_log(rec->fmt, rec->args, rec->nargs);
+        k_printf_from_log(rec->fmt, rec->args, rec->nargs, print);
     } else if (rec->handle && rec->handle->msg) {
-        printf("%s", rec->handle->msg);
+        print("%s", rec->handle->msg);
     }
 
     if (opts.show_caller) {
-        printf(" <+ at %s()", rec->caller_fn);
+        print(" <+ at %s()", rec->caller_fn);
     }
 
-    printf("\n");
+    print("\n");
 }
 
 static inline bool log_ringbuf_try_enqueue(struct log_site *site,
@@ -190,16 +191,18 @@ void log_dump_site(struct log_site *site, struct log_dump_options opts) {
     if (!site || !log_site_get(site))
         return;
 
+    enum irql irql = printf_lock();
     while (log_ringbuf_try_dequeue(site, &site->rb, &rec)) {
         if (rec.level < opts.min_level)
             continue;
 
         if (site->dropped) {
-            printf("!! dropped %u log records !!\n", site->dropped);
+            printf_unlocked("!! dropped %u log records !!\n", site->dropped);
         }
 
-        log_dump_record(site, &rec, opts);
+        log_dump_record(site, &rec, opts, printf_unlocked);
     }
+    printf_unlock(irql);
 
     log_site_put(site);
 }
@@ -210,10 +213,6 @@ void log_dump_site_default(struct log_site *site) {
 
     log_dump_site(site, LOG_DUMP_DEFAULT);
     log_site_put(site);
-}
-
-void log_console_emit(struct log_site *site, const struct log_record *rec) {
-    log_dump_record(site, rec, LOG_DUMP_CONSOLE);
 }
 
 void log_emit_internal(struct log_site *site, struct log_handle *handle,
@@ -246,7 +245,7 @@ void log_emit_internal(struct log_site *site, struct log_handle *handle,
 
     if (global.current_bootstage < BOOTSTAGE_LATE)
         if (log_handle_should_print(handle, site, level))
-            return log_dump_record(site, &rec, dopts);
+            return log_dump_record(site, &rec, dopts, printf);
 
     if (!log_site_accepts(site) ||
         (site->flags & LOG_SITE_NO_IRQ && irq_in_interrupt()))
@@ -282,7 +281,6 @@ void log_emit_internal(struct log_site *site, struct log_handle *handle,
 
     if (!queued) {
         if (handle->flags & LOG_IMPORTANT) {
-
             if (site->flags & LOG_SITE_DROP_OLD) {
                 queued = log_ringbuf_force_enqueue(site, &site->rb, &rec);
             } else if (!irq_in_interrupt()) {
@@ -297,16 +295,15 @@ void log_emit_internal(struct log_site *site, struct log_handle *handle,
 
             if (!queued) {
                 /* last-resort visibility */
-                log_dump_record(site, &rec, dopts);
+                log_dump_record(site, &rec, dopts, printf);
             }
         } else {
             site->dropped++;
-            return;
         }
     }
 
     if (log_handle_should_print(handle, site, level)) {
-        log_dump_record(site, &rec, dopts);
+        log_dump_record(site, &rec, dopts, printf);
     }
 
     if ((ll & LOG_PANIC) && level >= LOG_ERROR) {

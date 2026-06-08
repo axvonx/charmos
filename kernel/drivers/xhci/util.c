@@ -67,7 +67,7 @@ void xhci_controller_enable_ints(struct xhci_device *dev) {
 }
 
 void xhci_wake_waiter(struct xhci_device *dev, struct xhci_request *req) {
-    printf("wake waiter for %s", xhci_request_command_type_str(req->type));
+    xhci_trace("wake waiter for %s", xhci_request_command_type_str(req->type));
     thread_wake_from_io_block(req->private, dev);
 }
 

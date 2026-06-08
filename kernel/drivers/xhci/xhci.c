@@ -8,7 +8,6 @@
 #include <mem/alloc.h>
 #include <mem/page.h>
 #include <mem/vmm.h>
-#include <sleep.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
@@ -107,11 +106,14 @@ enum usb_error xhci_address_device(struct xhci_port *p, uint8_t slot_id,
     bool ret = xhci_send_command_and_block(xhci, &cmd, NULL);
 
     kfree_aligned(input_ctx);
-    if (!ret)
-        return USB_ERR_NO_DEVICE;
 
-    if (!xhci_request_ok(&request)) {
-        return xhci_rq_to_usb_status(&request);
+    if (!ret || !xhci_request_ok(&request)) {
+        enum usb_error err =
+            !ret ? USB_ERR_NO_DEVICE : xhci_rq_to_usb_status(&request);
+        kfree_aligned(dev_ctx);
+        xhci_free_ring(ring);
+        publish_to->ep_rings[0] = NULL;
+        return err;
     }
 
     return USB_OK;
@@ -217,7 +219,9 @@ enum usb_error xhci_configure_device_endpoints(struct usb_device *usb) {
 static void xhci_work_port_disconnect(void *arg1) {
     struct xhci_device *d = arg1;
     while (true) {
+        xhci_trace("port_disconnect work down");
         semaphore_wait(&d->port_disconnect);
+        xhci_trace("port_disconnect work up");
 
         /* Do repeated scans until we don't find a port */
         bool keep_going = true;
@@ -264,36 +268,65 @@ static void xhci_work_port_connect(void *arg1) {
     struct xhci_device *d = arg1;
 
     while (true) {
+        xhci_trace("port_connect work down");
         semaphore_wait(&d->port_connect);
-        struct xhci_port *port = NULL;
+        xhci_trace("port_connect work up");
 
-        enum irql irql = spin_lock_irq_disable(&d->lock);
+        /* Level triggered drain: handle each port the ISR marked CONNECTING...
+         *
+         * Cannot depend on future interrupt to rescue a port, device present
+         * now may not produce a change bit transition, so CONNECTING port
+         * always leaves CONNECTED or DISCONNECTED */
 
-        for (size_t i = 0; i < XHCI_PORT_COUNT; i++)
-            if ((port = &d->port_info[i])->state == XHCI_PORT_STATE_CONNECTING)
+        bool keep_going = true;
+        while (keep_going) {
+            struct xhci_port *port = NULL;
+
+            enum irql irql = spin_lock_irq_disable(&d->lock);
+            for (size_t i = 0; i < XHCI_PORT_COUNT; i++) {
+                if (d->port_info[i].state == XHCI_PORT_STATE_CONNECTING) {
+                    port = &d->port_info[i];
+                    break;
+                }
+            }
+            spin_unlock(&d->lock, irql);
+
+            /* Done */
+            if (!port) {
+                keep_going = false;
                 break;
+            }
 
-        spin_unlock(&d->lock, irql);
+            spin_lock_raw(&port->update_lock);
 
-        if (!port)
-            continue;
+            enum usb_error err;
 
-        uint32_t portsc = xhci_read_portsc(d, port->port_id);
+            /* Device can vanish in between connect and now, if it is gone,
+             * port_init never ran, no slot to tear down... */
+            if (!(xhci_read_portsc(d, port->port_id) & PORTSC_CCS))
+                err = USB_ERR_NO_DEVICE;
+            else
+                err = xhci_port_init(port);
 
-        if (!(portsc & PORTSC_CCS))
-            continue;
+            if (err == USB_OK) {
+                struct usb_device *dev = port->slot->udev;
+                spin_unlock_raw(&port->update_lock);
+                usb_init_device(dev);
+                continue;
+            }
 
-        spin_lock_raw(&port->update_lock);
+            /* Init failed, or device disappeared. retire the port if
+             * connecting, a disconnect could've moved it to DISCONNECTING,
+             * which would need the disconnect worker to handle it */
+            spin_unlock_raw(&port->update_lock);
 
-        enum usb_error err = xhci_port_init(port);
-        if (err != USB_OK)
-            goto nevermind;
+            irql = spin_lock_irq_disable(&d->lock);
 
-        struct usb_device *dev = port->slot->udev;
-        usb_init_device(dev);
+            if (port->state == XHCI_PORT_STATE_CONNECTING)
+                xhci_port_set_state(port, XHCI_PORT_STATE_DISCONNECTED);
 
-    nevermind:
-        spin_unlock_raw(&port->update_lock);
+            spin_unlock(&d->lock, irql);
+        }
     }
 }
 
@@ -447,6 +480,15 @@ static void xhci_disconnect_requests_on_port(struct xhci_device *dev,
             if (req->port != port)
                 continue;
 
+            /* An outgoing request has its TRB queued on the ring
+             * which always posts a completion event
+             *
+             * Completing it here would orphan that
+             * completion (xhci_lookup_trb would later miss it) */
+            if (i == XHCI_REQ_LIST_OUTGOING &&
+                req->command->ring == dev->cmd_ring)
+                continue;
+
             req->status = XHCI_REQUEST_DISCONNECT;
             xhci_request_move(dev, req, XHCI_REQ_LIST_PROCESSED);
         }
@@ -548,7 +590,15 @@ static bool xhci_trb_slot_exists(struct xhci_device *dev, struct xhci_trb *trb,
 static void xhci_process_request(struct xhci_device *dev,
                                  struct xhci_trb *trb) {
     struct xhci_request *found = xhci_lookup_trb(dev, trb);
-    kassert(found && "Completion TRB with no matching request");
+
+    /* No owner left for the completion: hotplug can create this scenario:
+     * a transfer request force completed by disconnect may post stale
+     * completion for already queued TRB */
+
+    if (!found) {
+        xhci_warn("Completion TRB with no matching request, dropping");
+        return;
+    }
 
     xhci_process_trb_into_request(dev, found, trb);
 
@@ -558,80 +608,77 @@ static void xhci_process_request(struct xhci_device *dev,
     xhci_request_move(dev, found, XHCI_REQ_LIST_PROCESSED);
 }
 
-enum port_event_type { PORT_DISCONNECT, PORT_RESET, PORT_CONNECT, PORT_NONE };
+/* ack the change bits. multiple changes can coalesce into one event. only
+ * write back a 1 for the bits we saw */
+static void xhci_ack_port_changes(uint32_t *portsc_ptr, uint32_t observed) {
+    uint32_t change = observed & XHCI_PORTSC_CHANGE_MASK;
+    if (!change)
+        return;
 
-static enum port_event_type xhci_detect_port_event(uint32_t portsc) {
-    if (!(portsc & PORTSC_CCS) && (portsc & PORTSC_CSC))
-        return PORT_DISCONNECT;
-
-    if (portsc & PORTSC_PRC)
-        return PORT_RESET;
-
-    if ((portsc & PORTSC_CCS) && (portsc & PORTSC_CSC))
-        return PORT_CONNECT;
-
-    return PORT_NONE;
+    uint32_t ack =
+        (observed & ~(XHCI_PORTSC_ACTION_MASK | XHCI_PORTSC_CHANGE_MASK)) |
+        change;
+    mmio_write_32(portsc_ptr, ack);
 }
 
-static void xhci_process_port_reset(struct xhci_device *dev,
-                                    struct xhci_trb *trb, uint32_t *portsc) {
-    (void) dev, (void) trb, (void) portsc;
-}
-
-static struct xhci_port *xhci_port_for_trb(struct xhci_device *dev,
-                                           struct xhci_trb *trb) {
-    uint64_t pm = mmio_read_64(&trb->parameter);
-    uint8_t port_id = TRB_PORT(pm);
-
-    return &dev->port_info[port_id - 1];
-}
-
-static void xhci_process_port_connect(struct xhci_device *dev,
-                                      struct xhci_trb *trb) {
-    struct xhci_port *port = xhci_port_for_trb(dev, trb);
+static void xhci_start_port_connect(struct xhci_device *dev,
+                                    struct xhci_port *port) {
     xhci_port_set_state(port, XHCI_PORT_STATE_CONNECTING);
     semaphore_post(&dev->port_connect);
 }
 
-static void xhci_process_port_disconnect(struct xhci_device *dev,
-                                         struct xhci_trb *trb) {
+static void xhci_start_port_disconnect(struct xhci_device *dev,
+                                       struct xhci_port *port) {
     xhci_warn("dsc");
-    struct xhci_port *port = xhci_port_for_trb(dev, trb);
     xhci_port_set_state(port, XHCI_PORT_STATE_DISCONNECTING);
 
-    /* Port did not have a slot */
-    if (!port->slot)
-        goto end;
+    if (port->slot) {
+        struct xhci_slot *s = xhci_get_slot(dev, port->slot->slot_id);
+        xhci_slot_set_state(s, XHCI_SLOT_STATE_DISCONNECTING);
+        xhci_disconnect_requests_on_port(dev, port->port_id);
+    }
 
-    uint8_t slot_id = port->slot->slot_id;
-
-    struct xhci_slot *s = xhci_get_slot(dev, slot_id);
-    xhci_slot_set_state(s, XHCI_SLOT_STATE_DISCONNECTING);
-
-    xhci_disconnect_requests_on_port(dev, port->port_id);
-
-end:
     semaphore_post(&dev->port_disconnect);
+}
+
+/* xHC only raises PSC on 0->1 bit change, edges get coalesced. driving
+ * from the CCS level makes missed edges fix themselves, as lost transitions
+ * are fixed on the next reconcile which converges the port to match HW */
+static void xhci_reconcile_port_locked(struct xhci_device *dev,
+                                       struct xhci_port *port) {
+    bool present = xhci_read_portsc(dev, port->port_id) & PORTSC_CCS;
+    bool tracked = port->slot != NULL;
+    enum xhci_port_state st = port->state;
+
+    if (present && !tracked && st != XHCI_PORT_STATE_CONNECTING)
+        xhci_start_port_connect(dev, port);
+    else if (!present && tracked && st != XHCI_PORT_STATE_DISCONNECTING)
+        xhci_start_port_disconnect(dev, port);
+}
+
+/* Sweep each port... ONE PSC is generated even when many ports change at once,
+ * never re-posting for a set change bit. A bit slower, but the safe route */
+
+static void xhci_scan_ports_locked(struct xhci_device *dev) {
+    for (size_t i = 0; i < dev->ports; i++) {
+        struct xhci_port *port = &dev->port_info[i];
+        uint32_t *portsc_ptr = xhci_portsc_ptr(dev, port->port_id);
+        xhci_ack_port_changes(portsc_ptr, mmio_read_32(portsc_ptr));
+        xhci_reconcile_port_locked(dev, port);
+    }
 }
 
 static void xhci_process_port_status_change(struct xhci_device *dev,
                                             struct xhci_trb *evt) {
-    uint64_t pm = mmio_read_64(&evt->parameter);
-    uint8_t port_id = TRB_PORT(pm);
-    uint32_t *portsc_ptr = xhci_portsc_ptr(dev, port_id);
-    uint32_t portsc = mmio_read_32(portsc_ptr);
+    (void) evt;
+    /* Scan all ports */
+    xhci_scan_ports_locked(dev);
+}
 
-    enum port_event_type event_type = xhci_detect_port_event(portsc);
-    switch (event_type) {
-    case PORT_DISCONNECT: xhci_process_port_disconnect(dev, evt); break;
-    case PORT_RESET: xhci_process_port_reset(dev, evt, portsc_ptr); break;
-    case PORT_NONE:
-    case PORT_CONNECT: xhci_process_port_connect(dev, evt); break;
-    default:
-        xhci_warn("Unknown port %u status change, PORTSC state %p", port_id,
-                  portsc);
-        break;
-    }
+static void xhci_scan_ports(struct xhci_device *dev) {
+    enum irql irql = spin_lock_irq_disable(&dev->lock);
+    xhci_scan_ports_locked(dev);
+    spin_unlock(&dev->lock, irql);
 }
 
 static void xhci_process_event(struct xhci_device *dev, struct xhci_trb *trb) {
@@ -674,6 +721,7 @@ void xhci_process_event_ring(struct xhci_device *xhci) {
 
 enum irq_result xhci_isr(void *ctx, uint8_t vector, struct irq_context *rsp) {
     (void) vector, (void) rsp;
+    xhci_trace("Interrupt caught");
     struct xhci_device *dev = ctx;
 
     xhci_process_event_ring(dev);
@@ -758,19 +806,7 @@ void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
     thread_spawn("xhci_disconnect_worker", xhci_work_port_disconnect, dev);
     thread_spawn("xhci_connect_worker", xhci_work_port_connect, dev);
 
-    for (uint64_t port = 1; port <= dev->ports; port++) {
-        uint32_t portsc = xhci_read_portsc(dev, port);
-
-        if (portsc & PORTSC_CCS) {
-            struct xhci_port *this_port = &dev->port_info[port - 1];
-            xhci_port_init(this_port);
-        }
-    }
-
-    struct usb_device *usb;
-    list_for_each_entry(usb, &dev->devices, hc_list) {
-        usb_init_device(usb);
-    }
+    xhci_scan_ports(dev);
 
 #ifdef DEBUG_USB_XHCI
 

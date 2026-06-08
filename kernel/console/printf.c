@@ -471,6 +471,21 @@ void vprintf(struct printf_cursor *csr, const char *format, va_list args) {
     }
 }
 
+enum irql printf_lock() {
+    return spin_lock_irq_disable(&k_printf_lock);
+}
+
+void printf_unlock(enum irql i) {
+    spin_unlock(&k_printf_lock, i);
+}
+
+void printf_unlocked(const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    vprintf(NULL, format, args);
+    va_end(args);
+}
+
 void printf(const char *format, ...) {
     bool i = are_interrupts_enabled();
     disable_interrupts();
