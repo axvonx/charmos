@@ -11,6 +11,7 @@
 void climb_per_period_hook();
 SCHEDULER_PERIODIC_WORK_REGISTER_PER_PERIOD(climb_per_period_hook,
                                             PERIODIC_WORK_MID);
+
 #ifdef DEBUG_CLIMB
 #define CLIMB_FLAGS LOG_SITE_ALL
 #else

@@ -803,10 +803,39 @@ void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
     ctrl->ops = &xhci_ctrl_ops;
     dev->controller = ctrl;
 
+    enum irql irql = spin_lock_irq_disable(&dev->lock);
+    for (uint32_t port = 1; port <= dev->ports; port++) {
+        struct xhci_port *p = &dev->port_info[port - 1];
+        uint32_t *portsc_ptr = xhci_portsc_ptr(dev, port);
+        uint32_t v = mmio_read_32(portsc_ptr);
+        xhci_ack_port_changes(portsc_ptr, v);
+        if ((v & PORTSC_CCS) && p->state == XHCI_PORT_STATE_DISCONNECTED)
+            xhci_port_set_state(p, XHCI_PORT_STATE_CONNECTING);
+    }
+    spin_unlock(&dev->lock, irql);
+
+    for (uint32_t port = 1; port <= dev->ports; port++) {
+        struct xhci_port *p = &dev->port_info[port - 1];
+        if (p->state != XHCI_PORT_STATE_CONNECTING)
+            continue;
+
+        spin_lock_raw(&p->update_lock);
+        enum usb_error err = xhci_port_init(p);
+        spin_unlock_raw(&p->update_lock);
+
+        if (err == USB_OK) {
+            usb_init_device(p->slot->udev);
+            continue;
+        }
+
+        irql = spin_lock_irq_disable(&dev->lock);
+        if (p->state == XHCI_PORT_STATE_CONNECTING)
+            xhci_port_set_state(p, XHCI_PORT_STATE_DISCONNECTED);
+        spin_unlock(&dev->lock, irql);
+    }
+
     thread_spawn("xhci_disconnect_worker", xhci_work_port_disconnect, dev);
     thread_spawn("xhci_connect_worker", xhci_work_port_connect, dev);
-
-    xhci_scan_ports(dev);
 
 #ifdef DEBUG_USB_XHCI
 
