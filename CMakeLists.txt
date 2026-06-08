@@ -25,6 +25,7 @@ endif()
 
 set(DEBUG_FLAGS
     DEBUG_LOCK
+    DEBUG_CLIMB
     DEBUG_USB
     DEBUG_USB_XHCI
 )

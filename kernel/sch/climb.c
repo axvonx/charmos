@@ -11,10 +11,15 @@
 void climb_per_period_hook();
 SCHEDULER_PERIODIC_WORK_REGISTER_PER_PERIOD(climb_per_period_hook,
                                             PERIODIC_WORK_MID);
+#ifdef DEBUG_CLIMB
+#define CLIMB_FLAGS LOG_SITE_ALL
+#else
+#define CLIMB_FLAGS LOG_SITE_LEVEL(LOG_ERROR)
+#endif
 
 LOG_SITE_DECLARE(climb, .flags = LOG_SITE_PRINT | LOG_SITE_DEFAULT,
                  .capacity = LOG_SITE_CAPACITY_DEFAULT,
-                 .enabled_mask = LOG_SITE_ALL,
+                 .enabled_mask = CLIMB_FLAGS,
                  .dump_opts = ((struct log_dump_options){.show_tid = true,
                                                          .show_args = true}));
 
