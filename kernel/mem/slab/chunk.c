@@ -23,53 +23,36 @@ static void validate_ptr_in_chunk(struct slab_chunk *chunk, void *ptr) {
     kassert(vaddr >= min && vaddr <= max);
 }
 
-static bool chunks_refill(struct slab_chunks *sc, enum irql *lirql) {
-    spin_unlock(&sc->lock, *lirql);
-    uintptr_t phys = pmm_alloc_page();
-    if (!phys) {
-        *lirql = spin_lock(&sc->lock);
-        return false;
+static struct list_head *chunk_list_for(struct slab_chunks *sc,
+                                        enum slab_chunk_state s) {
+    switch (s) {
+    case SLAB_CHUNK_PARTIAL: return &sc->partial_list;
+    case SLAB_CHUNK_USED: return &sc->used_list;
+    default: kassert_unreachable();
     }
+}
 
-    uintptr_t virt = hhdm_paddr_to_vaddr(phys);
-    uint8_t *chunks_base = (uint8_t *) virt;
-    size_t stride = sizeof(struct slab_chunk) + sc->bitmap_bytes;
+static void destroy_chunk(struct slab_chunks *sc, struct slab_chunk *c) {
+    vaddr_t vaddr = base_addr_to_vaddr(c->base_addr);
+    uint8_t curr = slab_order_map_get(vaddr);
+    kassert(curr != SLAB_POW2_ORDER_EMPTY && curr != SLAB_POW2_ORDER_NONE);
 
-    for (uint64_t i = 0; i < slab_chunks_per_page(sc); i++) {
-        struct slab_chunk *chunk =
-            (struct slab_chunk *) (chunks_base + i * stride);
-        INIT_LIST_HEAD(&chunk->list);
-        chunk->state = SLAB_CHUNK_FREE;
-        chunk->base_addr = 0x0;
-        memset(chunk->bitmap, 0, sc->bitmap_bytes);
-    }
+    vas_free(slab_global.vas, vaddr, PAGE_2MB);
+    slab_order_map_set(vaddr, SLAB_POW2_ORDER_EMPTY);
 
-    *lirql = spin_lock(&sc->lock);
-    for (uint64_t i = 0; i < slab_chunks_per_page(sc); i++) {
-        struct slab_chunk *chunk =
-            (struct slab_chunk *) (chunks_base + i * stride);
-        list_add_tail(&chunk->list, &sc->freelist);
-    }
-
-    return true;
+    fixed_size_free(&sc->fsr, c);
 }
 
 static void move_to(struct slab_chunks *sc, struct slab_chunk *c,
                     enum slab_chunk_state s) {
     kassert(c->state != s);
     list_del_init(&c->list);
-    c->state = s;
-    list_add_tail(&c->list, &sc->lists[s]);
     if (s == SLAB_CHUNK_FREE) {
-        vaddr_t vaddr = base_addr_to_vaddr(c->base_addr);
-        uint8_t curr = slab_order_map_get(vaddr);
-        kassert(curr != SLAB_POW2_ORDER_EMPTY && curr != SLAB_POW2_ORDER_NONE);
-
-        vas_free(slab_global.vas, vaddr, PAGE_2MB);
-        slab_order_map_set(vaddr, SLAB_POW2_ORDER_EMPTY);
-        c->base_addr = 0x0;
-        memset(c->bitmap, 0, sc->bitmap_bytes);
+        destroy_chunk(sc, c);
+        return;
     }
+    c->state = s;
+    list_add_tail(&c->list, chunk_list_for(sc, s));
 }
 
 static struct slab_chunk *alloc_chunk(struct slab_chunks *sc,
@@ -82,19 +65,23 @@ static struct slab_chunk *alloc_chunk(struct slab_chunks *sc,
     uint8_t curr = slab_order_map_get(base);
     kassert(curr == SLAB_POW2_ORDER_EMPTY || curr == SLAB_POW2_ORDER_NONE);
     slab_order_map_set(base, sc->pow2_order);
-    if (list_empty(&sc->freelist)) {
-        if (!chunks_refill(sc, lirql)) {
-            vas_free(slab_global.vas, base, PAGE_2MB);
-            return NULL;
-        }
+
+    spin_unlock(&sc->lock, *lirql);
+    struct slab_chunk *ret = fixed_size_alloc(&sc->fsr);
+    *lirql = spin_lock(&sc->lock);
+
+    if (!ret) {
+        slab_order_map_set(base, SLAB_POW2_ORDER_EMPTY);
+        vas_free(slab_global.vas, base, PAGE_2MB);
+        return NULL;
     }
 
-    struct list_head *pop = list_pop_front_init(&sc->freelist);
-    struct slab_chunk *ret = container_of(pop, struct slab_chunk, list);
-    kassert(!ret->base_addr);
-
-    move_to(sc, ret, SLAB_CHUNK_PARTIAL);
+    INIT_LIST_HEAD(&ret->list);
+    ret->state = SLAB_CHUNK_PARTIAL;
     ret->base_addr = vaddr_to_base_addr(base);
+    ret->used = 0;
+    memset(ret->bitmap, 0, sc->bitmap_bytes);
+    list_add_tail(&ret->list, &sc->partial_list);
     return ret;
 }
 
@@ -204,10 +191,18 @@ void slab_chunks_init(struct slab_chunks *sc, struct slab_cache *parent) {
     size_t page_count = 1 << (PAGE_2M_SHIFT - PAGE_4K_SHIFT);
     size_t bitmap_bits = DIV_ROUND_UP(page_count, sc->page_stride);
     sc->bitmap_bytes = to_bytes(bitmap_bits);
-    for (size_t i = 0; i < SLAB_CHUNK_MAX; i++) {
-        INIT_LIST_HEAD(&sc->lists[i]);
-    }
+    INIT_LIST_HEAD(&sc->partial_list);
+    INIT_LIST_HEAD(&sc->used_list);
 
     spinlock_init(&sc->lock);
     sc->pow2_order = ilog2(sc->page_stride);
+
+    struct fixed_size_range_attributes attrs = {
+        .obj_size = sizeof(struct slab_chunk) + sc->bitmap_bytes,
+        .obj_align = _Alignof(struct slab_chunk),
+        .init_obj = NULL,
+        .deinit_obj = NULL,
+        .bootstrap_mode = false,
+    };
+    fixed_size_range_init(&sc->fsr, &attrs);
 }

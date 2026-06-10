@@ -6,6 +6,7 @@
 #include <global.h>
 #include <irq/idt.h>
 #include <mem/alloc.h>
+#include <mem/alloc_or_die.h>
 #include <mem/page_fault.h>
 #include <mem/tlb.h>
 #include <mem/vmm.h>
@@ -82,10 +83,7 @@ void irq_register(char *name, uint8_t vector, irq_handler_t handler, void *ctx,
     if (was && !(flags & IRQ_FLAG_SHARED))
         panic("need to be shared to have many, registered by %s\n", me->name);
 
-    struct irq_action *act = kzalloc(sizeof(struct irq_action));
-
-    if (!act)
-        panic("OOM - TODO: make this dynamic\n");
+    struct irq_action *act = alloc_or_die(kzalloc(sizeof(struct irq_action)));
 
     act->handler = handler;
     INIT_LIST_HEAD(&act->list);
@@ -204,11 +202,8 @@ void irq_enable(uint8_t irq) {
 void irq_init() {
     for (size_t i = 0; i < IDT_ENTRIES; i++) {
         struct irq_desc *desc = &irq_table[i];
-        if (!cpu_mask_init(&desc->masked_cpus, global.core_count))
-            panic("OOM\n");
-
-        if (!cpu_mask_init(&desc->affinity, global.core_count))
-            panic("OOM\n");
+        alloc_or_die(cpu_mask_init(&desc->masked_cpus, global.core_count));
+        alloc_or_die(cpu_mask_init(&desc->affinity, global.core_count));
 
         desc->vector = i;
         irq_desc_clear(desc);

@@ -4,17 +4,13 @@
 #include <math/div.h>
 #include <mem/address_range.h>
 #include <mem/alloc.h>
+#include <mem/alloc_or_die.h>
 #include <mem/hhdm.h>
 #include <mem/page.h>
 #include <mem/pmm.h>
 #include <mem/vaddr_alloc.h>
 #include <smp/core.h>
 #include <string.h>
-
-#define VASRANGE_HDR_SIZE                                                      \
-    ALIGN_UP(sizeof(struct vasrange_page_hdr), _Alignof(struct vas_range))
-#define VASRANGE_PER_PAGE                                                      \
-    ((PAGE_SIZE - VASRANGE_HDR_SIZE) / sizeof(struct vas_range))
 
 static size_t vas_cpu_id() {
     if (global.current_bootstage < BOOTSTAGE_MID_MP)
@@ -34,78 +30,37 @@ static int32_t vas_range_cmp(const struct rbt_node *a,
     return (l > r) - (l < r);
 }
 
-static struct vasrange_page_hdr *vasrange_page_of(struct vas_range *r) {
-    return (struct vasrange_page_hdr *) ALIGN_DOWN((uintptr_t) r, PAGE_SIZE);
-}
-
-static bool vasrange_refill(struct vas_local_tree *lt) {
-    uintptr_t phys = pmm_alloc_page();
-    if (!phys)
-        return false;
-
-    uintptr_t virt = hhdm_paddr_to_vaddr(phys);
-
-    struct vasrange_page_hdr *hdr = (struct vasrange_page_hdr *) virt;
-    hdr->total = VASRANGE_PER_PAGE;
-    hdr->free_count = VASRANGE_PER_PAGE;
-    INIT_LIST_HEAD(&hdr->page_list);
-    list_add_tail(&hdr->page_list, &lt->fl_pages);
-
-    struct vas_range *ranges = (struct vas_range *) (virt + VASRANGE_HDR_SIZE);
-
-    for (uint32_t i = 0; i < VASRANGE_PER_PAGE; i++) {
-        INIT_LIST_HEAD(&ranges[i].free_list_node);
-        list_add_tail(&ranges[i].free_list_node, &lt->freelist);
-    }
-
-    return true;
-}
-
 static struct vas_range *vasrange_alloc(struct vas_local_tree *lt) {
-    if (list_empty(&lt->freelist)) {
-        if (!vasrange_refill(lt))
-            return NULL;
-    }
-
-    struct list_head *pop = list_pop_front_init(&lt->freelist);
-    struct vas_range *r = container_of(pop, struct vas_range, free_list_node);
-
-    vasrange_page_of(r)->free_count--;
-    return r;
+    return fixed_size_alloc(&lt->fsr);
 }
 
 static void vasrange_free(struct vas_local_tree *lt, struct vas_range *r) {
-    vasrange_page_of(r)->free_count++;
-    list_add_tail(&r->free_list_node, &lt->freelist);
+    return fixed_size_free(&lt->fsr, r);
 }
 
 void vas_reclaim_freelist_pages(struct vas_local_tree *lt) {
-    struct list_head *pos, *tmp;
+    fixed_size_reclaim_freelist_pages(&lt->fsr);
+}
 
-    list_for_each_safe(pos, tmp, &lt->fl_pages) {
-        struct vasrange_page_hdr *hdr =
-            container_of(pos, struct vasrange_page_hdr, page_list);
-
-        if (hdr->free_count < hdr->total)
-            continue;
-
-        struct vas_range *ranges =
-            (struct vas_range *) ((uintptr_t) hdr + VASRANGE_HDR_SIZE);
-
-        for (uint32_t i = 0; i < hdr->total; i++)
-            list_del_init(&ranges[i].free_list_node);
-
-        list_del(&hdr->page_list);
-        pmm_free_page(hhdm_vaddr_to_paddr((uintptr_t) hdr));
-    }
+static void vas_range_fsr_init(void *n) {
+    struct vas_range *r = n;
+    rbt_init_node(&r->node);
+    r->length = 0;
+    r->start = 0;
 }
 
 static void vas_local_tree_init(struct vas_local_tree *lt) {
     spinlock_init(&lt->lock);
     rbt_init(&lt->tree, vas_range_get_data, vas_range_cmp);
-    INIT_LIST_HEAD(&lt->freelist);
-    INIT_LIST_HEAD(&lt->fl_pages);
-    lt->total_free = 0;
+    struct fixed_size_range_attributes attrs = {
+        .init_obj = vas_range_fsr_init,
+        .deinit_obj = NULL,
+        .bootstrap_mode = true,
+        .obj_align = _Alignof(struct vas_range),
+        .obj_size = sizeof(struct vas_range),
+    };
+
+    fixed_size_range_init(&lt->fsr, &attrs);
 }
 
 static vaddr_t tree_alloc(struct vas_local_tree *lt, size_t size,
@@ -380,9 +335,7 @@ static void vas_space_init_common(struct vas_space *vas, vaddr_t base,
 
     enum irql irql = spin_lock(&vas->global.lock);
 
-    struct vas_range *g = vasrange_alloc(&vas->global);
-    if (!g)
-        panic("OOM: cannot create initial VAS gap");
+    struct vas_range *g = alloc_or_die(vasrange_alloc(&vas->global));
 
     g->start = base;
     g->length = limit - base;
@@ -405,11 +358,7 @@ struct vas_space *vas_space_bootstrap(vaddr_t base, vaddr_t limit) {
         sizeof(struct vas_space) + ncpus * sizeof(struct vas_local_tree);
     size_t pages_needed = DIV_ROUND_UP(total_size, PAGE_SIZE);
 
-    kassert(pages_needed == 1);
-    uintptr_t phys = pmm_alloc_page();
-    if (!phys)
-        panic("OOM creating vas_space\n");
-
+    uintptr_t phys = alloc_or_die(pmm_alloc_page(pages_needed));
     uintptr_t virt = hhdm_paddr_to_vaddr(phys);
     memset((void *) virt, 0, PAGE_SIZE);
 

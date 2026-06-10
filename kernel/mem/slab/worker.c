@@ -1,5 +1,5 @@
 /* Implements slab workers and daemon threads */
-
+#include <mem/alloc_or_die.h>
 #include <smp/domain.h>
 #include <thread/daemon.h>
 #include <thread/workqueue.h>
@@ -51,8 +51,7 @@ static struct daemon_work bg =
 
 void slab_domain_init_daemon(struct slab_domain *domain) {
     struct cpu_mask cmask;
-    if (!cpu_mask_init(&cmask, global.core_count))
-        panic("OOM\n");
+    alloc_or_die(cpu_mask_init(&cmask, global.core_count));
 
     domain_set_cpu_mask(&cmask, domain->domain);
     struct daemon_attributes attrs = {

@@ -1,6 +1,7 @@
 #pragma once
 #include <asm.h>
 #include <bootstage.h>
+#include <compiler.h>
 #include <console/panic.h>
 #include <irq/irq.h>
 #include <kassert.h>
@@ -41,7 +42,8 @@ static inline void spinlock_init(struct spinlock *lock) {
     atomic_store(&lock->state, 0);
 }
 
-static inline bool spin_trylock_raw(struct spinlock *lock) {
+static inline bool __warn_unused_result
+spin_trylock_raw(struct spinlock *lock) {
 
 #ifdef DEBUG_LOCK
     kassert(lock->initialized_magic == SPINLOCK_COOKIE_MAGIC);
@@ -75,7 +77,7 @@ static inline void spin_unlock(struct spinlock *lock, enum irql old) {
     irql_lower(old);
 }
 
-static inline enum irql spin_lock(struct spinlock *lock) {
+static inline enum irql __warn_unused_result spin_lock(struct spinlock *lock) {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_interrupt())
         panic("Attempted to take non-ISR safe spinlock from an ISR!\n");
 
@@ -88,7 +90,8 @@ static inline enum irql spin_lock(struct spinlock *lock) {
     return irql;
 }
 
-static inline enum irql spin_lock_irq_disable(struct spinlock *lock) {
+static inline enum irql __warn_unused_result
+spin_lock_irq_disable(struct spinlock *lock) {
 
 #ifdef DEBUG_LOCK
     lock->acquired_high = true;
@@ -99,7 +102,8 @@ static inline enum irql spin_lock_irq_disable(struct spinlock *lock) {
     return irql;
 }
 
-static inline bool spin_trylock(struct spinlock *lock, enum irql *out) {
+static inline bool __warn_unused_result spin_trylock(struct spinlock *lock,
+                                                     enum irql *out) {
 
 #ifdef DEBUG_LOCK
     kassert(!lock->acquired_high);
@@ -113,8 +117,8 @@ static inline bool spin_trylock(struct spinlock *lock, enum irql *out) {
     return false;
 }
 
-static inline bool spin_trylock_irq_disable(struct spinlock *lock,
-                                            enum irql *out) {
+static inline bool __warn_unused_result
+spin_trylock_irq_disable(struct spinlock *lock, enum irql *out) {
 
 #ifdef DEBUG_LOCK
     lock->acquired_high = true;

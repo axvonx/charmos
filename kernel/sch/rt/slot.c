@@ -1,4 +1,5 @@
 #include <mem/alloc.h>
+#include <mem/alloc_or_die.h>
 #include <sch/irql.h>
 #include <sch/rt_sched.h>
 #include <sync/spinlock.h>
@@ -48,10 +49,7 @@ void rt_slot_free(size_t slot) {
 void rt_slot_init(size_t num_slots) {
     slot_db.num_slots = num_slots;
     spinlock_init(&slot_db.lock);
-    slot_db.slots = kzalloc(sizeof(struct rt_slot) * num_slots);
-
-    if (!slot_db.slots)
-        panic("OOM\n");
+    slot_db.slots = alloc_or_die(kzalloc(sizeof(struct rt_slot) * num_slots));
 
     for (size_t i = 0; i < num_slots; i++)
         slot_db.slots[i].slot_index = i;

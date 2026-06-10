@@ -2,6 +2,7 @@
 #include <global.h>
 #include <log.h>
 #include <mem/alloc.h>
+#include <mem/alloc_or_die.h>
 #include <mem/numa.h>
 #include <sch/sched.h>
 #include <smp/domain.h>
@@ -145,8 +146,7 @@ void domain_init_after_smp() {
     construct_domains_after_smp();
     for (size_t i = 0; i < global.domain_count; i++) {
         struct domain *domain = global.domains[i];
-        if (!cpu_mask_init(&domain->cpu_mask, global.core_count))
-            panic("OOM\n");
+        alloc_or_die(cpu_mask_init(&domain->cpu_mask, global.core_count));
 
         for (size_t j = 0; j < domain->num_cores; j++) {
             domain->cores[j]->domain_cpu_id = j;

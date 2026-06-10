@@ -4,6 +4,7 @@
 #include <irq/idt.h>
 #include <limine.h>
 #include <mem/alloc.h>
+#include <mem/alloc_or_die.h>
 #include <mem/domain.h>
 #include <mem/tlb.h>
 #include <sch/sched.h>
@@ -269,9 +270,8 @@ void smp_init() {
         size_t d = domain_for_core(i);
 
         if (i != 0) {
-            global.cores[i] = kmalloc_from_domain(d, sizeof(struct core));
-            if (!global.cores[i])
-                panic("OOM\n");
+            global.cores[i] =
+                alloc_or_die(kmalloc_from_domain(d, sizeof(struct core)));
 
             memset(global.cores[i], 0, sizeof(struct core));
         }

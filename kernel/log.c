@@ -1,6 +1,7 @@
 #include <console/printf.h>
 #include <linker/symbol_table.h>
 #include <log.h>
+#include <mem/alloc_or_die.h>
 #include <mem/vmm.h>
 #include <sch/sched.h>
 #include <smp/core.h>
@@ -324,10 +325,9 @@ void log_sites_init(void) {
         s->enabled = true;
         refcount_init(&s->refcount, 1);
         struct log_ringbuf *lrb = &s->rb;
-        lrb->slots = kzalloc(sizeof(struct log_ring_slot) * s->capacity);
         kassert(s->capacity);
-        if (!lrb->slots)
-            panic("OOM\n");
+        lrb->slots =
+            alloc_or_die(kzalloc(sizeof(struct log_ring_slot) * s->capacity));
 
         for (size_t i = 0; i < s->capacity; i++) {
             atomic_store_explicit(&lrb->slots[i].seq, i, memory_order_release);

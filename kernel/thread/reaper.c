@@ -1,3 +1,4 @@
+#include <mem/alloc_or_die.h>
 #include <sch/sched.h>
 #include <thread/daemon.h>
 #include <thread/reaper.h>
@@ -15,22 +16,17 @@ void reaper_enqueue(struct thread *t) {
 
 void reaper_init(void) {
     size_t reaper_count = global.domain_count;
-    reapers = kzalloc(sizeof(struct reaper_thread *) * reaper_count);
-    if (!reapers)
-        panic("OOM\n");
+    reapers =
+        alloc_or_die(kzalloc(sizeof(struct reaper_thread *) * reaper_count));
 
     for (size_t i = 0; i < reaper_count; i++) {
-        reapers[i] = kmalloc_from_domain(i, sizeof(struct reaper_thread));
-        if (!reapers[i])
-            panic("OOM\n");
+        reapers[i] =
+            alloc_or_die(kmalloc_from_domain(i, sizeof(struct reaper_thread)));
 
         locked_list_init(&reapers[i]->list, LOCKED_LIST_INIT_IRQ_DISABLE);
         semaphore_init(&reapers[i]->sem, 1, SEMAPHORE_INIT_IRQ_DISABLE);
-        reapers[i]->thread =
-            thread_create("reaper_thread", reaper_thread_main, NULL);
-
-        if (!reapers[i]->thread)
-            panic("OOM\n");
+        reapers[i]->thread = alloc_or_die(
+            thread_create("reaper_thread", reaper_thread_main, NULL));
 
         domain_set_cpu_mask(&reapers[i]->thread->allowed_cpus,
                             global.domains[i]);

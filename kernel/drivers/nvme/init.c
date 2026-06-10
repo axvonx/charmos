@@ -5,6 +5,7 @@
 #include <drivers/nvme.h>
 #include <irq/idt.h>
 #include <mem/alloc.h>
+#include <mem/alloc_or_die.h>
 #include <mem/pmm.h>
 #include <mem/vmm.h>
 #include <sleep.h>
@@ -133,10 +134,8 @@ void nvme_alloc_io_queues(struct nvme_device *nvme, uint32_t qid) {
 
     uint8_t this_isr = nvme->isr_index[qid];
 
-    this_queue->sq_requests =
-        kzalloc(sizeof(struct nvme_request *) * this_queue->sq_depth);
-    if (!this_queue->sq_requests)
-        panic("OOM\n");
+    this_queue->sq_requests = alloc_or_die(
+        kzalloc(sizeof(struct nvme_request *) * this_queue->sq_depth));
 
     // complete queue
     struct nvme_command cq_cmd = {0};

@@ -6,6 +6,7 @@
 #include <drivers/usb/xhci.h>
 #include <irq/idt.h>
 #include <mem/alloc.h>
+#include <mem/alloc_or_die.h>
 #include <mem/page.h>
 #include <mem/vmm.h>
 #include <stdbool.h>
@@ -744,8 +745,7 @@ static struct usb_controller_ops xhci_ctrl_ops = {
 void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
                struct pci_device *pci) {
     struct cpu_mask cmask;
-    if (!cpu_mask_init(&cmask, global.core_count))
-        panic("OOM");
+    alloc_or_die(cpu_mask_init(&cmask, global.core_count));
 
     cpu_mask_set_all(&cmask);
     struct workqueue_attributes attrs = {

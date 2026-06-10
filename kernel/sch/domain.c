@@ -3,6 +3,7 @@
 #include <kassert.h>
 #include <log.h>
 #include <mem/alloc.h>
+#include <mem/alloc_or_die.h>
 #include <sch/domain.h>
 #include <string.h>
 
@@ -34,15 +35,11 @@ build_domain_for_level(enum topology_level lvl) {
     size_t n = t->count[lvl];
     struct topology_node *nodes = t->level[lvl];
 
-    struct scheduler_domain *d = kzalloc(sizeof(*d));
-    if (!d)
-        panic("OOM\n");
+    struct scheduler_domain *d = alloc_or_die(kzalloc(sizeof(*d)));
 
     d->level = lvl;
     d->ngroups = n;
-    d->groups = kzalloc(sizeof(struct scheduler_group) * n);
-    if (!d->groups)
-        panic("OOM\n");
+    d->groups = alloc_or_die(kzalloc(sizeof(struct scheduler_group) * n));
 
     for (size_t i = 0; i < n; i++) {
         struct topology_node *node = &nodes[i];

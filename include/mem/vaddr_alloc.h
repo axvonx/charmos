@@ -1,6 +1,6 @@
 /* @title: Virtual address allocator */
 #pragma once
-
+#include <mem/fixed_size_alloc.h>
 #include <mem/page.h>
 #include <stdatomic.h>
 #include <stdint.h>
@@ -12,26 +12,17 @@
 struct address_range;
 
 #define VAS_CHUNK_SIZE PAGE_1GB
-#define VAS_REFILL_THRESHOLD (VAS_CHUNK_SIZE / 4)
 
 struct vas_range {
     vaddr_t start;
     size_t length;
     struct rbt_node node;
-    struct list_head free_list_node;
-};
-
-struct vasrange_page_hdr {
-    uint16_t free_count;
-    uint16_t total;
-    struct list_head page_list;
 };
 
 struct vas_local_tree {
     struct spinlock lock;
     struct rbt tree;
-    struct list_head freelist;
-    struct list_head fl_pages;
+    struct fixed_size_range fsr;
     size_t total_free;
 };
 

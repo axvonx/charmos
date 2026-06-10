@@ -1,5 +1,6 @@
 #include <drivers/mmio.h>
 #include <mem/address_range.h>
+#include <mem/alloc_or_die.h>
 #include <mem/page.h>
 #include <mem/vaddr_alloc.h>
 #include <mem/vmm.h>
@@ -9,8 +10,8 @@ ADDRESS_RANGE_DECLARE(mmio, .name = "mmio", .align = PAGE_1GB,
                       .flags = ADDRESS_RANGE_DYNAMIC, .size = MMIO_RANGE_SIZE);
 
 void mmio_init() {
-    if (!(mmio_vas_space = vas_space_from_address_range(&ADDRESS_RANGE(mmio))))
-        panic("OOM\n");
+    mmio_vas_space =
+        alloc_or_die(vas_space_from_address_range(&ADDRESS_RANGE(mmio)));
 }
 
 void *mmio_map(paddr_t phys, size_t size) {

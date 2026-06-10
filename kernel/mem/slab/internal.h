@@ -5,6 +5,7 @@
 #include <math/bit_ops.h>
 #include <math/ilog2.h>
 #include <mem/alloc.h>
+#include <mem/fixed_size_alloc.h>
 #include <mem/page.h>
 #include <mem/simple_alloc.h>
 #include <mem/vmm.h>
@@ -271,14 +272,9 @@ struct slab_chunks {
     size_t bitmap_bytes;
     size_t page_stride;
     size_t pow2_order;
-    union {
-        struct {
-            struct list_head freelist;
-            struct list_head partial_list;
-            struct list_head used_list;
-        };
-        struct list_head lists[SLAB_CHUNK_MAX];
-    };
+    struct list_head partial_list;
+    struct list_head used_list;
+    struct fixed_size_range fsr;
     struct spinlock lock;
 };
 
@@ -712,10 +708,6 @@ static inline uint64_t slab_page_flags(enum slab_type type) {
 static inline void slab_ptr_validate(void *ptr) {
     vaddr_t vaddr = (vaddr_t) ptr;
     kassert(vaddr >= SLAB_HEAP_START && vaddr <= SLAB_HEAP_END);
-}
-
-static inline size_t slab_chunks_per_page(struct slab_chunks *chunks) {
-    return PAGE_SIZE / (sizeof(struct slab_chunk) + chunks->bitmap_bytes);
 }
 
 static inline size_t slab_cache_pow2_order(struct slab_cache *sc) {

@@ -61,7 +61,10 @@
                    "size of struct" #__struct                                  \
                    " does not match expected size " #__want)
 
-#define static_assert(a, b) _Static_assert(a, b)
+#define static_assert_1(cond) _Static_assert(cond, #cond)
+#define static_assert_2(cond, msg) _Static_assert(cond, msg)
+#define static_assert(...)                                                     \
+    _DISPATCH(static_assert, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
 
 #define smp_mb() atomic_thread_fence(memory_order_seq_cst)
 #define smp_rmb() atomic_thread_fence(memory_order_acquire)

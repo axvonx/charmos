@@ -2,6 +2,7 @@
 #include <log.h>
 #include <math/fixed.h>
 #include <mem/alloc.h>
+#include <mem/alloc_or_die.h>
 #include <sch/rt_sched.h>
 #include <sch/sched.h>
 #include <smp/core.h>
@@ -15,9 +16,7 @@ LOG_SITE_DECLARE(rt_sched, .flags = LOG_SITE_DEFAULT,
 
 static void init_scheduler_boot(struct scheduler *sched) {
     struct rt_scheduler_percpu *pcpu =
-        kzalloc(sizeof(struct rt_scheduler_percpu));
-    if (!pcpu)
-        panic("OOM\n");
+        alloc_or_die(kzalloc(sizeof(struct rt_scheduler_percpu)));
 
     struct log_site_options opts = {
         .name = "rt_sched",
@@ -27,9 +26,7 @@ static void init_scheduler_boot(struct scheduler *sched) {
         .flags = LOG_SITE_DEFAULT,
     };
 
-    pcpu->log_site = log_site_create(opts);
-    if (!pcpu->log_site)
-        panic("OOM\n");
+    pcpu->log_site = alloc_or_die(log_site_create(opts));
 
     pcpu->log_handle = LOG_HANDLE_DEFAULT;
     pcpu->perms.allowed_capabilities = UINT16_MAX;
@@ -39,13 +36,10 @@ static void init_scheduler_boot(struct scheduler *sched) {
     pcpu->active_mapping = NULL;
     semaphore_init(&pcpu->switch_semaphore, 1, SEMAPHORE_INIT_IRQ_DISABLE);
 
-    struct rt_scheduler *rts = kzalloc(sizeof(struct rt_scheduler));
-    if (!rts)
-        panic("OOM\n");
+    struct rt_scheduler *rts =
+        alloc_or_die(kzalloc(sizeof(struct rt_scheduler)));
 
-    rts->log_site = log_site_create(opts);
-    if (!rts->log_site)
-        panic("OOM\n");
+    rts->log_site = alloc_or_die(log_site_create(opts));
 
     rts->log_handle = LOG_HANDLE_DEFAULT;
     spinlock_init(&rts->lock);
@@ -57,15 +51,12 @@ static void init_scheduler_boot(struct scheduler *sched) {
 }
 
 void rt_scheduler_boot_init() {
-    if (!(rt_wq = workqueue_create_default("rt_wq")))
-        panic("OOM\n");
+    rt_wq = alloc_or_die(workqueue_create_default("rt_wq"));
 
     locked_list_init(&rt_global.static_list, LOCKED_LIST_INIT_IRQ_DISABLE);
     spinlock_init(&rt_global.switch_lock);
     rt_global.sch_pool =
-        kzalloc(sizeof(struct locked_list) * global.domain_count);
-    if (!rt_global.sch_pool)
-        panic("OOM\n");
+        alloc_or_die(kzalloc(sizeof(struct locked_list) * global.domain_count));
 
     struct domain *d;
     domain_for_each_domain(d) {

@@ -1,3 +1,4 @@
+#include <mem/alloc_or_die.h>
 #include <mem/slab.h>
 #include <sch/periodic_work.h>
 #include <sch/sched.h>
@@ -53,9 +54,7 @@ static void
 attach_work_to_cpus(struct scheduler_periodic_work_linker_object *spwlo) {
     for (size_t i = 0; i < global.core_count; i++) {
         struct scheduler_periodic_work *w =
-            kzalloc(sizeof(struct scheduler_periodic_work));
-        if (!w)
-            panic("OOM\n");
+            alloc_or_die(kzalloc(sizeof(struct scheduler_periodic_work)));
 
         pairing_node_init(&w->pnode);
         linker_object_work_to_work(spwlo, w);

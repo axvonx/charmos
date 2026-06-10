@@ -1,5 +1,6 @@
 #ifdef TEST_SCHED
 
+#include <mem/alloc_or_die.h>
 #include <sch/sched.h>
 #include <sleep.h>
 #include <string.h>
@@ -89,8 +90,7 @@ static void enqueue_thread(void *) {
 
 TEST_REGISTER(workqueue_test_2, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
     struct cpu_mask mask;
-    if (!cpu_mask_init(&mask, global.core_count))
-        panic("OOM\n");
+    alloc_or_die(cpu_mask_init(&mask, global.core_count));
 
     cpu_mask_set_all(&mask);
 
