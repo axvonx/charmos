@@ -14,7 +14,8 @@ static struct bio_request *create(struct block_device *d, uint64_t lba,
                                   void (*cb)(struct bio_request *), bool write,
                                   void *user, void *buffer) {
 
-    struct bio_request *req = kzalloc(sizeof(struct bio_request));
+    struct bio_request *req =
+        kmalloc(sizeof(struct bio_request), ALLOC_FLAGS_ZERO);
     if (!req)
         return NULL;
 

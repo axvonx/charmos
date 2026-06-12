@@ -48,9 +48,10 @@ static void allocate_port(struct ahci_device *dev, struct ahci_port *port,
     port->clbu = cmdlist_phys >> 32;
     port->fb = fis_phys & 0xFFFFFFFFUL;
     port->fbu = fis_phys >> 32;
-    struct ahci_cmd_table **arr = kzalloc(sizeof(struct ahci_cmd_table *) * 32);
+    struct ahci_cmd_table **arr =
+        kmalloc(sizeof(struct ahci_cmd_table *) * 32, ALLOC_FLAGS_ZERO);
     struct ahci_cmd_header **hdr =
-        kzalloc(sizeof(struct ahci_cmd_header *) * 32);
+        kmalloc(sizeof(struct ahci_cmd_header *) * 32, ALLOC_FLAGS_ZERO);
 
     if (!arr || !hdr)
         panic("Could not allocate space for AHCI commands\n");
@@ -114,7 +115,8 @@ static struct ahci_disk *device_setup(struct ahci_device *dev,
 
     *disk_count = total_disks;
 
-    struct ahci_disk *disks = kzalloc(sizeof(struct ahci_disk) * total_disks);
+    struct ahci_disk *disks =
+        kmalloc(sizeof(struct ahci_disk) * total_disks, ALLOC_FLAGS_ZERO);
     if (!disks)
         panic("Could not allocate space for AHCI disks\n");
 
@@ -173,7 +175,8 @@ struct ahci_disk *ahci_setup_controller(struct ahci_controller *ctrl,
 
     mmio_write_32(&ctrl->ghc, mmio_read_32(&ctrl->ghc) | AHCI_GHC_AE);
 
-    struct ahci_device *dev = kzalloc(sizeof(struct ahci_device));
+    struct ahci_device *dev =
+        kmalloc(sizeof(struct ahci_device), ALLOC_FLAGS_ZERO);
     if (!dev)
         panic("Could not allocate space for AHCI device setup\n");
 

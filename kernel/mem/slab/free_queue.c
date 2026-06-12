@@ -13,7 +13,8 @@
 void slab_free_queue_init(struct slab_domain *domain, struct slab_free_queue *q,
                           size_t capacity) {
     q->capacity = capacity;
-    q->slots = kzalloc(sizeof(struct slab_free_slot) * capacity);
+    q->slots =
+        kmalloc(sizeof(struct slab_free_slot) * capacity, ALLOC_FLAGS_ZERO);
     if (!q->slots)
         panic("Could not allocate slab free queue slots!\n");
 

@@ -11,12 +11,6 @@
 #define kmalloc_3(sz, fl, bh) kmalloc_internal((sz), (fl), (bh))
 #define kmalloc(...) _DISPATCH(kmalloc, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
 
-#define kzalloc_1(sz)                                                          \
-    kzalloc_internal((sz), ALLOC_FLAGS_DEFAULT, ALLOC_BEHAVIOR_DEFAULT)
-#define kzalloc_2(sz, fl) kzalloc_internal((sz), (fl), ALLOC_BEHAVIOR_DEFAULT)
-#define kzalloc_3(sz, fl, bh) kzalloc_internal((sz), (fl), (bh))
-#define kzalloc(...) _DISPATCH(kzalloc, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
-
 #define kmalloc_aligned_2(sz, al)                                              \
     kmalloc_aligned_internal((sz), (al), ALLOC_FLAGS_DEFAULT,                  \
                              ALLOC_BEHAVIOR_DEFAULT)
@@ -26,16 +20,6 @@
     kmalloc_aligned_internal((sz), (al), (fl), (bh))
 #define kmalloc_aligned(...)                                                   \
     _DISPATCH(kmalloc_aligned, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
-
-#define kzalloc_aligned_2(sz, al)                                              \
-    kzalloc_aligned_internal((sz), (al), ALLOC_FLAGS_DEFAULT,                  \
-                             ALLOC_BEHAVIOR_DEFAULT)
-#define kzalloc_aligned_3(sz, al, fl)                                          \
-    kzalloc_aligned_internal((sz), (al), (fl), ALLOC_BEHAVIOR_DEFAULT)
-#define kzalloc_aligned_4(sz, al, fl, bh)                                      \
-    kzalloc_aligned_internal((sz), (al), (fl), (bh))
-#define kzalloc_aligned(...)                                                   \
-    _DISPATCH(kzalloc_aligned, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
 
 #define kfree_aligned_1(ptr)                                                   \
     kfree_aligned_internal((ptr), ALLOC_BEHAVIOR_DEFAULT)

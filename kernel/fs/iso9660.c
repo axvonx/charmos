@@ -84,8 +84,10 @@ struct vfs_node *iso9660_mount(struct partition *p) {
     struct iso9660_pvd pvd;
     struct block_device *disk = p->disk;
     if (iso9660_parse_pvd(p, &pvd)) {
-        struct iso9660_fs *fs = kzalloc(sizeof(struct iso9660_fs));
-        struct iso9660_pvd *new_pvd = kzalloc(sizeof(struct iso9660_pvd));
+        struct iso9660_fs *fs =
+            kmalloc(sizeof(struct iso9660_fs), ALLOC_FLAGS_ZERO);
+        struct iso9660_pvd *new_pvd =
+            kmalloc(sizeof(struct iso9660_pvd), ALLOC_FLAGS_ZERO);
         if (!fs || !new_pvd)
             return NULL;
 

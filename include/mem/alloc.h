@@ -41,7 +41,7 @@ LOG_HANDLE_EXTERN(slab_flags);
  *
  *      ┌───────────────────────────┐
  * Bits │ 15..12  11..8  7..4  3..0 │
- * Use  │  %%%%    ###A  A***  MPFC │
+ * Use  │  %%%%    ###A  A*Zc  MPFC │
  *      └───────────────────────────┘
  *
  * C - "Prefer cache alignment"
@@ -51,6 +51,10 @@ LOG_HANDLE_EXTERN(slab_flags);
  * P - "Allow memory to be pageable"
  *
  * M - "Allow memory to be movable"
+ *
+ * c - Physically contiguous - applies only to page_alloc
+ *
+ * Z - Zero on alloc, memory is zeroed
  *
  * ### - Locality bits
  *
@@ -79,17 +83,27 @@ enum alloc_flags : uint16_t {
     ALLOC_FLAG_MOVABLE = (1 << 3),
     ALLOC_FLAG_NONMOVABLE = 0,
 
+    /* Contiguous - applies only to page_alloc() */
+    ALLOC_FLAG_CONTIGUOUS = (1 << 4),
+    ALLOC_FLAG_NONCONTIGUOUS = 0,
+
+    /* Zero on alloc */
+    ALLOC_FLAG_ZERO_ON_ALLOC = (1 << 5),
+    ALLOC_FLAG_NON_ZERO = 0,
+
     /* Allocation classes */
     ALLOC_FLAG_CLASS_DEFAULT = (1 << ALLOC_CLASS_SHIFT),
     ALLOC_FLAG_CLASS_INTERLEAVED = (2 << ALLOC_CLASS_SHIFT),
     ALLOC_FLAG_CLASS_HIGH_BANDWIDTH = (3 << ALLOC_CLASS_SHIFT),
 };
 
-#define ALLOC_FLAGS_UNAVAILABLE_BITS 0x70
+#define ALLOC_FLAGS_NONE 0
+#define ALLOC_FLAGS_UNAVAILABLE_BITS 0x40
 #define ALLOC_FLAGS_DEFAULT                                                    \
     (ALLOC_FLAG_CLASS_DEFAULT | ALLOC_FLAG_FLEXIBLE_LOCALITY |                 \
      ALLOC_FLAG_NONMOVABLE | ALLOC_FLAG_NONPAGEABLE |                          \
      ALLOC_FLAG_NO_CACHE_ALIGN | ALLOC_LOCALITY_TO_FLAGS(ALLOC_LOCALITY_MIN))
+#define ALLOC_FLAGS_ZERO (ALLOC_FLAGS_DEFAULT | ALLOC_FLAG_ZERO_ON_ALLOC)
 
 #define ALLOC_FLAGS_PAGEABLE                                                   \
     ALLOC_FLAG_PAGEABLE | ALLOC_FLAG_CLASS_DEFAULT |                           \
@@ -248,14 +262,9 @@ void *kmalloc_internal(size_t size, enum alloc_flags flags,
                        enum alloc_behavior behavior);
 void *krealloc_internal(void *ptr, size_t size, enum alloc_flags flags,
                         enum alloc_behavior behavior);
-void *kzalloc_internal(size_t size, enum alloc_flags flags,
-                       enum alloc_behavior behavior);
 void kfree_internal(void *ptr, enum alloc_behavior behavior);
 size_t ksize(void *ptr);
 void *kmalloc_aligned_internal(size_t size, size_t align,
-                               enum alloc_flags flags,
-                               enum alloc_behavior behavior);
-void *kzalloc_aligned_internal(size_t size, size_t align,
                                enum alloc_flags flags,
                                enum alloc_behavior behavior);
 void kfree_aligned_internal(void *ptr, enum alloc_behavior behavior);

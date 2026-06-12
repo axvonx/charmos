@@ -190,7 +190,7 @@ static inline void mark_free_in_progress(struct domain_free_queue *fq, bool s) {
 }
 
 static inline struct buddy_page *buddy_page_for_addr(paddr_t address) {
-    return (struct buddy_page *) &global.page_array[PAGE_TO_PFN(address)];
+    return (struct buddy_page *) page_for_paddr(address);
 }
 
 static inline void free_from_buddy_internal(struct domain_buddy *target,

@@ -125,7 +125,8 @@ TEST_REGISTER(bio_sched_delay_enqueue_test, SHOULD_NOT_FAIL,
 
     for (uint64_t i = 0; i < BIO_SCHED_TEST_RUNS; i++) {
         uint8_t *buf = kmalloc_aligned(PAGE_SIZE, PAGE_SIZE);
-        struct bio_request *rq = kzalloc(sizeof(struct bio_request));
+        struct bio_request *rq =
+            kmalloc(sizeof(struct bio_request), ALLOC_FLAGS_ZERO);
         TEST_ASSERT(rq && buf);
         TEST_ASSERT(IS_ALIGNED((vaddr_t) buf, PAGE_SIZE));
 
@@ -180,7 +181,7 @@ TEST_REGISTER(bio_sched_delay_enqueue_test, SHOULD_NOT_FAIL,
 
     for (uint64_t i = 0; i < BIO_SCHED_LEVELS; i++) {
         avg_complete_time[i] = total_complete_time[i] / runs_per_lvl[i];
-        char *msg = kzalloc(100);
+        char *msg = kmalloc(100, ALLOC_FLAGS_ZERO);
         TEST_ASSERT(msg);
         snprintf(msg, 100, "Average completion time of level %d is %d ms", i,
                  avg_complete_time[i]);

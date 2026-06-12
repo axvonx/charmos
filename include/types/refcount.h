@@ -8,17 +8,17 @@
 #include <stdbool.h>
 #include <types/types.h>
 
-static inline void refcount_init(refcount_t *rc, unsigned int val) {
+static inline void refcount_init(refcount_t *rc, uint32_t val) {
     atomic_store(rc, val);
 }
 
 static inline bool refcount_inc(refcount_t *rc) {
     while (true) {
-        unsigned int old = atomic_load(rc);
+        uint32_t old = atomic_load(rc);
         if (old == UINT_MAX)
             return false;
 
-        unsigned int expected = old;
+        uint32_t expected = old;
         if (atomic_compare_exchange_weak(rc, &expected, old + 1))
             return true;
     }
@@ -26,11 +26,11 @@ static inline bool refcount_inc(refcount_t *rc) {
 
 static inline bool refcount_inc_not_zero(refcount_t *rc) {
     while (true) {
-        unsigned int old = atomic_load(rc);
+        uint32_t old = atomic_load(rc);
         if (old == 0)
             return false;
 
-        unsigned int expected = old;
+        uint32_t expected = old;
         if (atomic_compare_exchange_weak(rc, &expected, old + 1))
             return true;
 
@@ -44,13 +44,13 @@ static inline uint32_t refcount_read(refcount_t *rc) {
 
 static inline bool refcount_dec_and_test(refcount_t *rc) {
     while (true) {
-        unsigned int old = atomic_load(rc);
+        uint32_t old = atomic_load(rc);
         if (old == 0) {
             panic("possible UAF\n");
             return false;
         }
 
-        unsigned int expected = old;
+        uint32_t expected = old;
         if (atomic_compare_exchange_weak(rc, &expected, old - 1))
             return (old - 1) == 0;
 

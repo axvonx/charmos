@@ -3,6 +3,7 @@
 #include <compiler.h>
 #include <mem/alloc.h>
 #include <mem/page.h>
+#include <smp/perdomain.h>
 #include <structures/list.h>
 #include <sync/spinlock.h>
 
@@ -60,3 +61,33 @@ struct fixed_size_range *
 fixed_size_range_create(struct fixed_size_range_attributes *attrs);
 void fixed_size_range_init(struct fixed_size_range *fsr,
                            struct fixed_size_range_attributes *attrs);
+
+/* Declare a per-domain fixed_size_range called `name`, one instance per domain,
+ * each constructed from the given fixed_size_range_attributes initializer.
+ *
+ *   FIXED_SIZE_RANGE_PERDOMAIN_DECLARE(folio,
+ *       .obj_size  = sizeof(struct folio),
+ *       .obj_align = _Alignof(struct folio));
+ *
+ * Reach the calling domain's instance with the companion accessors:
+ *
+ *   struct folio *f = FSR_PERDOMAIN_ALLOC(folio);
+ *   FSR_PERDOMAIN_FREE(folio, f);
+ *
+ * The generated constructor / perdomain symbols are name-mangled under a
+ * double-underscore prefix and are not meant to be referenced directly. */
+#define FIXED_SIZE_RANGE_PERDOMAIN_DECLARE(name, ...)                          \
+    static void __##name##_fsr_init(struct fixed_size_range *__fsr,            \
+                                    size_t __domain) {                         \
+        (void) __domain;                                                       \
+        struct fixed_size_range_attributes __attrs = {__VA_ARGS__};            \
+        fixed_size_range_init(__fsr, &__attrs);                                \
+    }                                                                          \
+    PERDOMAIN_DECLARE(__##name##_fsr, struct fixed_size_range,                 \
+                      __##name##_fsr_init)
+
+/* This domain's instance of a range declared above. */
+#define FSR_PERDOMAIN_THIS(name) PERDOMAIN_PTR(__##name##_fsr)
+#define FSR_PERDOMAIN_ALLOC(name) fixed_size_alloc(FSR_PERDOMAIN_THIS(name))
+#define FSR_PERDOMAIN_FREE(name, obj)                                          \
+    fixed_size_free(FSR_PERDOMAIN_THIS(name), (obj))

@@ -1,4 +1,5 @@
 /* @title: Reader writer lock */
+#pragma once
 #include <stdatomic.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -37,6 +38,21 @@ enum rwlock_acquire_type {
 void rwlock_lock(struct rwlock *lock, enum rwlock_acquire_type type);
 void rwlock_unlock(struct rwlock *lock);
 void rwlock_init(struct rwlock *lock, enum thread_prio_class ceiling);
+bool rwlock_held(struct rwlock *lock, enum rwlock_acquire_type type);
+
+#define RWLOCK_ASSERT_HELD(lock, type)                                         \
+    kassert(rwlock_held((lock), (type)), "rwlock not held")
+#define RWLOCK_ASSERT_READ(lock) RWLOCK_ASSERT_HELD((lock), RWLOCK_ACQUIRE_READ)
+#define RWLOCK_ASSERT_WRITE(lock)                                              \
+    RWLOCK_ASSERT_HELD((lock), RWLOCK_ACQUIRE_WRITE)
 
 #define RWLOCK_PRIO_CEIL_SHIFT (1)
 #define RWLOCK_INIT(ceil) {((ceil) << RWLOCK_PRIO_CEIL_SHIFT)}
+
+static inline void rwlock_read_lock(struct rwlock *lock) {
+    rwlock_lock(lock, RWLOCK_ACQUIRE_READ);
+}
+
+static inline void rwlock_write_lock(struct rwlock *lock) {
+    rwlock_lock(lock, RWLOCK_ACQUIRE_WRITE);
+}

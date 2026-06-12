@@ -83,7 +83,8 @@ void irq_register(char *name, uint8_t vector, irq_handler_t handler, void *ctx,
     if (was && !(flags & IRQ_FLAG_SHARED))
         panic("need to be shared to have many, registered by %s\n", me->name);
 
-    struct irq_action *act = alloc_or_die(kzalloc(sizeof(struct irq_action)));
+    struct irq_action *act =
+        alloc_or_die(kmalloc(sizeof(struct irq_action), ALLOC_FLAGS_ZERO));
 
     act->handler = handler;
     INIT_LIST_HEAD(&act->list);
@@ -207,6 +208,8 @@ void irq_init() {
 
         desc->vector = i;
         irq_desc_clear(desc);
+        if (i == IRQ_DBF || i == IRQ_GPF || i == IRQ_PAGE_FAULT)
+            continue;
 
         idt_set_gate(i, 0x08, 0x8e);
     }

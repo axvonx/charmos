@@ -52,7 +52,8 @@ struct minheap *minheap_create(void) {
     struct minheap *heap = kmalloc(sizeof(struct minheap));
     heap->capacity = MINHEAP_INIT_CAP;
     heap->size = 0;
-    heap->nodes = kzalloc(sizeof(struct minheap_node *) * heap->capacity);
+    heap->nodes = kmalloc(sizeof(struct minheap_node *) * heap->capacity,
+                          ALLOC_FLAGS_ZERO);
     spinlock_init(&heap->lock);
     return heap;
 }

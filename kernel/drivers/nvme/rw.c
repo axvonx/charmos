@@ -90,7 +90,8 @@ static bool rw_send_command(struct block_device *disk, struct nvme_request *req,
         return true;
     }
 
-    struct nvme_bio_data *data = kzalloc(sizeof(struct nvme_bio_data));
+    struct nvme_bio_data *data =
+        kmalloc(sizeof(struct nvme_bio_data), ALLOC_FLAGS_ZERO);
     if (!data)
         return false;
 

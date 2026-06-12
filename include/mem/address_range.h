@@ -28,7 +28,7 @@ struct address_range {
 #define ADDRESS_RANGE_DECLARE(sym, ...)                                        \
     static struct address_range __address_range_##sym                          \
         __attribute__((section(".kernel_address_ranges"), used)) = {           \
-            __VA_ARGS__, .rbt_node_internal = RBT_NODE_INIT}
+            .name = #sym, __VA_ARGS__, .rbt_node_internal = RBT_NODE_INIT}
 
 #define ADDRESS_RANGE(sym) (__address_range_##sym)
 
@@ -37,3 +37,8 @@ LINKER_SECTION_DEFINE(address_ranges, struct address_range);
 void address_ranges_init();
 void address_ranges_print();
 struct address_range *address_range_for_addr(vaddr_t vaddr);
+
+static inline bool address_range_addr_in_range(struct address_range *ar,
+                                               uintptr_t vaddr) {
+    return vaddr >= ar->base && vaddr < ar->base + ar->size;
+}

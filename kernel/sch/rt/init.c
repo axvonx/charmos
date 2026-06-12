@@ -15,8 +15,8 @@ LOG_SITE_DECLARE(rt_sched, .flags = LOG_SITE_DEFAULT,
                  .dump_opts = (struct log_dump_options){});
 
 static void init_scheduler_boot(struct scheduler *sched) {
-    struct rt_scheduler_percpu *pcpu =
-        alloc_or_die(kzalloc(sizeof(struct rt_scheduler_percpu)));
+    struct rt_scheduler_percpu *pcpu = alloc_or_die(
+        kmalloc(sizeof(struct rt_scheduler_percpu), ALLOC_FLAGS_ZERO));
 
     struct log_site_options opts = {
         .name = "rt_sched",
@@ -37,7 +37,7 @@ static void init_scheduler_boot(struct scheduler *sched) {
     semaphore_init(&pcpu->switch_semaphore, 1, SEMAPHORE_INIT_IRQ_DISABLE);
 
     struct rt_scheduler *rts =
-        alloc_or_die(kzalloc(sizeof(struct rt_scheduler)));
+        alloc_or_die(kmalloc(sizeof(struct rt_scheduler), ALLOC_FLAGS_ZERO));
 
     rts->log_site = alloc_or_die(log_site_create(opts));
 
@@ -55,8 +55,8 @@ void rt_scheduler_boot_init() {
 
     locked_list_init(&rt_global.static_list, LOCKED_LIST_INIT_IRQ_DISABLE);
     spinlock_init(&rt_global.switch_lock);
-    rt_global.sch_pool =
-        alloc_or_die(kzalloc(sizeof(struct locked_list) * global.domain_count));
+    rt_global.sch_pool = alloc_or_die(kmalloc(
+        sizeof(struct locked_list) * global.domain_count, ALLOC_FLAGS_ZERO));
 
     struct domain *d;
     domain_for_each_domain(d) {

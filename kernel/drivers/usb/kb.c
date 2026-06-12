@@ -165,7 +165,7 @@ static void usb_kbd_worker(void *arg) {
 
 struct usb_hid_keyboard *usb_keyboard_create(struct usb_device *dev,
                                              struct usb_endpoint *ep) {
-    struct usb_hid_keyboard *kbd = kzalloc(sizeof(*kbd));
+    struct usb_hid_keyboard *kbd = kmalloc(sizeof(*kbd), ALLOC_FLAGS_ZERO);
 
     kbd->dev = dev;
     kbd->ep = ep;
@@ -201,7 +201,7 @@ enum usb_error usb_keyboard_bringup(struct usb_device *dev) {
 
     uint8_t iface_num = intf->interface_number;
 
-    uint8_t *report_buf = kzalloc_aligned(256, PAGE_SIZE);
+    uint8_t *report_buf = kmalloc_aligned(256, PAGE_SIZE, ALLOC_FLAGS_ZERO);
 
     enum usb_error err = USB_OK;
     if ((err = usb_keyboard_get_descriptor(dev, iface_num, 256, report_buf)) !=

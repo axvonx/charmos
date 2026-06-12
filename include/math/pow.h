@@ -13,3 +13,7 @@ static inline size_t ipow(size_t base, int32_t exp) {
     }
     return result;
 }
+
+static inline size_t pow2(size_t n) {
+    return 1ULL << n;
+}

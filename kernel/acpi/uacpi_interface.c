@@ -162,7 +162,7 @@ uacpi_kernel_uninstall_interrupt_handler(uacpi_interrupt_handler handler,
 }
 
 uacpi_handle uacpi_kernel_create_spinlock(void) {
-    struct spinlock *lock = kzalloc(sizeof(struct spinlock));
+    struct spinlock *lock = kmalloc(sizeof(struct spinlock), ALLOC_FLAGS_ZERO);
     spinlock_init(lock);
     return lock;
 }
@@ -172,7 +172,8 @@ void uacpi_kernel_free_spinlock(uacpi_handle a) {
 }
 
 uacpi_handle uacpi_kernel_create_mutex(void) {
-    struct mutex_simple *m = kzalloc(sizeof(struct mutex_simple));
+    struct mutex_simple *m =
+        kmalloc(sizeof(struct mutex_simple), ALLOC_FLAGS_ZERO);
     mutex_simple_init(m);
     return m;
 }
@@ -226,7 +227,7 @@ uacpi_status uacpi_kernel_wait_for_work_completion(void) {
 
 uacpi_handle uacpi_kernel_create_event(void) {
 
-    return kzalloc(8);
+    return kmalloc(8, ALLOC_FLAGS_ZERO);
 }
 void uacpi_kernel_free_event(uacpi_handle a) {
 

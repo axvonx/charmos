@@ -18,6 +18,9 @@
 #include <stdint.h>
 #include <string.h>
 #include <sync/spinlock.h>
+
+#include "mem/slab/internal.h"
+
 #define KERNEL_PML4_START_INDEX 256
 #define ENTRY_PRESENT(entry) (entry & PAGE_PRESENT)
 
@@ -47,9 +50,21 @@ CMDLINE_ENTRY_DECLARE(mem, .callback = vmm_mem_cmdline_callback,
                       .default_val = "0x700000000000", .required = false,
                       .value = NULL);
 
-ADDRESS_RANGE_DECLARE(hhdm, .name = "hhdm", .base = 0xFFFF800000000000ULL,
+ADDRESS_RANGE_DECLARE(hhdm, .base = 0xFFFF800000000000ULL,
                       /* default size: from the base up to the slab heap */
-                      .size = 0xFFFFF00000000000ULL - 0xFFFF800000000000ULL);
+                      .size = SLAB_HEAP_START - 0xFFFF800000000000ULL);
+
+bool hhdm_vaddr_in_range(vaddr_t vaddr) {
+    return address_range_addr_in_range(&ADDRESS_RANGE(hhdm), vaddr);
+}
+
+bool hhdm_paddr_in_range(paddr_t paddr) {
+    return paddr < ADDRESS_RANGE(hhdm).size;
+}
+
+bool hhdm_ptr_in_range(void *ptr) {
+    return hhdm_vaddr_in_range((vaddr_t) ptr);
+}
 
 static struct pt_deferred_free *pt_free_list;
 static struct spinlock pt_free_lock = SPINLOCK_INIT;
@@ -213,6 +228,41 @@ uintptr_t vmm_make_user_pml4(void) {
     return hhdm_ptr_to_paddr(user_pml4);
 }
 
+/* Leaf frames are not touched here, this gets rid of structural page tables */
+static void vmm_free_user_subtree(struct page_table *pdpt) {
+    for (int i3 = 0; i3 < PT_ENTRIES; i3++) {
+        pte_t e3 = pdpt->entries[i3];
+        if (!ENTRY_PRESENT(e3) || (e3 & PAGE_PAGE_SIZE))
+            continue;
+
+        struct page_table *pd = pt_next_table(e3);
+        for (int i2 = 0; i2 < PT_ENTRIES; i2++) {
+            pte_t e2 = pd->entries[i2];
+            if (!ENTRY_PRESENT(e2) || (e2 & PAGE_2MB_page))
+                continue;
+
+            struct page_table *pt = pt_next_table(e2);
+            enqueue_pt_free(hhdm_ptr_to_paddr(pt));
+        }
+        enqueue_pt_free(hhdm_ptr_to_paddr(pd));
+    }
+}
+
+void vmm_unmap_all_user_pages(struct page_table *pml4, enum vmm_flags vflags) {
+    (void) vflags;
+
+    for (int i4 = 0; i4 < KERNEL_PML4_START_INDEX; i4++) {
+        pte_t e4 = pml4->entries[i4];
+        if (!ENTRY_PRESENT(e4))
+            continue;
+
+        struct page_table *pdpt = pt_next_table(e4);
+        vmm_free_user_subtree(pdpt);
+        enqueue_pt_free(hhdm_ptr_to_paddr(pdpt));
+        pml4->entries[i4] = 0;
+    }
+}
+
 void vmm_init(struct limine_memmap_response *memmap,
               struct limine_executable_address_response *xa) {
     kernel_pml4 = alloc_pt();
@@ -296,18 +346,21 @@ static inline bool vmm_is_table_empty(struct page_table *table) {
     return true;
 }
 
-enum errno vmm_map_2mb_page(uintptr_t virt, uintptr_t phys, uint64_t flags,
-                            enum vmm_flags vflags) {
+enum errno vmm_map_2mb_page_full(struct page_table *pml4, vaddr_t virt,
+                                 paddr_t phys, uint64_t flags,
+                                 enum vmm_flags vflags) {
     if (virt == 0 || !IS_ALIGNED(virt, PAGE_2MB) || !IS_ALIGNED(phys, PAGE_2MB))
         panic(
             "vmm_map_2mb_page: addresses must be 2MiB aligned and non-zero\n");
 
+    uint64_t user_flag = (vflags & VMM_FLAG_USER) ? PAGE_USER_ALLOWED : 0;
+    flags |= user_flag;
     pt_walk_enter();
     struct page_table *tables[3];
     enum irql irqls[2];
     pte_t *ptes[2];
 
-    tables[0] = kernel_pml4;
+    tables[0] = pml4;
 
     enum errno ret = ERR_OK;
     int level = 0;
@@ -318,7 +371,7 @@ enum errno vmm_map_2mb_page(uintptr_t virt, uintptr_t phys, uint64_t flags,
         ptes[level] = entry;
 
         if (!ENTRY_PRESENT(*entry)) {
-            if ((ret = pte_init(entry, 0)) < 0) {
+            if ((ret = pte_init(entry, user_flag)) < 0) {
                 level++;
                 goto out;
             }
@@ -345,6 +398,18 @@ out:
 
     pt_walk_exit();
     return ret;
+}
+
+enum errno vmm_map_2mb_page(vaddr_t virt, paddr_t phys, uint64_t flags,
+                            enum vmm_flags vflags) {
+    return vmm_map_2mb_page_full(kernel_pml4, virt, phys, flags, vflags);
+}
+
+enum errno vmm_map_2mb_page_user(struct page_table *pml4, vaddr_t virt,
+                                 paddr_t phys, uint64_t flags,
+                                 enum vmm_flags vflags) {
+    return vmm_map_2mb_page_full(pml4, virt, phys, flags,
+                                 vflags | VMM_FLAG_USER);
 }
 
 void vmm_unmap_2mb_page(uintptr_t virt, enum vmm_flags vflags) {
@@ -404,10 +469,14 @@ out:
     pt_walk_exit();
 }
 
-enum errno vmm_map_page(uintptr_t virt, uintptr_t phys, uint64_t flags,
-                        enum vmm_flags vflags) {
+enum errno vmm_map_page_full(struct page_table *pml4, vaddr_t virt,
+                             paddr_t phys, uint64_t flags,
+                             enum vmm_flags vflags) {
     if (virt == 0)
         panic("CANNOT MAP PAGE 0x0!!!\n");
+
+    uint64_t user_flag = (vflags & VMM_FLAG_USER) ? PAGE_USER_ALLOWED : 0;
+    flags |= user_flag;
 
     pt_walk_enter();
     enum errno ret = ERR_OK;
@@ -415,7 +484,7 @@ enum errno vmm_map_page(uintptr_t virt, uintptr_t phys, uint64_t flags,
     enum irql irqls[3];
     pte_t *entries[3];
 
-    tables[0] = kernel_pml4;
+    tables[0] = pml4;
 
     int level = 0;
     for (level = 0; level < 3; level++) {
@@ -425,7 +494,7 @@ enum errno vmm_map_page(uintptr_t virt, uintptr_t phys, uint64_t flags,
         irqls[level] = pte_lock(entry);
 
         if (!ENTRY_PRESENT(*entry)) {
-            if ((ret = pte_init(entry, 0)) < 0) {
+            if ((ret = pte_init(entry, user_flag)) < 0) {
                 level++;
                 goto out;
             }
@@ -452,6 +521,17 @@ out:
 
     pt_walk_exit();
     return ret;
+}
+
+enum errno vmm_map_page(vaddr_t virt, paddr_t phys, uint64_t flags,
+                        enum vmm_flags vflags) {
+    return vmm_map_page_full(kernel_pml4, virt, phys, flags, vflags);
+}
+
+enum errno vmm_map_page_user(struct page_table *pml4, vaddr_t virt,
+                             paddr_t phys, uint64_t flags,
+                             enum vmm_flags vflags) {
+    return vmm_map_page_full(pml4, virt, phys, flags, vflags | VMM_FLAG_USER);
 }
 
 void vmm_unmap_page(uintptr_t virt, enum vmm_flags vflags) {
@@ -541,44 +621,6 @@ uintptr_t vmm_get_phys(uintptr_t virt, enum vmm_flags vflags) {
 out:
     pt_walk_exit();
     return phys;
-}
-
-uintptr_t vmm_get_phys_unsafe(uintptr_t virt) {
-    struct page_table *current_table = kernel_pml4;
-
-    for (uint64_t i = 0; i < 2; i++) {
-        uint64_t level = (virt >> (39 - i * 9)) & 0x1FF;
-        pte_t *entry = &current_table->entries[level];
-        if (!ENTRY_PRESENT(*entry))
-            goto err;
-
-        current_table = pt_next_table(*entry);
-    }
-
-    uint64_t L2 = (virt >> 21) & 0x1FF;
-    pte_t *entry = &current_table->entries[L2];
-
-    if (!ENTRY_PRESENT(*entry))
-        goto err;
-
-    if (*entry & PAGE_2MB_page) {
-        uintptr_t phys_base = *entry & PAGE_2MB_PHYS_MASK;
-        uintptr_t offset = virt & (PAGE_2MB - 1);
-        return phys_base + offset;
-    }
-
-    current_table = pt_next_table(*entry);
-
-    uint64_t L1 = (virt >> 12) & 0x1FF;
-    entry = &current_table->entries[L1];
-
-    if (!ENTRY_PRESENT(*entry))
-        goto err;
-
-    return (*entry & PAGE_PHYS_MASK) + (virt & 0xFFF);
-
-err:
-    return (uintptr_t) -1;
 }
 
 void *vmm_map(paddr_t paddr, vaddr_t vaddr, uint64_t len, uint64_t flags,
@@ -681,4 +723,8 @@ void vmm_unmap_virt(void *addr, uint64_t len, enum vmm_flags vflags) {
     for (uint64_t i = 0; i < total_pages; i++) {
         vmm_unmap_page(aligned_virt + i * PAGE_SIZE, vflags);
     }
+}
+
+struct page_table *vmm_phys_to_pml4(paddr_t paddr) {
+    return (struct page_table *) hhdm_paddr_to_ptr(paddr);
 }

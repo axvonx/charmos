@@ -94,8 +94,8 @@ void elf_map(uintptr_t user_pml4_phys, void *elf_data) {
                        (uint8_t *) elf_data + file_pos, to_copy);
             }
 
-            vmm_map_page_user(user_pml4_phys, vaddr, phys, flags,
-                              VMM_FLAG_NONE);
+            vmm_map_page_user(vmm_phys_to_pml4(user_pml4_phys), vaddr, phys,
+                              flags, VMM_FLAG_USER);
         }
     }
 }
@@ -108,9 +108,9 @@ uintptr_t map_user_stack(uintptr_t user_pml4_phys) {
         if (!phys)
             panic("Failed to alloc user stack\n");
 
-        vmm_map_page_user(user_pml4_phys, v, phys,
+        vmm_map_page_user(vmm_phys_to_pml4(user_pml4_phys), v, phys,
                           PAGE_WRITE | PAGE_USER_ALLOWED | PAGE_PRESENT,
-                          VMM_FLAG_NONE);
+                          VMM_FLAG_USER);
     }
 
     return USER_STACK_TOP - 0x2000;

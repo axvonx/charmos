@@ -10,7 +10,7 @@
 static _Atomic(struct rwlock) panic_rwlock;
 static _Atomic(struct rwlock *) panic_rwlock_addr;
 
-static void rwlocpanic(char *msg, struct rwlock *offending_lock) {
+static void rwlock_panic(char *msg, struct rwlock *offending_lock) {
 
     struct rwlock *panic_expected = NULL;
     if (atomic_compare_exchange_weak_explicit(
@@ -130,7 +130,7 @@ void rwlock_lock(struct rwlock *lock, enum rwlock_acquire_type acq_type) {
         }
 
         if (RWLOCK_GET_OWNER_FROM_WORD(old) == (uintptr_t) curr)
-            rwlocpanic("recursive lock", lock);
+            rwlock_panic("recursive lock", lock);
 
         enum irql irql_out;
         struct turnstile *ts = turnstile_lookup(lock, &irql_out);
@@ -223,13 +223,13 @@ static uintptr_t rwlock_unlock_get_val_to_sub(struct rwlock *lock) {
     if (lock_word & RWLOCK_WRITER_HELD_BIT) {
         if (RWLOCK_GET_OWNER_FROM_WORD(lock_word) !=
             (uintptr_t) current_thread) {
-            rwlocpanic("non-owner thread unlocked as exclusive waiter", lock);
+            rwlock_panic("non-owner thread unlocked as exclusive waiter", lock);
         }
 
         return ((uintptr_t) current_thread) | RWLOCK_WRITER_HELD_BIT;
     } else {
         if ((lock_word & RWLOCK_READER_COUNT_MASK) == 0)
-            rwlocpanic("reader unlocked with no readers left on lock", lock);
+            rwlock_panic("reader unlocked with no readers left on lock", lock);
 
         return RWLOCK_READER_COUNT_ONE;
     }
@@ -314,4 +314,8 @@ void rwlock_unlock(struct rwlock *lock) {
     }
 
     thread_unboost_self();
+}
+
+bool rwlock_held(struct rwlock *lock, enum rwlock_acquire_type type) {
+    return rwlock_locked_with_type(lock, type);
 }

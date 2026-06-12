@@ -26,7 +26,7 @@ void rt_scheduler_static_work_init(struct rt_scheduler_static *rts) {
 static struct rt_scheduler_mapping *
 create_mapping(struct rt_scheduler_static *rts, rt_domain_id_t id) {
     struct rt_scheduler_mapping *ret =
-        kzalloc(sizeof(struct rt_scheduler_mapping));
+        kmalloc(sizeof(struct rt_scheduler_mapping), ALLOC_FLAGS_ZERO);
     if (!ret)
         return NULL;
 

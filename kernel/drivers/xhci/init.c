@@ -13,7 +13,8 @@
 #include "internal.h"
 
 void xhci_setup_event_ring(struct xhci_device *dev) {
-    struct xhci_erst_entry *erst = kzalloc_aligned(PAGE_SIZE, PAGE_SIZE);
+    struct xhci_erst_entry *erst =
+        kmalloc_aligned(PAGE_SIZE, PAGE_SIZE, ALLOC_FLAGS_ZERO);
 
     paddr_t erst_phys = vmm_get_phys((vaddr_t) erst, VMM_FLAG_NONE);
 
@@ -35,7 +36,8 @@ void xhci_setup_command_ring(struct xhci_device *dev) {
     dev->cmd_ring = xhci_allocate_ring();
     uintptr_t trb_phys = dev->cmd_ring->phys;
 
-    struct xhci_dcbaa *dcbaa_virt = kzalloc_aligned(PAGE_SIZE, PAGE_SIZE);
+    struct xhci_dcbaa *dcbaa_virt =
+        kmalloc_aligned(PAGE_SIZE, PAGE_SIZE, ALLOC_FLAGS_ZERO);
     uintptr_t dcbaa_phys = vmm_get_phys((uintptr_t) dcbaa_virt, VMM_FLAG_NONE);
 
     dev->dcbaa = dcbaa_virt;
@@ -123,7 +125,7 @@ static void xhci_disable_slot_done(struct xhci_device *dev,
  * before any later ENABLE SLOT, so slot reuse is
  * still safe. */
 void xhci_disable_slot(struct xhci_device *dev, uint8_t slot_id) {
-    struct xhci_disable_slot_async *a = kzalloc(sizeof(*a));
+    struct xhci_disable_slot_async *a = kmalloc(sizeof(*a), ALLOC_FLAGS_ZERO);
     if (!a)
         return;
 
@@ -313,7 +315,8 @@ void *xhci_map_mmio(uint8_t bus, uint8_t slot, uint8_t func) {
 }
 
 struct xhci_device *xhci_device_create(void *mmio) {
-    struct xhci_device *dev = kzalloc(sizeof(struct xhci_device));
+    struct xhci_device *dev =
+        kmalloc(sizeof(struct xhci_device), ALLOC_FLAGS_ZERO);
     if (unlikely(!dev))
         panic("Could not allocate space for XHCI device");
 
@@ -375,7 +378,7 @@ enum usb_error xhci_port_init(struct xhci_port *p) {
     enum usb_error err = USB_OK;
     uint8_t slot_id;
     struct usb_device *usb;
-    if (!(usb = kzalloc(sizeof(struct usb_device)))) {
+    if (!(usb = kmalloc(sizeof(struct usb_device), ALLOC_FLAGS_ZERO))) {
         return USB_ERR_OOM;
     }
 

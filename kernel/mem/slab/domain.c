@@ -15,9 +15,9 @@ void slab_domain_build_locality_lists(struct slab_domain *sdom) {
     sdom->zonelist_entry_count = zl->count;
 
     sdom->pageable_zonelist.entries =
-        kzalloc(sizeof(struct slab_cache_ref) * zl->count);
+        kmalloc(sizeof(struct slab_cache_ref) * zl->count, ALLOC_FLAGS_ZERO);
     sdom->nonpageable_zonelist.entries =
-        kzalloc(sizeof(struct slab_cache_ref) * zl->count);
+        kmalloc(sizeof(struct slab_cache_ref) * zl->count, ALLOC_FLAGS_ZERO);
 
     if (!sdom->nonpageable_zonelist.entries || !sdom->pageable_zonelist.entries)
         panic("Could not allocate slab domain zonelist entries!\n");
@@ -62,8 +62,10 @@ void slab_domain_link_caches(struct slab_domain *domain,
 }
 
 void slab_domain_init_caches(struct slab_domain *dom) {
-    dom->local_nonpageable_cache = kzalloc(sizeof(struct slab_caches));
-    dom->local_pageable_cache = kzalloc(sizeof(struct slab_caches));
+    dom->local_nonpageable_cache =
+        kmalloc(sizeof(struct slab_caches), ALLOC_FLAGS_ZERO);
+    dom->local_pageable_cache =
+        kmalloc(sizeof(struct slab_caches), ALLOC_FLAGS_ZERO);
     if (!dom->local_pageable_cache || !dom->local_nonpageable_cache)
         panic("Could not allocate slab cache\n");
 
@@ -110,7 +112,8 @@ void slab_domain_init_stats(struct slab_domain *domain) {
 
     domain->stats->private = domain;
     domain->buckets =
-        kzalloc(sizeof(struct slab_domain_bucket) * SLAB_STAT_SERIES_CAPACITY);
+        kmalloc(sizeof(struct slab_domain_bucket) * SLAB_STAT_SERIES_CAPACITY,
+                ALLOC_FLAGS_ZERO);
 
     if (!domain->stats || !domain->stats->buckets || !domain->buckets)
         panic("Failed to create domain stat series\n");
@@ -151,7 +154,8 @@ void slab_domain_move_slabs(void) {
 void slab_domain_init(void) {
     for (size_t i = 0; i < global.domain_count; i++) {
         struct domain *domain = global.domains[i];
-        struct slab_domain *sdomain = kzalloc(sizeof(struct slab_domain));
+        struct slab_domain *sdomain =
+            kmalloc(sizeof(struct slab_domain), ALLOC_FLAGS_ZERO);
         if (!sdomain)
             panic("Failed to allocate slab domain!\n");
 

@@ -4,7 +4,7 @@
 #include <math/to_bits_bytes.h>
 #include <mem/hhdm.h>
 #include <mem/pmm.h>
-#include <mem/vaddr_alloc.h>
+#include <mem/vas.h>
 
 #include "internal.h"
 

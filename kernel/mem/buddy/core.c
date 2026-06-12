@@ -1,8 +1,10 @@
 #include <console/printf.h>
+#include <kassert.h>
 #include <math/align.h>
 #include <mem/alloc.h>
 #include <mem/bitmap.h>
 #include <mem/buddy.h>
+#include <mem/page.h>
 #include <mem/pmm.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -41,15 +43,18 @@ paddr_t buddy_alloc_pages(struct free_area *free_area, size_t count) {
         if (!page)
             return 0x0;
 
+        buddy_page_assert_tag(page, PAGE_TAG_BUDDY);
         uint64_t new_order = current_order - 1;
         uint64_t buddy_pfn = buddy_page_get_pfn(page) + (1ULL << new_order);
 
+        /* Send the other half away */
         struct buddy_page *buddy = buddy_page_for_pfn(buddy_pfn);
-        memset(buddy, 0, sizeof(*buddy));
+        buddy_page_tag(buddy);
+        buddy_page_set_next_pfn(buddy, 0);
+        buddy_page_set_order(page, new_order);
+        buddy_page_set_order(buddy, new_order);
 
-        page->order = new_order;
-        buddy->order = new_order;
-
+        /* Put them in their new free areas */
         buddy_add_to_free_area(page, &free_area[new_order]);
         buddy_add_to_free_area(buddy, &free_area[new_order]);
 
@@ -60,7 +65,10 @@ paddr_t buddy_alloc_pages(struct free_area *free_area, size_t count) {
     if (!page)
         return 0x0;
 
-    return PFN_TO_PAGE(buddy_page_get_pfn(page));
+    buddy_page_assert_tag(page, PAGE_TAG_BUDDY);
+    buddy_page_untag(page);
+
+    return buddy_page_get_paddr(page);
 }
 
 void buddy_free_pages(paddr_t addr, size_t count, struct free_area *free_area,
@@ -68,9 +76,8 @@ void buddy_free_pages(paddr_t addr, size_t count, struct free_area *free_area,
     if (!addr || count == 0)
         return;
 
-    uint64_t pfn = (uintptr_t) addr / PAGE_SIZE;
-    if (pfn >= total_pages)
-        return;
+    uint64_t pfn = PAGE_TO_PFN(addr);
+    kassert(pfn < total_pages);
 
     uint64_t order = 0, size = 1;
     while (size < count) {
@@ -79,8 +86,10 @@ void buddy_free_pages(paddr_t addr, size_t count, struct free_area *free_area,
     }
 
     struct buddy_page *page = buddy_page_for_pfn(pfn);
-    memset(page, 0, sizeof(*page));
-    page->order = order;
+    buddy_page_assert_tag(page, PAGE_TAG_NONE);
+    buddy_page_set_next_pfn(page, 0);
+    buddy_page_set_order(page, order);
+    buddy_page_tag(page);
 
     while (order < MAX_ORDER - 1) {
         uint64_t buddy_pfn = pfn ^ (1ULL << order);
@@ -89,9 +98,11 @@ void buddy_free_pages(paddr_t addr, size_t count, struct free_area *free_area,
             break;
 
         struct buddy_page *buddy = buddy_page_for_pfn(buddy_pfn);
-        if (!buddy->is_free || buddy->order != order)
+
+        if (!buddy_page_is_free(buddy) || buddy_page_get_order(buddy) != order)
             break;
 
+        buddy_page_tag(buddy);
         struct buddy_page *prev = NULL;
         struct buddy_page *cur = free_area[order].next;
 
@@ -102,7 +113,7 @@ void buddy_free_pages(paddr_t addr, size_t count, struct free_area *free_area,
 
         if (cur == buddy) {
             if (prev) {
-                prev->next_pfn = buddy->next_pfn;
+                buddy_page_set_next_pfn(prev, buddy_page_get_next_pfn(buddy));
             } else {
                 free_area[order].next = buddy_page_get_next(buddy);
             }
@@ -111,8 +122,9 @@ void buddy_free_pages(paddr_t addr, size_t count, struct free_area *free_area,
 
         pfn = (pfn < buddy_pfn) ? pfn : buddy_pfn;
         page = buddy_page_for_pfn(pfn);
-        memset(page, 0, sizeof(*page));
-        page->order = ++order;
+        buddy_page_set_next_pfn(page, 0);
+        buddy_page_set_order(page, ++order);
+        buddy_page_tag(page);
     }
 
     buddy_add_to_free_area(page, &free_area[order]);

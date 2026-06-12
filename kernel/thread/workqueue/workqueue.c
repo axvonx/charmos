@@ -95,7 +95,7 @@ struct workqueue *workqueue_create_internal(struct workqueue_attributes *attrs,
     size_t size = permanent ? sizeof(struct workqueue)
                             : PAGE_ALIGN_UP(sizeof(struct workqueue));
 
-    struct workqueue *wq = kzalloc(size);
+    struct workqueue *wq = kmalloc(size, ALLOC_FLAGS_ZERO);
     if (!wq)
         goto err;
 
@@ -117,12 +117,13 @@ struct workqueue *workqueue_create_internal(struct workqueue_attributes *attrs,
     if (permanent)
         size = PAGE_ALIGN_UP(size);
 
-    wq->oneshot_works = kzalloc(size);
+    wq->oneshot_works = kmalloc(size, ALLOC_FLAGS_ZERO);
     if (!wq->oneshot_works)
         goto err;
 
     if (attrs->flags & WORKQUEUE_FLAG_STATIC_WORKERS) {
-        wq->worker_array = kzalloc(sizeof(struct worker) * attrs->max_workers);
+        wq->worker_array = kmalloc(sizeof(struct worker) * attrs->max_workers,
+                                   ALLOC_FLAGS_ZERO);
         if (!wq->worker_array)
             goto err;
     }
@@ -135,7 +136,7 @@ struct workqueue *workqueue_create_internal(struct workqueue_attributes *attrs,
         size_t needed = vsnprintf(NULL, 0, fmt, args_copy) + 1;
         va_end(args_copy);
 
-        wq->name = kzalloc(needed);
+        wq->name = kmalloc(needed, ALLOC_FLAGS_ZERO);
         if (!wq->name)
             goto err;
 
@@ -267,7 +268,7 @@ struct worker *workqueue_spawn_permanent_worker(struct workqueue *queue) {
     if (!thread)
         return NULL;
 
-    struct worker *worker = kzalloc(sizeof(struct worker));
+    struct worker *worker = kmalloc(sizeof(struct worker), ALLOC_FLAGS_ZERO);
     if (!worker)
         return NULL;
 
@@ -289,7 +290,8 @@ struct worker *workqueue_spawn_permanent_worker(struct workqueue *queue) {
 
 void workqueues_permanent_init(void) {
     int64_t num_workqueues = global.core_count;
-    global.workqueues = kzalloc(sizeof(struct workqueue *) * num_workqueues);
+    global.workqueues =
+        kmalloc(sizeof(struct workqueue *) * num_workqueues, ALLOC_FLAGS_ZERO);
 
     if (!global.workqueues)
         panic("Failed to allocate space for workqueues!\n");
@@ -336,7 +338,7 @@ struct work *work_init(struct work *work, work_function fn,
 }
 
 struct work *work_create(work_function fn, struct work_args args) {
-    struct work *work = kzalloc(sizeof(struct work));
+    struct work *work = kmalloc(sizeof(struct work), ALLOC_FLAGS_ZERO);
     if (!work)
         return NULL;
 

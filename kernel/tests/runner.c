@@ -1,7 +1,9 @@
+#include <colors.h>
 #include <console/panic.h>
 #include <console/printf.h>
 #include <global.h>
 #include <irq/irq.h>
+#include <mem/vas.h>
 #include <sleep.h>
 #include <smp/core.h>
 #include <stdbool.h>
@@ -10,7 +12,7 @@
 #include <tests.h>
 #include <time.h>
 
-#include <colors.h>
+#include "mem/slab/internal.h"
 
 LOG_SITE_DECLARE_DEFAULT(test);
 LOG_HANDLE_DECLARE_DEFAULT(test);
@@ -122,6 +124,8 @@ void tests_run(void) {
               skip_color);
 
     test_info("%s%s" ANSI_RESET " (%llu ms)", color, msg, total_time);
+
+    vas_space_dump(slab_global.vas);
 
 #endif
 }

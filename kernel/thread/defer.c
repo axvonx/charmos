@@ -75,7 +75,8 @@ static enum irq_result hpet_irq_handler(void *ctx, uint8_t irq,
 
 bool defer_enqueue(work_function func, struct work_args args,
                    uint64_t delay_ms) {
-    struct deferred_event *ev = kzalloc(sizeof(struct deferred_event));
+    struct deferred_event *ev =
+        kmalloc(sizeof(struct deferred_event), ALLOC_FLAGS_ZERO);
     if (!ev)
         return false;
 
@@ -111,7 +112,8 @@ bool defer_enqueue(work_function func, struct work_args args,
 
 void defer_init(void) {
     defer_queues =
-        kzalloc(sizeof(struct deferred_event_queue) * hpet_timer_count);
+        kmalloc(sizeof(struct deferred_event_queue) * hpet_timer_count,
+                ALLOC_FLAGS_ZERO);
     if (!defer_queues)
         panic("Defer queue allocation failed!\n");
 

@@ -9,11 +9,35 @@
     for (pos = rbt_first(root), tmp = rbt_next(pos); pos != NULL;              \
          pos = tmp, tmp = rbt_next(pos))
 
+#define rbt_for_each_entry_safe(pos, tmp, type, member, root)                  \
+    for (pos = rbt_entry(rbt_first(root), type, member),                       \
+        tmp = rbt_entry(rbt_next(&pos->member), type, member);                 \
+         &pos->member != NULL;                                                 \
+         pos = tmp, tmp = rbt_entry(rbt_next(&tmp->member), type, member))
+
+#define rbt_for_each_safe_reverse(pos, tmp, root)                              \
+    for (pos = rbt_last(root), tmp = rbt_prev(pos); pos != NULL;               \
+         pos = tmp, tmp = rbt_prev(pos))
+
+#define rbt_for_each_entry_safe_reverse(pos, tmp, type, member, root)          \
+    for (pos = rbt_entry(rbt_last(root), type, member),                        \
+        tmp = rbt_entry(rbt_prev(&pos->member), type, member);                 \
+         &pos->member != NULL;                                                 \
+         pos = tmp, tmp = rbt_entry(rbt_prev(&tmp->member), type, member))
+
 #define rbt_for_each(pos, root)                                                \
     for (pos = rbt_first(root); pos != NULL; pos = rbt_next(pos))
 
+#define rbt_for_each_entry(pos, type, member, root)                            \
+    for (pos = rbt_entry(rbt_first(root), type, member); &pos->member != NULL; \
+         pos = rbt_entry(rbt_next(&pos->member), type, member))
+
 #define rbt_for_each_reverse(pos, root)                                        \
     for (pos = rbt_last(root); pos != NULL; pos = rbt_prev(pos))
+
+#define rbt_for_each_entry_reverse(pos, type, member, root)                    \
+    for (pos = rbt_entry(rbt_last(root), type, member); &pos->member != NULL;  \
+         pos = rbt_entry(rbt_prev(&pos->member), type, member))
 
 #define rbt_entry(ptr, type, member) container_of(ptr, type, member)
 #define rbt_parent(n) ((n)->parent)

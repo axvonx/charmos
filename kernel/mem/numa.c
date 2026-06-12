@@ -46,9 +46,9 @@ static uint8_t idx_of_val(uint8_t *buf, size_t len, size_t search_for) {
 }
 
 void numa_construct_relative_distances(struct numa_node *node) {
-    node->rel_dists = kzalloc(node->distances_cnt);
-    uint8_t *tmp = kzalloc(node->distances_cnt);
-    node->nodes_by_distance = kzalloc(node->distances_cnt);
+    node->rel_dists = kmalloc(node->distances_cnt, ALLOC_FLAGS_ZERO);
+    uint8_t *tmp = kmalloc(node->distances_cnt, ALLOC_FLAGS_ZERO);
+    node->nodes_by_distance = kmalloc(node->distances_cnt, ALLOC_FLAGS_ZERO);
     if (!node->rel_dists || !tmp || !node->nodes_by_distance)
         panic("could not allocate numa relative distances\n");
 

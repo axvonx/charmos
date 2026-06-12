@@ -75,7 +75,8 @@ static enum errno detect_mbr_partitions(struct block_device *disk,
         return ERR_FS_CORRUPT;
 
     disk->partition_count = count;
-    disk->partitions = kzalloc(sizeof(struct partition) * count);
+    disk->partitions =
+        kmalloc(sizeof(struct partition) * count, ALLOC_FLAGS_ZERO);
     if (unlikely(!disk->partitions))
         return ERR_NO_MEM;
 
@@ -121,7 +122,8 @@ static bool detect_gpt_partitions(struct block_device *disk, uint8_t *sector) {
         return false;
 
     disk->partition_count = valid_count;
-    disk->partitions = kzalloc(sizeof(struct partition) * valid_count);
+    disk->partitions =
+        kmalloc(sizeof(struct partition) * valid_count, ALLOC_FLAGS_ZERO);
 
     int idx = 0;
     for (uint32_t i = 0; i < count; i++) {
@@ -228,7 +230,7 @@ enum fs_type detect_fs(struct block_device *disk) {
     if (!found_partitions) {
         /* No partition table - create one big partition spanning the disk */
         disk->partition_count = 1;
-        disk->partitions = kzalloc(sizeof(struct partition));
+        disk->partitions = kmalloc(sizeof(struct partition), ALLOC_FLAGS_ZERO);
         if (!disk->partitions)
             return FS_UNKNOWN;
 

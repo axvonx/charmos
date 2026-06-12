@@ -3,6 +3,10 @@
 #include <global.h>
 #include <types/types.h>
 
+bool hhdm_vaddr_in_range(vaddr_t vaddr);
+bool hhdm_paddr_in_range(paddr_t paddr);
+bool hhdm_ptr_in_range(void *ptr);
+
 static inline vaddr_t hhdm_paddr_to_vaddr(paddr_t p) {
     return p + global.hhdm_offset;
 }

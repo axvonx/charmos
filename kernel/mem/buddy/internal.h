@@ -3,6 +3,7 @@
 #include <math/min_max.h>
 #include <mem/bitmap.h>
 #include <mem/buddy.h>
+#include <mem/page.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <sync/spinlock.h>
@@ -11,41 +12,103 @@
 #define PAGE_TO_BUDDY_PAGE(p) ((struct buddy_page *) (p))
 #define BUDDY_PAGE_TO_PAGE(p) ((struct page *) (p))
 
-/* This must be 8 bytes, since struct page is 8 bytes */
+/*
+ * Layout of buddy_page::meta
+ *   bits [0,  2]  : page tag (PAGE_TAG_*)
+ *   bit  [3]      : is_free
+ *   bits [4, 11]  : order (8 bits)
+ *   bits [12, 63] : next_pfn (52 bits)
+ */
+#define BUDDY_IS_FREE_SHIFT 3
+#define BUDDY_IS_FREE_MASK (1ULL << BUDDY_IS_FREE_SHIFT)
+
+#define BUDDY_ORDER_SHIFT 4
+#define BUDDY_ORDER_BITS 8
+#define BUDDY_ORDER_MASK (((1ULL << BUDDY_ORDER_BITS) - 1) << BUDDY_ORDER_SHIFT)
+
+#define BUDDY_NEXT_PFN_SHIFT PAGE_4K_SHIFT
+#define BUDDY_NEXT_PFN_BITS (64 - PAGE_4K_SHIFT)
+#define BUDDY_NEXT_PFN_MASK                                                    \
+    (((1ULL << BUDDY_NEXT_PFN_BITS) - 1) << BUDDY_NEXT_PFN_SHIFT)
+
 struct buddy_page {
-    uint64_t next_pfn : (64 - PAGE_4K_SHIFT); /* 52 bits... */
-    uint64_t order : 8;                       /* 8 bits */
-    uint64_t is_free : 1;                     /* 1 bit */
-    uint64_t available : 3;                   /* leftover */
+    uint64_t meta;
 };
 static_assert_struct_size_eq(buddy_page, 8);
 
-static inline bool page_pfn_allocated_in_boot_bitmap(uint64_t pfn) {
+static inline uint64_t buddy_page_get_order(const struct buddy_page *bp) {
+    return (bp->meta & BUDDY_ORDER_MASK) >> BUDDY_ORDER_SHIFT;
+}
+
+static inline void buddy_page_set_order(struct buddy_page *bp, uint64_t order) {
+    bp->meta = (bp->meta & ~BUDDY_ORDER_MASK) |
+               ((order << BUDDY_ORDER_SHIFT) & BUDDY_ORDER_MASK);
+}
+
+static inline pfn_t buddy_page_get_next_pfn(const struct buddy_page *bp) {
+    return (pfn_t) ((bp->meta & BUDDY_NEXT_PFN_MASK) >> BUDDY_NEXT_PFN_SHIFT);
+}
+
+static inline void buddy_page_set_next_pfn(struct buddy_page *bp, pfn_t pfn) {
+    bp->meta = (bp->meta & ~BUDDY_NEXT_PFN_MASK) |
+               (((uint64_t) pfn << BUDDY_NEXT_PFN_SHIFT) & BUDDY_NEXT_PFN_MASK);
+}
+
+static inline bool buddy_page_is_free(const struct buddy_page *bp) {
+    return (bp->meta & BUDDY_IS_FREE_MASK) != 0;
+}
+
+static inline void buddy_page_set_free(struct buddy_page *bp, bool is_free) {
+    bp->meta =
+        (bp->meta & ~BUDDY_IS_FREE_MASK) | (is_free ? BUDDY_IS_FREE_MASK : 0);
+}
+
+static inline bool page_pfn_allocated_in_boot_bitmap(pfn_t pfn) {
     return test_bit(pfn);
 }
 
-static inline bool buddy_page_pfn_free(uint64_t pfn) {
+static inline bool buddy_page_pfn_free(pfn_t pfn) {
     if (pfn >= global.last_pfn) {
         return false;
     }
 
     struct page *p = &global.page_array[pfn];
 
-    return ((struct buddy_page *) p)->is_free;
+    return buddy_page_is_free((struct buddy_page *) p);
 }
 
-static inline struct buddy_page *buddy_page_for_pfn(uint64_t pfn) {
+static inline struct buddy_page *buddy_page_for_pfn(pfn_t pfn) {
     return PAGE_TO_BUDDY_PAGE(page_for_pfn(pfn));
 }
 
-static inline uint64_t buddy_page_get_pfn(struct buddy_page *bp) {
+static inline pfn_t buddy_page_get_pfn(struct buddy_page *bp) {
     return page_get_pfn((struct page *) bp);
 }
 
+static inline paddr_t buddy_page_get_paddr(struct buddy_page *bp) {
+    return PFN_TO_PAGE(buddy_page_get_pfn(bp));
+}
+
 static inline struct buddy_page *buddy_page_get_next(struct buddy_page *bp) {
-    if (bp->next_pfn == 0)
+    pfn_t pfn = buddy_page_get_next_pfn(bp);
+    if (pfn == 0)
         return NULL;
 
-    uint64_t pfn = bp->next_pfn;
     return buddy_page_for_pfn(pfn);
+}
+
+static inline void buddy_page_tag(struct buddy_page *page) {
+    if (page)
+        page_set_tag(BUDDY_PAGE_TO_PAGE(page), PAGE_TAG_BUDDY);
+}
+
+static inline void buddy_page_untag(struct buddy_page *page) {
+    if (page)
+        page_set_tag(BUDDY_PAGE_TO_PAGE(page), PAGE_TAG_NONE);
+}
+
+static inline void buddy_page_assert_tag(struct buddy_page *page,
+                                         enum page_tag tag) {
+    if (page)
+        page_assert_tag(BUDDY_PAGE_TO_PAGE(page), tag);
 }

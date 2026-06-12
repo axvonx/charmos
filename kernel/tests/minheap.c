@@ -10,7 +10,8 @@ static struct minheap_node *nodes[MINHEAP_TEST_TIMES] = {0};
 
 static void mhtest_do_inserts(struct minheap *mh) {
     for (int i = 0; i < MINHEAP_TEST_TIMES; i++) {
-        struct minheap_node *mhn = kzalloc(sizeof(struct minheap_node));
+        struct minheap_node *mhn =
+            kmalloc(sizeof(struct minheap_node), ALLOC_FLAGS_ZERO);
         mhn->key = MINHEAP_TEST_TIMES - i;
         nodes[i] = mhn;
         minheap_insert(mh, mhn, mhn->key);

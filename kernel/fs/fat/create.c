@@ -78,7 +78,7 @@ static bool fat_extend_directory(struct fat_fs *fs, uint32_t prev_cluster,
     if (new_cluster == 0)
         return false;
 
-    uint8_t *cluster_buf = kzalloc(fs->cluster_size);
+    uint8_t *cluster_buf = kmalloc(fs->cluster_size, ALLOC_FLAGS_ZERO);
     if (!fat_write_cluster(fs, new_cluster, cluster_buf)) {
         kfree(cluster_buf);
         return false;
@@ -199,7 +199,7 @@ bool fat_mkdir(struct fat_fs *fs, uint32_t parent_cluster, const char *name,
 
     *out_dirent = new_dirent;
 
-    uint8_t *buf = kzalloc(fs->cluster_size);
+    uint8_t *buf = kmalloc(fs->cluster_size, ALLOC_FLAGS_ZERO);
     if (!buf)
         return false;
 

@@ -3,12 +3,16 @@
 #include <compiler.h>
 #include <global.h>
 #include <math/align.h>
+#include <math/kb_mb_gb_tb.h>
+#include <mem/hhdm.h>
 #include <stdint.h>
 #include <sync/spinlock.h>
 
-#define PAGE_SIZE 4096ULL
-#define PAGE_2MB 0x200000ULL
-#define PAGE_1GB 0x40000000ULL
+struct folio;
+
+#define PAGE_SIZE KB(4)
+#define PAGE_2MB MB(2)
+#define PAGE_1GB GB(1)
 
 #define PAGE_PRESENT (0x1UL)
 #define PAGE_WRITE (0x2UL)
@@ -51,6 +55,16 @@
 #define PAGE_4K_MASK ((1ULL << PAGE_4K_SHIFT) - 1)
 #define PAGE_2M_MASK ((1ULL << PAGE_2M_SHIFT) - 1)
 
+#define PAGE_TAG_MASK 0x7ULL
+#define PAGE_PAYLOAD_ALIGNMENT 8
+
+enum page_tag {
+    /* Low 3 bits */
+    PAGE_TAG_NONE = 0,
+    PAGE_TAG_BUDDY = 1,
+    PAGE_TAG_FOLIO = 2,
+};
+
 struct page {
     uint64_t meta;
 };
@@ -60,13 +74,48 @@ struct page_table {
 } __packed;
 _Static_assert(sizeof(struct page_table) == PAGE_SIZE, "");
 
-static inline struct page *page_for_pfn(uint64_t pfn) {
+bool page_is_folio_head(struct page *p);
+
+static inline enum page_tag page_get_tag(const struct page *p) {
+    return (enum page_tag)(p->meta & PAGE_TAG_MASK);
+}
+
+static inline void page_set_tag(struct page *p, enum page_tag tag) {
+    p->meta = (p->meta & ~PAGE_TAG_MASK) | (tag & PAGE_TAG_MASK);
+}
+
+static inline uint64_t page_get_payload(const struct page *p) {
+    return p->meta & ~PAGE_TAG_MASK;
+}
+
+static inline void page_set_payload(struct page *p, uint64_t payload) {
+    p->meta = (p->meta & PAGE_TAG_MASK) | (payload & ~PAGE_TAG_MASK);
+}
+
+static inline void page_assert_tag(const struct page *p,
+                                   enum page_tag expected) {
+    kassert(page_get_tag(p) == expected);
+}
+
+static inline struct page *page_for_pfn(pfn_t pfn) {
     if (pfn >= global.last_pfn)
         return NULL;
 
     return &global.page_array[pfn];
 }
 
-static inline uint64_t page_get_pfn(struct page *bp) {
-    return (uint64_t) (bp - global.page_array);
+static inline struct page *page_for_paddr(paddr_t paddr) {
+    return page_for_pfn(PAGE_TO_PFN(paddr));
+}
+
+static inline pfn_t page_get_pfn(const struct page *bp) {
+    return (pfn_t) (bp - global.page_array);
+}
+
+static inline paddr_t page_get_paddr(const struct page *bp) {
+    return PFN_TO_PAGE(page_get_pfn(bp));
+}
+
+static inline vaddr_t page_get_vaddr(const struct page *bp) {
+    return hhdm_paddr_to_vaddr(page_get_paddr(bp));
 }

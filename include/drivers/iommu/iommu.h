@@ -61,7 +61,7 @@ struct iommu_domain {
     void *priv;
     iova_t iova_base;
     iova_t iova_limit;
-    struct vas_space *vas;
+    struct vas *vas;
 };
 
 void iommu_init();

@@ -23,17 +23,15 @@ LOG_HANDLE_DECLARE_DEFAULT(domain);
 
 static void init_global_domain(uint64_t domain_count) {
     global.domain_count = domain_count;
-    global.domains = kzalloc(sizeof(struct domain *) * domain_count);
-    if (!global.domains)
-        panic("Cannot allocate core domains\n");
+    global.domains = alloc_or_die(
+        kmalloc(sizeof(struct domain *) * domain_count, ALLOC_FLAGS_ZERO));
 
     for (size_t i = 0; i < domain_count; i++) {
 
         /* We align this up to the page so that they can all be
          * migrated later on to pages on each domain... */
-        global.domains[i] = kzalloc(PAGE_ALIGN_UP(sizeof(struct domain)));
-        if (!global.domains[i])
-            panic("Cannot allocate core domain %u\n");
+        global.domains[i] = alloc_or_die(
+            kmalloc(PAGE_ALIGN_UP(sizeof(struct domain)), ALLOC_FLAGS_ZERO));
 
         global.domains[i]->id = i;
     }
@@ -47,7 +45,8 @@ static void construct_domains_from_numa_nodes(void) {
         struct domain *cd = global.domains[i];
         cd->num_cores = cpu_mask_popcount(&nn->cpus);
         cd->associated_node = nn;
-        cd->cores = kzalloc(sizeof(struct core *) * cd->num_cores);
+        cd->cores =
+            kmalloc(sizeof(struct core *) * cd->num_cores, ALLOC_FLAGS_ZERO);
     }
 }
 
@@ -96,10 +95,8 @@ static void construct_domains_from_cores(void) {
             cores_this_domain = remainder; /* last one gets leftovers */
 
         cd->num_cores = cores_this_domain;
-        cd->cores = kzalloc(sizeof(struct core *) * cores_this_domain);
-
-        if (!cd->cores)
-            panic("Cannot allocate core array for domain %zu\n", i);
+        cd->cores = alloc_or_die(kmalloc(
+            sizeof(struct core *) * cores_this_domain, ALLOC_FLAGS_ZERO));
     }
 }
 

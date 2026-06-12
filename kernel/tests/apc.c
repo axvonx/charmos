@@ -20,7 +20,7 @@ static void apc_thread(void *) {
 static struct thread *ted = NULL;
 TEST_REGISTER(apc_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
     ted = thread_spawn("apc_test_thread", apc_thread, NULL);
-    struct apc *a = kzalloc(sizeof(struct apc));
+    struct apc *a = kmalloc(sizeof(struct apc), ALLOC_FLAGS_ZERO);
     if (!a || !ted)
         goto pluh;
 

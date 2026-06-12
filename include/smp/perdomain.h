@@ -2,6 +2,7 @@
 #pragma once
 #include <compiler.h>
 #include <linker/symbols.h>
+#include <smp/domain.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -37,7 +38,7 @@ LINKER_SECTION_DEFINE(perdomain_desc, struct perdomain_descriptor);
 void perdomain_obj_init(void);
 
 #define PERDOMAIN_PTR_FOR_DOMAIN(name, d)                                      \
-    (__perdomain_desc_##name.perdomain_ptrs[d])
+    ((typeof(__perdomain_##name) *) __perdomain_desc_##name.perdomain_ptrs[d])
 #define PERDOMAIN_READ_FOR_DOMAIN(name, d)                                     \
     (*((typeof(__perdomain_##name) *) PERDOMAIN_PTR_FOR_DOMAIN(name, d)))
 

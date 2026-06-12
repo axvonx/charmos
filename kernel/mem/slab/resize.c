@@ -21,7 +21,7 @@ static void slab_shrink(struct slab *slab, size_t start, size_t end,
         if (!page)
             return;
 
-        paddr_t phys = PFN_TO_PAGE(page_get_pfn(page));
+        paddr_t phys = page_get_paddr(page);
         vaddr_t virt = (vaddr_t) slab + i * PAGE_SIZE;
         vmm_unmap_page(virt, VMM_FLAG_NONE);
         pmm_free_page(phys);
@@ -57,7 +57,7 @@ bool slab_resize(struct slab *slab, size_t new_size_pages) {
                 goto grow_err;
             }
 
-            slab->backing_pages[i] = page_for_pfn(PAGE_TO_PFN(phys));
+            slab->backing_pages[i] = page_for_paddr(phys);
         }
 
         slab->page_count = new_size_pages;

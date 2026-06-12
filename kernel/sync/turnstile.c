@@ -47,7 +47,8 @@ SLAB_SIZE_REGISTER_FOR_STRUCT(turnstile, SLAB_OBJ_ALIGN_DEFAULT);
  */
 
 void turnstiles_init() {
-    global.turnstiles = kzalloc(sizeof(struct turnstile_hash_table));
+    global.turnstiles =
+        kmalloc(sizeof(struct turnstile_hash_table), ALLOC_FLAGS_ZERO);
     if (!global.turnstiles)
         panic("Could not allocate turnstile hash table\n");
     for (size_t i = 0; i < TURNSTILE_HASH_SIZE; i++) {
@@ -118,7 +119,7 @@ void turnstile_destroy(struct turnstile *ts) {
 }
 
 struct turnstile *turnstile_create(void) {
-    struct turnstile *ts = kzalloc(sizeof(struct turnstile));
+    struct turnstile *ts = kmalloc(sizeof(struct turnstile), ALLOC_FLAGS_ZERO);
     if (!ts)
         return NULL;
 

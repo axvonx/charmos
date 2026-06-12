@@ -485,7 +485,7 @@ struct slab_domain {
 };
 
 struct slab_globals {
-    struct vas_space *vas;
+    struct vas *vas;
     struct slab_caches caches;
     struct slab_size_constant *class_sizes;
     size_t num_sizes;

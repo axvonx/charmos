@@ -2,6 +2,7 @@
 #pragma once
 #include <compiler.h>
 #include <linker/symbols.h>
+#include <smp/core.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -36,7 +37,8 @@ LINKER_SECTION_DEFINE(percpu_desc, struct percpu_descriptor);
 
 void percpu_obj_init(void);
 
-#define PERCPU_PTR_FOR_CPU(name, cpu) (__percpu_desc_##name.percpu_ptrs[cpu])
+#define PERCPU_PTR_FOR_CPU(name, cpu)                                          \
+    ((typeof(__percpu_##name) *) __percpu_desc_##name.percpu_ptrs[cpu])
 #define PERCPU_READ_FOR_CPU(name, cpu)                                         \
     (*((typeof(__percpu_##name) *) PERCPU_PTR_FOR_CPU(name, cpu)))
 

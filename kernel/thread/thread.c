@@ -3,7 +3,7 @@
 #include <mem/alloc.h>
 #include <mem/pmm.h>
 #include <mem/slab.h>
-#include <mem/vaddr_alloc.h>
+#include <mem/vas.h>
 #include <mem/vmm.h>
 #include <sch/periodic_work.h>
 #include <sch/sched.h>
@@ -33,11 +33,10 @@ ADDRESS_RANGE_DECLARE(thread_stacks, .name = "thread stacks",
 
 /* lol */
 static struct tid_space *global_tid_space = NULL;
-static struct vas_space *stacks_space = NULL;
+static struct vas *stacks_space = NULL;
 
 void thread_init_thread_ids(void) {
-    stacks_space =
-        vas_space_create(THREAD_STACKS_HEAP_START, THREAD_STACKS_HEAP_END);
+    stacks_space = vas_create(THREAD_STACKS_HEAP_START, THREAD_STACKS_HEAP_END);
     global_tid_space = tid_space_init(UINT64_MAX);
     locked_list_init(&global.thread_list, LOCKED_LIST_INIT_IRQ_DISABLE);
 }
@@ -194,7 +193,8 @@ static struct thread *thread_init(struct thread *thread,
 struct thread *thread_create_internal(char *name, void (*entry_point)(void *),
                                       void *arg, size_t stack_size,
                                       va_list args) {
-    struct thread *new_thread = kzalloc(sizeof(struct thread));
+    struct thread *new_thread =
+        kmalloc(sizeof(struct thread), ALLOC_FLAGS_ZERO);
     if (unlikely(!new_thread))
         goto err;
 
@@ -202,7 +202,8 @@ struct thread *thread_create_internal(char *name, void (*entry_point)(void *),
     if (unlikely(!stack))
         goto err;
 
-    new_thread->activity_data = kzalloc(sizeof(struct thread_activity_data));
+    new_thread->activity_data =
+        kmalloc(sizeof(struct thread_activity_data), ALLOC_FLAGS_ZERO);
     if (unlikely(!new_thread->activity_data))
         goto err;
 
@@ -210,7 +211,8 @@ struct thread *thread_create_internal(char *name, void (*entry_point)(void *),
     if (unlikely(!new_thread->turnstile))
         goto err;
 
-    new_thread->activity_stats = kzalloc(sizeof(struct thread_activity_stats));
+    new_thread->activity_stats =
+        kmalloc(sizeof(struct thread_activity_stats), ALLOC_FLAGS_ZERO);
     if (unlikely(!new_thread->activity_stats))
         goto err;
 
@@ -224,7 +226,7 @@ struct thread *thread_create_internal(char *name, void (*entry_point)(void *),
     size_t needed = vsnprintf(NULL, 0, name, args_copy) + 1;
     va_end(args_copy);
 
-    new_thread->name = kzalloc(needed);
+    new_thread->name = kmalloc(needed, ALLOC_FLAGS_ZERO);
     if (!new_thread->name)
         goto err;
 

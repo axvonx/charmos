@@ -144,7 +144,7 @@
 #include <mem/pmm.h>
 #include <mem/simple_alloc.h>
 #include <mem/slab.h>
-#include <mem/vaddr_alloc.h>
+#include <mem/vas.h>
 #include <mem/vmm.h>
 #include <sch/sched.h>
 #include <smp/core.h>
@@ -169,8 +169,8 @@ const size_t slab_class_sizes_const[] = {
     sizeof(slab_class_sizes_const) / sizeof(*slab_class_sizes_const)
 
 ADDRESS_RANGE_DECLARE(
-    slab, .name = "slab", .base = SLAB_HEAP_START,
-    .size = SLAB_HEAP_END - SLAB_HEAP_START, .flags = ADDRESS_RANGE_STATIC
+    slab, .base = SLAB_HEAP_START, .size = SLAB_HEAP_END - SLAB_HEAP_START,
+    .flags = ADDRESS_RANGE_STATIC
     /* alignment does not need to be provided for static entries */);
 
 struct slab_globals slab_global = {0};
@@ -237,7 +237,7 @@ static void slab_free_virt_and_phys(struct slab *slab) {
 
     for (size_t i = 0; i < slab->page_count; i++) {
         size_t virt = virt_base + i * PAGE_SIZE;
-        paddr_t phys = PFN_TO_PAGE(page_get_pfn(slab->backing_pages[i]));
+        paddr_t phys = page_get_paddr(slab->backing_pages[i]);
         vmm_unmap_page(virt, VMM_FLAG_NONE);
         pmm_free_page(phys);
     }
@@ -322,7 +322,7 @@ static struct slab *slab_create_new(struct slab_cache *cache) {
     slab->page_count = cache->pages_per_slab;
 
     for (size_t i = 0; i < cache->pages_per_slab; i++) {
-        slab->backing_pages[i] = page_for_pfn(PAGE_TO_PFN(phys[i]));
+        slab->backing_pages[i] = page_for_paddr(phys[i]);
     }
 
     return slab_init(slab, cache);
@@ -559,7 +559,7 @@ static void log_dupes(const char *keep, const char *discard, size_t size) {
 
 void slab_allocator_init() {
     /* bootstrap VAS */
-    slab_global.vas = vas_space_bootstrap(SLAB_HEAP_START, SLAB_HEAP_END);
+    slab_global.vas = vas_bootstrap(SLAB_HEAP_START, SLAB_HEAP_END);
     if (!slab_global.vas)
         panic("Could not initialize slab VAS\n");
     struct slab_size_constant *start = __skernel_slab_sizes;
@@ -1272,6 +1272,8 @@ void slab_switch_to_domain_allocations(void) {
 void *kmalloc_internal(size_t size, enum alloc_flags flags,
                        enum alloc_behavior behavior) {
     void *p = alloc(size, flags, behavior);
+    if (p && (flags & ALLOC_FLAG_ZERO_ON_ALLOC))
+        memset(p, 0, size);
     return p;
 }
 
@@ -1286,15 +1288,6 @@ void kfree_internal(void *p, enum alloc_behavior behavior) {
 
     memset(p, 0x67, ksize(p));
     free(p, behavior);
-}
-
-void *kzalloc_internal(uint64_t size, enum alloc_flags f,
-                       enum alloc_behavior b) {
-    void *ptr = kmalloc(size, f, b);
-    if (!ptr)
-        return NULL;
-
-    return memset(ptr, 0, size);
 }
 
 void *krealloc_internal(void *ptr, size_t size, enum alloc_flags flags,

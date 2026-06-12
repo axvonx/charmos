@@ -86,12 +86,14 @@ void xhci_cleanup(struct xhci_device *dev, struct xhci_request *req) {
 }
 
 struct xhci_ring *xhci_allocate_ring() {
-    struct xhci_trb *trbs = kzalloc_aligned(PAGE_SIZE, PAGE_SIZE);
+    struct xhci_trb *trbs =
+        kmalloc_aligned(PAGE_SIZE, PAGE_SIZE, ALLOC_FLAGS_ZERO);
     if (!trbs)
         return NULL;
 
     paddr_t phys = vmm_get_phys((vaddr_t) trbs, VMM_FLAG_NONE);
-    struct xhci_ring *ring = kzalloc(sizeof(struct xhci_ring));
+    struct xhci_ring *ring =
+        kmalloc(sizeof(struct xhci_ring), ALLOC_FLAGS_ZERO);
     if (!ring)
         return NULL;
 
@@ -113,9 +115,9 @@ struct xhci_ring *xhci_allocate_ring() {
 }
 
 struct xhci_ring *xhci_allocate_event_ring(void) {
-    struct xhci_ring *er = kzalloc(sizeof(*er));
+    struct xhci_ring *er = kmalloc(sizeof(*er), ALLOC_FLAGS_ZERO);
 
-    er->trbs = kzalloc_aligned(PAGE_SIZE, PAGE_SIZE);
+    er->trbs = kmalloc_aligned(PAGE_SIZE, PAGE_SIZE, ALLOC_FLAGS_ZERO);
     er->phys = vmm_get_phys((vaddr_t) er->trbs, VMM_FLAG_NONE);
 
     er->size = TRB_RING_SIZE;
@@ -164,8 +166,8 @@ void xhci_reset_slot(struct usb_device *dev) {
     struct xhci_trb outgoing = {
         .parameter = 0,
         .status = 0,
-        .control = TRB_SET_TYPE(TRB_TYPE_RESET_DEVICE) |
-                   TRB_SET_SLOT_ID(slot_id),
+        .control =
+            TRB_SET_TYPE(TRB_TYPE_RESET_DEVICE) | TRB_SET_SLOT_ID(slot_id),
     };
 
     cmd = (struct xhci_command){

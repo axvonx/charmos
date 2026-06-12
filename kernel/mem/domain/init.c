@@ -51,7 +51,7 @@ void domain_buddy_track_pages(struct domain_buddy *dom) {
     for (size_t order = 0; order < MAX_ORDER; order++) {
         struct buddy_page *page = dom->free_area[order].next;
         while (page) {
-            used_pages += (1ULL << page->order);
+            used_pages += (1ULL << buddy_page_get_order(page));
             page = buddy_page_get_next(page);
         }
     }
@@ -72,13 +72,14 @@ static void remove_block_from_global(size_t start_pfn, int order) {
             struct buddy_page *nxt = buddy_page_get_next(cur);
 
             if (prev) {
-                prev->next_pfn = (nxt ? buddy_page_get_pfn(nxt) : 0);
+                buddy_page_set_next_pfn(prev,
+                                        nxt ? buddy_page_get_pfn(nxt) : 0);
             } else {
                 fa->next = (struct buddy_page *) nxt;
             }
 
             fa->nr_free--;
-            cur->next_pfn = 0;
+            buddy_page_set_next_pfn(cur, 0);
             return;
         }
 
@@ -90,13 +91,13 @@ static void remove_block_from_global(size_t start_pfn, int order) {
 static void buddy_add_block_to_global(size_t start_pfn, int order) {
     struct buddy_page *page = buddy_page_for_pfn(start_pfn);
 
-    memset(page, 0, sizeof(*page));
-    page->order = (uint64_t) order;
-    page->is_free = true;
+    buddy_page_set_next_pfn(page, 0);
+    buddy_page_set_order(page, (uint64_t) order);
+    buddy_page_set_free(page, true);
 
     struct free_area *fa = &global.buddy_free_area[order];
 
-    page->next_pfn = fa->next ? buddy_page_get_pfn(fa->next) : 0;
+    buddy_page_set_next_pfn(page, fa->next ? buddy_page_get_pfn(fa->next) : 0);
     fa->next = page;
 }
 
@@ -116,9 +117,10 @@ static void domain_buddy_split_for_domain(struct domain_buddy *dom,
     if (start_pfn >= domain_start && block_end <= domain_end) {
         size_t idx = start_pfn - dom->start / PAGE_SIZE;
         struct buddy_page *page = &dom->buddy[idx];
-        memset(page, 0, sizeof(*page));
-        page->order = order;
-        page->is_free = true;
+        buddy_page_tag(page);
+        buddy_page_set_next_pfn(page, 0);
+        buddy_page_set_order(page, order);
+        buddy_page_set_free(page, true);
         buddy_add_to_free_area(page, &dom->free_area[order]);
         return;
     }
@@ -168,7 +170,8 @@ static void domain_buddy_init(struct domain_buddy *dom) {
         while (page) {
             struct buddy_page *next_page = buddy_page_get_next(page);
             size_t block_start = buddy_page_get_pfn(page);
-            size_t block_end = block_start + (1ULL << page->order);
+            size_t block_end =
+                block_start + (1ULL << buddy_page_get_order(page));
 
             if (block_end <= dom_start || block_start >= dom_end) {
                 page = next_page;
@@ -176,7 +179,8 @@ static void domain_buddy_init(struct domain_buddy *dom) {
             }
 
             domain_buddy_split_for_domain(dom, buddy_page_get_pfn(page),
-                                          page->order, dom_start, dom_end);
+                                          buddy_page_get_order(page), dom_start,
+                                          dom_end);
 
             page = next_page;
         }
@@ -184,7 +188,7 @@ static void domain_buddy_init(struct domain_buddy *dom) {
 }
 
 static void *alloc_up(size_t size) {
-    return kzalloc(PAGE_ALIGN_UP(size));
+    return kmalloc(PAGE_ALIGN_UP(size), ALLOC_FLAGS_ZERO);
 }
 
 static void domain_structs_init(struct domain_buddy *dom, size_t arena_capacity,
@@ -342,7 +346,8 @@ static void late_init_non_numa(size_t domain_count) {
 
 void domain_buddies_init(void) {
     size_t domain_count = global.domain_count;
-    global.domain_buddies = kzalloc(sizeof(struct domain_buddy) * domain_count);
+    global.domain_buddies =
+        kmalloc(sizeof(struct domain_buddy) * domain_count, ALLOC_FLAGS_ZERO);
 
     if (global.numa_node_count > 1) {
         late_init_from_numa(domain_count);

@@ -5,6 +5,7 @@
 #include <mem/fixed_size_alloc.h>
 #include <mem/hhdm.h>
 #include <mem/pmm.h>
+#include <string.h>
 
 static inline size_t fixed_size_header_size(struct fixed_size_range *fsr) {
     return ALIGN_UP(sizeof(struct fixed_size_page_hdr), fsr->attrs.obj_align);
@@ -76,8 +77,10 @@ static bool fixed_size_refill(struct fixed_size_range *fsr) {
         INIT_LIST_HEAD(&fsn->list_node);
         list_add_tail(&fsn->list_node, &fsr->freelist);
 
-        if (fsr->attrs.init_obj)
+        if (fsr->attrs.init_obj) {
+            memset(obj, 0, fsr->attrs.obj_size);
             fsr->attrs.init_obj(obj);
+        }
     }
 
     return true;
@@ -146,6 +149,7 @@ void fixed_size_reclaim_freelist_pages(struct fixed_size_range *fsr) {
 
 void fixed_size_range_init(struct fixed_size_range *fsr,
                            struct fixed_size_range_attributes *attrs) {
+    kassert(attrs->obj_size && attrs->obj_align, "Fill the fields out");
     spinlock_init(&fsr->lock);
     fsr->attrs = *attrs;
     INIT_LIST_HEAD(&fsr->freelist);

@@ -53,8 +53,8 @@ linker_object_work_to_work(struct scheduler_periodic_work_linker_object *lobj,
 static void
 attach_work_to_cpus(struct scheduler_periodic_work_linker_object *spwlo) {
     for (size_t i = 0; i < global.core_count; i++) {
-        struct scheduler_periodic_work *w =
-            alloc_or_die(kzalloc(sizeof(struct scheduler_periodic_work)));
+        struct scheduler_periodic_work *w = alloc_or_die(
+            kmalloc(sizeof(struct scheduler_periodic_work), ALLOC_FLAGS_ZERO));
 
         pairing_node_init(&w->pnode);
         linker_object_work_to_work(spwlo, w);

@@ -11,7 +11,7 @@
 static struct spinlock pf_lock = SPINLOCK_INIT;
 
 static bool addr_is_mapped(uint64_t addr) {
-    return vmm_get_phys_unsafe((vaddr_t) PAGE_ALIGN_DOWN(addr)) !=
+    return vmm_get_phys((vaddr_t) PAGE_ALIGN_DOWN(addr), VMM_FLAG_NONE) !=
            (uintptr_t) -1;
 }
 

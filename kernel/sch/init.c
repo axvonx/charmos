@@ -32,7 +32,8 @@ void scheduler_init(void) {
 
     size_t i;
     for_each_cpu_id(i) {
-        struct scheduler *s = kzalloc(sizeof(struct scheduler));
+        struct scheduler *s =
+            kmalloc(sizeof(struct scheduler), ALLOC_FLAGS_ZERO);
         if (!s)
             panic("Could not allocate scheduler %lu\n", i);
 

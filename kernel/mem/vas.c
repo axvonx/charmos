@@ -8,7 +8,7 @@
 #include <mem/hhdm.h>
 #include <mem/page.h>
 #include <mem/pmm.h>
-#include <mem/vaddr_alloc.h>
+#include <mem/vas.h>
 #include <smp/core.h>
 #include <string.h>
 
@@ -160,7 +160,7 @@ static void tree_free(struct vas_local_tree *lt, vaddr_t addr, size_t size) {
     lt->total_free += (end - addr);
 }
 
-static bool vas_pull_chunk(struct vas_space *vas, struct vas_local_tree *lt) {
+static bool vas_pull_chunk(struct vas *vas, struct vas_local_tree *lt) {
     struct vas_local_tree *gl = &vas->global;
     size_t chunk = vas->chunk_size;
 
@@ -243,7 +243,7 @@ static bool vas_pull_chunk(struct vas_space *vas, struct vas_local_tree *lt) {
 
 /* faster approach: maintain a sorted interval list per-CPU of chunk
  * boundaries and binary-search it. But the simple version works first. */
-static ssize_t vas_find_owner(struct vas_space *vas, vaddr_t addr) {
+static ssize_t vas_find_owner(struct vas *vas, vaddr_t addr) {
     size_t i;
     for_each_cpu_id(i) {
         struct vas_local_tree *lt = &vas->local[i];
@@ -286,7 +286,7 @@ static ssize_t vas_find_owner(struct vas_space *vas, vaddr_t addr) {
     return -1;
 }
 
-vaddr_t vas_alloc(struct vas_space *vas, size_t size, size_t align) {
+vaddr_t vas_alloc(struct vas *vas, size_t size, size_t align) {
     uint32_t cpu = vas_cpu_id();
     struct vas_local_tree *lt = &vas->local[cpu];
     vaddr_t result;
@@ -308,7 +308,7 @@ vaddr_t vas_alloc(struct vas_space *vas, size_t size, size_t align) {
     return result;
 }
 
-void vas_free(struct vas_space *vas, vaddr_t addr, size_t size) {
+void vas_free(struct vas *vas, vaddr_t addr, size_t size) {
 
     ssize_t owner = vas_find_owner(vas, addr);
     struct vas_local_tree *lt;
@@ -324,7 +324,7 @@ void vas_free(struct vas_space *vas, vaddr_t addr, size_t size) {
     spin_unlock(&lt->lock, irql);
 }
 
-static void vas_space_init_common(struct vas_space *vas, vaddr_t base,
+static void vas_space_init_common(struct vas *vas, vaddr_t base,
                                   vaddr_t limit) {
     vas->base = base;
     vas->limit = limit;
@@ -348,47 +348,47 @@ static void vas_space_init_common(struct vas_space *vas, vaddr_t base,
         vas_local_tree_init(&vas->local[i]);
 }
 
-struct vas_space *vas_space_bootstrap(vaddr_t base, vaddr_t limit) {
+struct vas *vas_bootstrap(vaddr_t base, vaddr_t limit) {
     if (global.current_bootstage >= BOOTSTAGE_LATE)
         log_warn_once("vas_space_bootstrap called after bootstage %s",
                       bootstage_str[BOOTSTAGE_LATE]);
 
     uint32_t ncpus = global.core_count;
     size_t total_size =
-        sizeof(struct vas_space) + ncpus * sizeof(struct vas_local_tree);
+        sizeof(struct vas) + ncpus * sizeof(struct vas_local_tree);
     size_t pages_needed = DIV_ROUND_UP(total_size, PAGE_SIZE);
 
     uintptr_t phys = alloc_or_die(pmm_alloc_page(pages_needed));
     uintptr_t virt = hhdm_paddr_to_vaddr(phys);
     memset((void *) virt, 0, PAGE_SIZE);
 
-    struct vas_space *vas = (struct vas_space *) virt;
+    struct vas *vas = (struct vas *) virt;
     vas->local =
-        (struct vas_local_tree *) ((uint8_t *) vas + sizeof(struct vas_space));
+        (struct vas_local_tree *) ((uint8_t *) vas + sizeof(struct vas));
 
     vas_space_init_common(vas, base, limit);
     return vas;
 }
 
-struct vas_space *vas_space_create(vaddr_t base, vaddr_t limit) {
+struct vas *vas_create(vaddr_t base, vaddr_t limit) {
     uint32_t ncpus = global.core_count;
     size_t total_size =
-        sizeof(struct vas_space) + ncpus * sizeof(struct vas_local_tree);
+        sizeof(struct vas) + ncpus * sizeof(struct vas_local_tree);
 
-    struct vas_space *vas =
-        kzalloc(total_size, ALLOC_FLAGS_DEFAULT,
+    struct vas *vas =
+        kmalloc(total_size, ALLOC_FLAGS_ZERO,
                 ALLOC_BEHAVIOR_NORMAL | ALLOC_BEHAVIOR_FLAG_MINIMAL);
     if (!vas)
         return NULL;
 
     vas->local =
-        (struct vas_local_tree *) ((uint8_t *) vas + sizeof(struct vas_space));
+        (struct vas_local_tree *) ((uint8_t *) vas + sizeof(struct vas));
 
     vas_space_init_common(vas, base, limit);
     return vas;
 }
 
-void *vas_map(struct vas_space *vas, paddr_t paddr, size_t len, uint64_t flags,
+void *vas_map(struct vas *vas, paddr_t paddr, size_t len, uint64_t flags,
               enum vmm_flags vflags) {
     size_t pages = DIV_ROUND_UP(len, PAGE_SIZE);
     vaddr_t vaddr = vas_alloc(vas, PAGE_SIZE * pages, PAGE_SIZE);
@@ -402,12 +402,61 @@ void *vas_map(struct vas_space *vas, paddr_t paddr, size_t len, uint64_t flags,
     return ret;
 }
 
-void vas_unmap(struct vas_space *vas, void *vaddr, size_t len) {
+void vas_unmap(struct vas *vas, void *vaddr, size_t len) {
     size_t pages = DIV_ROUND_UP(len, PAGE_SIZE);
     vmm_unmap(vaddr, PAGE_SIZE * pages, VMM_FLAG_NONE);
     vas_free(vas, (vaddr_t) vaddr, PAGE_SIZE * pages);
 }
 
-struct vas_space *vas_space_from_address_range(struct address_range *ar) {
-    return vas_space_create(ar->base, ar->base + ar->size);
+struct vas *vas_from(struct address_range *ar) {
+    return vas_create(ar->base, ar->base + ar->size);
+}
+
+struct vas *vas_bootstrap_from(struct address_range *ar) {
+    return vas_bootstrap(ar->base, ar->base + ar->size);
+}
+
+static void vas_dump_local_tree(struct vas_local_tree *lt, bool take_lock) {
+    enum irql irql = 0;
+    if (take_lock)
+        irql = spin_lock(&lt->lock);
+
+    size_t count = 0;
+    size_t largest = 0;
+    vaddr_t largest_start = 0;
+
+    for (struct rbt_node *n = rbt_min(&lt->tree); n; n = rbt_next(n)) {
+        struct vas_range *r = rbt_entry(n, struct vas_range, node);
+        printf("    [%zu] %p .. %p  len=%zu (%zu KiB)\n", count,
+               (void *) r->start, (void *) (r->start + r->length), r->length,
+               r->length >> 10);
+        if (r->length > largest) {
+            largest = r->length;
+            largest_start = r->start;
+        }
+        count++;
+    }
+
+    printf(
+        "    %zu free range(s), total_free=%zu (%zu KiB), largest=%zu @ %p\n",
+        count, lt->total_free, lt->total_free >> 10, largest,
+        (void *) largest_start);
+
+    if (take_lock)
+        spin_unlock(&lt->lock, irql);
+}
+
+void vas_space_dump(struct vas *vas) {
+    size_t span = (size_t) (vas->limit - vas->base);
+    printf("vas_space %p: base=%p limit=%p span=%zu (%zu MiB) chunk_size=%zu\n",
+           (void *) vas, (void *) vas->base, (void *) vas->limit, span,
+           span >> 20, vas->chunk_size);
+
+    printf("  global tree:\n");
+    vas_dump_local_tree(&vas->global, true);
+
+    for (uint32_t i = 0; i < global.core_count; i++) {
+        printf("  cpu[%u] tree:\n", i);
+        vas_dump_local_tree(&vas->local[i], true);
+    }
 }

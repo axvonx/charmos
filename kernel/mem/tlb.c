@@ -7,9 +7,6 @@
 #include <stdint.h>
 #include <thread/dpc.h>
 
-/* TODO: I have applied bandaid fixes to make this "work", however
- * scalability and performance will perform badly here, please fix */
-
 struct spinlock tlb_shootdown_lock = SPINLOCK_INIT;
 
 static void tlb_shootdown_internal(void) {

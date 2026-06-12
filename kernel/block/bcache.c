@@ -183,7 +183,7 @@ static enum errno prefetch(struct block_device *disk, struct bcache *cache,
         return ERR_NO_MEM;
 
     pf->cache = cache;
-    pf->new_entry = kzalloc(sizeof(struct bcache_entry));
+    pf->new_entry = kmalloc(sizeof(struct bcache_entry), ALLOC_FLAGS_ZERO);
     if (!pf->new_entry)
         return ERR_NO_MEM;
 
@@ -385,7 +385,7 @@ void *bcache_create_ent(struct block_device *disk, uint64_t lba,
             return NULL;
         }
 
-        ent = kzalloc(sizeof(struct bcache_entry));
+        ent = kmalloc(sizeof(struct bcache_entry), ALLOC_FLAGS_ZERO);
         if (!ent)
             return NULL;
 
@@ -414,7 +414,8 @@ void bcache_init(struct bcache *cache, uint64_t capacity) {
     spinlock_init(&cache->lock);
     cache->capacity = capacity;
     cache->count = 0;
-    cache->entries = kzalloc(sizeof(struct bcache_wrapper *) * capacity);
+    cache->entries =
+        kmalloc(sizeof(struct bcache_wrapper *) * capacity, ALLOC_FLAGS_ZERO);
     if (!cache->entries)
         panic("Block cache initialization allocation failed\n");
 }

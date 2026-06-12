@@ -112,7 +112,7 @@ struct counting_bloom_filter *cbf_create(size_t capacity,
         return NULL;
 
     size_t byte_count = num_counters / COUNTERS_PER_BYTE;
-    cbf->counters = kzalloc(byte_count);
+    cbf->counters = kmalloc(byte_count, ALLOC_FLAGS_ZERO);
     if (!cbf->counters) {
         kfree(cbf);
         return NULL;

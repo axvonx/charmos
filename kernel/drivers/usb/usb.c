@@ -222,7 +222,8 @@ static void usb_register_dev_ep(struct usb_device *dev,
         kmalloc(sizeof(struct usb_endpoint_descriptor));
     memcpy(new_ep, endpoint, sizeof(struct usb_endpoint_descriptor));
 
-    struct usb_endpoint *ep = kzalloc(sizeof(struct usb_endpoint));
+    struct usb_endpoint *ep =
+        kmalloc(sizeof(struct usb_endpoint), ALLOC_FLAGS_ZERO);
 
     ep->type = USB_ENDPOINT_ATTR_TRANS_TYPE(endpoint->attributes);
     ep->number = USB_ENDPOINT_ADDR_EP_NUM(endpoint->address);

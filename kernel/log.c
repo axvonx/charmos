@@ -326,8 +326,8 @@ void log_sites_init(void) {
         refcount_init(&s->refcount, 1);
         struct log_ringbuf *lrb = &s->rb;
         kassert(s->capacity);
-        lrb->slots =
-            alloc_or_die(kzalloc(sizeof(struct log_ring_slot) * s->capacity));
+        lrb->slots = alloc_or_die(kmalloc(
+            sizeof(struct log_ring_slot) * s->capacity, ALLOC_FLAGS_ZERO));
 
         for (size_t i = 0; i < s->capacity; i++) {
             atomic_store_explicit(&lrb->slots[i].seq, i, memory_order_release);
@@ -356,7 +356,8 @@ static void log_site_free(struct log_site *site) {
 }
 
 struct log_site *log_site_create(struct log_site_options opts) {
-    struct log_site *ret = kzalloc_aligned(sizeof(struct log_site), 64);
+    struct log_site *ret =
+        kmalloc_aligned(sizeof(struct log_site), 64, ALLOC_FLAGS_ZERO);
     if (!ret)
         return NULL;
 
@@ -365,7 +366,7 @@ struct log_site *log_site_create(struct log_site_options opts) {
         goto err;
 
     struct log_ring_slot *slots =
-        kzalloc(sizeof(struct log_ring_slot) * opts.capacity);
+        kmalloc(sizeof(struct log_ring_slot) * opts.capacity, ALLOC_FLAGS_ZERO);
     if (!slots)
         goto err;
 
@@ -413,7 +414,8 @@ void debug_print_stack(void) {
 
         uint8_t *page_base = (uint8_t *) PAGE_ALIGN_DOWN(addr);
         if (page_base != last_checked_page) {
-            if (vmm_get_phys_unsafe((vaddr_t) page_base) == (uintptr_t) -1) {
+            if (vmm_get_phys((vaddr_t) page_base, VMM_FLAG_NONE) ==
+                (uintptr_t) -1) {
                 break;
             }
             last_checked_page = page_base;
@@ -463,7 +465,8 @@ void debug_print_stack_from(uint64_t *start, size_t max_scan) {
         uint8_t *page_base = (uint8_t *) PAGE_ALIGN_DOWN(addr);
 
         if (page_base != last_checked_page) {
-            if (vmm_get_phys_unsafe((vaddr_t) page_base) == (uintptr_t) -1)
+            if (vmm_get_phys((vaddr_t) page_base, VMM_FLAG_NONE) ==
+                (uintptr_t) -1)
                 break;
             last_checked_page = page_base;
         }

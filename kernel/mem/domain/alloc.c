@@ -76,7 +76,7 @@ static paddr_t try_alloc_from_remote_arenas(struct domain_buddy *owner,
         if (bp) {
             struct domain_buddy *local = domain_buddy_on_this_core();
             domain_stat_alloc(local, /*remote*/ remote, /*interleaved*/ false);
-            return PFN_TO_PAGE(buddy_page_get_pfn(bp));
+            return buddy_page_get_paddr(bp);
         }
     }
 
@@ -113,7 +113,7 @@ static paddr_t try_alloc_from_free_queue(struct domain_free_queue *fq,
         struct buddy_page *bp = domain_arena_pop(this_arena);
         if (bp) {
             domain_stat_alloc(this, /*remote*/ false, /*interleaved*/ false);
-            return PFN_TO_PAGE(buddy_page_get_pfn(bp));
+            return buddy_page_get_paddr(bp);
         }
     }
 
@@ -130,7 +130,7 @@ static paddr_t try_alloc_from_arenas(size_t pages) {
     if (bp) {
         struct domain_buddy *local = domain_buddy_on_this_core();
         domain_stat_alloc(local, /*remote*/ false, /*interleaved*/ false);
-        return PFN_TO_PAGE(buddy_page_get_pfn(bp));
+        return buddy_page_get_paddr(bp);
     }
 
     struct domain_buddy *this = domain_buddy_on_this_core();

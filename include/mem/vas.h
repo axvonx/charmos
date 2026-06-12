@@ -26,7 +26,7 @@ struct vas_local_tree {
     size_t total_free;
 };
 
-struct vas_space {
+struct vas {
     struct vas_local_tree global;
 
     vaddr_t base;
@@ -36,15 +36,17 @@ struct vas_space {
     struct vas_local_tree *local;
 };
 
-struct vas_space *vas_space_bootstrap(vaddr_t base, vaddr_t limit);
-struct vas_space *vas_space_create(vaddr_t base, vaddr_t limit);
-struct vas_space *vas_space_from_address_range(struct address_range *ar);
+struct vas *vas_bootstrap(vaddr_t base, vaddr_t limit);
+struct vas *vas_create(vaddr_t base, vaddr_t limit);
+struct vas *vas_from(struct address_range *ar);
+struct vas *vas_bootstrap_from(struct address_range *ar);
 
-vaddr_t vas_alloc(struct vas_space *vas, size_t size, size_t align);
-void vas_free(struct vas_space *vas, vaddr_t addr, size_t size);
+vaddr_t vas_alloc(struct vas *vas, size_t size, size_t align);
+void vas_free(struct vas *vas, vaddr_t addr, size_t size);
 
-void *vas_map(struct vas_space *vas, paddr_t paddr, size_t len, uint64_t flags,
+void *vas_map(struct vas *vas, paddr_t paddr, size_t len, uint64_t flags,
               enum vmm_flags vflags);
-void vas_unmap(struct vas_space *vas, void *vaddr, size_t len);
+void vas_unmap(struct vas *vas, void *vaddr, size_t len);
 
 void vas_reclaim_freelist_pages(struct vas_local_tree *lt);
+void vas_space_dump(struct vas *vas);
