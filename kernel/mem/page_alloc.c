@@ -14,7 +14,8 @@ void page_alloc_init() {
     page_alloc_vas = vas_bootstrap_from(&ADDRESS_RANGE(page_alloc));
 }
 
-void *page_alloc_internal(size_t n_pages, enum alloc_flags flags) {
+void *page_alloc_internal(size_t n_pages, enum alloc_flags flags,
+                          enum alloc_behavior bh) {
     if (n_pages == 1 || flags & ALLOC_FLAG_CONTIGUOUS) {
         paddr_t phys = pmm_alloc_pages(n_pages);
         if (!phys)
@@ -70,4 +71,9 @@ void page_free_internal(void *ptr, size_t n_pages, enum alloc_behavior b) {
 
         vas_free(page_alloc_vas, virt, n_pages * PAGE_SIZE);
     }
+}
+
+bool page_alloc_vaddr_in_vas(vaddr_t vaddr) {
+    return vas_vaddr_in_vas(page_alloc_vas, vaddr) ||
+           hhdm_vaddr_in_range(vaddr);
 }

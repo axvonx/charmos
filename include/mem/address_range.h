@@ -26,13 +26,13 @@ struct address_range {
 } __linker_aligned;
 
 #define ADDRESS_RANGE_DECLARE(sym, ...)                                        \
-    static struct address_range __address_range_##sym                          \
-        __attribute__((section(".kernel_address_ranges"), used)) = {           \
-            .name = #sym, __VA_ARGS__, .rbt_node_internal = RBT_NODE_INIT}
+    LINKER_SECTION_OBJECT(struct address_range, address_ranges)                \
+    __address_range_##sym = {                                                  \
+        .name = #sym, __VA_ARGS__, .rbt_node_internal = RBT_NODE_INIT}
 
 #define ADDRESS_RANGE(sym) (__address_range_##sym)
 
-LINKER_SECTION_DEFINE(address_ranges, struct address_range);
+LINKER_SECTION_DEFINE(struct address_range, address_ranges);
 
 void address_ranges_init();
 void address_ranges_print();

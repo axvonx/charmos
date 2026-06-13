@@ -1,5 +1,6 @@
 #include <console/printf.h>
 #include <dbg.h>
+#include <irq/exception_sync_cb.h>
 #include <irq/irq.h>
 #include <mem/address_range.h>
 #include <mem/vmm.h>

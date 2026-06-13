@@ -35,32 +35,32 @@ static void print_bytes(uint64_t bytes) {
 
     v = bytes / eib;
     if (v)
-        printf("%llu exabytes ", v);
+        printf("%llu eib", v);
     bytes %= eib;
 
     v = bytes / pib;
     if (v)
-        printf("%llu petabytes ", v);
+        printf("%llu pib", v);
     bytes %= pib;
 
     v = bytes / tib;
     if (v)
-        printf("%llu terabytes ", v);
+        printf("%llu tib", v);
     bytes %= tib;
 
     v = bytes / gib;
     if (v)
-        printf("%llu gigabytes ", v);
+        printf("%llu gib", v);
     bytes %= gib;
 
     v = bytes / mib;
     if (v)
-        printf("%llu megabytes ", v);
+        printf("%llu mib", v);
     bytes %= mib;
 
     v = bytes / kib;
     if (v)
-        printf("%llu kilobytes ", v);
+        printf("%llu kib", v);
     bytes %= kib;
 
     if (bytes) {

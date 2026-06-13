@@ -148,17 +148,6 @@ LOG_HANDLE_EXTERN(usb);
 #define usb_debug(fmt, ...) usb_log(LOG_DEBUG, fmt, ##__VA_ARGS__)
 #define usb_trace(fmt, ...) usb_log(LOG_TRACE, fmt, ##__VA_ARGS__)
 
-#define USB_DRIVER_REGISTER(n, cc, sc, proto, bringup_fn, teardown_fn,         \
-                            free_fn)                                           \
-    static struct usb_driver usb_driver_##n __attribute__((                    \
-        section(".kernel_usb_drivers"), used)) = {.name = #n,                  \
-                                                  .class_code = cc,            \
-                                                  .subclass = sc,              \
-                                                  .protocol = proto,           \
-                                                  .bringup = bringup_fn,       \
-                                                  .teardown = teardown_fn,     \
-                                                  .free = free_fn};
-
 /* Request codes */
 enum usb_rq_code : uint8_t {
     USB_RQ_CODE_GET_STATUS = 0,    /* Page 282 */
@@ -485,4 +474,14 @@ static inline const char *usb_error_str(const enum usb_error err) {
     }
 }
 
-LINKER_SECTION_DEFINE(usb_drivers, struct usb_driver);
+LINKER_SECTION_DEFINE(struct usb_driver, usb_drivers);
+#define USB_DRIVER_REGISTER(n, cc, sc, proto, bringup_fn, teardown_fn,         \
+                            free_fn)                                           \
+    LINKER_SECTION_OBJECT(struct usb_driver, usb_drivers)                      \
+    usb_driver_##n = {.name = #n,                                              \
+                      .class_code = cc,                                        \
+                      .subclass = sc,                                          \
+                      .protocol = proto,                                       \
+                      .bringup = bringup_fn,                                   \
+                      .teardown = teardown_fn,                                 \
+                      .free = free_fn};

@@ -4,6 +4,7 @@
 #include <console/printf.h>
 #include <dbg.h>
 #include <global.h>
+#include <irq/exception_sync_cb.h>
 #include <irq/idt.h>
 #include <mem/alloc.h>
 #include <mem/alloc_or_die.h>
@@ -23,6 +24,7 @@
 /* Lock is only used for allocation/free and registering */
 static struct spinlock irq_table_lock = SPINLOCK_INIT;
 static struct irq_desc irq_table[IDT_ENTRIES] = {0};
+static struct exception_sync_cb exception_cbs[IRQ_EXCEPTION_COUNT] = {0};
 static struct idt_table idts = {0};
 static struct idt_ptr idtps = {0};
 
@@ -30,10 +32,13 @@ static struct idt_ptr idtps = {0};
 #include "isr_stubs.h"
 #include "isr_vectors_array.h"
 
-void isr_common_entry(uint8_t vector, struct irq_context *rsp) {
+void isr_common_entry(uint8_t vector, struct irq_context *irq_ctx) {
     irq_mark_self_in_interrupt(true);
 
     enum irql old = irql_raise(IRQL_HIGH_LEVEL);
+
+    kassert(smp_core()->irq_entered_irql == IRQL_NONE, "Potential race");
+    smp_core()->irq_entered_irql = old;
 
     struct irq_desc *desc = &irq_table[vector];
     if (!desc->present || list_empty(&irq_table[vector].actions))
@@ -43,7 +48,7 @@ void isr_common_entry(uint8_t vector, struct irq_context *rsp) {
     struct list_head *lh;
     list_for_each(lh, &desc->actions) {
         struct irq_action *act = container_of(lh, struct irq_action, list);
-        if (act->handler(act->data, vector, rsp) == IRQ_HANDLED) {
+        if (act->handler(act->data, vector, irq_ctx) == IRQ_HANDLED) {
             handled = true;
             break;
         }
@@ -52,8 +57,36 @@ void isr_common_entry(uint8_t vector, struct irq_context *rsp) {
     if (handled && desc->chip && desc->chip->eoi)
         desc->chip->eoi(desc);
 
-    irql_lower(old);
-    irq_mark_self_in_interrupt(false);
+    smp_core()->irq_entered_irql = IRQL_NONE;
+
+    /* Here's an odd bit: we'll have very different
+     * behavior if we came from an exception. Namely,
+     * irql_lower will NOT `sti` if irq_in_interrupt()
+     *
+     * Thus, if we are in an exception, we FIRST
+     * irq_mark_self_in_interrupt(false), and the we
+     * irql_lower(old)
+     *
+     * This results in interrupts being enabled
+     * when we come out of irql_lower(), and the
+     * reason why this only applies to exceptions
+     * is because they are synchronous, and more
+     * importantly, have an exception_sync_cb that
+     * can run, but only from this context in which we
+     * are at our old pre-exception IRQL and have
+     * interrupts enabled */
+    if (irq_vector_is_exception(vector)) {
+        irq_mark_self_in_interrupt(false);
+        irql_lower(old);
+
+        struct exception_sync_cb *escb = &exception_cbs[vector];
+        if (escb->fn)
+            escb->fn(escb, irq_ctx);
+
+    } else {
+        irql_lower(old);
+        irq_mark_self_in_interrupt(false);
+    }
 
     /* in reschedule, don't check if we need to preempt */
     if (scheduler_self_in_resched())

@@ -27,7 +27,7 @@ struct profiling_entry {
 void profiling_init(void);
 void profiling_log_all(void);
 
-#define PROFILE_SECTION __attribute__((section(".kernel_profiling_data"), used))
+#define PROFILE_SECTION LINKER_SECTION_ATTRIBUTE(profiling_data)
 
 #define REGISTER_PROFILING_ENTRY(entry)                                        \
     static const struct profiling_entry entry PROFILE_SECTION

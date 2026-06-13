@@ -7,6 +7,7 @@
 #include <mem/alloc.h>
 #include <mem/fixed_size_alloc.h>
 #include <mem/page.h>
+#include <mem/page_alloc.h>
 #include <mem/simple_alloc.h>
 #include <mem/vmm.h>
 #include <smp/domain.h>
@@ -53,9 +54,7 @@ LOG_HANDLE_EXTERN(slab);
 #define SLAB_MIN_SIZE (sizeof(uintptr_t))
 #define SLAB_MAX_SIZE (PAGE_SIZE / 4)
 #define SLAB_MAX_PAGES 64
-#define SLAB_POW2_ORDER_COUNT 6 /* 2^6 max */
-#define SLAB_POW2_ORDER_NONE                                                   \
-    0xF /* Sentinel value, "this is not a slab region" */
+#define SLAB_POW2_ORDER_COUNT 6   /* 2^6 max */
 #define SLAB_POW2_ORDER_EMPTY 0xE /* Sentinel value, "Nothing here" */
 
 /* Bitmap */
@@ -245,7 +244,7 @@ struct slab_free_queue {
 
     struct slab_domain *parent;
 };
-#define SLAB_FREE_QUEUE_CAPACITY 2048
+#define SLAB_FREE_QUEUE_CAPACITY 256
 #define SLAB_FREE_QUEUE_GET_COUNT(fq) (atomic_load(&(fq)->count))
 #define SLAB_FREE_QUEUE_INC_COUNT(fq) (atomic_fetch_add(&(fq)->count, 1))
 #define SLAB_FREE_QUEUE_ADD_COUNT(fq, n) (atomic_fetch_add(&(fq)->count, n))
@@ -510,7 +509,7 @@ void slab_domain_init_daemon(struct slab_domain *domain);
 void slab_domain_init_workqueue(struct slab_domain *domain);
 int32_t slab_size_to_index(size_t size);
 void *slab_alloc_old(struct slab_cache *cache);
-void slab_free_page_hdr(struct slab_page_hdr *hdr);
+void slab_free_page_hdr(struct slab_page_hdr *hdr, enum alloc_behavior bh);
 size_t slab_allocation_size(vaddr_t addr);
 void slab_free(struct slab_domain *domain, void *obj);
 void *slab_cache_try_alloc_from_lists(struct slab_cache *c);
@@ -525,7 +524,7 @@ struct slab *slab_for_ptr(void *ptr);
 /* Magazine + percpu */
 bool slab_magazine_push(struct slab_magazine *mag, vaddr_t obj);
 vaddr_t slab_magazine_pop(struct slab_magazine *mag);
-void slab_free_addr_to_cache(void *addr);
+void slab_free_addr_to_cache(void *addr, enum alloc_behavior bh);
 void slab_domain_percpu_init(struct slab_domain *domain);
 void slab_percpu_flush(struct slab_domain *dom, struct slab_percpu_cache *pc,
                        size_t class_idx, vaddr_t overflow_obj);
@@ -541,10 +540,12 @@ bool slab_free_queue_ringbuffer_enqueue(struct slab_free_queue *q,
 vaddr_t slab_free_queue_ringbuffer_dequeue(struct slab_free_queue *q);
 vaddr_t slab_free_queue_dequeue(struct slab_free_queue *q);
 size_t slab_free_queue_drain(struct slab_percpu_cache *cache,
-                             struct slab_free_queue *queue, size_t target);
+                             struct slab_free_queue *queue, size_t target,
+                             enum alloc_behavior bh);
 size_t slab_free_queue_get_target_drain(struct slab_domain *domain, size_t pct);
 size_t slab_free_queue_drain_limited(struct slab_percpu_cache *pc,
-                                     struct slab_domain *dom, size_t pct);
+                                     struct slab_domain *dom, size_t pct,
+                                     enum alloc_behavior bh);
 
 /* Check */
 bool slab_check(struct slab *slab);
@@ -573,7 +574,6 @@ bool slab_can_resize_to(struct slab *slab, size_t new_size_pages);
 
 /* Order map */
 uint8_t slab_order_map_get(vaddr_t addr);
-bool slab_order_map_none(vaddr_t addr);
 void slab_order_map_set(vaddr_t addr, uint8_t order);
 void slab_order_map_init(void);
 
@@ -705,9 +705,13 @@ static inline uint64_t slab_page_flags(enum slab_type type) {
     return pflags;
 }
 
-static inline void slab_ptr_validate(void *ptr) {
+static inline bool kmalloc_ptr_in_slab_validate(void *ptr) {
     vaddr_t vaddr = (vaddr_t) ptr;
-    kassert(vaddr >= SLAB_HEAP_START && vaddr <= SLAB_HEAP_END);
+    bool in_slab = vaddr >= SLAB_HEAP_START && vaddr <= SLAB_HEAP_END;
+    bool in_page_alloc = page_alloc_vaddr_in_vas(vaddr);
+    kassert(in_slab || in_page_alloc, "invalid pointer");
+
+    return in_slab;
 }
 
 static inline size_t slab_cache_pow2_order(struct slab_cache *sc) {

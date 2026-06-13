@@ -124,6 +124,13 @@ SECTIONS {
         __ekernel_cmdline_entries = .;
     } :data
 
+    .kernel_exception_sync_cbs : ALIGN(64) {
+        __skernel_exception_sync_cbs = .;
+        KEEP(*(.kernel_exception_sync_cbs))
+        . = ALIGN(64);
+        __ekernel_exception_sync_cbs = .;
+    } :data
+
     /* BSS */
     .bss : ALIGN(4K) {
         __sbss = .;

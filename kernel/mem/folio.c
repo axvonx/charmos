@@ -71,3 +71,12 @@ void folio_unbind_pages(struct folio *f) {
         page_clear_folio(page);
     }
 }
+
+bool page_is_folio_head(struct page *p) {
+    return page_get_folio(p)->base_page == p;
+}
+
+uint32_t page_get_folio_index(struct page *p) {
+    struct folio *f = page_get_folio(p);
+    return page_get_pfn(p) - page_get_pfn(f->base_page);
+}

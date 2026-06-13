@@ -5,11 +5,17 @@ struct folio;
 struct mm;
 struct vma_range;
 
-/* visitor invoked for each confirmed (mm, va) mapping the folio */
-typedef void (*rmap_visit_fn)(struct mm *mm, vaddr_t va, struct folio *f);
+/* The way that rmap goes is:
+ *
+ * page -> folio -> mapping object (file_vma, anon_vma) ->
+ * traverse interval tree -> for each matching avc -> vma_range -> addr
+ */
 
-/* folio -> object -> itree query -> per-VMA address -> PTE confirm */
-void rmap_walk_anon(struct folio *f, rmap_visit_fn visit);
+/* visitor invoked for each confirmed (mm, va) mapping the folio */
+typedef void (*rmap_visit_fn)(struct mm *mm, vaddr_t va, struct folio *f,
+                              void *private);
+
+void rmap_walk_anon(struct folio *f, rmap_visit_fn visit, void *private);
 
 /* fault path: first PTE to map this folio */
 void folio_add_anon_rmap(struct folio *f, struct vma_range *vm_area,

@@ -26,6 +26,7 @@
 #include <mem/buddy.h>
 #include <mem/domain.h>
 #include <mem/movealloc.h>
+#include <mem/page_alloc.h>
 #include <mem/pmm.h>
 #include <mem/slab.h>
 #include <mem/tlb.h>
@@ -69,6 +70,7 @@ __no_sanitize_address void k_main(void) {
 
     address_ranges_init();
     slab_allocator_init();
+    page_alloc_init();
     asan_init();
 
     log_sites_init();

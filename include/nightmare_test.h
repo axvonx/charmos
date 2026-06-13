@@ -178,7 +178,7 @@ static inline struct nightmare_thread *nightmare_get_thread() {
     return container_of(nightmare_get_local(), struct nightmare_thread, local);
 }
 
-LINKER_SECTION_DEFINE(nightmare_tests, struct nightmare_test);
+LINKER_SECTION_DEFINE(struct nightmare_test, nightmare_tests);
 
 #define NIGHTMARE_THREAD_ENTRY(__name) static void __name(void *__arg)
 #define NIGHTMARE_RESET_FN_NAME(__name) __name##_reset
@@ -246,21 +246,21 @@ LINKER_SECTION_DEFINE(nightmare_tests, struct nightmare_test);
 #define NIGHTMARE_ASSERT_EQ(a, b) NIGHTMARE_ASSERT((a) == (b))
 
 #define NIGHTMARE_DEFINE_TEST(__name, __runtime_ms, __threads)                 \
-    static struct nightmare_test __nightmare_test_##name                       \
-        __attribute__((section(".kernel_nightmare_tests"), used)) = {          \
-            .name = #__name,                                                   \
-            .default_runtime_ms = __runtime_ms,                                \
-            .default_threads = __threads,                                      \
-            .state = NIGHTMARE_UNINIT,                                         \
-            .error = NIGHTMARE_ERR_OK,                                         \
-            .roles = {{0}},                                                    \
-            .role_count = 0,                                                   \
-            .reset = NIGHTMARE_RESET_FN_NAME(__name),                          \
-            .init = NIGHTMARE_INIT_FN_NAME(__name),                            \
-            .start = NIGHTMARE_START_FN_NAME(__name),                          \
-            .stop = NIGHTMARE_STOP_FN_NAME(__name),                            \
-            .shutdown = NIGHTMARE_SHUTDOWN_FN_NAME(__name),                    \
-            .report = NIGHTMARE_REPORT_FN_NAME(__name),                        \
+    LINKER_SECTION_OBJECT(struct nightmare_test, nightmare_tests)              \
+    __nightmare_test_##name = {                                                \
+        .name = #__name,                                                       \
+        .default_runtime_ms = __runtime_ms,                                    \
+        .default_threads = __threads,                                          \
+        .state = NIGHTMARE_UNINIT,                                             \
+        .error = NIGHTMARE_ERR_OK,                                             \
+        .roles = {{0}},                                                        \
+        .role_count = 0,                                                       \
+        .reset = NIGHTMARE_RESET_FN_NAME(__name),                              \
+        .init = NIGHTMARE_INIT_FN_NAME(__name),                                \
+        .start = NIGHTMARE_START_FN_NAME(__name),                              \
+        .stop = NIGHTMARE_STOP_FN_NAME(__name),                                \
+        .shutdown = NIGHTMARE_SHUTDOWN_FN_NAME(__name),                        \
+        .report = NIGHTMARE_REPORT_FN_NAME(__name),                            \
     }
 
 #define NIGHTMARE_ADD_MESSAGE(msg)                                             \

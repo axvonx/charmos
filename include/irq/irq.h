@@ -18,6 +18,7 @@
 #define IRQ_SCHEDULER IRQ_TIMER
 #define IRQ_TLB_SHOOTDOWN 0x22
 #define IRQ_NOP 0x24
+#define IRQ_EXCEPTION_COUNT 32
 
 struct irq_context;
 struct irq_desc;
@@ -112,6 +113,10 @@ static inline bool irq_in_interrupt(void) {
 
 static inline bool irq_in_thread_context(void) {
     return !irq_in_interrupt();
+}
+
+static inline bool irq_vector_is_exception(uint8_t vector) {
+    return vector < IRQ_EXCEPTION_COUNT;
 }
 
 void ipi_send(uint32_t apic_id, uint8_t vector);

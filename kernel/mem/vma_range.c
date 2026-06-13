@@ -18,13 +18,14 @@ void vma_range_init(struct vma_range *vma_range, struct mm *mm, vaddr_t start,
     /* fold [start, end) into interval node */
     vma_range->mm_node.interval.low = start;
     vma_range->mm_node.interval.high = end - 1;
+
     /* convention: object space offset == virtual page index, so
      * vma_range_address() is an identity over [start, end) and makes pgoff
      * survive fork unchanged (child keeping same VA layout), the folio's
      * `index` resolves to the right VA in every mm that ends up mapping it */
     vma_range->pgoff = start >> PAGE_4K_SHIFT;
     vma_range->prot = prot;
-    vma_range->anon_vma = NULL; /* lazily attached on first write fault */
+    vma_range->anon_vma = NULL;
     vma_range->mm = mm;
     INIT_LIST_HEAD(&vma_range->anon_vma_chain);
 }

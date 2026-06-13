@@ -111,7 +111,7 @@ void slab_percpu_refill(struct slab_domain *dom,
                         struct slab_percpu_cache *cache,
                         enum alloc_behavior behavior) {
     /* This flushes a portion of the freequeue into the percpu cache */
-    slab_free_queue_drain_limited(cache, dom, /* pct = */ 100);
+    slab_free_queue_drain_limited(cache, dom, /* pct = */ 100, behavior);
     for (size_t class = 0; class < slab_global.num_sizes; class++)
         slab_percpu_refill_class(dom, cache, class, behavior);
 }

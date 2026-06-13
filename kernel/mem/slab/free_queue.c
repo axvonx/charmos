@@ -109,7 +109,8 @@ static inline bool page_is_pageable(struct page *page) {
     return false;
 }
 
-void slab_free_queue_free(struct slab_domain *d, void *ptr) {
+static void slab_free_queue_free(struct slab_domain *d, void *ptr,
+                                 enum alloc_behavior bh) {
     int32_t class = slab_size_to_index(slab_allocation_size((vaddr_t) ptr));
     bool fits_in_slab = class >= 0;
 
@@ -117,7 +118,7 @@ void slab_free_queue_free(struct slab_domain *d, void *ptr) {
         return slab_free(d, ptr);
 
     struct slab_page_hdr *header = slab_page_hdr_for_addr(ptr);
-    return slab_free_page_hdr(header);
+    return slab_free_page_hdr(header, bh);
 }
 
 /* The reason we have the "flush to cache" option is because in hot paths,
@@ -133,7 +134,8 @@ void slab_free_queue_free(struct slab_domain *d, void *ptr) {
  * will simply be re-enqueued to the free_queue so that in a future drain
  * attempt/free attempt, these addresses may be freed. */
 size_t slab_free_queue_drain(struct slab_percpu_cache *cache,
-                             struct slab_free_queue *queue, size_t target) {
+                             struct slab_free_queue *queue, size_t target,
+                             enum alloc_behavior bh) {
     kassert(cache == slab_percpu_cache_local());
     size_t drained_to_magazine = 0; /* Return value */
     size_t addrs_dequeued = 0;      /* Used to check against `target` */
@@ -167,7 +169,7 @@ size_t slab_free_queue_drain(struct slab_percpu_cache *cache,
         continue;
 
     flush:
-        slab_free_queue_free(cache->domain, (void *) addr);
+        slab_free_queue_free(cache->domain, (void *) addr, bh);
     }
 
     return drained_to_magazine;
@@ -200,12 +202,13 @@ size_t slab_free_queue_get_target_drain(struct slab_domain *domain,
 }
 
 size_t slab_free_queue_drain_limited(struct slab_percpu_cache *pc,
-                                     struct slab_domain *dom, size_t pct) {
+                                     struct slab_domain *dom, size_t pct,
+                                     enum alloc_behavior bh) {
     size_t target = slab_free_queue_get_target_drain(dom, pct);
 
     /* This will also fill up the magazines for other orders. We set the target
      * to prevent overly aggressive stealing from the free_queue into our
      * percpu cache to allow other CPUs in our domain to get their fair share of
      * what remains in the free_queue in the event that they must also refill */
-    return slab_free_queue_drain(pc, &dom->free_queue, target);
+    return slab_free_queue_drain(pc, &dom->free_queue, target, bh);
 }

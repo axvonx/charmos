@@ -17,7 +17,7 @@ struct percpu_descriptor {
     percpu_descriptor_constructor constructor;
 } __linker_aligned;
 
-LINKER_SECTION_DEFINE(percpu_desc, struct percpu_descriptor);
+LINKER_SECTION_DEFINE(struct percpu_descriptor, percpu_desc);
 
 #define PERCPU_DECLARE(__n, __type, __ctor)                                    \
     extern __type __percpu_##__n;                                              \
@@ -25,13 +25,13 @@ LINKER_SECTION_DEFINE(percpu_desc, struct percpu_descriptor);
         if ((__ctor) != NULL)                                                  \
             __ctor((__type *) inst, cpu);                                      \
     }                                                                          \
-    static volatile struct percpu_descriptor __percpu_desc_##__n               \
-        __attribute__((section(".kernel_percpu_desc"))) = {                    \
-            .name = #__n,                                                      \
-            .size = sizeof(__type),                                            \
-            .align = _Alignof(__type),                                         \
-            .percpu_ptrs = NULL,                                               \
-            .constructor = __percpu_ctor_##__n,                                \
+    LINKER_SECTION_OBJECT(struct percpu_descriptor, percpu_desc)               \
+    __percpu_desc_##__n = {                                                    \
+        .name = #__n,                                                          \
+        .size = sizeof(__type),                                                \
+        .align = _Alignof(__type),                                             \
+        .percpu_ptrs = NULL,                                                   \
+        .constructor = __percpu_ctor_##__n,                                    \
     };                                                                         \
     __type __percpu_##__n
 

@@ -636,11 +636,10 @@ void slab_allocator_init() {
 }
 
 struct slab *slab_for_ptr(void *ptr) {
-    slab_ptr_validate(ptr);
+    kassert(kmalloc_ptr_in_slab_validate(ptr));
     vaddr_t vp = (vaddr_t) ptr;
     uint8_t pow2_order = slab_order_map_get(vp);
-    kassert(pow2_order != SLAB_POW2_ORDER_EMPTY &&
-            pow2_order != SLAB_POW2_ORDER_NONE);
+    kassert(pow2_order != SLAB_POW2_ORDER_EMPTY);
 
     size_t align = ipow(2, pow2_order) * PAGE_SIZE;
     return (struct slab *) ALIGN_DOWN(vp, align);
@@ -650,14 +649,9 @@ size_t ksize(void *ptr) {
     if (!ptr)
         return 0;
 
-    vaddr_t vp = (vaddr_t) ptr;
+    bool in_slab = kmalloc_ptr_in_slab_validate(ptr);
 
-    slab_ptr_validate(ptr);
-
-    uint8_t pow2_order = slab_order_map_get(vp);
-    kassert(pow2_order != SLAB_POW2_ORDER_EMPTY);
-
-    if (pow2_order == SLAB_POW2_ORDER_NONE) {
+    if (!in_slab) {
         struct slab_page_hdr *hdr = slab_page_hdr_for_addr(ptr);
         kassert(hdr->magic == KMALLOC_PAGE_MAGIC);
         return hdr->pages * PAGE_SIZE - sizeof(struct slab_page_hdr);
@@ -671,48 +665,16 @@ size_t slab_allocation_size(vaddr_t addr) {
 }
 
 void *kmalloc_pages_raw(struct slab_domain *parent, size_t size,
-                        enum alloc_flags flags) {
+                        enum alloc_flags flags, enum alloc_behavior behavior) {
     uint64_t total_size = size + sizeof(struct slab_page_hdr);
     uint64_t pages = PAGES_NEEDED_FOR(total_size);
 
-    vaddr_t virt = vas_alloc(slab_global.vas, pages * PAGE_SIZE, PAGE_SIZE);
+    /* TODO: when we get pageable pages, we need to differentiate that here */
+    void *vptr = page_alloc(pages, flags, behavior);
+    if (!vptr)
+        return NULL;
 
-    uint8_t map_nibble = slab_order_map_get(virt);
-    kassert(map_nibble == SLAB_POW2_ORDER_NONE ||
-            map_nibble == SLAB_POW2_ORDER_EMPTY);
-
-    if (map_nibble == SLAB_POW2_ORDER_EMPTY)
-        slab_order_map_set(virt, SLAB_POW2_ORDER_NONE);
-
-    uintptr_t phys_pages[pages];
-    uint64_t allocated = 0;
-
-    page_flags_t page_flags = PAGE_PRESENT | PAGE_WRITE | PAGE_XD;
-    if (flags & ALLOC_FLAG_PAGEABLE)
-        page_flags |= PAGE_PAGEABLE;
-
-    for (uint64_t i = 0; i < pages; i++) {
-        uintptr_t phys = pmm_alloc_page(flags);
-        if (!phys) {
-            for (uint64_t j = 0; j < allocated; j++)
-                pmm_free_page(phys_pages[j]);
-            return NULL;
-        }
-
-        enum errno e =
-            vmm_map_page(virt + i * PAGE_SIZE, phys, page_flags, VMM_FLAG_NONE);
-        if (e < 0) {
-            pmm_free_page(phys);
-            for (uint64_t j = 0; j < allocated; j++)
-                pmm_free_page(phys_pages[j]);
-
-            return NULL;
-        }
-
-        phys_pages[allocated++] = phys;
-    }
-
-    struct slab_page_hdr *hdr = (struct slab_page_hdr *) virt;
+    struct slab_page_hdr *hdr = (struct slab_page_hdr *) vptr;
     hdr->magic = KMALLOC_PAGE_MAGIC;
     hdr->pages = pages;
     hdr->domain = parent;
@@ -732,29 +694,21 @@ void *kmalloc_old(size_t size) {
         return slab_alloc_old(&slab_global.caches.caches[idx]);
 
     /* we say NULL and just free these to domain 0 */
-    return kmalloc_pages_raw(NULL, size, ALLOC_FLAGS_DEFAULT);
+    return kmalloc_pages_raw(NULL, size, ALLOC_FLAGS_DEFAULT,
+                             ALLOC_BEHAVIOR_NORMAL);
 }
 
-void slab_free_page_hdr(struct slab_page_hdr *hdr) {
-    uintptr_t virt = (uintptr_t) hdr;
+void slab_free_page_hdr(struct slab_page_hdr *hdr, enum alloc_behavior bh) {
     uint32_t pages = hdr->pages;
-    hdr->magic = 0;
-    for (uint32_t i = 0; i < pages; i++) {
-        uintptr_t vaddr = virt + i * PAGE_SIZE;
-        paddr_t phys = (paddr_t) vmm_get_phys(vaddr, VMM_FLAG_NONE);
-        vmm_unmap_page(vaddr, VMM_FLAG_NONE);
-        pmm_free_page(phys);
-    }
-
-    vas_free(slab_global.vas, virt, pages * PAGE_SIZE);
+    page_free(hdr, pages, bh);
 }
 
-void slab_free_addr_to_cache(void *addr) {
-    slab_ptr_validate(addr);
+void slab_free_addr_to_cache(void *addr, enum alloc_behavior bh) {
+    kmalloc_ptr_in_slab_validate(addr);
 
     struct slab_page_hdr *hdr_candidate = slab_page_hdr_for_addr(addr);
     if (hdr_candidate->magic == KMALLOC_PAGE_MAGIC)
-        return slab_free_page_hdr(hdr_candidate);
+        return slab_free_page_hdr(hdr_candidate, bh);
 
     struct slab *slab = slab_for_ptr(addr);
     if (!slab)
@@ -764,12 +718,12 @@ void slab_free_addr_to_cache(void *addr) {
 }
 
 void kfree_old(void *ptr) {
-    slab_free_addr_to_cache(ptr);
+    slab_free_addr_to_cache(ptr, ALLOC_BEHAVIOR_NORMAL);
 }
 
 void *kmalloc_pages(struct slab_domain *domain, size_t size,
                     enum alloc_flags flags, enum alloc_behavior behavior) {
-    void *ret = kmalloc_pages_raw(domain, size, flags);
+    void *ret = kmalloc_pages_raw(domain, size, flags, behavior);
 
     if (alloc_behavior_may_fault(behavior) &&
         !alloc_behavior_is_fast(behavior)) {
@@ -781,7 +735,7 @@ void *kmalloc_pages(struct slab_domain *domain, size_t size,
         size_t target = slab_free_queue_get_target_drain(local, pct);
         target /= 2;
 
-        slab_free_queue_drain(pcpu, &local->free_queue, target);
+        slab_free_queue_drain(pcpu, &local->free_queue, target, behavior);
     }
 
     if (ret)
@@ -815,7 +769,7 @@ static size_t slab_free_queue_drain_on_alloc(struct slab_domain *dom,
         return 0;
 
     /* drain a tiny bit back into our magazine */
-    return slab_free_queue_drain_limited(c, dom, pct);
+    return slab_free_queue_drain_limited(c, dom, pct, behavior);
 }
 
 static inline size_t slab_get_search_dist(struct slab_domain *dom,
@@ -1144,8 +1098,8 @@ void kfree_pages(void *ptr, size_t size, enum alloc_behavior behavior) {
 
     /* TODO: We can try and figure out how to turn these pages
      * back into slabs and recycle them as such... for now, it
-     * is fine to just free them to the physical memory allocator */
-    slab_free_page_hdr(header);
+     * is fine to just free them to page_alloc */
+    slab_free_page_hdr(header, behavior);
 }
 
 static bool kfree_try_free_to_magazine(struct slab_percpu_cache *pcpu,
@@ -1199,12 +1153,13 @@ static size_t slab_free_queue_drain_on_free(struct slab_domain *domain,
     if (!alloc_behavior_may_fault(behavior))
         return 0;
 
-    return slab_free_queue_drain_limited(pcpu, domain, /* pct = */ 100);
+    return slab_free_queue_drain_limited(pcpu, domain, /* pct = */ 100,
+                                         behavior);
 }
 
 void kfree_new(void *ptr, enum alloc_behavior behavior) {
     enum irql outer = irql_raise(IRQL_DISPATCH_LEVEL);
-    slab_ptr_validate(ptr);
+    kmalloc_ptr_in_slab_validate(ptr);
 
     size_t size = ksize(ptr);
     int32_t idx = slab_size_to_index(size);

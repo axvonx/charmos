@@ -35,7 +35,7 @@ static struct list_head *chunk_list_for(struct slab_chunks *sc,
 static void destroy_chunk(struct slab_chunks *sc, struct slab_chunk *c) {
     vaddr_t vaddr = base_addr_to_vaddr(c->base_addr);
     uint8_t curr = slab_order_map_get(vaddr);
-    kassert(curr != SLAB_POW2_ORDER_EMPTY && curr != SLAB_POW2_ORDER_NONE);
+    kassert(curr != SLAB_POW2_ORDER_EMPTY);
 
     vas_free(slab_global.vas, vaddr, PAGE_2MB);
     slab_order_map_set(vaddr, SLAB_POW2_ORDER_EMPTY);
@@ -63,7 +63,7 @@ static struct slab_chunk *alloc_chunk(struct slab_chunks *sc,
         return NULL;
 
     uint8_t curr = slab_order_map_get(base);
-    kassert(curr == SLAB_POW2_ORDER_EMPTY || curr == SLAB_POW2_ORDER_NONE);
+    kassert(curr == SLAB_POW2_ORDER_EMPTY);
     slab_order_map_set(base, sc->pow2_order);
 
     spin_unlock(&sc->lock, *lirql);

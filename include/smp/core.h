@@ -69,6 +69,12 @@ struct core {
     bool in_interrupt;
     enum irql current_irql;
 
+    /* Remains valid in the top half, once the bottom half is
+     * reached, this becomes IRQL_NONE */
+    enum irql irq_entered_irql; /* What IRQL were we at before
+                                 * entering an ISR (if !in_interrupt,
+                                 * this should be IRQL_NONE */
+
     enum dpc_event dpc_event;
 
     atomic_bool needs_resched;

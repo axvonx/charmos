@@ -47,7 +47,7 @@ enum folio_tag : uintptr_t {
     FOLIO_TAG_ANON = 1,
 };
 
-#define FOLIO_TAG_BITS 0x3
+#define FOLIO_TAG_BITS 0x7
 
 struct folio {
     struct page *base_page;
@@ -59,6 +59,8 @@ struct folio {
     pgoff_t index;
     struct list_head lru; /* reclaim linkage */
 };
+uint32_t page_get_folio_index(struct page *p);
+bool page_is_folio_head(struct page *p);
 
 struct folio *folio_alloc_folio_struct();
 void folio_free_folio_struct(struct folio *f);
@@ -94,6 +96,7 @@ static inline struct folio *page_get_folio(const struct page *p) {
 static inline void page_clear_folio(struct page *p) {
     kassert(page_get_tag(p) == PAGE_TAG_FOLIO);
     page_set_payload(p, 0);
+    page_set_tag(p, PAGE_TAG_NONE);
 }
 
 static inline bool folio_mapped(const struct folio *f) {

@@ -2,7 +2,7 @@
 
 /* defines linker sections for commonly accessed regions,
  * .text, .bss, .rodata, etc... */
-
+#include <compiler.h>
 #include <stdint.h>
 
 extern uint64_t __stext, __etext;
@@ -12,6 +12,13 @@ extern uint64_t __sbss, __ebss;
 extern uint64_t __slimine_requests, __elimine_requests;
 extern uint64_t __kernel_virt_end;
 
-#define LINKER_SECTION_DEFINE(name, type)                                      \
+#define LINKER_SECTION_ATTRIBUTE(n)                                            \
+    __attribute__((section(".kernel_" #n), used))
+
+#define LINKER_SECTION_OBJECT(type, section)                                   \
+    static_assert(_Alignof(type) == 64);                                       \
+    LINKER_SECTION_ATTRIBUTE(section) static type
+
+#define LINKER_SECTION_DEFINE(type, name)                                      \
     extern type __skernel_##name[];                                            \
     extern type __ekernel_##name[];

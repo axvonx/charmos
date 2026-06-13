@@ -18,13 +18,12 @@ struct cmdline_entry {
     const char *default_val;
     enum cmdline_status status;
     bool required;
-};
+} __linker_aligned;
 
 #define CMDLINE_ENTRY_DECLARE(n, ...)                                          \
-    static struct cmdline_entry __cmdline_##n                                  \
-        __attribute__((used, section(".kernel_cmdline_entries"))) = {          \
-            .name = #n, .status = CMDLINE_NOT_FOUND, __VA_ARGS__}
+    LINKER_SECTION_OBJECT(struct cmdline_entry, cmdline_entries)               \
+    __cmdline_##n = {.name = #n, .status = CMDLINE_NOT_FOUND, __VA_ARGS__}
 
-LINKER_SECTION_DEFINE(cmdline_entries, struct cmdline_entry);
+LINKER_SECTION_DEFINE(struct cmdline_entry, cmdline_entries);
 
 void cmdline_parse(const char *input);

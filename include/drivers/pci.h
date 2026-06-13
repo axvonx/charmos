@@ -34,16 +34,16 @@ struct pci_driver {
     uint16_t vendor_id;
 } __linker_aligned;
 
-LINKER_SECTION_DEFINE(pci_devices, struct pci_driver);
+LINKER_SECTION_DEFINE(struct pci_driver, pci_devices);
 
 #define PCI_DEV_REGISTER(n, cc, sc, pi, vi, init)                              \
-    static struct pci_driver pci_device_##n __attribute__((                    \
-        section(".kernel_pci_devices"), used)) = {.driver.name = #n,           \
-                                                  .class_code = cc,            \
-                                                  .subclass = sc,              \
-                                                  .prog_if = pi,               \
-                                                  .vendor_id = vi,             \
-                                                  .driver.probe = init};
+    LINKER_SECTION_OBJECT(struct pci_driver, pci_devices)                      \
+    pci_device_##n = {.driver.name = #n,                                       \
+                      .class_code = cc,                                        \
+                      .subclass = sc,                                          \
+                      .prog_if = pi,                                           \
+                      .vendor_id = vi,                                         \
+                      .driver.probe = init};
 
 union pci_command_reg {
     uint16_t value;

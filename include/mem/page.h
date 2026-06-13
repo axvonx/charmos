@@ -74,8 +74,6 @@ struct page_table {
 } __packed;
 _Static_assert(sizeof(struct page_table) == PAGE_SIZE, "");
 
-bool page_is_folio_head(struct page *p);
-
 static inline enum page_tag page_get_tag(const struct page *p) {
     return (enum page_tag)(p->meta & PAGE_TAG_MASK);
 }

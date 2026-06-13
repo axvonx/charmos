@@ -24,9 +24,9 @@ struct kernel_test {
 
 #define TEST_REGISTER(name, should_fail, is_integration)                       \
     static void name(void);                                                    \
-    static struct kernel_test __test_##name                                    \
-        __attribute__((section(".kernel_tests"), used)) = {                    \
-            #name, name, is_integration, should_fail, false, false, 0, NULL};  \
+    LINKER_SECTION_OBJECT(struct kernel_test, tests)                           \
+    __test_##name = {#name, name, is_integration, should_fail, false, false,   \
+                     0,     NULL};                                             \
     static void name(void)
 
 #define SET_SUCCESS() current_test->success = true

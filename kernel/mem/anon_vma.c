@@ -50,19 +50,21 @@ static struct rbit_node *itree_subtree_search(struct rbit_node *node,
     /* invariant: first <= node->max, so an overlap exists below */
     while (true) {
         if (node->left && first <= node->left->max) {
-            node =
-                node->left; /* leftmost candidate lives in the left subtree */
+            node = node->left; /* leftmost lives in the left subtree */
             continue;
         }
+
         if (node->interval.low <= last) { /* node starts at/under the window */
-            if (first <=
-                node->interval.high) /* ...and ends at or over it -> hit */
+
+            if (first <= node->interval.high) /* ...ends at or over it -> hit */
                 return node;
+
             if (node->right && first <= node->right->max) {
                 node = node->right;
                 continue;
             }
         }
+
         return NULL;
     }
 }
@@ -96,8 +98,10 @@ struct anon_vma_chain *anon_vma_itree_next(struct anon_vma_chain *avc,
         do {
             prev = node;
             node = node->parent;
+
             if (!node)
                 return NULL;
+
             rb = node->right;
         } while (prev == rb);
 
@@ -107,6 +111,7 @@ struct anon_vma_chain *anon_vma_itree_next(struct anon_vma_chain *avc,
         /* the walk is finished */
         if (last < node->interval.low)
             return NULL;
+
         if (first <= node->interval.high)
             return rbit_entry(node, struct anon_vma_chain, itnode);
 
@@ -184,6 +189,7 @@ enomem:
  * away is freed (going up to the pinned root eventually) */
 void vma_range_unlink_anon_vmas(struct vma_range *vma_range) {
     struct anon_vma_chain *avc, *next;
+
     list_for_each_entry_safe(avc, next, &vma_range->anon_vma_chain,
                              same_vma_range) {
         struct anon_vma *av = avc->anon_vma;
@@ -191,5 +197,6 @@ void vma_range_unlink_anon_vmas(struct vma_range *vma_range) {
         avc_free(avc);
         anon_vm_area_put(av);
     }
+
     vma_range->anon_vma = NULL;
 }

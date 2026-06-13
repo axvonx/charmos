@@ -87,17 +87,17 @@ struct scheduler_periodic_work_percpu {
     bool executing;
 };
 
-LINKER_SECTION_DEFINE(sched_periodic_work,
-                      struct scheduler_periodic_work_linker_object);
+LINKER_SECTION_DEFINE(struct scheduler_periodic_work_linker_object,
+                      sched_periodic_work);
 
 #define SCHEDULER_PERIODIC_WORK_REGISTER(_fn, _type, _prio, _interval)         \
-    static struct scheduler_periodic_work_linker_object __spw_##_fn            \
-        __attribute__((section(".kernel_sched_periodic_work"), used)) = {      \
-            .name = #_fn,                                                      \
-            .fn = _fn,                                                         \
-            .type = _type,                                                     \
-            .interval = _interval,                                             \
-            .prio = _prio}
+    LINKER_SECTION_OBJECT(struct scheduler_periodic_work_linker_object,        \
+                          sched_periodic_work)                                 \
+    __spw_##_fn = {.name = #_fn,                                               \
+                   .fn = _fn,                                                  \
+                   .type = _type,                                              \
+                   .interval = _interval,                                      \
+                   .prio = _prio}
 
 #define SCHEDULER_PERIODIC_WORK_REGISTER_PER_PERIOD(_fn, _prio)                \
     SCHEDULER_PERIODIC_WORK_REGISTER(_fn, PERIODIC_WORK_PERIOD_BASED, _prio, 1)

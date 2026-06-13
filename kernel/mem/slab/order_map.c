@@ -5,7 +5,7 @@
 #include "internal.h"
 
 static _Atomic uint8_t *order_map_entry_for(vaddr_t vaddr, bool *high_bits) {
-    slab_ptr_validate((void *) vaddr);
+    kassert(kmalloc_ptr_in_slab_validate((void *) vaddr));
     vaddr_t vptr_relative = vaddr - SLAB_HEAP_START;
     vaddr_t aligned_2mb = ALIGN_DOWN(vptr_relative, PAGE_2MB);
     vaddr_t aligned_4mb = ALIGN_DOWN(vptr_relative, PAGE_2MB * 2);
@@ -44,8 +44,4 @@ void slab_order_map_init(void) {
 
     uint8_t set_to = SLAB_POW2_ORDER_EMPTY << 4 | SLAB_POW2_ORDER_EMPTY;
     memset(slab_global.order_map, set_to, bytes_needed);
-}
-
-bool slab_order_map_none(vaddr_t vaddr) {
-    return slab_order_map_get(vaddr) == SLAB_POW2_ORDER_NONE;
 }

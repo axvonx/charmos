@@ -17,7 +17,7 @@ struct perdomain_descriptor {
     perdomain_descriptor_constructor constructor;
 } __linker_aligned;
 
-LINKER_SECTION_DEFINE(perdomain_desc, struct perdomain_descriptor);
+LINKER_SECTION_DEFINE(struct perdomain_descriptor, perdomain_desc);
 
 #define PERDOMAIN_DECLARE(__n, __type, __ctor)                                 \
     extern __type __perdomain_##__n;                                           \
@@ -25,13 +25,13 @@ LINKER_SECTION_DEFINE(perdomain_desc, struct perdomain_descriptor);
         if ((__ctor) != NULL)                                                  \
             __ctor((__type *) inst, cpu);                                      \
     }                                                                          \
-    static volatile struct perdomain_descriptor __perdomain_desc_##__n         \
-        __attribute__((section(".kernel_perdomain_desc"))) = {                 \
-            .name = #__n,                                                      \
-            .size = sizeof(__type),                                            \
-            .align = _Alignof(__type),                                         \
-            .perdomain_ptrs = NULL,                                            \
-            .constructor = __perdomain_ctor_##__n,                             \
+    LINKER_SECTION_OBJECT(struct perdomain_descriptor, perdomain_desc)         \
+    __perdomain_desc_##__n = {                                                 \
+        .name = #__n,                                                          \
+        .size = sizeof(__type),                                                \
+        .align = _Alignof(__type),                                             \
+        .perdomain_ptrs = NULL,                                                \
+        .constructor = __perdomain_ctor_##__n,                                 \
     };                                                                         \
     __type __perdomain_##__n
 

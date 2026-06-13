@@ -25,13 +25,13 @@ struct slab_size_constant {
 } __linker_aligned;
 
 #define SLAB_SIZE_REGISTER(n, s, a)                                            \
-    static struct slab_size_constant slab_size_constant_##n                    \
-        __attribute__((section(".kernel_slab_sizes"), used)) = {               \
-            .name = #n,                                                        \
-            .size = s,                                                         \
-            .align = a,                                                        \
-            .list = LIST_HEAD_INIT(slab_size_constant_##n.list),               \
-            .internal = {{0}},                                                 \
+    LINKER_SECTION_OBJECT(struct slab_size_constant, slab_sizes)               \
+    slab_size_constant_##n = {                                                 \
+        .name = #n,                                                            \
+        .size = s,                                                             \
+        .align = a,                                                            \
+        .list = LIST_HEAD_INIT(slab_size_constant_##n.list),                   \
+        .internal = {{0}},                                                     \
     }
 
 /* convenience wrapper */
@@ -45,4 +45,4 @@ void slab_domain_init(void);
 void slab_domains_print();
 void slab_domain_init_late();
 
-LINKER_SECTION_DEFINE(slab_sizes, struct slab_size_constant);
+LINKER_SECTION_DEFINE(struct slab_size_constant, slab_sizes);

@@ -234,13 +234,12 @@ void log_site_destroy(struct log_site *site);
 #define LOG_SITE_ALL UINT32_MAX
 
 #define LOG_SITE_DECLARE(_name, ...)                                           \
-    __attribute__((                                                            \
-        section(".kernel_log_sites"))) struct log_site __log_site_##_name = {  \
-        .name = #_name, __VA_ARGS__}
+    LINKER_SECTION_ATTRIBUTE(log_sites)                                        \
+    struct log_site __log_site_##_name = {.name = #_name, __VA_ARGS__}
 
 #define LOG_SITE_DECLARE_DEFAULT(_name, ...)                                   \
-    __attribute__((                                                            \
-        section(".kernel_log_sites"))) struct log_site __log_site_##_name = {  \
+    LINKER_SECTION_ATTRIBUTE(log_sites)                                        \
+    struct log_site __log_site_##_name = {                                     \
         .name = #_name,                                                        \
         .flags = LOG_SITE_DEFAULT,                                             \
         .capacity = LOG_SITE_CAPACITY_DEFAULT,                                 \
@@ -272,7 +271,7 @@ void log_site_destroy(struct log_site *site);
 
 #define LOG_HANDLE(name) &(__log_handle_##name)
 
-LINKER_SECTION_DEFINE(log_sites, struct log_site);
+LINKER_SECTION_DEFINE(struct log_site, log_sites);
 
 LOG_HANDLE_EXTERN(global);
 LOG_SITE_EXTERN(global);
