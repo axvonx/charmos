@@ -76,7 +76,7 @@ static bool radix_verify_node(struct radix_tree *tree, struct radix_node *node,
         return true;
 
     if (node->parent != expected_parent)
-        panic("Node %p has incorrect parent %p (expected %p)\n", (void *) node,
+        panic("Node %p has incorrect parent %p (expected %p)", (void *) node,
               (void *) node->parent, (void *) expected_parent);
 
     if (node_count)
@@ -89,7 +89,7 @@ static bool radix_verify_node(struct radix_tree *tree, struct radix_node *node,
     }
 
     if (expected_mask != node->present_mask)
-        panic("Node %p present_mask mismatch: expected 0x%llx, got 0x%llx\n",
+        panic("Node %p present_mask mismatch: expected 0x%llx, got 0x%llx",
               (void *) node, (unsigned long long) expected_mask,
               (unsigned long long) node->present_mask);
 
@@ -101,7 +101,7 @@ static bool radix_verify_node(struct radix_tree *tree, struct radix_node *node,
             continue;
 
         if (level >= max_height)
-            panic("Node %p at level %d has child beyond max height %d\n",
+            panic("Node %p at level %d has child beyond max height %d",
                   (void *) node, level, max_height);
 
         uint32_t shift = (max_height - level - 1) * RADIX_BITS;
@@ -110,7 +110,7 @@ static bool radix_verify_node(struct radix_tree *tree, struct radix_node *node,
         if (is_leaf_parent) {
             uint64_t item_key = tree->key_fn(child);
             if (item_key != child_prefix)
-                panic("Leaf item at slot %d has key %llu (expected %llu)\n", i,
+                panic("Leaf item at slot %d has key %llu (expected %llu)", i,
                       (unsigned long long) item_key,
                       (unsigned long long) child_prefix);
 
@@ -131,7 +131,7 @@ static bool radix_verify_tree(struct radix_tree *tree) {
 
     if (!tree->root)
         if (tree->height != 0)
-            panic("Tree has no root but nonzero height %u\n", tree->height);
+            panic("Tree has no root but nonzero height %u", tree->height);
 
     int node_count = 0;
     return radix_verify_node(tree, tree->root, NULL, 0, tree->height, 0,

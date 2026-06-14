@@ -30,7 +30,7 @@ void simple_free(struct vas *space, void *ptr, size_t size) {
         vaddr_t virt = (vaddr_t) real_virt + i * PAGE_SIZE;
         paddr_t phys = vmm_get_phys(virt, VMM_FLAG_NONE);
         kassert(phys != (paddr_t) -1);
-        vmm_unmap_page(virt, VMM_FLAG_NONE);
+        vmm_unmap_page(virt);
         pmm_free_page(phys);
     }
 

@@ -13,7 +13,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#define HALT panic("UBSAN HALT ASSERTED\n");
+#define HALT panic("UBSAN HALT ASSERTED");
 
 #define is_aligned(value, align) (((value) & ((align) - 1)) == 0)
 

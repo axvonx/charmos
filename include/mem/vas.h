@@ -54,3 +54,5 @@ void vas_space_dump(struct vas *vas);
 static inline bool vas_vaddr_in_vas(struct vas *vas, vaddr_t vaddr) {
     return vaddr >= vas->base && vaddr < vas->limit;
 }
+
+bool vas_vaddr_is_allocated(struct vas *vas, vaddr_t addr);

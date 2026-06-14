@@ -242,7 +242,7 @@ static bool vas_pull_chunk(struct vas *vas, struct vas_local_tree *lt) {
 }
 
 /* faster approach: maintain a sorted interval list per-CPU of chunk
- * boundaries and binary-search it. But the simple version works first. */
+ * boundaries and binary-search it, but the simple version works first */
 static ssize_t vas_find_owner(struct vas *vas, vaddr_t addr) {
     size_t i;
     for_each_cpu_id(i) {
@@ -322,6 +322,47 @@ void vas_free(struct vas *vas, vaddr_t addr, size_t size) {
     enum irql irql = spin_lock(&lt->lock);
     tree_free(lt, addr, size);
     spin_unlock(&lt->lock, irql);
+}
+
+/* True if addr lands inside a free gap held by this one tree. The tree is keyed
+ * by gap start, so this is a plain BST containment search (the same shape as
+ * the inner loops of tree_free / vas_find_owner). Caller holds lt->lock. */
+static bool tree_addr_is_free(struct vas_local_tree *lt, vaddr_t addr) {
+    struct rbt_node *node = lt->tree.root;
+    while (node) {
+        struct vas_range *g = rbt_entry(node, struct vas_range, node);
+
+        if (addr < g->start)
+            node = node->left;
+        else if (addr >= g->start + g->length)
+            node = node->right;
+        else
+            return true; /* g->start <= addr < g->start + g->length */
+    }
+    return false;
+}
+
+bool vas_vaddr_is_allocated(struct vas *vas, vaddr_t addr) {
+    if (!vas_vaddr_in_vas(vas, addr))
+        return false;
+
+    enum irql irql = spin_lock(&vas->global.lock);
+    bool free_here = tree_addr_is_free(&vas->global, addr);
+    spin_unlock(&vas->global.lock, irql);
+    if (free_here)
+        return false;
+
+    size_t i;
+    for_each_cpu_id(i) {
+        struct vas_local_tree *lt = &vas->local[i];
+        irql = spin_lock(&lt->lock);
+        free_here = tree_addr_is_free(lt, addr);
+        spin_unlock(&lt->lock, irql);
+        if (free_here)
+            return false;
+    }
+
+    return true;
 }
 
 static void vas_space_init_common(struct vas *vas, vaddr_t base,

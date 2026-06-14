@@ -18,7 +18,7 @@ static void rbit_check_cycle(struct rbit_node *node, const char *caller) {
 
         if (tortoise == hare) {
             panic("Cycle detected in %s (left spine): tortoise == hare at "
-                  "node=%p\n",
+                  "node=%p",
                   caller, (void *) tortoise);
             break;
         }
@@ -36,7 +36,7 @@ static void rbit_check_cycle(struct rbit_node *node, const char *caller) {
 
         if (tortoise == hare) {
             panic("Cycle detected in %s (right spine): tortoise == hare at "
-                  "node=%p\n",
+                  "node=%p",
                   caller, (void *) tortoise);
             break;
         }
@@ -324,7 +324,7 @@ static size_t validate_rbit(struct rbit_node *node, size_t *black_height) {
     if (node->color == RBIT_RED) {
         if ((node->left && node->left->color == RBIT_RED) ||
             (node->right && node->right->color == RBIT_RED)) {
-            panic("Red-Red violation at node [%d,%d]\n", node->interval.low,
+            panic("Red-Red violation at node [%d,%d]", node->interval.low,
                   node->interval.high);
             return 0;
         }
@@ -339,7 +339,7 @@ static size_t validate_rbit(struct rbit_node *node, size_t *black_height) {
         return 0;
 
     if (left_black_height != right_black_height) {
-        panic("Black-height violation at node [%d,%d] (left=%d, right=%d)\n",
+        panic("Black-height violation at node [%d,%d] (left=%d, right=%d)",
               node->interval.low, node->interval.high, left_black_height,
               right_black_height);
         return 0;
@@ -348,9 +348,8 @@ static size_t validate_rbit(struct rbit_node *node, size_t *black_height) {
     size_t expected_max =
         max3(node->interval.high, node_max(node->left), node_max(node->right));
     if (node->max != expected_max) {
-        panic(
-            "Max-invariant violation at node [%d,%d]: stored=%d, expected=%d\n",
-            node->interval.low, node->interval.high, node->max, expected_max);
+        panic("Max-invariant violation at node [%d,%d]: stored=%d, expected=%d",
+              node->interval.low, node->interval.high, node->max, expected_max);
         return 0;
     }
 

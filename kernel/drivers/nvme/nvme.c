@@ -54,7 +54,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
     struct nvme_device *nvme =
         kmalloc(sizeof(struct nvme_device), ALLOC_FLAGS_ZERO);
     if (!nvme)
-        panic("Could not allocate space for NVMe drive\n");
+        panic("Could not allocate space for NVMe drive");
 
     nvme->doorbell_stride = 4U << dstrd;
     nvme->page_size = PAGE_SIZE;
@@ -65,7 +65,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
     nvme->admin_q_depth = ((nvme->cap) & 0xFFFF) + 1;
     nvme->io_queues = kmalloc(sizeof(struct nvme_queue *), ALLOC_FLAGS_ZERO);
     if (!nvme->io_queues)
-        panic("Could not allocate space for NVMe IO queues\n");
+        panic("Could not allocate space for NVMe IO queues");
 
     nvme->admin_sq_db =
         (uint32_t *) ((uint8_t *) nvme->regs + NVME_DOORBELL_BASE);
@@ -133,7 +133,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
 
     struct cpu_mask mask;
     if (!cpu_mask_init(&mask, global.core_count))
-        panic("Could not initialize CPU mask\n");
+        panic("Could not initialize CPU mask");
 
     cpu_mask_set_all(&mask);
 
@@ -149,7 +149,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
 
     nvme->workqueue = workqueue_create("nvme_wq", &attrs);
     if (!nvme->workqueue)
-        panic("Could not allocate workqueue\n");
+        panic("Could not allocate workqueue");
 
     semaphore_init(&nvme->sem, 0, SEMAPHORE_INIT_IRQ_DISABLE);
     nvme_work_enqueue(nvme, &nvme->work);
@@ -195,7 +195,7 @@ struct block_device *nvme_create_generic(struct nvme_device *nvme) {
     struct block_device *d =
         kmalloc(sizeof(struct block_device), ALLOC_FLAGS_ZERO);
     if (!d)
-        panic("Could not allocate space for NVMe device\n");
+        panic("Could not allocate space for NVMe device");
 
     d->driver_data = nvme;
     d->sector_size = nvme->sector_size;
@@ -205,7 +205,7 @@ struct block_device *nvme_create_generic(struct nvme_device *nvme) {
     d->flags = BDEV_FLAG_NO_REORDER | BDEV_FLAG_NO_COALESCE;
     d->cache = kmalloc(sizeof(struct bcache), ALLOC_FLAGS_ZERO);
     if (unlikely(!d->cache))
-        panic("Could not allocate space for NVMe block cache\n");
+        panic("Could not allocate space for NVMe block cache");
 
     d->scheduler = bio_sched_create(d, &nvme_bio_sched_ops);
 

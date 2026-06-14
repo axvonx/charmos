@@ -14,6 +14,7 @@ struct folio;
 #define PAGE_2MB MB(2)
 #define PAGE_1GB GB(1)
 
+#define PAGE_PRESENT_SHIFT (0)
 #define PAGE_PRESENT (0x1UL)
 #define PAGE_WRITE (0x2UL)
 #define PAGE_USER_ALLOWED (0x4UL)

@@ -35,12 +35,12 @@ void movealloc_exec_all(void) {
 
 static void change_slab_backing_page(void *ptr) {
     if (slab_size_to_index(ksize(ptr)) != -1)
-        panic("Moved allocations cannot come from slab\n");
+        panic("Moved allocations cannot come from slab");
 }
 
-void movealloc(size_t new_domain, void *ptr, enum vmm_flags flags) {
+void movealloc_internal(size_t new_domain, void *ptr, enum vmm_flags flags) {
     if (global.current_bootstage >= BOOTSTAGE_COMPLETE)
-        panic("movealloc cannot be called after boot completes\n");
+        panic("movealloc cannot be called after boot completes");
 
     struct domain *d = global.domains[new_domain];
     size_t size = ksize(ptr);
@@ -53,13 +53,14 @@ void movealloc(size_t new_domain, void *ptr, enum vmm_flags flags) {
         paddr_t paddr = vmm_get_phys(vaddr, flags);
         paddr_t new_phys = domain_alloc_from_domain(d, 1);
         if (!new_phys)
-            panic("movealloc failed!\n");
+            panic("movealloc failed!");
 
         vaddr_t new_virt = hhdm_paddr_to_vaddr(new_phys);
         void *pvaddr = (void *) vaddr;
         void *pnew_virt = (void *) new_virt;
         memcpy(pnew_virt, pvaddr, PAGE_SIZE);
-        vmm_map_page(vaddr, new_phys, PAGE_WRITE | PAGE_PRESENT, flags);
+        vmm_map_page(vaddr, new_phys, PAGE_WRITE | PAGE_PRESENT,
+                     flags | VMM_FLAG_MODIFY_LEAF);
         kassert(vmm_get_phys(vaddr, flags) == new_phys);
 
         phys_addrs[i] = paddr;

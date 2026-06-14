@@ -110,7 +110,7 @@ void rcu_read_unlock(void) {
     uint32_t old =
         atomic_fetch_sub_explicit(&t->rcu_nesting, 1, memory_order_seq_cst);
     if (old == 0)
-        panic("RCU nesting underflow\n");
+        panic("RCU nesting underflow");
 
     if (old == 1) {
         uint64_t start_gen =

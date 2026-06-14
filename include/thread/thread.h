@@ -501,7 +501,7 @@ void reaper_enqueue(struct thread *t);
 static inline void thread_put(struct thread *t) {
     if (refcount_dec_and_test(&t->refcount)) {
         if (thread_get_state(t) != THREAD_STATE_ZOMBIE)
-            panic("final ref dropped while thread not zombie\n");
+            panic("final ref dropped while thread not zombie");
 
         reaper_enqueue(t);
     }

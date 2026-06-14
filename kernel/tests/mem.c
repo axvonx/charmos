@@ -3,6 +3,7 @@
 #include <crypto/prng.h>
 #include <mem/alloc.h>
 #include <mem/elcm.h>
+#include <mem/page_alloc.h>
 #include <mem/pmm.h>
 #include <mem/slab.h>
 #include <mem/tlb.h>
@@ -28,7 +29,7 @@ TEST_REGISTER(vmm_map_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
 
     uint64_t p = pmm_alloc_page();
     TEST_ASSERT(p != 0);
-    void *ptr = vmm_map_bump(p, PAGE_SIZE, 0, VMM_FLAG_NONE);
+    void *ptr = vmm_map_bump(p, PAGE_SIZE, 0);
     TEST_ASSERT(ptr != NULL);
     vmm_unmap_virt(ptr, PAGE_SIZE, VMM_FLAG_NONE);
     TEST_ASSERT(vmm_get_phys((uint64_t) ptr, VMM_FLAG_NONE) == (uint64_t) -1);
@@ -444,13 +445,13 @@ TEST_REGISTER(tlb_shootdown_single_cpu_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
     paddr_t p2 = pmm_alloc_page();
     TEST_ASSERT(p1 && p2);
 
-    void *va = vmm_map_bump(p1, PAGE_SIZE, 0, VMM_FLAG_NONE);
+    void *va = vmm_map_bump(p1, PAGE_SIZE, 0);
     TEST_ASSERT(va);
 
     *(volatile uint64_t *) va = 0x11111111;
 
     vmm_unmap_virt(va, PAGE_SIZE, VMM_FLAG_NONE);
-    va = vmm_map_bump(p2, PAGE_SIZE, 0, VMM_FLAG_NONE);
+    va = vmm_map_bump(p2, PAGE_SIZE, 0);
 
     tlb_shootdown((uintptr_t) va, true);
 
@@ -484,7 +485,7 @@ TEST_REGISTER(tlb_shootdown_synchronous_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
     paddr_t p2 = pmm_alloc_page();
     TEST_ASSERT(p1 && p2);
 
-    void *va = vmm_map_bump(p1, PAGE_SIZE, 0, VMM_FLAG_NONE);
+    void *va = vmm_map_bump(p1, PAGE_SIZE, 0);
     TEST_ASSERT(va);
 
     *(volatile uint64_t *) va = 0xAAAAAAAA;
@@ -496,7 +497,7 @@ TEST_REGISTER(tlb_shootdown_synchronous_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
     }
 
     vmm_unmap_virt(va, PAGE_SIZE, VMM_FLAG_NONE);
-    vmm_map_page((vaddr_t) va, p2, PAGE_WRITE, VMM_FLAG_NONE);
+    vmm_map_page((vaddr_t) va, p2, PAGE_WRITE);
     *(volatile uint64_t *) va = 0xBBBBBBBB;
 
     atomic_store(&tlb_go, true);
@@ -520,11 +521,11 @@ TEST_REGISTER(tlb_shootdown_async_eventual_test, SHOULD_NOT_FAIL,
     paddr_t p2 = pmm_alloc_page();
     TEST_ASSERT(p1 && p2);
 
-    void *va = vmm_map_bump(p1, PAGE_SIZE, 0, VMM_FLAG_NONE);
+    void *va = vmm_map_bump(p1, PAGE_SIZE, 0);
     *(volatile uint64_t *) va = 0x1234;
 
     vmm_unmap_virt(va, PAGE_SIZE, VMM_FLAG_NONE);
-    va = vmm_map_bump(p2, PAGE_SIZE, 0, VMM_FLAG_NONE);
+    va = vmm_map_bump(p2, PAGE_SIZE, 0);
     *(volatile uint64_t *) va = 0x5678;
 
     tlb_shootdown((uintptr_t) va, false);
@@ -547,7 +548,7 @@ TEST_REGISTER(tlb_shootdown_flush_all_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
     paddr_t p = pmm_alloc_page();
     TEST_ASSERT(p);
 
-    void *va = vmm_map_bump(p, PAGE_SIZE, 0, VMM_FLAG_NONE);
+    void *va = vmm_map_bump(p, PAGE_SIZE, 0);
 
     /* Flood shootdown queue */
     for (size_t i = 0; i < TLB_QUEUE_SIZE * 4; i++) {
@@ -557,7 +558,7 @@ TEST_REGISTER(tlb_shootdown_flush_all_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
     /* Now do a real remap */
     paddr_t p2 = pmm_alloc_page();
     vmm_unmap_virt(va, PAGE_SIZE, VMM_FLAG_NONE);
-    va = vmm_map_bump(p2, PAGE_SIZE, 0, VMM_FLAG_NONE);
+    va = vmm_map_bump(p2, PAGE_SIZE, 0);
     *(volatile uint64_t *) va = 0xDEADBEEF;
 
     tlb_shootdown((uintptr_t) va, true);
@@ -568,7 +569,7 @@ TEST_REGISTER(tlb_shootdown_flush_all_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
 
 static void tlb_spammer(void *) {
     paddr_t p = pmm_alloc_page();
-    void *va = vmm_map_bump(p, PAGE_SIZE, 0, VMM_FLAG_NONE);
+    void *va = vmm_map_bump(p, PAGE_SIZE, 0);
 
     for (int i = 0; i < 1000; i++) {
         tlb_shootdown((uintptr_t) va, false);
@@ -670,6 +671,13 @@ TEST_REGISTER(kfree_defer_irq_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
             spins--;
         }
     }
+    SET_SUCCESS();
+}
+
+TEST_REGISTER(page_alloc_demand_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
+    void *ptr = page_alloc_demand(8, ALLOC_FLAGS_ZERO);
+    memset(ptr, 67, PAGE_SIZE);
+    ADD_MESSAGE("successfully demand allocated and memsetted memory");
     SET_SUCCESS();
 }
 

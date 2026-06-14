@@ -5,7 +5,7 @@
 #define kassert_1(x)                                                           \
     do {                                                                       \
         if (unlikely(!(x))) {                                                  \
-            panic("Assertion \"" #x "\" failed\n");                            \
+            panic("Assertion \"" #x "\" failed");                              \
             __builtin_unreachable();                                           \
         }                                                                      \
     } while (0)
@@ -13,7 +13,7 @@
 #define kassert_n(x, fmt, ...)                                                 \
     do {                                                                       \
         if (unlikely(!(x))) {                                                  \
-            panic("Assertion \"" #x "\" failed with message: " fmt "\n",       \
+            panic("Assertion \"" #x "\" failed with message: " fmt "",         \
                   ##__VA_ARGS__);                                              \
             __builtin_unreachable();                                           \
         }                                                                      \

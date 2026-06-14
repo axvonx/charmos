@@ -106,7 +106,7 @@ void thread_free_stack(struct thread *thread) {
         vaddr_t virt = (vaddr_t) thread->stack + i * PAGE_SIZE;
         paddr_t phys = vmm_get_phys(virt, VMM_FLAG_NONE);
         kassert(phys != (paddr_t) -1);
-        vmm_unmap_page(virt, VMM_FLAG_NONE);
+        vmm_unmap_page(virt);
         pmm_free_page(phys);
     }
     vas_free(stacks_space, stack_real_virt, thread->stack_size);
@@ -385,7 +385,7 @@ struct scheduler *thread_get_scheduler(struct thread *t, enum irql *sirql_out) {
         spin_unlock(&sched->lock, *sirql_out);
     } while (1);
 
-    panic("unreachable\n");
+    panic("unreachable");
 }
 
 void thread_lock_two_runqueues(struct thread *a, struct thread *b,

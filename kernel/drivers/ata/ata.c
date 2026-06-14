@@ -100,7 +100,7 @@ bool ata_setup_drive(struct ata_drive *ide, struct pci_device *devices,
             ide->slave = is_slave;
             ide->identify_data = kmalloc(512);
             if (!ide->identify_data)
-                panic("Could not allocate space for IDE Identify\n");
+                panic("Could not allocate space for IDE Identify");
 
             ata_select_drive(ide);
             ata_soft_reset(ide);
@@ -131,7 +131,7 @@ void ata_init(struct pci_device *devices, uint64_t count) {
     struct ata_drive *drives =
         kmalloc(sizeof(struct ata_drive) * 4, ALLOC_FLAGS_ZERO);
     if (!drives)
-        panic("Could not allocate space for devices\n");
+        panic("Could not allocate space for devices");
 
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 2; j++) {

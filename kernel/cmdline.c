@@ -50,7 +50,7 @@ static void cmdline_dispatch(const char *var, const char *val) {
             continue;
 
         if (e->status == CMDLINE_FOUND)
-            panic("duplicate cmdline entry: %s\n", var);
+            panic("duplicate cmdline entry: %s", var);
 
         e->status = CMDLINE_FOUND;
         if (e->callback) {
@@ -58,7 +58,7 @@ static void cmdline_dispatch(const char *var, const char *val) {
         } else if (e->value) {
             char *copy = kmalloc(strlen(val) + 1);
             if (!copy)
-                panic("alloc failed for %s\n", var);
+                panic("alloc failed for %s", var);
             memcpy(copy, val, strlen(val) + 1);
             *e->value = copy;
             log_msg(LOG_INFO, "command line entry '%s' set to '%s'", e->name,

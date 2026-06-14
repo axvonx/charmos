@@ -30,6 +30,7 @@ struct fixed_size_node {
 static_assert(offsetof(struct fixed_size_node, list_node) == 0);
 
 struct fixed_size_page_hdr {
+    ssize_t domain; /* -1 means it isn't perdomain */
     size_t free_count;
     size_t total;
     struct list_head page_list;
@@ -50,6 +51,8 @@ struct fixed_size_range {
     struct list_head fl_pages;
     size_t empty_pages;
     size_t full_node_size; /* node size + object size */
+    struct fixed_size_range **perdomain_fsrs;
+    ssize_t domain;
 };
 
 static_assert(sizeof(struct fixed_size_range) < PAGE_SIZE);
@@ -62,31 +65,24 @@ fixed_size_range_create(struct fixed_size_range_attributes *attrs);
 void fixed_size_range_init(struct fixed_size_range *fsr,
                            struct fixed_size_range_attributes *attrs);
 
-/* Declare a per-domain fixed_size_range called `name`, one instance per domain,
- * each constructed from the given fixed_size_range_attributes initializer.
- *
- *   FIXED_SIZE_RANGE_PERDOMAIN_DECLARE(folio,
- *       .obj_size  = sizeof(struct folio),
- *       .obj_align = _Alignof(struct folio));
- *
- * Reach the calling domain's instance with the companion accessors:
- *
- *   struct folio *f = FSR_PERDOMAIN_ALLOC(folio);
- *   FSR_PERDOMAIN_FREE(folio, f);
- *
- * The generated constructor / perdomain symbols are name-mangled under a
- * double-underscore prefix and are not meant to be referenced directly. */
 #define FIXED_SIZE_RANGE_PERDOMAIN_DECLARE(name, ...)                          \
     static void __##name##_fsr_init(struct fixed_size_range *__fsr,            \
                                     size_t __domain) {                         \
         (void) __domain;                                                       \
+        static struct fixed_size_range **__perdomain_fsrs_##name = NULL;       \
+        if (!__perdomain_fsrs_##name)                                          \
+            __perdomain_fsrs_##name = kmalloc(                                 \
+                sizeof(struct fixed_size_range *) * global.domain_count);      \
+                                                                               \
         struct fixed_size_range_attributes __attrs = {__VA_ARGS__};            \
         fixed_size_range_init(__fsr, &__attrs);                                \
+        __perdomain_fsrs_##name[__domain] = __fsr;                             \
+        __fsr->perdomain_fsrs = __perdomain_fsrs_##name;                       \
+        __fsr->domain = __domain;                                              \
     }                                                                          \
     PERDOMAIN_DECLARE(__##name##_fsr, struct fixed_size_range,                 \
                       __##name##_fsr_init)
 
-/* This domain's instance of a range declared above. */
 #define FSR_PERDOMAIN_THIS(name) PERDOMAIN_PTR(__##name##_fsr)
 #define FSR_PERDOMAIN_ALLOC(name) fixed_size_alloc(FSR_PERDOMAIN_THIS(name))
 #define FSR_PERDOMAIN_FREE(name, obj)                                          \

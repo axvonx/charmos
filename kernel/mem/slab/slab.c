@@ -207,7 +207,7 @@ static void *slab_map_new(struct slab_cache *cache,
     for (pages_mapped = 0; pages_mapped < pages; pages_mapped++) {
         paddr_t phys = phys_out[pages_mapped];
         vaddr_t virt = virt_base + pages_mapped * PAGE_SIZE;
-        if (unlikely(vmm_map_page(virt, phys, pflags, VMM_FLAG_NONE) < 0))
+        if (unlikely(vmm_map_page(virt, phys, pflags) < 0))
             goto err;
     }
 
@@ -221,7 +221,7 @@ err:
 
     for (size_t i = 0; i < pages_mapped; i++) {
         vaddr_t virt = virt_base + i * PAGE_SIZE;
-        vmm_unmap_page(virt, VMM_FLAG_NONE);
+        vmm_unmap_page(virt);
     }
 
     if (virt_base)
@@ -238,7 +238,7 @@ static void slab_free_virt_and_phys(struct slab *slab) {
     for (size_t i = 0; i < slab->page_count; i++) {
         size_t virt = virt_base + i * PAGE_SIZE;
         paddr_t phys = page_get_paddr(slab->backing_pages[i]);
-        vmm_unmap_page(virt, VMM_FLAG_NONE);
+        vmm_unmap_page(virt);
         pmm_free_page(phys);
     }
 
@@ -258,7 +258,7 @@ void slab_cache_init(size_t order, struct slab_cache *cache,
 
     if (cache->obj_size > available)
         panic("Slab class too large, object size is %u with %u available "
-              "bytes -- insufficient\n",
+              "bytes -- insufficient",
               cache->obj_size, available);
 
     uint64_t n;
@@ -277,7 +277,7 @@ void slab_cache_init(size_t order, struct slab_cache *cache,
     cache->objs_per_slab = n;
 
     if (cache->objs_per_slab == 0)
-        panic("Slab cache cannot hold any objects per slab!\n");
+        panic("Slab cache cannot hold any objects per slab!");
 
     cache->bitmap_bytes = SLAB_BITMAP_BYTES_FOR(cache->objs_per_slab);
     cache->slab_metadata_size =
@@ -415,10 +415,12 @@ static void slab_bitmap_free(struct slab *slab, void *obj) {
     uint8_t bit_mask;
     slab_index_and_mask(slab, obj, &byte_idx, &bit_mask);
 
+    /* TODO: mystery bug here, might've been influenced by the
+     * scheduler work push bug causing wrong context to be saved,
+     * and not causing kmalloc-internal corruption due to IRQL raised */
     if (!SLAB_BITMAP_TEST(slab->bitmap[byte_idx], bit_mask)) {
-        slab_warn("Possible UAF of addr %p for bitmap 0b%b with bitmask 0b%b\n",
-                  obj, slab->bitmap[byte_idx], bit_mask);
-        return;
+        panic("Possible UAF of addr %p for bitmap 0b%b with bitmask 0b%b", obj,
+              slab->bitmap[byte_idx], bit_mask);
     }
 
     SLAB_BITMAP_UNSET(slab->bitmap[byte_idx], bit_mask);
@@ -561,7 +563,7 @@ void slab_allocator_init() {
     /* bootstrap VAS */
     slab_global.vas = vas_bootstrap(SLAB_HEAP_START, SLAB_HEAP_END);
     if (!slab_global.vas)
-        panic("Could not initialize slab VAS\n");
+        panic("Could not initialize slab VAS");
     struct slab_size_constant *start = __skernel_slab_sizes;
     struct slab_size_constant *end = __ekernel_slab_sizes;
     size_t dyn_count = end - start;
@@ -712,7 +714,7 @@ void slab_free_addr_to_cache(void *addr, enum alloc_behavior bh) {
 
     struct slab *slab = slab_for_ptr(addr);
     if (!slab)
-        panic("Likely double free of address %p\n", addr);
+        panic("Likely double free of address %p", addr);
 
     slab_free_old(slab, addr);
 }
@@ -878,7 +880,7 @@ void *slab_alloc(struct slab_cache *cache, enum alloc_behavior behavior) {
 
     if (!alloc_behavior_may_fault(behavior) &&
         cache->type == SLAB_TYPE_PAGEABLE)
-        panic("picked pageable cache with non-fault tolerant behavior\n");
+        panic("picked pageable cache with non-fault tolerant behavior");
 
     enum irql irql = spin_lock(&cache->lock);
 

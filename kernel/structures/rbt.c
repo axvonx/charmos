@@ -18,7 +18,7 @@ static void rbt_check_cycle(struct rbt_node *node, const char *caller) {
 
         if (tortoise == hare) {
             panic("Cycle detected in %s (left spine): tortoise == hare at "
-                  "node=%p\n",
+                  "node=%p",
                   caller, (void *) tortoise);
             break;
         }
@@ -36,7 +36,7 @@ static void rbt_check_cycle(struct rbt_node *node, const char *caller) {
 
         if (tortoise == hare) {
             panic("Cycle detected in %s (right spine): tortoise == hare at "
-                  "node=%p\n",
+                  "node=%p",
                   caller, (void *) tortoise);
             break;
         }

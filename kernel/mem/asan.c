@@ -46,7 +46,7 @@ void asan_init(void) {
         (asan_shadow_size + PAGE_SIZE - 1) / PAGE_SIZE, ALLOC_FLAGS_DEFAULT);
 
     if (!shadow_phys)
-        panic("ASAN: could not allocate shadow memory\n");
+        panic("ASAN: could not allocate shadow memory");
 
     asan_shadow_base = hhdm_paddr_to_ptr(shadow_phys);
 
@@ -56,18 +56,17 @@ void asan_init(void) {
 
     while (remaining >= PAGE_2MB && (phys % PAGE_2MB) == 0 &&
            (virt % PAGE_2MB) == 0) {
-        if (vmm_map_2mb_page(virt, phys, PAGE_PRESENT | PAGE_WRITE,
-                             VMM_FLAG_NONE) < 0)
-            panic("ASAN: failed to map 2MB page at %lx\n", virt);
+        if (vmm_map_page(virt, phys, PAGE_PRESENT | PAGE_WRITE, VMM_FLAG_NONE,
+                         VMM_MAP_PAGE_SIZE_2MB) < 0)
+            panic("ASAN: failed to map 2MB page at %lx", virt);
         phys += PAGE_2MB;
         virt += PAGE_2MB;
         remaining -= PAGE_2MB;
     }
 
     while (remaining > 0) {
-        if (vmm_map_page(virt, phys, PAGE_PRESENT | PAGE_WRITE, VMM_FLAG_NONE) <
-            0)
-            panic("ASAN: failed to map 4KB page at %lx\n", virt);
+        if (vmm_map_page(virt, phys, PAGE_PRESENT | PAGE_WRITE) < 0)
+            panic("ASAN: failed to map 4KB page at %lx", virt);
         phys += PAGE_SIZE;
         virt += PAGE_SIZE;
         remaining = remaining > PAGE_SIZE ? remaining - PAGE_SIZE : 0;
@@ -94,9 +93,9 @@ static inline uint8_t *asan_shadow_for(const void *addr) {
 /* Report function called on violation. Prints info and panics. */
 static void __asan_report_and_panic(const char *what, const void *addr,
                                     size_t size, bool is_write) {
-    printf("[ASAN] %s at %p size=%zu %s\n", what, addr, size,
+    printf("[ASAN] %s at %p size=%zu %s", what, addr, size,
            is_write ? "store" : "load");
-    panic("ASAN: aborting due to memory error\n");
+    panic("ASAN: aborting due to memory error");
 }
 
 /* Core access check: conservative: checks every shadow byte spanned by access.

@@ -14,7 +14,12 @@
 #include <structures/list.h>
 
 /* this will always panic upon alloc failure - only to be used in init code! */
-void movealloc(size_t domain, void *ptr, enum vmm_flags vf);
+void movealloc_internal(size_t domain, void *ptr, enum vmm_flags vf);
+
+/* movealloc(domain, ptr[, vf]) - vf defaults to VMM_FLAG_NONE */
+#define movealloc_2(d, p) movealloc_internal((d), (p), VMM_FLAG_NONE)
+#define movealloc_3(d, p, vf) movealloc_internal((d), (p), (vf))
+#define movealloc(...) _DISPATCH(movealloc, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
 
 typedef void (*movealloc_callback)(void *a, void *b);
 

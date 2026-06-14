@@ -3,13 +3,114 @@
 #include <irq/exception_sync_cb.h>
 #include <irq/irq.h>
 #include <mem/address_range.h>
+#include <mem/demand_page.h>
+#include <mem/hhdm.h>
+#include <mem/page_fault.h>
+#include <mem/page_table.h>
+#include <mem/pmm.h>
 #include <mem/vmm.h>
 #include <sch/sched.h>
 #include <string.h>
 #include <sync/spinlock.h>
 #include <thread/thread.h>
 
+static enum exception_sync_cb_result
+page_fault_sync_cb(struct exception_sync_cb *this, struct irq_context *irqc,
+                   uint8_t buf[EXCEPTION_SYNC_CB_SCRATCH_BUFFER_SIZE]);
+
+static void __noreturn page_fault_report_crash(vaddr_t fault_addr,
+                                               uint64_t error_code,
+                                               struct irq_context *irqc);
+
+EXCEPTION_SYNC_CB_REGISTER(page_fault, IRQ_PAGE_FAULT, page_fault_sync_cb,
+                           NULL);
+
 static struct spinlock pf_lock = SPINLOCK_INIT;
+
+enum irq_result page_fault_isr(void *context, uint8_t vector,
+                               struct irq_context *rsp) {
+    (void) context, (void) vector;
+    struct page_fault_scratch_buffer *pfsb =
+        (struct page_fault_scratch_buffer *) smp_core()->irq_stack_scratch_buf;
+
+    uint64_t error_code = rsp->error_code;
+    uint64_t fault_addr;
+    asm volatile("mov %%cr2, %0" : "=r"(fault_addr));
+    pfsb->error_code = error_code;
+    pfsb->virt = fault_addr;
+
+    return IRQ_HANDLED;
+}
+
+static enum exception_sync_cb_result
+page_fault_sync_cb(struct exception_sync_cb *this, struct irq_context *irqc,
+                   uint8_t buf[EXCEPTION_SYNC_CB_SCRATCH_BUFFER_SIZE]) {
+    struct page_fault_scratch_buffer *pfsb =
+        (struct page_fault_scratch_buffer *) buf;
+
+    vaddr_t vaddr = pfsb->virt;
+    uint64_t error = pfsb->error_code;
+
+    enum page_fault_access access_error;
+    if (error & PAGE_FAULT_EC_WRITE) {
+        access_error = PAGE_FAULT_WRITE;
+    } else if (error & PAGE_FAULT_EC_INSTRUCTION) {
+        access_error = PAGE_FAULT_EXEC;
+    } else {
+        access_error = PAGE_FAULT_READ;
+    }
+
+    struct page_fault_info pfi = {
+        .addr = vaddr,
+        .user = error & PAGE_FAULT_EC_USER,
+        .was_present = error & PAGE_FAULT_EC_PRESENT,
+        .access = access_error,
+    };
+
+    /* Do the full crash here, it's not a valid address_range,
+     * we need the other information here */
+    struct address_range *adr = address_range_for_addr(vaddr);
+    if (!adr)
+        goto crash;
+
+    /* it just needs to exist */
+    struct page_fault_handler *pfh = adr->page_fault_handler;
+    kassert(pfh);
+    kassert(pfh->ops && pfh->ops->is_valid_fault);
+
+    if (!pfh->ops->is_valid_fault(&pfi))
+        goto crash;
+
+    /* Great, we have a valid vaddr, let's bring it in */
+
+    /* TODO: order > 0, i.e. hugepages */
+    pte_t pte = vmm_get_leaf_pte(vaddr);
+
+    /* Nice, another CPU mapped this in
+     * for us while we were dillying */
+    if (pte & PAGE_PRESENT)
+        goto done;
+
+    struct pte_tagged ptag = pte_tagged_unpack(pte);
+    kassert(ptag.type = PTE_TAG_TYPE_DEMAND_PAGED);
+    kassert(ptag.payload | DEMAND_PAGE_FLAG_ZERO_MEMORY ||
+            ptag.payload | DEMAND_PAGE_FLAG_NONE);
+    bool zeroed_out = ptag.payload == DEMAND_PAGE_FLAG_ZERO_MEMORY;
+    paddr_t paddr = pmm_alloc_page(); /* TODO: order > 0 */
+    kassert(paddr); /* TODO: might be recoverable? many say no */
+
+    if (zeroed_out)
+        memset(hhdm_paddr_to_ptr(paddr), 0, PAGE_SIZE);
+
+    vmm_map_demand_page(vaddr, paddr, ptag.payload);
+    log_msg(LOG_INFO, "successfully mapped in demand page 0x%llx", vaddr);
+
+done:
+    return EXCEPTION_SYNC_CB_OK;
+
+crash:
+    page_fault_report_crash(vaddr, error, irqc);
+}
 
 static bool addr_is_mapped(uint64_t addr) {
     return vmm_get_phys((vaddr_t) PAGE_ALIGN_DOWN(addr), VMM_FLAG_NONE) !=
@@ -96,35 +197,32 @@ static void dump_slab_exec_fault(struct thread *curr, struct irq_context *rsp) {
     printf("  scheduler = %p\n", (uint64_t) atomic_load(&curr->scheduler));
 }
 
-enum irq_result page_fault_handler(void *context, uint8_t vector,
-                                   struct irq_context *rsp) {
-    (void) context, (void) vector;
-    struct thread *curr = thread_get_current();
+static void __noreturn page_fault_report_crash(vaddr_t fault_addr,
+                                               uint64_t error_code,
+                                               struct irq_context *irqc) {
 
-    uint64_t error_code = rsp->error_code;
-    uint64_t fault_addr;
-    asm volatile("mov %%cr2, %0" : "=r"(fault_addr));
+    struct thread *curr = thread_get_current();
 
     struct address_range *ar = address_range_for_addr(fault_addr);
     const char *name = ar ? ar->name : "UNKNOWN";
 
     spin_lock_raw(&pf_lock);
 
-    printf("\n=== PAGE FAULT === @ %p\n", rsp->rip);
+    printf("\n=== PAGE FAULT === @ %p\n", irqc->rip);
     printf("Faulting Address (CR2): %p (ar: %s)\n", fault_addr, name);
     printf("Error Code: %p\n", error_code);
     printf("  - Page not Present (P): %s\n",
-           (error_code & 0x01) ? "Yes" : "No");
+           (error_code & PAGE_FAULT_EC_PRESENT) ? "Yes" : "No");
     printf("  - Write Access (W/R): %s\n",
-           (error_code & 0x02) ? "Write" : "Read");
+           (error_code & PAGE_FAULT_EC_WRITE) ? "Write" : "Read");
     printf("  - User Mode (U/S): %s\n",
-           (error_code & 0x04) ? "User" : "Supervisor");
+           (error_code & PAGE_FAULT_EC_USER) ? "User" : "Supervisor");
     printf("  - Reserved Bit Set (RSVD): %s\n",
-           (error_code & 0x08) ? "Yes" : "No");
+           (error_code & PAGE_FAULT_EC_RESERVED) ? "Yes" : "No");
     printf("  - Instruction Fetch (I/D): %s\n",
-           (error_code & 0x10) ? "Yes" : "No");
+           (error_code & PAGE_FAULT_EC_INSTRUCTION) ? "Yes" : "No");
     printf("  - Protection Key Violation (PK): %s\n",
-           (error_code & 0x20) ? "Yes" : "No");
+           (error_code & PAGE_FAULT_EC_PROTECTION_KEY) ? "Yes" : "No");
     printf("  - Kernel stack %p -> %p\n", curr->stack,
            (uintptr_t) curr->stack + curr->stack_size);
 
@@ -134,23 +232,23 @@ enum irq_result page_fault_handler(void *context, uint8_t vector,
         printf("Likely stack overflow!! Fault in protector page!!!\n");
 
     printf("\n--- Stack at fault RSP ---\n");
-    debug_print_stack_from((uint64_t *) rsp->rsp, 0);
+    debug_print_stack_from((uint64_t *) irqc->rsp, 0);
 
-    bool is_slab_exec =
-        (error_code & 0x10) && ar && strcmp(ar->name, "slab") == 0;
+    bool is_slab_exec = (error_code & PAGE_FAULT_EC_INSTRUCTION) && ar &&
+                        strcmp(ar->name, "slab") == 0;
 
-    if (!is_slab_exec && (error_code & 0x10)) {
-        struct address_range *rip_ar = address_range_for_addr(rsp->rip);
+    if (!is_slab_exec && (error_code & PAGE_FAULT_EC_INSTRUCTION)) {
+        struct address_range *rip_ar = address_range_for_addr(irqc->rip);
         if (rip_ar && strcmp(rip_ar->name, "slab") == 0)
             is_slab_exec = true;
     }
 
     if (is_slab_exec)
-        dump_slab_exec_fault(curr, rsp);
+        dump_slab_exec_fault(curr, irqc);
 
-    if (!(error_code & 0x04)) {
+    if (!(error_code & PAGE_FAULT_EC_USER)) {
         spin_unlock_raw(&pf_lock);
-        panic("KERNEL PAGE FAULT ON CORE %llu under thread %s\n", smp_core_id(),
+        panic("KERNEL PAGE FAULT ON CORE %llu under thread %s", smp_core_id(),
               thread_get_current()->name);
         while (true) {
             disable_interrupts();
@@ -159,5 +257,5 @@ enum irq_result page_fault_handler(void *context, uint8_t vector,
     }
 
     spin_unlock_raw(&pf_lock);
-    return IRQ_HANDLED;
+    panic("?");
 }

@@ -326,7 +326,7 @@ void smp_setup_bsp() {
     global.shootdown_data = kmalloc(
         sizeof(struct tlb_shootdown_cpu) * global.core_count, ALLOC_FLAGS_ZERO);
     if (!global.shootdown_data)
-        panic("Could not allocate global shootdown data\n");
+        panic("Could not allocate global shootdown data");
 
     global.cores[0] = c;
     init_smt_info(c);

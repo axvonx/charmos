@@ -105,7 +105,7 @@ struct workqueue *workqueue_create_internal(struct workqueue_attributes *attrs,
     spinlock_init(&wq->work_lock);
 
     if (attrs->worker_cpu_mask.nbits == 0)
-        panic("please set a CPU mask before creating the workqueue\n");
+        panic("please set a CPU mask before creating the workqueue");
 
     wq->attrs = *attrs;
     condvar_init(&wq->queue_cv, attrs->flags & WORKQUEUE_FLAG_ISR_SAFE
@@ -294,13 +294,13 @@ void workqueues_permanent_init(void) {
         kmalloc(sizeof(struct workqueue *) * num_workqueues, ALLOC_FLAGS_ZERO);
 
     if (!global.workqueues)
-        panic("Failed to allocate space for workqueues!\n");
+        panic("Failed to allocate space for workqueues!");
 
     for (int64_t i = 0; i < num_workqueues; i++) {
 
         struct cpu_mask mask;
         if (!cpu_mask_init(&mask, global.core_count))
-            panic("Failed to initialize CPU mask\n");
+            panic("Failed to initialize CPU mask");
 
         cpu_mask_set(&mask, i);
 
@@ -319,10 +319,10 @@ void workqueues_permanent_init(void) {
         global.workqueues[i]->core = i;
 
         if (!global.workqueues[i])
-            panic("Failed to spawn permanent workqueue\n");
+            panic("Failed to spawn permanent workqueue");
 
         if (!workqueue_spawn_permanent_worker(global.workqueues[i]))
-            panic("Failed to spawn initial worker on workqueue %u\n", i);
+            panic("Failed to spawn initial worker on workqueue %u", i);
     }
 }
 

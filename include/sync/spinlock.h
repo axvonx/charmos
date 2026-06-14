@@ -79,7 +79,7 @@ static inline void spin_unlock(struct spinlock *lock, enum irql old) {
 
 static inline enum irql __warn_unused_result spin_lock(struct spinlock *lock) {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_interrupt())
-        panic("Attempted to take non-ISR safe spinlock from an ISR!\n");
+        panic("Attempted to take non-ISR safe spinlock from an ISR!");
 
 #ifdef DEBUG_LOCK
     kassert(!lock->acquired_high);

@@ -69,9 +69,9 @@ void elf_map(uintptr_t user_pml4_phys, void *elf_data) {
 
             uintptr_t phys = pmm_alloc_page();
             if (!phys)
-                panic("Failed to allocate page for user ELF segment\n");
+                panic("Failed to allocate page for user ELF segment");
 
-            void *phys_mapped = vmm_map_bump(phys, PAGE_SIZE, 0, VMM_FLAG_NONE);
+            void *phys_mapped = vmm_map_bump(phys, PAGE_SIZE, 0);
             memset(phys_mapped, 0, PAGE_SIZE);
 
             uintptr_t offset_in_seg = vaddr - seg_vaddr_start;
@@ -106,7 +106,7 @@ uintptr_t map_user_stack(uintptr_t user_pml4_phys) {
     for (uintptr_t v = stack_bottom; v < USER_STACK_TOP; v += PAGE_SIZE) {
         uintptr_t phys = pmm_alloc_page();
         if (!phys)
-            panic("Failed to alloc user stack\n");
+            panic("Failed to alloc user stack");
 
         vmm_map_page_user(vmm_phys_to_pml4(user_pml4_phys), v, phys,
                           PAGE_WRITE | PAGE_USER_ALLOWED | PAGE_PRESENT,

@@ -19,7 +19,7 @@ paddr_t bitmap_alloc_page() {
 paddr_t bitmap_alloc_pages(uint64_t count, enum alloc_flags flags) {
     (void) flags;
     if (count == 0)
-        panic("Zero pages requested\n");
+        panic("Zero pages requested");
 
     uint64_t consecutive = 0;
     uint64_t start_index = 0;
@@ -73,7 +73,7 @@ paddr_t bitmap_alloc_pages(uint64_t count, enum alloc_flags flags) {
 
 void bitmap_free_pages(paddr_t addr, uint64_t count) {
     if (addr == 0 || count == 0) {
-        panic("Possible UAF\n");
+        panic("Possible UAF");
     }
 
     uint64_t start_index = (uint64_t) addr / PAGE_SIZE;

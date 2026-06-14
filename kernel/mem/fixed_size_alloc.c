@@ -69,6 +69,7 @@ static bool fixed_size_refill(struct fixed_size_range *fsr) {
     hdr->free_count = fixed_size_per_page(fsr);
     INIT_LIST_HEAD(&hdr->page_list);
     list_add_tail(&hdr->page_list, &fsr->fl_pages);
+    hdr->domain = fsr->domain;
     fsr->empty_pages++;
 
     for (uint32_t i = 0; i < hdr->total; i++) {
@@ -110,7 +111,7 @@ void *fixed_size_alloc(struct fixed_size_range *fsr) {
     return obj;
 }
 
-void fixed_size_free(struct fixed_size_range *fsr, void *obj) {
+static void fixed_size_free_internal(struct fixed_size_range *fsr, void *obj) {
     enum irql irql = spin_lock(&fsr->lock);
     struct fixed_size_page_hdr *hdr = fixed_size_page_of(obj);
     struct fixed_size_node *fsn = fsn_for_obj(fsr, obj);
@@ -128,6 +129,21 @@ void fixed_size_free(struct fixed_size_range *fsr, void *obj) {
         fixed_size_drop_page(fsr, hdr);
 
     spin_unlock(&fsr->lock, irql);
+}
+
+/* Wrapper around internal for domain FSRs, finds the right fsr */
+void fixed_size_free(struct fixed_size_range *fsr, void *obj) {
+    struct fixed_size_page_hdr *hdr = fixed_size_page_of(obj);
+    ssize_t domain = hdr->domain;
+    if (!fsr->perdomain_fsrs) {
+        kassert(domain == -1);
+
+        /* Just one */
+        return fixed_size_free_internal(fsr, obj);
+    }
+
+    kassert(fsr->perdomain_fsrs[domain]->domain == domain);
+    return fixed_size_free(fsr->perdomain_fsrs[domain], obj);
 }
 
 void fixed_size_reclaim_freelist_pages(struct fixed_size_range *fsr) {
@@ -157,6 +173,10 @@ void fixed_size_range_init(struct fixed_size_range *fsr,
     fsr->empty_pages = 0;
     fsr->full_node_size = ALIGN_UP(
         sizeof(struct fixed_size_node) + attrs->obj_size, attrs->obj_align);
+
+    /* These are instantiated after init in the macro for perdomain */
+    fsr->perdomain_fsrs = NULL;
+    fsr->domain = -1;
 }
 
 struct fixed_size_range *

@@ -66,6 +66,11 @@ struct core {
     atomic_bool executing_dpcs;
     atomic_bool idle;
 
+    /* This scratch buffer is stack allocated, and is set upon
+     * IRQ entry, allowing the top half of the IRQ to modify it
+     *
+     * For exception_sync_cb, it is passed into the callback as a parameter */
+    uint8_t *irq_stack_scratch_buf;
     bool in_interrupt;
     enum irql current_irql;
 

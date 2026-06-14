@@ -214,7 +214,7 @@ void mutex_unlock(struct mutex *mutex) {
 
     if (mutex_get_owner(mutex) != current_thread)
         panic("non-owner thread tried to unlock mutex. mutex owner is %p, "
-              "current thread is %p\n",
+              "current thread is %p",
               mutex_get_owner(mutex), current_thread);
 
     enum irql ts_lock_irql;

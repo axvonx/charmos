@@ -50,7 +50,7 @@ void turnstiles_init() {
     global.turnstiles =
         kmalloc(sizeof(struct turnstile_hash_table), ALLOC_FLAGS_ZERO);
     if (!global.turnstiles)
-        panic("Could not allocate turnstile hash table\n");
+        panic("Could not allocate turnstile hash table");
     for (size_t i = 0; i < TURNSTILE_HASH_SIZE; i++) {
         spinlock_init(&global.turnstiles->heads[i].lock);
         INIT_LIST_HEAD(&global.turnstiles->heads[i].list);

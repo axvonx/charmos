@@ -95,11 +95,11 @@ void nvme_alloc_admin_queues(struct nvme_device *nvme) {
 
 void nvme_alloc_io_queues(struct nvme_device *nvme, uint32_t qid) {
     if (!qid)
-        panic("Can't allocate IO queue zero!\n");
+        panic("Can't allocate IO queue zero!");
 
     nvme->io_queues[qid] = kmalloc(sizeof(struct nvme_queue), ALLOC_FLAGS_ZERO);
     if (unlikely(!nvme->io_queues[qid]))
-        panic("NVMe IO queue allocation failed!\n");
+        panic("NVMe IO queue allocation failed!");
 
     struct nvme_queue *this_queue = nvme->io_queues[qid];
 
@@ -108,14 +108,14 @@ void nvme_alloc_io_queues(struct nvme_device *nvme, uint32_t qid) {
 
     uint64_t sq_phys = pmm_alloc_pages(sq_pages);
 
-    this_queue->sq = vmm_map_bump(sq_phys, sq_pages * nvme->page_size,
-                                  PAGE_NO_FLAGS, VMM_FLAG_NONE);
+    this_queue->sq =
+        vmm_map_bump(sq_phys, sq_pages * nvme->page_size, PAGE_NO_FLAGS);
     memset(this_queue->sq, 0, sq_pages * nvme->page_size);
 
     uint64_t cq_phys = pmm_alloc_pages(cq_pages);
 
-    this_queue->cq = vmm_map_bump(cq_phys, cq_pages * nvme->page_size,
-                                  PAGE_NO_FLAGS, VMM_FLAG_NONE);
+    this_queue->cq =
+        vmm_map_bump(cq_phys, cq_pages * nvme->page_size, PAGE_NO_FLAGS);
     memset(this_queue->cq, 0, cq_pages * nvme->page_size);
 
     this_queue->sq_phys = sq_phys;

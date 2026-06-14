@@ -32,7 +32,7 @@ static void e1000_setup_tx_ring(struct e1000_device *dev) {
     for (int i = 0; i < E1000_NUM_TX_DESC; i++) {
         dev->tx_buffers[i] = kmalloc(2048);
         if (!dev->tx_buffers[i])
-            panic("e1000 ring setup allocation failed!\n");
+            panic("e1000 ring setup allocation failed!");
 
         dev->tx_descs[i].addr =
             vmm_get_phys((uintptr_t) dev->tx_buffers[i], VMM_FLAG_NONE);
@@ -64,7 +64,7 @@ static void e1000_setup_rx_ring(struct e1000_device *dev) {
     for (int i = 0; i < E1000_NUM_RX_DESC; i++) {
         dev->rx_buffers[i] = kmalloc(E1000_RX_BUF_SIZE);
         if (!dev->rx_buffers[i])
-            panic("e1000 ring allocation failed\n");
+            panic("e1000 ring allocation failed");
 
         dev->rx_descs[i].addr =
             vmm_get_phys((uintptr_t) dev->rx_buffers[i], VMM_FLAG_NONE);
@@ -220,7 +220,7 @@ static enum errno e1000_pci_init(struct device *dev) {
         struct pci_device dev = {.bus = bus, .dev = d, .function = func};
         struct e1000_device *device = kmalloc(sizeof(struct e1000_device));
         if (unlikely(!device))
-            panic("e1000 device allocation failed!\n");
+            panic("e1000 device allocation failed!");
 
         e1000_init(&dev, device);
     }

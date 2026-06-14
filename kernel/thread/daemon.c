@@ -132,12 +132,11 @@ void daemon_main(void *a) {
             daemon_thread_exit(daemon, self);
             break;
         default:
-            panic("Unknown daemon thread command with value %u\n",
-                  self->command);
+            panic("Unknown daemon thread command with value %u", self->command);
         }
     }
 
-    panic("Daemon thread should not be able to exit the loop\n");
+    panic("Daemon thread should not be able to exit the loop");
 }
 
 struct daemon_thread *daemon_thread_create(struct daemon *daemon) {
@@ -204,7 +203,7 @@ struct daemon *daemon_create(const char *fmt, struct daemon_attributes *attrs,
         goto err;
 
     if (attrs->thread_cpu_mask.nbits == 0)
-        panic("please set a valid CPU mask\n");
+        panic("please set a valid CPU mask");
 
     daemon->attrs = *attrs;
 

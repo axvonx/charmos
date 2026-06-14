@@ -23,6 +23,7 @@ struct address_range {
     size_t align;
     enum address_range_flags flags;
     struct rbt_node rbt_node_internal;
+    struct page_fault_handler *page_fault_handler;
 } __linker_aligned;
 
 #define ADDRESS_RANGE_DECLARE(sym, ...)                                        \

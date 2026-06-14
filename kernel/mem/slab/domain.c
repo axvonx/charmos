@@ -20,7 +20,7 @@ void slab_domain_build_locality_lists(struct slab_domain *sdom) {
         kmalloc(sizeof(struct slab_cache_ref) * zl->count, ALLOC_FLAGS_ZERO);
 
     if (!sdom->nonpageable_zonelist.entries || !sdom->pageable_zonelist.entries)
-        panic("Could not allocate slab domain zonelist entries!\n");
+        panic("Could not allocate slab domain zonelist entries!");
 
     for (size_t i = 0; i < zl->count; i++) {
         struct domain_zonelist_entry *zent = &zl->entries[i];
@@ -67,7 +67,7 @@ void slab_domain_init_caches(struct slab_domain *dom) {
     dom->local_pageable_cache =
         kmalloc(sizeof(struct slab_caches), ALLOC_FLAGS_ZERO);
     if (!dom->local_pageable_cache || !dom->local_nonpageable_cache)
-        panic("Could not allocate slab cache\n");
+        panic("Could not allocate slab cache");
 
     dom->local_pageable_cache->caches = slab_caches_alloc();
     dom->local_nonpageable_cache->caches = slab_caches_alloc();
@@ -116,7 +116,7 @@ void slab_domain_init_stats(struct slab_domain *domain) {
                 ALLOC_FLAGS_ZERO);
 
     if (!domain->stats || !domain->stats->buckets || !domain->buckets)
-        panic("Failed to create domain stat series\n");
+        panic("Failed to create domain stat series");
 
     struct stat_bucket *iter;
     stat_series_for_each(domain->stats, iter) {
@@ -157,7 +157,7 @@ void slab_domain_init(void) {
         struct slab_domain *sdomain =
             kmalloc(sizeof(struct slab_domain), ALLOC_FLAGS_ZERO);
         if (!sdomain)
-            panic("Failed to allocate slab domain!\n");
+            panic("Failed to allocate slab domain!");
 
         sdomain->domain = domain;
         domain->slab_domain = sdomain;

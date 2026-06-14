@@ -72,7 +72,7 @@ void slab_domain_init_daemon(struct slab_domain *domain) {
 void slab_domain_init_workqueue(struct slab_domain *domain) {
     struct cpu_mask mask = {0};
     if (!cpu_mask_init(&mask, global.core_count))
-        panic("CPU mask initialization failed\n");
+        panic("CPU mask initialization failed");
 
     domain_set_cpu_mask(&mask, domain->domain);
 

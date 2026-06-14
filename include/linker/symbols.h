@@ -22,3 +22,6 @@ extern uint64_t __kernel_virt_end;
 #define LINKER_SECTION_DEFINE(type, name)                                      \
     extern type __skernel_##name[];                                            \
     extern type __ekernel_##name[];
+
+#define linker_section_for_each_object(obj, name)                              \
+    for (obj = __skernel_##name; obj < __ekernel_##name; obj++)

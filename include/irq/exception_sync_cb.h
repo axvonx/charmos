@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define EXCEPTION_SYNC_CB_SCRATCH_BUFFER_SIZE 32 /* bytes */
+
 struct exception_sync_cb;
 struct irq_context;
 
@@ -13,7 +15,8 @@ enum exception_sync_cb_result {
 };
 
 typedef enum exception_sync_cb_result (*exception_sync_cb_fn)(
-    struct exception_sync_cb *this, struct irq_context *irqc);
+    struct exception_sync_cb *this, struct irq_context *irqc,
+    uint8_t scratch_buf[EXCEPTION_SYNC_CB_SCRATCH_BUFFER_SIZE]);
 
 struct exception_sync_cb {
     const char *name;

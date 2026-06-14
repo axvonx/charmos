@@ -197,27 +197,27 @@ static void domain_structs_init(struct domain_buddy *dom, size_t arena_capacity,
     dom->domain = core_domain;
     dom->free_area = alloc_up(sizeof(struct free_area) * MAX_ORDER);
     if (!dom->free_area)
-        panic("Failed to allocate domain free area\n");
+        panic("Failed to allocate domain free area");
 
     dom->zonelist.entries =
         alloc_up(sizeof(struct domain_zonelist_entry) * global.domain_count);
     if (!dom->zonelist.entries)
-        panic("Failed to allocate domain zonelist entries\n");
+        panic("Failed to allocate domain zonelist entries");
 
     dom->arenas = alloc_up(sizeof(struct domain_arena *) * dom->core_count);
     if (!dom->arenas)
-        panic("Failed to allocate domain arena\n");
+        panic("Failed to allocate domain arena");
 
     core_domain->domain_buddy = dom;
     for (size_t i = 0; i < dom->core_count; i++) {
         dom->arenas[i] = alloc_up(sizeof(struct domain_arena));
         if (!dom->arenas[i])
-            panic("Failed to allocate domain arena\n");
+            panic("Failed to allocate domain arena");
 
         struct domain_arena *this = dom->arenas[i];
         this->pages = alloc_up(sizeof(struct page *) * arena_capacity);
         if (!this->pages)
-            panic("Failed to allocate domain arena pages\n");
+            panic("Failed to allocate domain arena pages");
 
         this->head = 0;
         this->tail = 0;
@@ -233,12 +233,12 @@ static void domain_structs_init(struct domain_buddy *dom, size_t arena_capacity,
 
     dom->free_queue = alloc_up(sizeof(struct domain_free_queue));
     if (!dom->free_queue)
-        panic("Failed to allocate domain free queue\n");
+        panic("Failed to allocate domain free queue");
 
     size_t fq_size = sizeof(*dom->free_queue->queue) * fq_capacity;
     dom->free_queue->queue = alloc_up(fq_size);
     if (!dom->free_queue->queue)
-        panic("Failed to allocate domain free queue array\n");
+        panic("Failed to allocate domain free queue array");
 
     dom->free_queue->head = 0;
     dom->free_queue->tail = 0;
@@ -399,14 +399,14 @@ void domain_buddy_dump(void) {
 
 static void move_buddy(struct domain_buddy *buddy) {
     size_t domain = buddy->domain->id;
-    movealloc(domain, buddy->free_queue, VMM_FLAG_NONE);
-    movealloc(domain, buddy->free_area, VMM_FLAG_NONE);
-    movealloc(domain, buddy->free_queue->queue, VMM_FLAG_NONE);
-    movealloc(domain, buddy->zonelist.entries, VMM_FLAG_NONE);
-    movealloc(domain, buddy->arenas, VMM_FLAG_NONE);
+    movealloc(domain, buddy->free_queue);
+    movealloc(domain, buddy->free_area);
+    movealloc(domain, buddy->free_queue->queue);
+    movealloc(domain, buddy->zonelist.entries);
+    movealloc(domain, buddy->arenas);
     for (size_t i = 0; i < buddy->core_count; i++) {
-        movealloc(domain, buddy->arenas[i], VMM_FLAG_NONE);
-        movealloc(domain, buddy->arenas[i]->pages, VMM_FLAG_NONE);
+        movealloc(domain, buddy->arenas[i]);
+        movealloc(domain, buddy->arenas[i]->pages);
     }
 }
 

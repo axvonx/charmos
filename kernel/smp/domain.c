@@ -181,7 +181,7 @@ static void domains_move(void *a, void *b) {
     (void) a, (void) b;
     for (size_t i = 0; i < global.domain_count; i++) {
         struct domain *domain = global.domains[i];
-        movealloc(domain->id, domain, VMM_FLAG_NONE);
+        movealloc(domain->id, domain);
     }
 }
 
@@ -200,7 +200,7 @@ size_t domain_for_core(size_t cpu) {
             return i;
     }
 
-    panic("unreachable!\n");
+    panic("unreachable!");
 }
 
 MOVEALLOC_REGISTER_CALL(domain_move, domains_move, /* a = */ NULL,

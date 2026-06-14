@@ -5,7 +5,7 @@
         uint64_t core = smp_core_id();                                         \
         printf("\n=== " #handler_name " fault! ===\n");                        \
         printf("Message -> %s\n", message);                                    \
-        panic("Core %u faulted at %p\n", core, rsp->rip);                      \
+        panic("Core %u faulted at %p", core, rsp->rip);                        \
         while (true) {                                                         \
             wait_for_interrupt();                                              \
         }                                                                      \
@@ -68,7 +68,7 @@ enum irq_result gpf_handler(void *ctx, uint8_t vector,
     printf("\n--- Stack at fault RSP ---\n");
     debug_print_stack_from((uint64_t *) rsp->rsp, 0);
 
-    panic("GPF on core %u at %p (error code 0x%lx)\n", core, rsp->rip, ec);
+    panic("GPF on core %u at %p (error code 0x%lx)", core, rsp->rip, ec);
 
     while (true)
         wait_for_interrupt();

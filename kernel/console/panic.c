@@ -43,15 +43,24 @@ __noreturn void panic_impl(const char *file, int line, const char *func,
     atomic_store(&global.panicked, true);
 
     printf("\n" EIGHTY_LINES "\n");
-    printf("\n                                [" ANSI_BG_RED
-           "KERNEL PANIC" ANSI_RESET "] @ time %llu\n",
-           time_get_ms());
+
+    if (global.current_bootstage < BOOTSTAGE_EARLY_DEVICES) {
+        printf("\n                                [" ANSI_BG_RED
+               "KERNEL PANIC" ANSI_RESET "] @ time unknown\n");
+    } else {
+        printf("\n                                [" ANSI_BG_RED
+               "KERNEL PANIC" ANSI_RESET "] @ time %llu\n",
+               time_get_ms());
+    }
+
     printf(ANSI_RED "%s\n" ANSI_RESET, OS_LOGO_PANIC_CENTERED);
 
     panic_entry();
 
     printf("    [" ANSI_BRIGHT_BLUE "AT" ANSI_RESET " ");
-    time_print_current();
+    if (global.current_bootstage > BOOTSTAGE_EARLY_DEVICES)
+        time_print_current();
+
     printf("]\n");
 
     printf("    [" ANSI_BRIGHT_GREEN "FROM" ANSI_RESET "] " ANSI_GREEN
@@ -64,6 +73,7 @@ __noreturn void panic_impl(const char *file, int line, const char *func,
     va_start(args, fmt);
     vprintf(NULL, fmt, args);
     va_end(args);
+    printf("\n");
 
     debug_print_stack();
 

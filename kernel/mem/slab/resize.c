@@ -23,7 +23,7 @@ static void slab_shrink(struct slab *slab, size_t start, size_t end,
 
         paddr_t phys = page_get_paddr(page);
         vaddr_t virt = (vaddr_t) slab + i * PAGE_SIZE;
-        vmm_unmap_page(virt, VMM_FLAG_NONE);
+        vmm_unmap_page(virt);
         pmm_free_page(phys);
         slab->backing_pages[i] = NULL;
     }
@@ -52,7 +52,7 @@ bool slab_resize(struct slab *slab, size_t new_size_pages) {
 
             vaddr_t virt = (vaddr_t) slab + i * PAGE_SIZE;
             uint64_t flags = slab_page_flags(slab->type);
-            if (unlikely(vmm_map_page(virt, phys, flags, VMM_FLAG_NONE) < 0)) {
+            if (unlikely(vmm_map_page(virt, phys, flags) < 0)) {
                 pmm_free_page(phys); /* not yet recorded, free directly */
                 goto grow_err;
             }

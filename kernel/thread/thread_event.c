@@ -610,7 +610,7 @@ void thread_yield_until_wake_match() {
     while (!(thread_get_flags(curr) & THREAD_FLAG_WAKE_MATCHED)) {
         if (curr->last_action != THREAD_STATE_BLOCKED &&
             curr->last_action != THREAD_STATE_SLEEPING)
-            panic("uh oh\n");
+            panic("uh oh");
 
         if (curr->last_action == THREAD_STATE_BLOCKED) {
             if (block_interruptible(curr, curr->last_action_reason,

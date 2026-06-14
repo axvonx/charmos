@@ -17,6 +17,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 #include <sync/rcu.h>
 #include <thread/apc.h>
 #include <thread/thread.h>
@@ -37,12 +38,16 @@ void isr_common_entry(uint8_t vector, struct irq_context *irq_ctx) {
 
     enum irql old = irql_raise(IRQL_HIGH_LEVEL);
 
+    bool is_exception = irq_vector_is_exception(vector);
+    uint8_t scratch_buf[EXCEPTION_SYNC_CB_SCRATCH_BUFFER_SIZE] = {0};
+
     kassert(smp_core()->irq_entered_irql == IRQL_NONE, "Potential race");
     smp_core()->irq_entered_irql = old;
+    smp_core()->irq_stack_scratch_buf = scratch_buf;
 
     struct irq_desc *desc = &irq_table[vector];
     if (!desc->present || list_empty(&irq_table[vector].actions))
-        panic("Unhandled ISR vector: %u\n", vector);
+        panic("Unhandled ISR vector: %u", vector);
 
     bool handled = false;
     struct list_head *lh;
@@ -58,6 +63,7 @@ void isr_common_entry(uint8_t vector, struct irq_context *irq_ctx) {
         desc->chip->eoi(desc);
 
     smp_core()->irq_entered_irql = IRQL_NONE;
+    smp_core()->irq_stack_scratch_buf = NULL;
 
     /* Here's an odd bit: we'll have very different
      * behavior if we came from an exception. Namely,
@@ -75,13 +81,13 @@ void isr_common_entry(uint8_t vector, struct irq_context *irq_ctx) {
      * can run, but only from this context in which we
      * are at our old pre-exception IRQL and have
      * interrupts enabled */
-    if (irq_vector_is_exception(vector)) {
+    if (is_exception) {
         irq_mark_self_in_interrupt(false);
         irql_lower(old);
 
         struct exception_sync_cb *escb = &exception_cbs[vector];
         if (escb->fn)
-            escb->fn(escb, irq_ctx);
+            escb->fn(escb, irq_ctx, scratch_buf);
 
     } else {
         irql_lower(old);
@@ -114,7 +120,7 @@ void irq_register(char *name, uint8_t vector, irq_handler_t handler, void *ctx,
     me->enabled = true;
 
     if (was && !(flags & IRQ_FLAG_SHARED))
-        panic("need to be shared to have many, registered by %s\n", me->name);
+        panic("need to be shared to have many, registered by %s", me->name);
 
     struct irq_action *act =
         alloc_or_die(kmalloc(sizeof(struct irq_action), ALLOC_FLAGS_ZERO));
@@ -136,7 +142,7 @@ void irq_set_chip(uint8_t vec, struct irq_chip *chip, void *data) {
     enum irql irql = spin_lock(&irq_table_lock);
 
     if (irq_table[vec].chip && chip)
-        panic("IRQ chip %u exists\n", vec);
+        panic("IRQ chip %u exists", vec);
 
     irq_table[vec].chip = chip;
     irq_table[vec].chip_data = data;
@@ -233,6 +239,14 @@ void irq_enable(uint8_t irq) {
         desc->chip->unmask(desc);
 }
 
+static void exception_sync_cbs_init() {
+    struct exception_sync_cb *esc;
+    linker_section_for_each_object(esc, exception_sync_cbs) {
+        kassert(exception_cbs[esc->vector].vector == 0);
+        exception_cbs[esc->vector] = *esc;
+    }
+}
+
 void irq_init() {
     for (size_t i = 0; i < IDT_ENTRIES; i++) {
         struct irq_desc *desc = &irq_table[i];
@@ -241,11 +255,11 @@ void irq_init() {
 
         desc->vector = i;
         irq_desc_clear(desc);
-        if (i == IRQ_DBF || i == IRQ_GPF || i == IRQ_PAGE_FAULT)
-            continue;
 
         idt_set_gate(i, 0x08, 0x8e);
     }
+
+    exception_sync_cbs_init();
 
     irq_register("division_by_zero", IRQ_DIV_BY_Z, divbyz_handler, NULL,
                  IRQ_FLAG_NONE);
@@ -258,7 +272,7 @@ void irq_init() {
     irq_register("gpf", IRQ_GPF, gpf_handler, NULL, IRQ_FLAG_NONE);
     irq_register("double_fault", IRQ_DBF, double_fault_handler, NULL,
                  IRQ_FLAG_NONE);
-    irq_register("page_fault", IRQ_PAGE_FAULT, page_fault_handler, NULL,
+    irq_register("page_fault", IRQ_PAGE_FAULT, page_fault_isr, NULL,
                  IRQ_FLAG_NONE);
 
     irq_register("timer", IRQ_TIMER, scheduler_timer_isr, NULL, IRQ_FLAG_NONE);
