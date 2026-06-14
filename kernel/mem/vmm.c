@@ -449,6 +449,7 @@ static enum errno vmm_pt_apply(struct vmm_map_request *rq) {
         kassert((bool) (*last_entry & PAGE_2MB_page) == want_huge);
         if (handle_exist) {
             err = ERR_EXIST;
+            pte_unlock(last_entry, last_irql);
             goto out;
         }
     }
@@ -569,7 +570,8 @@ enum errno vmm_map_demand_page_internal(vaddr_t virt, paddr_t phys,
         .virt = virt,
         .phys = phys,
         .page_flags = pflags,
-        .vmm_flags = VMM_FLAG_MODIFY_LEAF | VMM_FLAG_HANDLE_PTE_EXISTING,
+        .vmm_flags = VMM_FLAG_MODIFY_LEAF | VMM_FLAG_HANDLE_PTE_EXISTING |
+                     VMM_FLAG_NO_TLB_SHOOTDOWN,
         .page_size = size,
     };
 

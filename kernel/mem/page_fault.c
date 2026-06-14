@@ -92,17 +92,20 @@ page_fault_sync_cb(struct exception_sync_cb *this, struct irq_context *irqc,
         goto done;
 
     struct pte_tagged ptag = pte_tagged_unpack(pte);
-    kassert(ptag.type = PTE_TAG_TYPE_DEMAND_PAGED);
-    kassert(ptag.payload | DEMAND_PAGE_FLAG_ZERO_MEMORY ||
-            ptag.payload | DEMAND_PAGE_FLAG_NONE);
-    bool zeroed_out = ptag.payload == DEMAND_PAGE_FLAG_ZERO_MEMORY;
+    kassert(ptag.type == PTE_TAG_TYPE_DEMAND_PAGED);
+    kassert((ptag.payload & DEMAND_PAGE_FLAG_ZERO_MEMORY) ||
+            (ptag.payload & DEMAND_PAGE_FLAG_NONE));
+    bool zeroed_out = ptag.payload & DEMAND_PAGE_FLAG_ZERO_MEMORY;
     paddr_t paddr = pmm_alloc_page(); /* TODO: order > 0 */
     kassert(paddr); /* TODO: might be recoverable? many say no */
 
     if (zeroed_out)
         memset(hhdm_paddr_to_ptr(paddr), 0, PAGE_SIZE);
 
-    vmm_map_demand_page(vaddr, paddr, ptag.payload);
+    enum errno e = vmm_map_demand_page(vaddr, paddr, ptag.payload);
+    if (e == ERR_EXIST)
+        pmm_free_page(paddr);
+
     log_msg(LOG_INFO, "successfully mapped in demand page 0x%llx", vaddr);
 
 done:

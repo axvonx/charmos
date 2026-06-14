@@ -681,4 +681,154 @@ TEST_REGISTER(page_alloc_demand_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
     SET_SUCCESS();
 }
 
+#define DP_PAGES 16
+#define DP_STRIDE (PAGE_SIZE / sizeof(uint64_t))
+#define DP_MAX_BUFS 8
+#define DP_MAX_THREADS 64
+
+struct dp_worker {
+    _Atomic uint64_t **bufs; /* nbuf demand buffers, counter at page head */
+    size_t nbuf;
+    size_t pages;
+    atomic_uint *done;
+};
+
+static void dp_hammer(void *arg) {
+    struct dp_worker *w = arg;
+
+    /* touch every page of every buffer; first touch faults the zero frame in,
+     * the atomic add is the lost-update probe */
+    for (size_t b = 0; b < w->nbuf; b++)
+        for (size_t p = 0; p < w->pages; p++)
+            atomic_fetch_add_explicit(&w->bufs[b][p * DP_STRIDE], 1,
+                                      memory_order_relaxed);
+
+    atomic_fetch_add(w->done, 1);
+}
+
+static bool dp_alloc_bufs(_Atomic uint64_t **bufs, size_t nbuf, size_t pages) {
+    for (size_t b = 0; b < nbuf; b++) {
+        bufs[b] = page_alloc_demand(pages, ALLOC_FLAGS_ZERO);
+        if (!bufs[b]) {
+            for (size_t j = 0; j < b; j++)
+                page_free((void *) bufs[j], pages);
+            return false;
+        }
+    }
+    return true;
+}
+
+/* every page was faulted in by the workers, so all frames are present here */
+static void dp_free_bufs(_Atomic uint64_t **bufs, size_t nbuf, size_t pages) {
+    for (size_t b = 0; b < nbuf; b++)
+        page_free((void *) bufs[b], pages);
+}
+
+static bool dp_verify(_Atomic uint64_t **bufs, size_t nbuf, size_t pages,
+                      uint64_t expect) {
+    for (size_t b = 0; b < nbuf; b++)
+        for (size_t p = 0; p < pages; p++)
+            if (atomic_load(&bufs[b][p * DP_STRIDE]) != expect)
+                return false;
+
+    return true;
+}
+
+/* Spawn nthreads workers over the shared buffer set. single_core pins them all
+ * to core 0 (the race is then preemption inside the fault handler); otherwise
+ * they spread round-robin across every CPU (true parallel faults) */
+static void dp_spawn(struct thread **t, size_t nthreads, struct dp_worker *w,
+                     bool single_core) {
+    for (size_t i = 0; i < nthreads; i++) {
+        uint64_t core = single_core ? 0 : (i % global.core_count);
+        t[i] = thread_spawn_on_core("dp_hammer", dp_hammer, w, core);
+        if (single_core)
+            thread_pin(t[i]);
+    }
+}
+
+/* 1 buffer, N threads, 1 CPU: serialized faults + preemption mid-handler */
+TEST_REGISTER(demand_1buf_Nthreads_1cpu_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
+    ABORT_IF_RAM_LOW();
+
+    const size_t pages = DP_PAGES, nthreads = 8, nbuf = 1;
+    _Atomic uint64_t *bufs[1];
+    TEST_ASSERT(dp_alloc_bufs(bufs, nbuf, pages));
+
+    atomic_uint done = 0;
+    struct dp_worker w = {bufs, nbuf, pages, &done};
+    struct thread *t[DP_MAX_THREADS];
+    dp_spawn(t, nthreads, &w, /*single_core=*/true);
+
+    while (atomic_load(&done) < nthreads)
+        scheduler_yield();
+
+    TEST_ASSERT(dp_verify(bufs, nbuf, pages, nthreads));
+    dp_free_bufs(bufs, nbuf, pages);
+    SET_SUCCESS();
+}
+
+/* 1 buffer, N threads, N CPUs: many CPUs racing the same demand PTEs */
+TEST_REGISTER(demand_1buf_Nthreads_Ncpu_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
+    ABORT_IF_RAM_LOW();
+
+    if (global.core_count < 2) {
+        SET_SKIP();
+        return;
+    }
+
+    const size_t pages = DP_PAGES, nbuf = 1;
+    size_t nthreads = global.core_count;
+    if (nthreads > DP_MAX_THREADS)
+        nthreads = DP_MAX_THREADS;
+
+    _Atomic uint64_t *bufs[1];
+    TEST_ASSERT(dp_alloc_bufs(bufs, nbuf, pages));
+
+    atomic_uint done = 0;
+    struct dp_worker w = {bufs, nbuf, pages, &done};
+    struct thread *t[DP_MAX_THREADS];
+    dp_spawn(t, nthreads, &w, /*single_core=*/false);
+
+    while (atomic_load(&done) < nthreads)
+        scheduler_yield();
+
+    TEST_ASSERT(dp_verify(bufs, nbuf, pages, nthreads));
+    dp_free_bufs(bufs, nbuf, pages);
+    SET_SUCCESS();
+}
+
+/* N buffers, M threads (M > N), N CPUs: contention spread over many regions */
+TEST_REGISTER(demand_Nbuf_Mthreads_Ncpu_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
+    ABORT_IF_RAM_LOW();
+
+    if (global.core_count < 2) {
+        SET_SKIP();
+        return;
+    }
+
+    const size_t pages = DP_PAGES;
+    size_t nbuf = global.core_count;
+    if (nbuf > DP_MAX_BUFS)
+        nbuf = DP_MAX_BUFS;
+    size_t nthreads = 2 * nbuf; /* M > N */
+    if (nthreads > DP_MAX_THREADS)
+        nthreads = DP_MAX_THREADS;
+
+    _Atomic uint64_t *bufs[DP_MAX_BUFS];
+    TEST_ASSERT(dp_alloc_bufs(bufs, nbuf, pages));
+
+    atomic_uint done = 0;
+    struct dp_worker w = {bufs, nbuf, pages, &done};
+    struct thread *t[DP_MAX_THREADS];
+    dp_spawn(t, nthreads, &w, /*single_core=*/false);
+
+    while (atomic_load(&done) < nthreads)
+        scheduler_yield();
+
+    TEST_ASSERT(dp_verify(bufs, nbuf, pages, nthreads));
+    dp_free_bufs(bufs, nbuf, pages);
+    SET_SUCCESS();
+}
+
 #endif
