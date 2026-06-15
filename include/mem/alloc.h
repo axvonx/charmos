@@ -149,6 +149,9 @@ enum alloc_behavior : uint16_t {
     ALLOC_BEHAVIOR_NO_RECLAIM,
     ALLOC_BEHAVIOR_FAULT_SAFE,
     ALLOC_BEHAVIOR_FLAG_FAST = 1 << ALLOC_BEHAVIOR_FLAG_SHIFT,
+
+    /* Used by various allocators to prevent
+     * recursion in things they interact with */
     ALLOC_BEHAVIOR_FLAG_MINIMAL = 1 << (ALLOC_BEHAVIOR_FLAG_SHIFT + 1),
 
 };

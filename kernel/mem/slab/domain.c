@@ -1,3 +1,4 @@
+#include <mem/alloc_or_die.h>
 #include <mem/domain.h>
 #include <mem/slab.h>
 #include <smp/domain.h>
@@ -10,39 +11,25 @@ void slab_domain_build_locality_lists(struct slab_domain *sdom) {
     struct domain_buddy *buddy = sdom->domain->domain_buddy;
     struct domain_zonelist *zl = &buddy->zonelist;
 
-    sdom->pageable_zonelist.count = zl->count;
-    sdom->nonpageable_zonelist.count = zl->count;
-    sdom->zonelist_entry_count = zl->count;
-
-    sdom->pageable_zonelist.entries =
-        kmalloc(sizeof(struct slab_cache_ref) * zl->count, ALLOC_FLAGS_ZERO);
-    sdom->nonpageable_zonelist.entries =
-        kmalloc(sizeof(struct slab_cache_ref) * zl->count, ALLOC_FLAGS_ZERO);
-
-    if (!sdom->nonpageable_zonelist.entries || !sdom->pageable_zonelist.entries)
-        panic("Could not allocate slab domain zonelist entries!");
-
-    for (size_t i = 0; i < zl->count; i++) {
-        struct domain_zonelist_entry *zent = &zl->entries[i];
-        struct domain_buddy *bd = zent->domain;
-
-        size_t idx = bd - global.domain_buddies;
-        struct slab_domain *remote_sdom = global.domains[idx]->slab_domain;
-
-        sdom->pageable_zonelist.entries[i] = (struct slab_cache_ref){
-            .caches = remote_sdom->local_pageable_cache,
-            .type = SLAB_TYPE_PAGEABLE,
-            .locality = zent->distance,
-            .domain = remote_sdom,
-        };
-
-        sdom->nonpageable_zonelist.entries[i] = (struct slab_cache_ref){
-            .caches = remote_sdom->local_nonpageable_cache,
-            .type = SLAB_TYPE_NONPAGEABLE,
-            .locality = zent->distance,
-            .domain = remote_sdom,
-        };
+    for (int i = 0; i < SLAB_TYPE_COUNT; i++) {
+        sdom->zonelists[i].count = zl->count;
+        sdom->zonelists[i].entries = alloc_or_die(kmalloc(
+            sizeof(struct slab_cache_ref) * zl->count, ALLOC_FLAGS_ZERO));
+        for (size_t j = 0; j < zl->count; j++) {
+            struct domain_zonelist_entry *zent = &zl->entries[j];
+            struct domain_buddy *bd = zent->domain;
+            size_t idx = bd - global.domain_buddies;
+            struct slab_domain *remote_sdom = global.domains[idx]->slab_domain;
+            sdom->zonelists[i].entries[j] = (struct slab_cache_ref){
+                .caches = remote_sdom->caches[i],
+                .type = i,
+                .locality = zent->distance,
+                .domain = remote_sdom,
+            };
+        }
     }
+
+    sdom->zonelist_entry_count = zl->count;
 }
 
 void slab_init_caches(struct slab_caches *caches, enum slab_type type) {
@@ -61,21 +48,21 @@ void slab_domain_link_caches(struct slab_domain *domain,
     }
 }
 
+static void slab_domain_init_cache(struct slab_domain *dom,
+                                   enum slab_type type) {
+    struct slab_caches *caches =
+        alloc_or_die(kmalloc(sizeof(struct slab_caches), ALLOC_FLAGS_ZERO));
+
+    dom->caches[type] = caches;
+    dom->caches[type]->caches = alloc_or_die(slab_caches_alloc());
+    slab_init_caches(caches, type);
+    slab_domain_link_caches(dom, caches);
+}
+
 void slab_domain_init_caches(struct slab_domain *dom) {
-    dom->local_nonpageable_cache =
-        kmalloc(sizeof(struct slab_caches), ALLOC_FLAGS_ZERO);
-    dom->local_pageable_cache =
-        kmalloc(sizeof(struct slab_caches), ALLOC_FLAGS_ZERO);
-    if (!dom->local_pageable_cache || !dom->local_nonpageable_cache)
-        panic("Could not allocate slab cache");
-
-    dom->local_pageable_cache->caches = slab_caches_alloc();
-    dom->local_nonpageable_cache->caches = slab_caches_alloc();
-
-    slab_init_caches(dom->local_nonpageable_cache, SLAB_TYPE_NONPAGEABLE);
-    slab_init_caches(dom->local_pageable_cache, SLAB_TYPE_PAGEABLE);
-    slab_domain_link_caches(dom, dom->local_pageable_cache);
-    slab_domain_link_caches(dom, dom->local_nonpageable_cache);
+    for (int i = 0; i < SLAB_TYPE_COUNT; i++) {
+        slab_domain_init_cache(dom, i);
+    }
 }
 
 static size_t slab_bucket_reset(struct stat_bucket *bucket) {
@@ -131,7 +118,7 @@ static struct slab_cache *slab_domain_cache_for_slab(struct slab *slab) {
 
     size_t o = slab->parent_cache->order;
 
-    return &d->slab_domain->local_nonpageable_cache->caches[o];
+    return &d->slab_domain->caches[SLAB_TYPE_NONPAGEABLE]->caches[o];
 }
 
 void slab_domain_move_slabs(void) {

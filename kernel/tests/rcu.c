@@ -106,6 +106,7 @@ static _Atomic(struct rcu_stress_node *) stress_shared = NULL;
 static atomic_bool stress_stop = false;
 static atomic_bool stress_failed = false;
 static _Atomic uint32_t stress_readers_done = 0;
+static _Atomic uint32_t stress_writers_done = 0;
 static _Atomic uint32_t stress_deferred_freed = 0;
 static _Atomic uint32_t stress_replacements = 0;
 static atomic_size_t gen_freed = 0;
@@ -193,9 +194,8 @@ static void rcu_stress_writer(void *arg) {
         new->value = (local_iter & 1) ? 43 : 42;
         local_iter++;
 
-        /* publish new pointer */
-        struct rcu_stress_node *old = stress_shared;
-        rcu_assign_pointer(stress_shared, new);
+        struct rcu_stress_node *old =
+            atomic_exchange_explicit(&stress_shared, new, memory_order_acq_rel);
 
         /*
          * Defer freeing the old pointer. We deliberately create a backlog by
@@ -216,6 +216,8 @@ static void rcu_stress_writer(void *arg) {
 
         scheduler_yield();
     }
+
+    atomic_fetch_add(&stress_writers_done, 1);
 }
 
 /* a reclaimer thread that also calls synchronize periodically to help drain */
@@ -237,6 +239,13 @@ TEST_REGISTER(rcu_stress_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
     TEST_ASSERT(initial != NULL);
     initial->seq = 1;
     initial->value = 42;
+
+    atomic_store(&stress_stop, false);
+    atomic_store(&stress_failed, false);
+    atomic_store(&stress_readers_done, 0);
+    atomic_store(&stress_writers_done, 0);
+    atomic_store(&stress_deferred_freed, 0);
+    atomic_store(&stress_replacements, 0);
     stress_shared = initial;
 
     /* spawn readers (more than cores) */
@@ -268,6 +277,10 @@ TEST_REGISTER(rcu_stress_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
 
     /* wait for readers to finish */
     while (atomic_load(&stress_readers_done) < STRESS_NUM_READERS) {
+        scheduler_yield();
+    }
+
+    while (atomic_load(&stress_writers_done) < STRESS_NUM_WRITERS) {
         scheduler_yield();
     }
 

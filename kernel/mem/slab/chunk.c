@@ -77,6 +77,7 @@ static struct slab_chunk *alloc_chunk(struct slab_chunks *sc,
     }
 
     INIT_LIST_HEAD(&ret->list);
+    ret->owner = sc;
     ret->state = SLAB_CHUNK_PARTIAL;
     ret->base_addr = vaddr_to_base_addr(base);
     ret->used = 0;

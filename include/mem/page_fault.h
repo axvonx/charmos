@@ -29,8 +29,8 @@ struct page_fault_info {
 
 struct page_fault_handler_ops {
     bool (*is_valid_fault)(struct page_fault_info *pfi);
-    void (*update_after_map)(vaddr_t vaddr, struct page *page);
-    paddr_t (*alloc_pages)(uint8_t order);
+    bool (*update_after_map)(vaddr_t vaddr, struct page *page);
+    paddr_t (*alloc_pages)(vaddr_t vaddr, uint8_t order);
 };
 
 struct page_fault_handler {

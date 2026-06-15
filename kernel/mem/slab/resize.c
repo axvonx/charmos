@@ -46,18 +46,37 @@ bool slab_resize(struct slab *slab, size_t new_size_pages) {
             slab->backing_pages[i] = NULL;
 
         for (size_t i = old; i < new_size_pages; i++) {
-            paddr_t phys = domain_alloc_from_domain(parent->domain, 1);
-            if (!phys)
-                goto grow_err;
-
             vaddr_t virt = (vaddr_t) slab + i * PAGE_SIZE;
-            uint64_t flags = slab_page_flags(slab->type);
-            if (unlikely(vmm_map_page(virt, phys, flags) < 0)) {
-                pmm_free_page(phys); /* not yet recorded, free directly */
-                goto grow_err;
-            }
 
-            slab->backing_pages[i] = page_for_paddr(phys);
+            /* TODO: we can handle in the PAGEABLE type that isn't zero
+             * with stuff once we get the infra for that to exist */
+            if (slab->type == SLAB_TYPE_PAGEABLE_ZERO) {
+                /* TODO: memory commit limits here */
+
+                /* TODO: grow_err needs to handle pages that were just
+                 * marked as being demand paged, i.e. vmm_unmap_page should
+                 * either have its behavior changed or another function should
+                 * get introduced for the sake of this little thing */
+                if (unlikely(vmm_mark_demand_page(
+                                 virt, DEMAND_PAGE_FLAG_WRITABLE |
+                                           DEMAND_PAGE_FLAG_ZERO_MEMORY) < 0)) {
+                    goto grow_err;
+                }
+            } else {
+                paddr_t phys = domain_alloc_from_domain(parent->domain, 1);
+                if (!phys)
+                    goto grow_err;
+
+                uint64_t flags = slab_page_flags(slab->type);
+                if (unlikely(vmm_map_page(virt, phys, flags) < 0)) {
+                    pmm_free_page(phys); /* not yet recorded, free directly */
+                    goto grow_err;
+                }
+
+                slab->backing_pages[i] = page_for_paddr(phys);
+                if (slab->type == SLAB_TYPE_NONPAGEABLE_ZERO)
+                    memset(hhdm_paddr_to_ptr(phys), 0, PAGE_SIZE);
+            }
         }
 
         slab->page_count = new_size_pages;

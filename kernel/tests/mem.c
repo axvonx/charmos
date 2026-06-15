@@ -831,4 +831,14 @@ TEST_REGISTER(demand_Nbuf_Mthreads_Ncpu_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
     SET_SUCCESS();
 }
 
+TEST_REGISTER(slab_demand_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
+    /* One of these should eventually touch the demand page */
+    for (size_t i = 0; i < 5000; i++) {
+        void *p = kmalloc(500, ALLOC_FLAGS_ZERO | ALLOC_FLAG_PAGEABLE);
+        memset(p, 0, 500);
+    }
+
+    SET_SUCCESS();
+}
+
 #endif

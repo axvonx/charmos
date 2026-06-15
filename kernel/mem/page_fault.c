@@ -67,6 +67,12 @@ page_fault_sync_cb(struct exception_sync_cb *this, struct irq_context *irqc,
         .access = access_error,
     };
 
+    /*
+     * I'll need to rework this model... just leave it absent for now,
+     * no harm done, yet... TODO:
+    if (smp_core()->irq_entered_irql != IRQL_PASSIVE_LEVEL)
+        goto crash; */
+
     /* Do the full crash here, it's not a valid address_range,
      * we need the other information here */
     struct address_range *adr = address_range_for_addr(vaddr);
@@ -96,17 +102,30 @@ page_fault_sync_cb(struct exception_sync_cb *this, struct irq_context *irqc,
     kassert((ptag.payload & DEMAND_PAGE_FLAG_ZERO_MEMORY) ||
             (ptag.payload & DEMAND_PAGE_FLAG_NONE));
     bool zeroed_out = ptag.payload & DEMAND_PAGE_FLAG_ZERO_MEMORY;
-    paddr_t paddr = pmm_alloc_page(); /* TODO: order > 0 */
+    paddr_t paddr;
+
+    /* TODO: memory locality in allocations, we can use the alloc_pages
+     * function to supply that, but we do need to take note of this */
+    if (!pfh->ops->alloc_pages) {
+        paddr = pmm_alloc_page(); /* TODO: order > 0 */
+    } else {
+        paddr = pfh->ops->alloc_pages(vaddr, 0);
+    }
+
     kassert(paddr); /* TODO: might be recoverable? many say no */
 
     if (zeroed_out)
         memset(hhdm_paddr_to_ptr(paddr), 0, PAGE_SIZE);
 
     enum errno e = vmm_map_demand_page(vaddr, paddr, ptag.payload);
-    if (e == ERR_EXIST)
+    if (e == ERR_EXIST) {
         pmm_free_page(paddr);
+        return EXCEPTION_SYNC_CB_OK;
+    }
 
-    log_msg(LOG_INFO, "successfully mapped in demand page 0x%llx", vaddr);
+    if (pfh->ops->update_after_map)
+        if (!pfh->ops->update_after_map(vaddr, page_for_paddr(paddr)))
+            pmm_free_page(paddr);
 
 done:
     return EXCEPTION_SYNC_CB_OK;

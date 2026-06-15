@@ -82,7 +82,7 @@ enum errno vmm_map_demand_page_internal(vaddr_t virt, paddr_t phys,
                                         enum demand_page_flags flags,
                                         enum vmm_map_page_size size);
 
-paddr_t vmm_get_phys(vaddr_t virt, enum vmm_flags flags);
+paddr_t vmm_get_phys_internal(vaddr_t virt, enum vmm_flags flags);
 pte_t vmm_get_leaf_pte_internal(vaddr_t virt, enum vmm_flags flags);
 void vmm_unmap(void *addr, uint64_t len, enum vmm_flags vflags);
 void *vmm_map(paddr_t paddr, vaddr_t vaddr, uint64_t len, uint64_t flags,

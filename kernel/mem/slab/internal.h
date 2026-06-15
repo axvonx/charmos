@@ -8,6 +8,7 @@
 #include <mem/fixed_size_alloc.h>
 #include <mem/page.h>
 #include <mem/page_alloc.h>
+#include <mem/page_fault.h>
 #include <mem/simple_alloc.h>
 #include <mem/vmm.h>
 #include <smp/domain.h>
@@ -149,10 +150,30 @@ enum slab_state {
     SLAB_IN_GC = 4,
 };
 
+/* A little aside on zero types:
+ *
+ * The idea is that for NONPAGEABLE_ZERO, the slab is allocated
+ * and all of its data is zeroed out at the very start
+ *
+ * For PAGEABLE_ZERO, the slab will be optionally demand allocated/
+ * demand paged if insufficient zero pages exist (this will come Soon:tm:)
+ *
+ * Then, the idea is that upon freeing, if we are freeing any sort of ZERO
+ * memory, we will clear it if it's going to a magazine or slab
+ */
 enum slab_type {
-    SLAB_TYPE_NONE, /* Sentinel value */
     SLAB_TYPE_NONPAGEABLE,
     SLAB_TYPE_PAGEABLE,
+    SLAB_TYPE_NONPAGEABLE_ZERO,
+    SLAB_TYPE_PAGEABLE_ZERO,
+    SLAB_TYPE_COUNT,
+    SLAB_TYPE_NONE, /* Sentinel value */
+};
+
+enum slab_magazine_type {
+    SLAB_MAGAZINE_NORMAL,
+    SLAB_MAGAZINE_ZERO,
+    SLAB_MAGAZINE_TYPE_COUNT,
 };
 
 /*
@@ -181,6 +202,10 @@ enum slab_type {
  * │static metadata││page pointers││bitmap│
  * └───────────────┘└─────────────┘└──────┘
  */
+
+/* Some notes on demand paged slabs: the slab itself must
+ * always be less than PAGE_SIZE, for now, as that page
+ * will have to be mapped regardless */
 struct slab {
     /* Put commonly accessed fields up here to make cache happier */
     uint8_t *bitmap;
@@ -202,7 +227,7 @@ struct slab {
                            * recycled from the GC list? */
 
     size_t page_count;
-    struct page *backing_pages[];
+    _Atomic(struct page *) backing_pages[];
 };
 
 #define slab_from_rbt_node(n) (container_of(n, struct slab, rb))
@@ -213,8 +238,10 @@ struct slab {
 
 /* Just a simple stack */
 struct slab_magazine {
+    enum slab_magazine_type type;
     vaddr_t objs[SLAB_MAG_ENTRIES];
     size_t count;
+    size_t obj_size;
 };
 
 struct slab_percpu_cache {
@@ -222,7 +249,7 @@ struct slab_percpu_cache {
     struct dpc defer_dpc;
 
     /* Magazines are always nonpageable */
-    struct slab_magazine *mag; /* the size of this is slab_num_sizes */
+    struct slab_magazine *mags[SLAB_MAGAZINE_TYPE_COUNT];
     struct slab_domain *domain;
     vaddr_t shadow_objs[SLAB_MAG_ENTRIES + 1]; /* Used in magazine internal
                                                 * to mitigate risk of
@@ -260,6 +287,8 @@ enum slab_chunk_state : uintptr_t {
 
 struct slab_chunk {
     struct list_head list; /* Either on: free list, partial list, used list */
+    /* Chunk allocator that owns this */
+    struct slab_chunks *owner;
     vaddr_t base_addr : 64 - PAGE_4K_SHIFT;
     enum slab_chunk_state state : 2;
     size_t used : 9;
@@ -409,10 +438,7 @@ enum slab_gc_flags : uint32_t {
 };
 
 struct slab_gc {
-    struct {
-        struct list_head pageable[SLAB_POW2_ORDER_COUNT];
-        struct list_head nonpageable[SLAB_POW2_ORDER_COUNT];
-    } lists;
+    struct list_head lists[SLAB_TYPE_COUNT][SLAB_POW2_ORDER_COUNT];
     struct slab_domain *parent;
     struct rbt rbt;
     struct spinlock lock;
@@ -455,12 +481,10 @@ struct slab_domain {
     struct domain *domain;
 
     /* This domain's slab caches */
-    struct slab_caches *local_nonpageable_cache;
-    struct slab_caches *local_pageable_cache;
+    struct slab_caches *caches[SLAB_TYPE_COUNT];
 
     /* Slab caches for each distance */
-    struct slab_cache_zonelist nonpageable_zonelist;
-    struct slab_cache_zonelist pageable_zonelist;
+    struct slab_cache_zonelist zonelists[SLAB_TYPE_COUNT];
     size_t zonelist_entry_count;
 
     /* Pointer to an array of pointers to per CPU single-slabs for each class */
@@ -529,7 +553,7 @@ void slab_domain_percpu_init(struct slab_domain *domain);
 void slab_percpu_flush(struct slab_domain *dom, struct slab_percpu_cache *pc,
                        size_t class_idx, vaddr_t overflow_obj);
 void slab_percpu_refill(struct slab_domain *dom,
-                        struct slab_percpu_cache *cache,
+                        struct slab_percpu_cache *cache, enum alloc_flags flags,
                         enum alloc_behavior behavior);
 
 /* Freequeue */
@@ -693,13 +717,13 @@ static inline struct slab_cache *slab_caches_alloc() {
 
 static inline uint8_t *slab_get_bitmap_location(struct slab *s) {
     uint8_t *base = (uint8_t *) s + sizeof(struct slab);
-    return base + sizeof(struct page *) * s->page_count;
+    return base + sizeof(struct page *) * s->parent_cache->pages_per_slab;
 }
 
 static inline uint64_t slab_page_flags(enum slab_type type) {
     uint64_t pflags = PAGE_PRESENT | PAGE_WRITE | PAGE_XD;
     kassert(type != SLAB_TYPE_NONE);
-    if (type == SLAB_TYPE_PAGEABLE)
+    if (type == SLAB_TYPE_PAGEABLE || type == SLAB_TYPE_PAGEABLE_ZERO)
         pflags |= PAGE_PAGEABLE;
 
     return pflags;
@@ -721,3 +745,29 @@ static inline size_t slab_cache_pow2_order(struct slab_cache *sc) {
 static inline size_t slab_pow2_order(struct slab *slab) {
     return slab_cache_pow2_order(slab->parent_cache);
 }
+
+static inline bool slab_is_pageable(struct slab *s) {
+    return s->type == SLAB_TYPE_PAGEABLE || s->type == SLAB_TYPE_PAGEABLE_ZERO;
+}
+
+static inline bool slab_is_zeroed(struct slab *s) {
+    return s->type == SLAB_TYPE_PAGEABLE_ZERO ||
+           s->type == SLAB_TYPE_NONPAGEABLE_ZERO;
+}
+
+static inline bool slab_cache_is_pageable(struct slab_cache *c) {
+    return c->type == SLAB_TYPE_PAGEABLE || c->type == SLAB_TYPE_PAGEABLE_ZERO;
+}
+
+static inline bool is_buffer_uniform(const void *ptr, size_t len,
+                                     uint8_t value) {
+    const uint8_t *byte_ptr = (const uint8_t *) ptr;
+
+    for (size_t i = 0; i < len; i++)
+        if (byte_ptr[i] != value)
+            return false;
+
+    return true;
+}
+
+extern struct page_fault_handler slab_page_fault_handler;

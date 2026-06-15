@@ -170,13 +170,19 @@ const size_t slab_class_sizes_const[] = {
 
 ADDRESS_RANGE_DECLARE(
     slab, .base = SLAB_HEAP_START, .size = SLAB_HEAP_END - SLAB_HEAP_START,
-    .flags = ADDRESS_RANGE_STATIC
+    .flags = ADDRESS_RANGE_STATIC,
+    .page_fault_handler = &slab_page_fault_handler
     /* alignment does not need to be provided for static entries */);
 
 struct slab_globals slab_global = {0};
 LOG_HANDLE_DECLARE_DEFAULT(slab);
 LOG_SITE_DECLARE_DEFAULT(slab);
 
+/* If our cache is PAGEABLE_ZERO, we can demand page it in
+ *
+ * In the future, PAGEABLE will want to be demand paged too, maybe
+ *
+ * TODO: zero pager interaction */
 static void *slab_map_new(struct slab_cache *cache,
                           paddr_t phys_out[SLAB_MAX_PAGES],
                           struct slab_chunk **out) {
@@ -184,17 +190,29 @@ static void *slab_map_new(struct slab_cache *cache,
     size_t pages = cache->pages_per_slab;
     enum slab_type type = cache->type;
     kassert(pages <= SLAB_MAX_PAGES);
+
     memset(phys_out, 0, pages * sizeof(paddr_t));
     size_t pages_mapped = 0;
     vaddr_t virt_base = 0x0;
 
-    for (size_t i = 0; i < pages; i++) {
-        if (domain) {
-            phys_out[i] = domain_alloc_from_domain(domain->domain, 1);
-        } else {
-            phys_out[i] = pmm_alloc_page();
+    if (cache->type != SLAB_TYPE_PAGEABLE_ZERO) {
+        for (size_t i = 0; i < pages; i++) {
+            if (domain) {
+                phys_out[i] = domain_alloc_from_domain(domain->domain, 1);
+            } else {
+                phys_out[i] = pmm_alloc_page();
+            }
+            if (unlikely(!phys_out[i]))
+                goto err;
         }
-        if (unlikely(!phys_out[i]))
+    } else {
+        if (domain) {
+            phys_out[0] = domain_alloc_from_domain(domain->domain, 1);
+        } else {
+            phys_out[0] = pmm_alloc_page();
+        }
+
+        if (unlikely(!phys_out[0]))
             goto err;
     }
 
@@ -205,10 +223,22 @@ static void *slab_map_new(struct slab_cache *cache,
     uint64_t pflags = slab_page_flags(type);
 
     for (pages_mapped = 0; pages_mapped < pages; pages_mapped++) {
-        paddr_t phys = phys_out[pages_mapped];
         vaddr_t virt = virt_base + pages_mapped * PAGE_SIZE;
-        if (unlikely(vmm_map_page(virt, phys, pflags) < 0))
-            goto err;
+        if (cache->type != SLAB_TYPE_PAGEABLE_ZERO) {
+            paddr_t phys = phys_out[pages_mapped];
+            if (unlikely(vmm_map_page(virt, phys, pflags) < 0))
+                goto err;
+        } else {
+            if (pages_mapped == 0) {
+                if (unlikely(vmm_map_page(virt, phys_out[0], pflags) < 0))
+                    goto err;
+            } else {
+                if (unlikely(vmm_mark_demand_page(
+                                 virt, DEMAND_PAGE_FLAG_ZERO_MEMORY |
+                                           DEMAND_PAGE_FLAG_WRITABLE) < 0))
+                    goto err;
+            }
+        }
     }
 
     return (void *) virt_base;
@@ -233,13 +263,18 @@ err:
 static void slab_free_virt_and_phys(struct slab *slab) {
     vaddr_t virt_base = (vaddr_t) slab;
     struct slab_chunk *chunk = slab->parent_chunk;
-    struct slab_chunks *chunks = &slab->parent_cache->chunks;
+    /* Free through chunk's owner, as a GC reused slab's parent_cache may
+     * differ from the cache whose chunk it physically lives in */
+    struct slab_chunks *chunks = chunk->owner;
 
     for (size_t i = 0; i < slab->page_count; i++) {
         size_t virt = virt_base + i * PAGE_SIZE;
-        paddr_t phys = page_get_paddr(slab->backing_pages[i]);
+        if (slab->backing_pages[i]) {
+            paddr_t phys = page_get_paddr(slab->backing_pages[i]);
+            pmm_free_page(phys);
+        }
+
         vmm_unmap_page(virt);
-        pmm_free_page(phys);
     }
 
     slab_chunks_free(chunks, chunk, virt_base);
@@ -269,7 +304,7 @@ void slab_cache_init(size_t order, struct slab_cache *cache,
         data_start = SLAB_ALIGN_UP(data_start, ssc->align);
         uintptr_t data_end = data_start + n * cache->obj_stride;
 
-        if (data_end <= PAGE_SIZE)
+        if (data_end <= PAGE_SIZE * cache->pages_per_slab)
             break;
     }
 
@@ -283,10 +318,27 @@ void slab_cache_init(size_t order, struct slab_cache *cache,
     cache->slab_metadata_size =
         sizeof(struct slab) + cache->bitmap_bytes + page_ptr_size;
 
+    kassert(cache->objs_per_slab * cache->obj_size + cache->slab_metadata_size <
+            cache->pages_per_slab * PAGE_SIZE);
+
+    /* We must hold this true because right now we only handle
+     * cases where the slab metadata is just 1 page. If we want,
+     * in the future if we somehow get GARGANTUAN slabs we can
+     * handle cases where this is more than one page. But I'll
+     * leave that as an optional TODO: */
+    kassert(cache->slab_metadata_size <= PAGE_SIZE);
+
     INIT_LIST_HEAD(&cache->slabs[SLAB_FREE]);
     INIT_LIST_HEAD(&cache->slabs[SLAB_PARTIAL]);
     INIT_LIST_HEAD(&cache->slabs[SLAB_FULL]);
     slab_chunks_init(&cache->chunks, cache);
+}
+
+static void slab_zero_out(struct slab *slab, size_t n_pages) {
+    void *start = (void *) slab->mem;
+    size_t non_data = slab->mem - (vaddr_t) slab;
+    size_t len = n_pages * PAGE_SIZE - non_data;
+    memset(start, 0, len);
 }
 
 struct slab *slab_init(struct slab *slab, struct slab_cache *parent) {
@@ -307,6 +359,14 @@ struct slab *slab_init(struct slab *slab, struct slab_cache *parent) {
 
     memset(slab->bitmap, 0, parent->bitmap_bytes);
 
+    if (slab->type == SLAB_TYPE_NONPAGEABLE_ZERO) {
+        slab_zero_out(slab, slab->page_count);
+    } else if (slab->type == SLAB_TYPE_PAGEABLE_ZERO) {
+        /* TODO: handle cases where the other pages are mapped
+         * once zero pager infrastructure comes alive */
+        slab_zero_out(slab, 1); /* Just the first page */
+    }
+
     return slab;
 }
 
@@ -322,7 +382,11 @@ static struct slab *slab_create_new(struct slab_cache *cache) {
     slab->page_count = cache->pages_per_slab;
 
     for (size_t i = 0; i < cache->pages_per_slab; i++) {
-        slab->backing_pages[i] = page_for_paddr(phys[i]);
+        if (phys[i]) {
+            slab->backing_pages[i] = page_for_paddr(phys[i]);
+        } else {
+            slab->backing_pages[i] = NULL;
+        }
     }
 
     return slab_init(slab, cache);
@@ -348,6 +412,7 @@ struct slab *slab_create(struct slab_cache *cache,
             return slab_init(slab, cache);
         } else {
             slab_gc_enqueue(local, slab);
+            slab = NULL;
         }
     }
 
@@ -392,7 +457,8 @@ static void *slab_alloc_from(struct slab_cache *cache, struct slab *slab) {
             }
 
             vaddr_t ret = slab->mem + i * cache->obj_stride;
-            kassert(ret > (vaddr_t) slab && ret < (vaddr_t) slab + PAGE_SIZE);
+            kassert(ret > (vaddr_t) slab &&
+                    ret < (vaddr_t) slab + cache->pages_per_slab * PAGE_SIZE);
 
             slab_check_assert(slab);
             return (void *) ret;
@@ -633,6 +699,7 @@ void slab_allocator_init() {
                   slab_global.caches.caches[i].objs_per_slab,
                   slab_global.class_sizes[i].internal.cand.pages);
     }
+
     simple_free(slab_global.vas, tmp, total_input * sizeof(*tmp));
     slab_elcm_initialize();
 }
@@ -671,8 +738,15 @@ void *kmalloc_pages_raw(struct slab_domain *parent, size_t size,
     uint64_t total_size = size + sizeof(struct slab_page_hdr);
     uint64_t pages = PAGES_NEEDED_FOR(total_size);
 
-    /* TODO: when we get pageable pages, we need to differentiate that here */
-    void *vptr = page_alloc(pages, flags, behavior);
+    void *vptr;
+    if (flags & ALLOC_FLAG_PAGEABLE) {
+        vptr = page_alloc_demand(pages, flags, behavior);
+    } else {
+        vptr = page_alloc(pages, flags, behavior);
+        if (vptr && (flags & ALLOC_FLAG_ZERO_ON_ALLOC))
+            memset(vptr, 0, total_size);
+    }
+
     if (!vptr)
         return NULL;
 
@@ -685,19 +759,26 @@ void *kmalloc_pages_raw(struct slab_domain *parent, size_t size,
     return (void *) (hdr + 1);
 }
 
-void *kmalloc_old(size_t size) {
+static void *kmalloc_old(size_t size, enum alloc_flags flags) {
     if (size == 0)
         return NULL;
 
     int idx = slab_size_to_index(size);
 
+    void *ptr;
     if (kmalloc_size_fits_in_slab(size) &&
-        slab_global.caches.caches[idx].objs_per_slab > 0)
-        return slab_alloc_old(&slab_global.caches.caches[idx]);
+        slab_global.caches.caches[idx].objs_per_slab > 0) {
+        ptr = slab_alloc_old(&slab_global.caches.caches[idx]);
+    } else {
+        /* we say NULL and just free these to domain 0 */
+        ptr = kmalloc_pages_raw(NULL, size, ALLOC_FLAGS_DEFAULT,
+                                ALLOC_BEHAVIOR_NORMAL);
+    }
 
-    /* we say NULL and just free these to domain 0 */
-    return kmalloc_pages_raw(NULL, size, ALLOC_FLAGS_DEFAULT,
-                             ALLOC_BEHAVIOR_NORMAL);
+    if ((flags & ALLOC_FLAG_ZERO_ON_ALLOC) && ptr)
+        memset(ptr, 0, size);
+
+    return ptr;
 }
 
 void slab_free_page_hdr(struct slab_page_hdr *hdr, enum alloc_behavior bh) {
@@ -749,16 +830,23 @@ void *kmalloc_pages(struct slab_domain *domain, size_t size,
 void *kmalloc_try_from_magazine(struct slab_domain *domain,
                                 struct slab_percpu_cache *pcpu, size_t size,
                                 enum alloc_flags flags) {
+    enum slab_magazine_type mtype = (flags & ALLOC_FLAG_ZERO_ON_ALLOC)
+                                        ? SLAB_MAGAZINE_ZERO
+                                        : SLAB_MAGAZINE_NORMAL;
     size_t class_idx = slab_size_to_index(size);
-    struct slab_magazine *mag = &pcpu->mag[class_idx];
+    struct slab_magazine *mag = &pcpu->mags[mtype][class_idx];
 
     /* Reserve SLAB_MAG_WATERMARK_PCT% entries for nonpageable requests */
     if (flags & ALLOC_FLAG_PAGEABLE && mag->count < SLAB_MAG_WATERMARK)
         return NULL;
 
     void *ret = (void *) slab_magazine_pop(mag);
-    if (ret)
+    if (ret) {
         slab_stat_alloc_magazine_hit(domain);
+        if (mtype == SLAB_MAGAZINE_ZERO && !is_buffer_uniform(ret, size, 0)) {
+            panic("buffer size %zu idx %zu not uniform", size, class_idx);
+        }
+    }
 
     return ret;
 }
@@ -810,16 +898,20 @@ struct slab_cache *slab_search_for_cache(struct slab_domain *dom,
 
     bool pageable = flags & ALLOC_FLAG_PAGEABLE;
     bool flexible = flags & ALLOC_FLAG_FLEXIBLE_LOCALITY;
+    bool zero = flags & ALLOC_FLAG_ZERO_ON_ALLOC;
 
     size_t search_distance = slab_get_search_dist(dom, locality);
 
     int32_t best_score = INT32_MAX;
     struct slab_cache *ret = NULL;
 
+    enum slab_type p_type = zero ? SLAB_TYPE_PAGEABLE_ZERO : SLAB_TYPE_PAGEABLE;
+    enum slab_type np_type =
+        zero ? SLAB_TYPE_NONPAGEABLE_ZERO : SLAB_TYPE_NONPAGEABLE;
     for (size_t i = 0; i < search_distance; i++) {
         /* pageable, nonpageable candidates */
-        struct slab_cache_ref *p_ref = &dom->pageable_zonelist.entries[i];
-        struct slab_cache_ref *np_ref = &dom->nonpageable_zonelist.entries[i];
+        struct slab_cache_ref *p_ref = &dom->zonelists[p_type].entries[i];
+        struct slab_cache_ref *np_ref = &dom->zonelists[np_type].entries[i];
         struct slab_cache *p_cache = &p_ref->caches->caches[idx];
         struct slab_cache *np_cache = &np_ref->caches->caches[idx];
 
@@ -853,12 +945,17 @@ struct slab_cache *slab_search_for_cache(struct slab_domain *dom,
     if (ret)
         return ret;
 
+    /* saying pages = 1 here is actually fine because we won't do contiguous
+     * allocations. the only risk is for multi-page slabs, but those will just
+     * OOM in the worst case scenario, and besides, this is a "racy
+     * heuristic", so accuracy doesn't matter, if we OOM, bigger problems exist
+     */
     struct domain *d = domain_alloc_pick_best_domain(dom->domain, /*pages=*/1,
                                                      search_distance, flexible);
 
     struct slab_domain *sd = global.domains[d->id]->slab_domain;
     struct slab_caches *sc =
-        pageable ? sd->local_pageable_cache : sd->local_nonpageable_cache;
+        pageable ? sd->caches[p_type] : sd->caches[np_type];
 
     ret = &sc->caches[idx];
 
@@ -878,8 +975,7 @@ void *slab_alloc(struct slab_cache *cache, enum alloc_behavior behavior) {
     void *ret = NULL;
     bool from_alloc = behavior & SLAB_ALLOC_BEHAVIOR_FROM_ALLOC;
 
-    if (!alloc_behavior_may_fault(behavior) &&
-        cache->type == SLAB_TYPE_PAGEABLE)
+    if (!alloc_behavior_may_fault(behavior) && slab_cache_is_pageable(cache))
         panic("picked pageable cache with non-fault tolerant behavior");
 
     enum irql irql = spin_lock(&cache->lock);
@@ -907,6 +1003,14 @@ void *slab_alloc(struct slab_cache *cache, enum alloc_behavior behavior) {
 
 out:
     spin_unlock(&cache->lock, irql);
+
+    if (ret && (cache->type == SLAB_TYPE_NONPAGEABLE_ZERO ||
+                cache->type == SLAB_TYPE_PAGEABLE_ZERO)) {
+        if (!is_buffer_uniform(ret, cache->obj_size, 0)) {
+            panic("buffer size %zu not uniform", cache->obj_size);
+        }
+    }
+
     return ret;
 }
 
@@ -938,9 +1042,16 @@ void *slab_alloc_retry(struct slab_domain *domain, size_t size,
         return kmalloc_pages(domain, size, flags, behavior);
     } else {
         /* here, `domain` might be another domain */
+
+        bool zero = flags & ALLOC_FLAG_ZERO_ON_ALLOC;
+        enum slab_type p_type =
+            zero ? SLAB_TYPE_PAGEABLE_ZERO : SLAB_TYPE_PAGEABLE;
+        enum slab_type np_type =
+            zero ? SLAB_TYPE_NONPAGEABLE_ZERO : SLAB_TYPE_NONPAGEABLE;
+
         struct slab_caches *cs = flags & ALLOC_FLAG_PAGEABLE
-                                     ? domain->local_pageable_cache
-                                     : domain->local_nonpageable_cache;
+                                     ? domain->caches[p_type]
+                                     : domain->caches[np_type];
 
         struct slab_cache *cache = &cs->caches[slab_size_to_index(size)];
 
@@ -999,7 +1110,7 @@ void *kmalloc_new(size_t size, enum alloc_flags flags,
 
     /* slowpath - let's try and fill up our percpu caches so we don't
      * end up in this slowpath over and over again... */
-    slab_percpu_refill(local_dom, pcpu, behavior);
+    slab_percpu_refill(local_dom, pcpu, flags, behavior);
 
     /* uh oh... we found NOTHING...
      * try one last time - this will run emergency GC */
@@ -1019,7 +1130,7 @@ exit:
 void *kmalloc_from_domain(size_t domain, size_t size) {
     size_t index = slab_size_to_index(size);
     struct slab_caches *cs =
-        global.domains[domain]->slab_domain->local_nonpageable_cache;
+        global.domains[domain]->slab_domain->caches[SLAB_TYPE_NONPAGEABLE_ZERO];
     struct slab_cache *c = &cs->caches[index];
     return slab_alloc(c,
                       ALLOC_BEHAVIOR_NORMAL | SLAB_ALLOC_BEHAVIOR_FROM_ALLOC);
@@ -1113,11 +1224,17 @@ static bool kfree_try_free_to_magazine(struct slab_percpu_cache *pcpu,
         return false;
 
     kassert(slab->type != SLAB_TYPE_NONE);
-    if (slab->type == SLAB_TYPE_PAGEABLE)
+    if (slab_is_pageable(slab))
         return false;
 
     int32_t idx = slab_size_to_index(size);
-    struct slab_magazine *mag = &pcpu->mag[idx];
+    enum slab_magazine_type mtype =
+        slab_is_zeroed(slab) ? SLAB_MAGAZINE_ZERO : SLAB_MAGAZINE_NORMAL;
+
+    if (mtype == SLAB_MAGAZINE_ZERO)
+        memset(ptr, 0, ksize(ptr));
+
+    struct slab_magazine *mag = &pcpu->mags[mtype][idx];
     bool ret = slab_magazine_push(mag, (vaddr_t) ptr);
     if (ret)
         slab_stat_free_to_percpu(pcpu->domain);
@@ -1128,6 +1245,8 @@ static bool kfree_try_free_to_magazine(struct slab_percpu_cache *pcpu,
 void slab_free(struct slab_domain *domain, void *obj) {
     struct slab *slab = slab_for_ptr(obj);
     struct slab_cache *cache = slab->parent_cache;
+    if (slab_is_zeroed(slab))
+        memset(obj, 0, cache->obj_size);
 
     enum irql slab_cache_irql = spin_lock(&cache->lock);
     slab_bitmap_free(slab, obj);
@@ -1208,8 +1327,8 @@ done:
 
 static void *kmalloc_init(size_t size, enum alloc_flags f,
                           enum alloc_behavior b) {
-    (void) b, (void) f;
-    return kmalloc_old(size);
+    (void) b;
+    return kmalloc_old(size, f);
 }
 
 static void kfree_init(void *p, enum alloc_behavior b) {
@@ -1229,8 +1348,13 @@ void slab_switch_to_domain_allocations(void) {
 void *kmalloc_internal(size_t size, enum alloc_flags flags,
                        enum alloc_behavior behavior) {
     void *p = alloc(size, flags, behavior);
+
+    /* TODO: This should go away on release builds. When we bring
+     * in non-fatal assertions/debug only assertions, this should
+     * get changed so as to not make the code be slower than a memset 0 */
     if (p && (flags & ALLOC_FLAG_ZERO_ON_ALLOC))
-        memset(p, 0, size);
+        kassert(is_buffer_uniform(p, size, 0));
+
     return p;
 }
 

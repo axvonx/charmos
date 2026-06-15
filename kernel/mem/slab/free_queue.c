@@ -91,14 +91,11 @@ vaddr_t slab_free_queue_ringbuffer_dequeue(struct slab_free_queue *q) {
     }
 }
 
-/* Non-fallible free queue enqueue. If the ringbuffer enqueue fails,
- * it enqueues onto the indefinite list of addresses to free */
 void slab_free_queue_enqueue(struct slab_free_queue *q, vaddr_t addr) {
     slab_free_queue_ringbuffer_enqueue(q, addr);
 }
 
 vaddr_t slab_free_queue_dequeue(struct slab_free_queue *q) {
-    /* Prioritize the ringbuffer */
     vaddr_t ret = slab_free_queue_ringbuffer_dequeue(q);
     return ret;
 }
@@ -121,18 +118,6 @@ static void slab_free_queue_free(struct slab_domain *d, void *ptr,
     return slab_free_page_hdr(header, bh);
 }
 
-/* The reason we have the "flush to cache" option is because in hot paths,
- * it is rather suboptimal to acquire 'expensive' locks, and potentially
- * run into scenarios where the physical memory allocator is called,
- * which can cause a whole boatload of slowness.
- *
- * Thus, it must be explicitly specified if unfit free_queue elements
- * should be drained and flushed to the slab cache (potentially waking
- * threads, invoking the physical memory allocator, and other things).
- *
- * If this is turned off, the addresses that are not successfully freed
- * will simply be re-enqueued to the free_queue so that in a future drain
- * attempt/free attempt, these addresses may be freed. */
 size_t slab_free_queue_drain(struct slab_percpu_cache *cache,
                              struct slab_free_queue *queue, size_t target,
                              enum alloc_behavior bh) {
@@ -141,11 +126,15 @@ size_t slab_free_queue_drain(struct slab_percpu_cache *cache,
     size_t addrs_dequeued = 0;      /* Used to check against `target` */
 
     while (true) {
+        if (addrs_dequeued + 1 >= target)
+            break;
+
         /* Drain an element from our free_queue */
         vaddr_t addr = slab_free_queue_dequeue(queue);
-        addrs_dequeued++;
-        if (addr == 0x0 || addrs_dequeued >= target)
+        if (!addr)
             break;
+
+        addrs_dequeued++;
 
         /* What class? */
         int32_t class = slab_size_to_index(slab_allocation_size(addr));
@@ -155,12 +144,19 @@ size_t slab_free_queue_drain(struct slab_percpu_cache *cache,
         /* Magazines only cache nonpageable addresses */
         /* NOTE: We dereference the first page in the backing page array
          * since all pages should have the same property as it */
-        struct page *page = *slab_for_ptr((void *) addr)->backing_pages;
+        struct slab *slab = slab_for_ptr((void *) addr);
+        struct page *page = *slab->backing_pages;
         if (page_is_pageable(page))
             goto flush;
 
         /* Push it onto the magazine */
-        struct slab_magazine *mag = &cache->mag[class];
+        enum slab_magazine_type mtype =
+            slab_is_zeroed(slab) ? SLAB_MAGAZINE_ZERO : SLAB_MAGAZINE_NORMAL;
+
+        if (mtype == SLAB_MAGAZINE_ZERO)
+            memset((void *) addr, 0, slab_allocation_size(addr));
+
+        struct slab_magazine *mag = &cache->mags[mtype][class];
         if (!slab_magazine_push(mag, addr))
             goto flush;
 

@@ -42,6 +42,12 @@
 #define vmm_unmap_page(...)                                                    \
     _DISPATCH(vmm_unmap_page, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
 
+/* vmm_get_phys(virt[, vflags]) - vflags defaults to VMM_FLAG_NONE */
+#define vmm_get_phys_1(v) vmm_get_phys_internal((v), VMM_FLAG_NONE)
+#define vmm_get_phys_2(v, vf) vmm_get_phys_internal((v), (vf))
+#define vmm_get_phys(...)                                                      \
+    _DISPATCH(vmm_get_phys, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
+
 /* vmm_get_leaf_pte(virt[, vflags]) - vflags defaults to VMM_FLAG_NONE */
 #define vmm_get_leaf_pte_1(v) vmm_get_leaf_pte_internal((v), VMM_FLAG_NONE)
 #define vmm_get_leaf_pte_2(v, vf) vmm_get_leaf_pte_internal((v), (vf))

@@ -650,7 +650,7 @@ out:
     return snap;
 }
 
-paddr_t vmm_get_phys(uintptr_t virt, enum vmm_flags vflags) {
+paddr_t vmm_get_phys_internal(uintptr_t virt, enum vmm_flags vflags) {
     (void) vflags;
 
     int level;

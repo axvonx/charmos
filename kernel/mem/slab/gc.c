@@ -128,11 +128,7 @@ static int64_t score_order(size_t total_free, uint32_t bias_map, size_t order,
 
 static struct slab_caches *slab_gc_pick_caches(struct slab_domain *domain,
                                                struct slab *slab) {
-    if (slab->type == SLAB_TYPE_PAGEABLE) {
-        return domain->local_pageable_cache;
-    } else {
-        return domain->local_nonpageable_cache;
-    }
+    return domain->caches[slab->type];
 }
 
 static void slab_recycle(struct slab_cache *best, struct slab *slab,
@@ -310,11 +306,7 @@ void slab_gc_enqueue(struct slab_domain *domain, struct slab *slab) {
     /* Put it in the right order */
     size_t order = slab_pow2_order(slab);
 
-    if (slab->type == SLAB_TYPE_PAGEABLE) {
-        list_add_tail(&slab->list, &domain->slab_gc.lists.pageable[order]);
-    } else {
-        list_add_tail(&slab->list, &domain->slab_gc.lists.nonpageable[order]);
-    }
+    list_add_tail(&slab->list, &domain->slab_gc.lists[slab->type][order]);
 
     rbt_insert(&domain->slab_gc.rbt, &slab->rb);
     atomic_fetch_add(&gc->num_elements, 1);
@@ -336,14 +328,12 @@ struct slab *slab_gc_get_for_cache(struct slab_cache *sc) {
     struct slab *ret = NULL;
     struct slab_gc *sgc = &sc->parent_domain->slab_gc;
     size_t pow2_order = slab_cache_pow2_order(sc);
-    enum irql irql = spin_lock(&sgc->lock);
 
     struct list_head *lh;
-    if (sc->type == SLAB_TYPE_PAGEABLE) {
-        lh = &sgc->lists.pageable[pow2_order];
-    } else {
-        lh = &sgc->lists.nonpageable[pow2_order];
-    }
+
+    lh = &sgc->lists[sc->type][pow2_order];
+
+    enum irql irql = spin_lock(&sgc->lock);
 
     struct list_head *got = list_pop_tail_init(lh);
     if (!got)
@@ -415,7 +405,8 @@ void slab_gc_init(struct slab_domain *dom) {
     rbt_init(&gc->rbt, slab_get_data, slab_cmp_slabs);
     gc->parent = dom;
     for (size_t i = 0; i < SLAB_POW2_ORDER_COUNT; i++) {
-        INIT_LIST_HEAD(&gc->lists.pageable[i]);
-        INIT_LIST_HEAD(&gc->lists.nonpageable[i]);
+        for (int j = 0; j < SLAB_TYPE_COUNT; j++) {
+            INIT_LIST_HEAD(&gc->lists[j][i]);
+        }
     }
 }
