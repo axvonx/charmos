@@ -64,6 +64,7 @@ enum page_tag {
     PAGE_TAG_NONE = 0,
     PAGE_TAG_BUDDY = 1,
     PAGE_TAG_FOLIO = 2,
+    PAGE_TAG_ARENA = 3, /* cached as a free single page in a domain arena */
 };
 
 struct page {

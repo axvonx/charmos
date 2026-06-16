@@ -10,6 +10,10 @@
 #include <sync/spinlock.h>
 #include <time.h>
 
+void panic_broadcast_nmi() {
+    panic_broadcast(smp_core_id());
+}
+
 void panic_handler(struct panic_regs *regs) {
     (void) regs;
     disable_interrupts();

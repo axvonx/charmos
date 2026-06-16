@@ -60,7 +60,7 @@ void reaper_thread_main(void *unused) {
 
             kassert(refcount_read(&t->refcount) == 0);
             thread_free(t);
-            atomic_fetch_add(&reaped_threads, memory_order_acquire);
+            atomic_fetch_add(&reaped_threads, 1);
         }
 
         scheduler_yield();

@@ -41,7 +41,9 @@ void isr_common_entry(uint8_t vector, struct irq_context *irq_ctx) {
     bool is_exception = irq_vector_is_exception(vector);
     uint8_t scratch_buf[EXCEPTION_SYNC_CB_SCRATCH_BUFFER_SIZE] = {0};
 
-    kassert(smp_core()->irq_entered_irql == IRQL_NONE, "Potential race");
+    if (vector != IRQ_NMI)
+        kassert(smp_core()->irq_entered_irql == IRQL_NONE, "Potential race");
+
     smp_core()->irq_entered_irql = old;
     smp_core()->irq_stack_scratch_buf = scratch_buf;
 

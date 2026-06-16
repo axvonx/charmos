@@ -342,11 +342,16 @@ done:
 }
 
 paddr_t domain_alloc_from_domain(struct domain *cd, size_t pages) {
+    enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
     paddr_t ret = 0x0;
     if ((ret = try_alloc_from_arenas(pages)))
-        return ret;
+        goto out;
 
-    return alloc_from_remote_domain(cd->domain_buddy, pages);
+    ret = alloc_from_remote_domain(cd->domain_buddy, pages);
+
+out:
+    irql_lower(irql);
+    return ret;
 }
 
 struct domain *domain_for_addr(paddr_t addr) {

@@ -227,8 +227,13 @@ struct slab {
                            * recycled from the GC list? */
 
     size_t page_count;
+    uint64_t live_magic; /* DEBUG: SLAB_LIVE_MAGIC while initialized/live, 0
+                          * once destroyed. Used to catch the chunk allocator
+                          * handing out a slot that is still a live slab. */
     _Atomic(struct page *) backing_pages[];
 };
+
+#define SLAB_LIVE_MAGIC 0x51AB1AED51AB1AEDULL
 
 #define slab_from_rbt_node(n) (container_of(n, struct slab, rb))
 #define slab_from_list_node(ln) (container_of(ln, struct slab, list))
@@ -238,6 +243,7 @@ struct slab {
 
 /* Just a simple stack */
 struct slab_magazine {
+    struct slab_percpu_cache *parent;
     enum slab_magazine_type type;
     vaddr_t objs[SLAB_MAG_ENTRIES];
     size_t count;

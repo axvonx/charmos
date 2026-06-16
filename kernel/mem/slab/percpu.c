@@ -5,8 +5,42 @@
 
 #include "internal.h"
 
+static void slab_magazine_zero_check(struct slab_magazine *mag) {
+    if (mag->type != SLAB_MAGAZINE_ZERO)
+        return;
+
+    /* TODO: make this run in debug mode */
+    return;
+
+    for (size_t i = 0; i < SLAB_MAG_ENTRIES; i++) {
+        if (mag->objs[i]) {
+            if (!is_buffer_uniform((void *) mag->objs[i], mag->obj_size, 0)) {
+                vaddr_t obj = mag->objs[i];
+                struct slab *s = slab_for_ptr((void *) obj);
+                uint64_t byte_idx;
+                uint8_t bit_mask;
+                slab_index_and_mask(s, (void *) obj, &byte_idx, &bit_mask);
+                slab_err("CORRUPT parked obj %p mag_objsize=%zu", obj,
+                         mag->obj_size);
+                slab_err("  slab=%p type=%d obj_size=%zu page_count=%zu "
+                         "used=%zu bit_set=%d",
+                         s, s->type, s->parent_cache->obj_size, s->page_count,
+                         s->used,
+                         SLAB_BITMAP_TEST(s->bitmap[byte_idx], bit_mask) != 0);
+                for (size_t b = 0; b < mag->obj_size; b++) {
+                    uint8_t v = ((uint8_t *) obj)[b];
+                    if (v)
+                        slab_err("  byte %zu = 0x%02x", b, v);
+                }
+                panic("not uniform at idx %zu on mag %p with count %zu\n", i,
+                      mag, mag->count);
+            }
+        }
+    }
+}
+
 static bool slab_magazine_has(struct slab_magazine *mag, vaddr_t obj) {
-    for (size_t i = 0; i < mag->count; i++) {
+    for (size_t i = 0; i < SLAB_MAG_ENTRIES; i++) {
         if (mag->objs[i] == obj)
             return true;
     }
@@ -18,7 +52,9 @@ bool slab_magazine_push(struct slab_magazine *mag, vaddr_t obj) {
         !is_buffer_uniform((void *) obj, mag->obj_size, 0))
         panic("buffer of size %zu is not uniform\n", mag->obj_size);
 
+    kassert(mag->parent == slab_percpu_cache_local());
     kassert(!slab_magazine_has(mag, obj));
+    slab_magazine_zero_check(mag);
 
     if (mag->count < SLAB_MAG_ENTRIES) {
         mag->objs[mag->count++] = obj;
@@ -29,6 +65,7 @@ bool slab_magazine_push(struct slab_magazine *mag, vaddr_t obj) {
 }
 
 vaddr_t slab_magazine_pop(struct slab_magazine *mag) {
+    kassert(mag->parent == slab_percpu_cache_local());
 
     vaddr_t ret = 0x0;
 
@@ -40,6 +77,7 @@ vaddr_t slab_magazine_pop(struct slab_magazine *mag) {
     if (ret)
         kassert(!slab_magazine_has(mag, ret));
 
+    slab_magazine_zero_check(mag);
     return ret;
 }
 
@@ -124,15 +162,21 @@ static vaddr_t slab_percpu_refill_for_mag_and_cache(
     if (to_insert > can_insert)
         to_insert = can_insert;
 
+    kassert(mag->obj_size == cache->obj_size);
+    vaddr_t first = pc->shadow_objs[0];
+
     for (size_t i = 1; i <= to_insert; i++) {
         if (mag->type == SLAB_MAGAZINE_ZERO &&
             !is_buffer_uniform((void *) pc->shadow_objs[i], mag->obj_size, 0))
             panic("buffer of size %zu is not uniform\n", mag->obj_size);
 
         mag->objs[mag->count++] = pc->shadow_objs[i];
+        pc->shadow_objs[i] = 0;
     }
 
-    return pc->shadow_objs[0];
+    slab_magazine_zero_check(mag);
+
+    return first;
 }
 
 static vaddr_t slab_percpu_refill_class(struct slab_domain *dom,
@@ -180,6 +224,8 @@ void slab_domain_percpu_init(struct slab_domain *domain) {
                 domain->percpu_caches[i]->mags[j][k].type = j;
                 domain->percpu_caches[i]->mags[j][k].obj_size =
                     slab_global.class_sizes[k].size;
+                domain->percpu_caches[i]->mags[j][k].parent =
+                    domain->percpu_caches[i];
             }
         }
 

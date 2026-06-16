@@ -5,6 +5,7 @@
 
 void debug_print_stack();
 extern void panic_entry();
+void panic_broadcast_nmi();
 
 static inline void qemu_exit(int code) {
     outb(0xf4, ((code << 1) | 1) & 0xFF);

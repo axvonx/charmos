@@ -193,6 +193,7 @@ static struct thread *thread_init(struct thread *thread,
 struct thread *thread_create_internal(char *name, void (*entry_point)(void *),
                                       void *arg, size_t stack_size,
                                       va_list args) {
+    kassert(name);
     struct thread *new_thread =
         kmalloc(sizeof(struct thread), ALLOC_FLAGS_ZERO);
     if (unlikely(!new_thread))
@@ -289,10 +290,10 @@ void thread_free(struct thread *t) {
     kfree(t->activity_data);
     kfree(t->activity_stats);
     kfree(t->name);
-    log_site_destroy(t->log_site);
     kfree(t->turnstile);
     apc_free_on_thread(t);
     thread_free_stack(t);
+    log_site_put(t->log_site);
     kfree(t);
 }
 

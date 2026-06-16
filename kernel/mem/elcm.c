@@ -146,16 +146,15 @@ static size_t max_objects_fit(size_t pages, size_t page_size,
     size_t high = total_bytes / aligned_obj_size; /* no overhead */
 
     while (low < high) {
-        size_t mid = DIV_ROUND_UP(low + high, 2);
+        size_t mid = low + (high - low + 1) / 2;
         size_t bmap_bytes = bitmap_bytes_for(mid, metadata_bits_per_obj);
         size_t data_start = metadata_bytes + bmap_bytes;
         size_t aligned_start = ALIGN_UP(data_start, alignment);
-        size_t used = aligned_start + mid * aligned_obj_size;
 
-        if (used <= total_bytes)
-            low = mid;
-        else
+        if (mid > (total_bytes - aligned_start) / aligned_obj_size)
             high = mid - 1;
+        else
+            low = mid;
     }
     return low;
 }
@@ -169,7 +168,7 @@ static size_t find_best(struct elcm_params *params) {
     size_t metadata_bytes_per_page = params->metadata_bytes_per_page;
     size_t aligned_obj_size = get_aligned_obj_size(obj_size, alignment);
 
-    for (size_t i = 1; i <= SIZE_MAX; i++) {
+    for (size_t i = 1; i <= params->max_pages; i++) {
         size_t mdata_bytes = metadata_size_bytes + metadata_bytes_per_page * i;
 
         size_t obj_count =
@@ -185,11 +184,12 @@ static size_t find_best(struct elcm_params *params) {
         size_t used_bytes = aligned_start + obj_count * aligned_obj_size;
         size_t total_bytes = i * page_size;
         size_t wasted = total_bytes - used_bytes;
+
         if (wasted == 0)
             return i;
     }
 
-    kassert_unreachable();
+    return params->max_pages;
 }
 
 enum errno elcm(struct elcm_params *params) {

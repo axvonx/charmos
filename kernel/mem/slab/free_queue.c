@@ -78,6 +78,7 @@ vaddr_t slab_free_queue_ringbuffer_dequeue(struct slab_free_queue *q) {
                                                       memory_order_relaxed)) {
 
                 vaddr_t ret = slot->addr;
+                slot->addr = 0;
 
                 atomic_store_explicit(&slot->seq, pos + q->capacity,
                                       memory_order_release);
@@ -91,24 +92,17 @@ vaddr_t slab_free_queue_ringbuffer_dequeue(struct slab_free_queue *q) {
     }
 }
 
-void slab_free_queue_enqueue(struct slab_free_queue *q, vaddr_t addr) {
-    slab_free_queue_ringbuffer_enqueue(q, addr);
+bool slab_free_queue_enqueue(struct slab_free_queue *q, vaddr_t addr) {
+    return slab_free_queue_ringbuffer_enqueue(q, addr);
 }
 
 vaddr_t slab_free_queue_dequeue(struct slab_free_queue *q) {
-    vaddr_t ret = slab_free_queue_ringbuffer_dequeue(q);
-    return ret;
-}
-
-/* TODO: Eventually this will be a real function */
-static inline bool page_is_pageable(struct page *page) {
-    (void) page;
-    return false;
+    return slab_free_queue_ringbuffer_dequeue(q);
 }
 
 static void slab_free_queue_free(struct slab_domain *d, void *ptr,
                                  enum alloc_behavior bh) {
-    int32_t class = slab_size_to_index(slab_allocation_size((vaddr_t) ptr));
+    int32_t class = slab_size_to_index(ksize(ptr));
     bool fits_in_slab = class >= 0;
 
     if (fits_in_slab)
@@ -126,7 +120,7 @@ size_t slab_free_queue_drain(struct slab_percpu_cache *cache,
     size_t addrs_dequeued = 0;      /* Used to check against `target` */
 
     while (true) {
-        if (addrs_dequeued + 1 >= target)
+        if (addrs_dequeued >= target)
             break;
 
         /* Drain an element from our free_queue */
@@ -142,11 +136,8 @@ size_t slab_free_queue_drain(struct slab_percpu_cache *cache,
             goto flush;
 
         /* Magazines only cache nonpageable addresses */
-        /* NOTE: We dereference the first page in the backing page array
-         * since all pages should have the same property as it */
         struct slab *slab = slab_for_ptr((void *) addr);
-        struct page *page = *slab->backing_pages;
-        if (page_is_pageable(page))
+        if (slab_is_pageable(slab))
             goto flush;
 
         /* Push it onto the magazine */
@@ -154,7 +145,7 @@ size_t slab_free_queue_drain(struct slab_percpu_cache *cache,
             slab_is_zeroed(slab) ? SLAB_MAGAZINE_ZERO : SLAB_MAGAZINE_NORMAL;
 
         if (mtype == SLAB_MAGAZINE_ZERO)
-            memset((void *) addr, 0, slab_allocation_size(addr));
+            memset((void *) addr, 0, slab->parent_cache->obj_size);
 
         struct slab_magazine *mag = &cache->mags[mtype][class];
         if (!slab_magazine_push(mag, addr))

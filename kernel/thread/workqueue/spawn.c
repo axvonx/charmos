@@ -93,8 +93,8 @@ static void workqueue_init_new_worker(struct workqueue *queue, struct worker *w,
                                       struct thread *t) {
     w->inactivity_check_period = get_inactivity_timeout(queue);
 
-    workqueue_add_worker(queue, w);
     worker_init(queue, w, t);
+    workqueue_add_worker(queue, w);
     workqueue_enqueue_thread(queue, t);
 }
 

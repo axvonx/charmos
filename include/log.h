@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <structures/list.h>
+#include <types/refcount.h>
 #include <types/types.h>
 
 enum log_flags : uint32_t {
@@ -162,8 +163,17 @@ void log_dump_site(struct log_site *, struct log_dump_options opts);
 void log_dump_site_default(struct log_site *);
 void log_dump_all(void);
 void log_sites_init(void);
+void log_site_free(struct log_site *site);
 struct log_site *log_site_create(struct log_site_options opts);
-void log_site_destroy(struct log_site *site);
+
+static inline bool log_site_get(struct log_site *site) {
+    return refcount_inc_not_zero(&site->refcount);
+}
+
+static inline void log_site_put(struct log_site *site) {
+    if (refcount_dec_and_test(&site->refcount))
+        log_site_free(site);
+}
 
 #define LOG_DUMP_DEFAULT                                                       \
     (struct log_dump_options) {                                                \

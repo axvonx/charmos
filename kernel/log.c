@@ -24,22 +24,7 @@ struct log_globals {
     struct locked_list list;
 };
 
-static void log_site_free(struct log_site *site);
-
 struct log_globals log_global = {0};
-
-static bool log_site_get(struct log_site *site) {
-    return refcount_inc(&site->refcount);
-}
-
-static void log_site_put(struct log_site *site) {
-    if (refcount_dec_and_test(&site->refcount))
-        log_site_free(site);
-}
-
-void log_site_destroy(struct log_site *site) {
-    log_site_put(site);
-}
 
 static const char *find_symbol(uint64_t addr, uint64_t *out_sym_addr) {
     const char *result = NULL;
@@ -348,16 +333,16 @@ void log_dump_all(void) {
     spin_unlock(&log_global.list.lock, irql);
 }
 
-static void log_site_free(struct log_site *site) {
+void log_site_free(struct log_site *site) {
     locked_list_del(&log_global.list, &site->list);
     kfree(site->rb.slots);
     kfree(site->name);
-    kfree_aligned(site, 64);
+    kfree_aligned(site, _Alignof(struct log_site));
 }
 
 struct log_site *log_site_create(struct log_site_options opts) {
-    struct log_site *ret =
-        kmalloc_aligned(sizeof(struct log_site), 64, ALLOC_FLAGS_ZERO);
+    struct log_site *ret = kmalloc_aligned(
+        sizeof(struct log_site), _Alignof(struct log_site), ALLOC_FLAGS_ZERO);
     if (!ret)
         return NULL;
 
@@ -394,7 +379,7 @@ err:
         kfree(ret->name);
     }
 
-    kfree(ret);
+    kfree_aligned(ret, _Alignof(struct log_site));
     return NULL;
 }
 
