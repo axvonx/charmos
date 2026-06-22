@@ -85,7 +85,7 @@ struct domain_buddy {
     struct domain_zonelist zonelist;
 
     struct buddy_page *buddy;
-    struct free_area *free_area;
+    struct buddy_free_area *free_area;
 
     struct domain_arena **arenas; /* One per core */
     struct core **cores;

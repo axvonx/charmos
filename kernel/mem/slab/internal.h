@@ -613,6 +613,14 @@ void slab_chunks_free(struct slab_chunks *sc, struct slab_chunk *chunk,
                       vaddr_t addr);
 void slab_chunks_init(struct slab_chunks *sc, struct slab_cache *parent);
 
+/* Debug checks */
+#ifdef DEBUG_SLAB_DEEP
+void slab_track_event(vaddr_t addr, uint64_t ra0, uint64_t ra1, bool is_alloc);
+void slab_track_dump(const char *label, vaddr_t addr);
+void slab_debug_assert_not_already_free(vaddr_t v, int32_t class);
+void slab_dump_corruption(void *obj, struct slab_magazine *popped_mag);
+#endif
+
 extern struct slab_globals slab_global;
 
 /* Recall that the EWMA formula is

@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sync/spinlock.h>
 
+#ifdef DEBUG_ASAN
 LOG_SITE_DECLARE_DEFAULT(asan);
 LOG_HANDLE_DECLARE_DEFAULT(asan);
 static bool asan_ready = false;
@@ -37,8 +38,6 @@ void asan_unpoison(void *addr, size_t size) {
 }
 
 void asan_init(void) {
-    return;
-
     asan_info("Bringing up ASAN... this will take time...");
     asan_shadow_size = (global.total_pages * PAGE_SIZE) >> ASAN_SHADOW_SCALE;
 
@@ -538,3 +537,4 @@ __attribute__((weak)) void __asan_alloca_poison_0(void *addr, size_t size) {
 __attribute__((weak)) void __asan_allocas_unpoison_0(void *addr, size_t size) {
     __asan_allocas_unpoison(addr, size);
 }
+#endif

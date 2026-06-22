@@ -12,7 +12,28 @@
 
 #include "internal.h"
 
-paddr_t buddy_alloc_pages(struct free_area *free_area, size_t count) {
+void buddy_add_to_free_area(struct buddy_page *page,
+                            struct buddy_free_area *area) {
+    buddy_page_assert_tag(page, PAGE_TAG_BUDDY);
+    buddy_hash_table_insert(&area->hash_table, page);
+    area->nr_free++;
+    buddy_page_set_free(page, true);
+}
+
+struct buddy_page *buddy_remove_from_free_area(struct buddy_free_area *area) {
+    if (area->nr_free == 0)
+        return NULL;
+
+    struct buddy_page *page = buddy_hash_table_get_any(&area->hash_table);
+    if (!page)
+        return NULL;
+
+    area->nr_free--;
+    buddy_page_set_free(page, false);
+    return page;
+}
+
+paddr_t buddy_alloc_pages(struct buddy_free_area *free_area, size_t count) {
     if (count == 0)
         panic("Tried to allocate zero pages");
 
@@ -71,8 +92,8 @@ paddr_t buddy_alloc_pages(struct free_area *free_area, size_t count) {
     return buddy_page_get_paddr(page);
 }
 
-void buddy_free_pages(paddr_t addr, size_t count, struct free_area *free_area,
-                      size_t total_pages) {
+void buddy_free_pages(paddr_t addr, size_t count,
+                      struct buddy_free_area *free_area, size_t total_pages) {
     if (!addr || count == 0)
         return;
 
@@ -103,22 +124,24 @@ void buddy_free_pages(paddr_t addr, size_t count, struct free_area *free_area,
             break;
 
         buddy_page_tag(buddy);
+        buddy_hash_table_remove(&free_area[order].hash_table, buddy);
+        /*
         struct buddy_page *prev = NULL;
-        struct buddy_page *cur = free_area[order].next;
+        struct buddy_page *cur = free_area[order].tail;
 
         while (cur && cur != buddy) {
             prev = cur;
             cur = buddy_page_get_next(cur);
         }
 
-        if (cur == buddy) {
-            if (prev) {
-                buddy_page_set_next_pfn(prev, buddy_page_get_next_pfn(buddy));
-            } else {
-                free_area[order].next = buddy_page_get_next(buddy);
-            }
-            free_area[order].nr_free--;
-        }
+        kassert(cur == buddy, "Buddy page %p list corruption", cur);
+        if (prev) {
+            buddy_page_set_next_pfn(prev, buddy_page_get_next_pfn(buddy));
+        } else {
+            free_area[order].tail = buddy_page_get_next(buddy);
+        } */
+
+        free_area[order].nr_free--;
 
         pfn = (pfn < buddy_pfn) ? pfn : buddy_pfn;
         page = buddy_page_for_pfn(pfn);

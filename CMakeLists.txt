@@ -23,11 +23,27 @@ elseif(_BUILD_TYPE_UPPER STREQUAL "RELWITHDEBINFO")
     add_compile_definitions(BUILD_RELEASE)
 endif()
 
+#[[
+
+Some notes on the DEBUG flag hierarchy:
+
+The idea is that there are general flags that enable debugging across the whole
+subsystem, but at a shallow level, and then ones that go a layer deeper (e.g.
+DEBUG_SLAB vs DEBUG_SLAB_DEEP). This is to allow us to do surface level
+assertions for cheap, but opt for in depth instrumentation if something
+pops up and needs to be debugged. It is not mandatory that all subsystems
+that feature debugging flags implement this hierarchy, however it is standard.
+
+]]
+
 set(DEBUG_FLAGS
     DEBUG_LOCK
     DEBUG_CLIMB
     DEBUG_USB
     DEBUG_USB_XHCI
+    DEBUG_SLAB
+    DEBUG_SLAB_DEEP
+    DEBUG_ASAN
 )
 
 set(PROFILING_FLAGS
@@ -81,6 +97,19 @@ define_flag_group(PROFILING       PROFILING_ALL       OFF "${PROFILING_FLAGS}")
 define_flag_group(TEST            TEST_ALL            ON  "${TEST_FLAGS}")
 define_flag_group(TEST_NIGHTMARE  TEST_NIGHTMARE_ALL  ON  "${TEST_NIGHTMARE_FLAGS}")
 define_flag_group(DEBUG DEBUG_ALL OFF  "${DEBUG_FLAGS}")
+
+get_directory_property(current_defns COMPILE_DEFINITIONS)
+foreach(flag ${DEBUG_FLAGS})
+    if(flag MATCHES "_DEEP" AND flag IN_LIST current_defns)
+        string(LENGTH ${flag} len)
+        math(EXPR new_len "${len} - 5")
+        string(SUBSTRING "${flag}" 0 ${new_len} trimmed)
+        if (trimmed IN_LIST DEBUG_FLAGS)
+            set(${trimmed} ON CACHE BOOL "" FORCE)
+            add_compile_definitions(${trimmed})
+        endif()
+    endif()
+endforeach()
 
 option(QEMU_KVM         "Enable KVM acceleration"                         OFF)
 option(QEMU_IOMMU       "Attach intel-iommu device with intremap"         ON)
@@ -143,6 +172,12 @@ set(KERNEL_C_FLAGS_LIST
 
 string(REPLACE ";" " " KERNEL_C_FLAGS_STR "${KERNEL_C_FLAGS_LIST}")
 set(CMAKE_C_FLAGS "${KERNEL_C_FLAGS_STR} -std=gnu11")
+
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    set(CMAKE_ASM_NASM_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+endif()
 
 if(APPLE)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -target x86_64-unknown-unknown")

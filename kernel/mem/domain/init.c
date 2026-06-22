@@ -46,73 +46,39 @@ static void domain_build_zonelist(struct domain_buddy *dom) {
 
 void domain_buddy_track_pages(struct domain_buddy *dom) {
     size_t total_pages = dom->length / PAGE_SIZE;
-    size_t used_pages = 0;
+    size_t free_pages = 0;
 
-    for (size_t order = 0; order < MAX_ORDER; order++) {
-        struct buddy_page *page = dom->free_area[order].next;
-        while (page) {
-            used_pages += (1ULL << buddy_page_get_order(page));
-            page = buddy_page_get_next(page);
-        }
-    }
+    for (size_t order = 0; order < MAX_ORDER; order++)
+        free_pages += dom->free_area[order].nr_free << order;
 
     dom->total_pages = total_pages;
-    dom->pages_used = total_pages - used_pages;
-}
-
-static void remove_block_from_global(size_t start_pfn, int order) {
-    struct free_area *fa = &global.buddy_free_area[order];
-
-    struct buddy_page *cur = fa->next;
-
-    struct buddy_page *prev = NULL;
-
-    while (cur) {
-        if (buddy_page_get_pfn(cur) == start_pfn) {
-            struct buddy_page *nxt = buddy_page_get_next(cur);
-
-            if (prev) {
-                buddy_page_set_next_pfn(prev,
-                                        nxt ? buddy_page_get_pfn(nxt) : 0);
-            } else {
-                fa->next = (struct buddy_page *) nxt;
-            }
-
-            fa->nr_free--;
-            buddy_page_set_next_pfn(cur, 0);
-            return;
-        }
-
-        prev = cur;
-        cur = buddy_page_get_next(cur);
-    }
+    dom->pages_used = total_pages - free_pages;
 }
 
 static void buddy_add_block_to_global(size_t start_pfn, int order) {
     struct buddy_page *page = buddy_page_for_pfn(start_pfn);
 
+    buddy_page_tag(page);
     buddy_page_set_next_pfn(page, 0);
     buddy_page_set_order(page, (uint64_t) order);
     buddy_page_set_free(page, true);
 
-    struct free_area *fa = &global.buddy_free_area[order];
-
-    buddy_page_set_next_pfn(page, fa->next ? buddy_page_get_pfn(fa->next) : 0);
-    fa->next = page;
+    buddy_add_to_free_area(page, &global.buddy_free_area[order]);
 }
 
-static void domain_buddy_split_for_domain(struct domain_buddy *dom,
-                                          size_t start_pfn, int order,
-                                          size_t domain_start,
-                                          size_t domain_end) {
+/* Place block removed from global free area. Blocks fully outside the domain
+ * get handed back to the global area, fully inside ones are put in the domain
+ * free area, and ones that cross domains are split and distributed */
+static void domain_distribute_block(struct domain_buddy *dom, size_t start_pfn,
+                                    int order, size_t domain_start,
+                                    size_t domain_end) {
     size_t block_size = 1ULL << order;
     size_t block_end = start_pfn + block_size;
 
     if (block_end <= domain_start || start_pfn >= domain_end) {
+        buddy_add_block_to_global(start_pfn, order);
         return;
     }
-
-    remove_block_from_global(start_pfn, order);
 
     if (start_pfn >= domain_start && block_end <= domain_end) {
         size_t idx = start_pfn - dom->start / PAGE_SIZE;
@@ -128,63 +94,51 @@ static void domain_buddy_split_for_domain(struct domain_buddy *dom,
     int half_order = order - 1;
     size_t half_size = 1ULL << half_order;
 
-    if (start_pfn < domain_start || start_pfn + half_size > domain_end) {
-        if (start_pfn + half_size <= domain_start || start_pfn >= domain_end) {
-            buddy_add_block_to_global(start_pfn, half_order);
-        } else {
-            domain_buddy_split_for_domain(dom, start_pfn, half_order,
-                                          domain_start, domain_end);
-        }
-    } else {
-        domain_buddy_split_for_domain(dom, start_pfn, half_order, domain_start,
-                                      domain_end);
-    }
+    domain_distribute_block(dom, start_pfn, half_order, domain_start,
+                            domain_end);
+    domain_distribute_block(dom, start_pfn + half_size, half_order,
+                            domain_start, domain_end);
+}
 
-    size_t right_start = start_pfn + half_size;
-    if (right_start < domain_start || right_start + half_size > domain_end) {
-        if (right_start + half_size <= domain_start ||
-            right_start >= domain_end) {
-            buddy_add_block_to_global(right_start, half_order);
-        } else {
-            domain_buddy_split_for_domain(dom, right_start, half_order,
-                                          domain_start, domain_end);
+static void domain_claim_global_blocks(struct domain_buddy *dom,
+                                       size_t dom_start, size_t dom_end) {
+    for (int order = MAX_ORDER - 1; order >= 0; order--) {
+        struct buddy_free_area *fa = &global.buddy_free_area[order];
+
+        /* buddy_hash_table has no iteration order and distribution changes
+         * the global free area, so drain the whole order into a temporary list
+         * in order to prevent blocks we hand back to the global allocator from
+         * being checked again in this current pass */
+        struct buddy_page *pending = NULL;
+        struct buddy_page *page;
+        while ((page = buddy_remove_from_free_area(fa))) {
+            buddy_page_set_next(page, pending);
+            pending = page;
         }
-    } else {
-        domain_buddy_split_for_domain(dom, right_start, half_order,
-                                      domain_start, domain_end);
+
+        while (pending) {
+            struct buddy_page *next = buddy_page_get_next(pending);
+            buddy_page_set_next_pfn(pending, 0);
+
+            domain_distribute_block(dom, buddy_page_get_pfn(pending), order,
+                                    dom_start, dom_end);
+
+            pending = next;
+        }
     }
 }
 
 static void domain_buddy_init(struct domain_buddy *dom) {
     for (int i = 0; i < MAX_ORDER; i++) {
-        dom->free_area[i].next = NULL;
+        memset(&dom->free_area[i].hash_table, 0,
+               sizeof(struct buddy_hash_table));
         dom->free_area[i].nr_free = 0;
     }
 
     size_t dom_start = dom->start / PAGE_SIZE;
     size_t dom_end = dom->end / PAGE_SIZE;
 
-    for (int order = MAX_ORDER - 1; order >= 0; order--) {
-        struct buddy_page *page = global.buddy_free_area[order].next;
-
-        while (page) {
-            struct buddy_page *next_page = buddy_page_get_next(page);
-            size_t block_start = buddy_page_get_pfn(page);
-            size_t block_end =
-                block_start + (1ULL << buddy_page_get_order(page));
-
-            if (block_end <= dom_start || block_start >= dom_end) {
-                page = next_page;
-                continue;
-            }
-
-            domain_buddy_split_for_domain(dom, buddy_page_get_pfn(page),
-                                          buddy_page_get_order(page), dom_start,
-                                          dom_end);
-
-            page = next_page;
-        }
-    }
+    domain_claim_global_blocks(dom, dom_start, dom_end);
 }
 
 static void *alloc_up(size_t size) {
@@ -195,7 +149,7 @@ static void domain_structs_init(struct domain_buddy *dom, size_t arena_capacity,
                                 size_t fq_capacity,
                                 struct domain *core_domain) {
     dom->domain = core_domain;
-    dom->free_area = alloc_up(sizeof(struct free_area) * MAX_ORDER);
+    dom->free_area = alloc_up(sizeof(struct buddy_free_area) * MAX_ORDER);
     if (!dom->free_area)
         panic("Failed to allocate domain free area");
 

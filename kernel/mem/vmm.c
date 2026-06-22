@@ -58,6 +58,9 @@ ADDRESS_RANGE_DECLARE(hhdm, .base = 0xFFFF800000000000ULL,
                       /* default size: from the base up to the slab heap */
                       .size = SLAB_HEAP_START - 0xFFFF800000000000ULL);
 
+ADDRESS_RANGE_DECLARE(kernel, .base = 0xffffffff80000000,
+                      .size = 0); /* Filled in at boot */
+
 bool hhdm_vaddr_in_range(vaddr_t vaddr) {
     return address_range_addr_in_range(&ADDRESS_RANGE(hhdm), vaddr);
 }
@@ -277,6 +280,7 @@ void vmm_init(struct limine_memmap_response *memmap,
     uint64_t kernel_virt_start = xa->virtual_base;
     uint64_t kernel_virt_end = (uint64_t) &__kernel_virt_end;
     uint64_t kernel_size = kernel_virt_end - kernel_virt_start;
+    ADDRESS_RANGE(kernel).size = kernel_size;
 
     paddr_t dummy_phys = pmm_alloc_page();
     uint8_t *dummy_virt = hhdm_paddr_to_ptr(dummy_phys);
@@ -291,6 +295,7 @@ void vmm_init(struct limine_memmap_response *memmap,
             panic("Error %s whilst mapping kernel", errno_to_str(e));
     }
 
+#ifdef DEBUG_ASAN
     for (uintptr_t addr = kernel_virt_start; addr < kernel_virt_end;
          addr += PAGE_SIZE) {
         uint64_t shadow_addr = ASAN_SHADOW_OFFSET + (addr >> ASAN_SHADOW_SCALE);
@@ -298,6 +303,7 @@ void vmm_init(struct limine_memmap_response *memmap,
         vmm_map_page(shadow_addr, dummy_phys, PAGE_PRESENT | PAGE_WRITE,
                      VMM_FLAG_MODIFY_LEAF);
     }
+#endif
 
     for (uint64_t i = 0; i < memmap->entry_count; i++) {
         struct limine_memmap_entry *entry = memmap->entries[i];

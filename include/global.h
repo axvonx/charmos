@@ -45,7 +45,7 @@ struct globals {
     struct domain **domains;
     struct domain_buddy *domain_buddies;
     struct page *page_array;
-    struct free_area buddy_free_area[MAX_ORDER];
+    struct buddy_free_area buddy_free_area[MAX_ORDER];
 
     bool scheduler_domains_ready;
     struct scheduler_domain *scheduler_domains[TOPOLOGY_LEVEL_MAX];

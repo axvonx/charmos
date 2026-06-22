@@ -189,29 +189,30 @@ static void format_size(char *buf, size_t bufsz, size_t bytes) {
     if (bytes >= (1ULL << 30)) {
         size_t whole = bytes >> 30;
         size_t frac = ((bytes & ((1ULL << 30) - 1)) * 100) >> 30;
-        snprintf(buf, bufsz, "%zu.%02zu GiB", whole, frac);
+        if (frac == 0) {
+            snprintf(buf, bufsz, "%zu GiB", whole);
+        } else {
+            snprintf(buf, bufsz, "%zu.%02zu GiB", whole, frac);
+        }
     } else if (bytes >= (1ULL << 20)) {
         size_t whole = bytes >> 20;
         size_t frac = ((bytes & ((1ULL << 20) - 1)) * 100) >> 20;
-        snprintf(buf, bufsz, "%zu.%02zu MiB", whole, frac);
+        if (frac == 0) {
+            snprintf(buf, bufsz, "%zu MiB", whole);
+        } else {
+            snprintf(buf, bufsz, "%zu.%02zu MiB", whole, frac);
+        }
     } else if (bytes >= (1ULL << 10)) {
         size_t whole = bytes >> 10;
         size_t frac = ((bytes & ((1ULL << 10) - 1)) * 100) >> 10;
-        snprintf(buf, bufsz, "%zu.%02zu KiB", whole, frac);
+        if (frac == 0) {
+            snprintf(buf, bufsz, "%zu KiB", whole);
+        } else {
+            snprintf(buf, bufsz, "%zu.%02zu KiB", whole, frac);
+        }
     } else {
         snprintf(buf, bufsz, "%zu B", bytes);
     }
-}
-
-static void ar_fmt_size(char *buf, size_t bufsz, vaddr_t sz) {
-    if (sz >= (1ULL << 30))
-        snprintf(buf, bufsz, "%llu GiB", (unsigned long long) sz >> 30);
-    else if (sz >= (1ULL << 20))
-        snprintf(buf, bufsz, "%llu MiB", (unsigned long long) sz >> 20);
-    else if (sz >= (1ULL << 10))
-        snprintf(buf, bufsz, "%llu KiB", (unsigned long long) sz >> 10);
-    else
-        snprintf(buf, bufsz, "%llu B", (unsigned long long) sz);
 }
 
 #define AR_COL_ADDR 18
@@ -219,9 +220,10 @@ static void ar_fmt_size(char *buf, size_t bufsz, vaddr_t sz) {
 #define AR_SEP_TOP "0x%llx ┬───┬─────────────────────────"
 #define AR_SEP_BOTTOM "0x%llx ┴───┴─────────────────────────"
 
-static void ar_print_gap(vaddr_t gap_size) {
+static void ar_print_gap(vaddr_t gap_size, vaddr_t end) {
     char gapbuf[32];
-    ar_fmt_size(gapbuf, sizeof(gapbuf), gap_size);
+    format_size(gapbuf, sizeof(gapbuf), gap_size);
+    printf("0x%016llx ┼───┼" AR_LINE "\n", end);
     printf("                   │ O │\n");
     printf("                   │ O │ gap: %-13s\n", gapbuf);
     printf("                   │ O │\n");
@@ -250,37 +252,38 @@ void address_ranges_print() {
 
     printf("\n");
     printf("%-*s       %s\n", AR_COL_ADDR, "  address", "region");
-    printf(AR_SEP_TOP "\n", ADDRESS_RANGE_KERNEL_END);
 
     if (i > 0) {
         vaddr_t top_end = ranges[0]->base + ranges[0]->size;
         if ((vaddr_t) ADDRESS_RANGE_KERNEL_END > top_end)
-            ar_print_gap((vaddr_t) ADDRESS_RANGE_KERNEL_END - top_end + 1);
+            ar_print_gap((vaddr_t) ADDRESS_RANGE_KERNEL_END - top_end,
+                         ADDRESS_RANGE_KERNEL_END);
     }
 
     for (size_t k = 0; k < i; k++) {
         struct address_range *ar = ranges[k];
         vaddr_t end = ar->base + ar->size;
         char szbuf[32];
-        ar_fmt_size(szbuf, sizeof(szbuf), ar->size);
+        format_size(szbuf, sizeof(szbuf), ar->size);
 
         size_t name_len = strlen(ar->name);
 
-        printf("0x%016llx ┼───┼" AR_LINE "\n", (unsigned long long) end);
+        printf("0x%016llx ┼───┼" AR_LINE "\n", end);
         printf("%-*s │ X │ %s: %-*s\n", AR_COL_ADDR, "", ar->name,
                AR_COL_ADDR - name_len - 2, szbuf);
 
         if (k + 1 < i) {
             vaddr_t next_end = ranges[k + 1]->base + ranges[k + 1]->size;
             if (ar->base > next_end)
-                ar_print_gap(ar->base - next_end);
+                ar_print_gap(ar->base - next_end, ar->base);
         }
     }
 
     if (i > 0) {
         vaddr_t bot_base = ranges[i - 1]->base;
         if (bot_base > (vaddr_t) ADDRESS_RANGE_KERNEL_START)
-            ar_print_gap(bot_base - (vaddr_t) ADDRESS_RANGE_KERNEL_START);
+            ar_print_gap(bot_base - (vaddr_t) ADDRESS_RANGE_KERNEL_START,
+                         bot_base);
     }
 
     printf(AR_SEP_BOTTOM "\n\n", ADDRESS_RANGE_KERNEL_START);

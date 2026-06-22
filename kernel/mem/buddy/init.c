@@ -50,27 +50,8 @@ static inline int order_base_2(uint64_t x) {
     return 64 - __builtin_clzll(x) - 1;
 }
 
-void buddy_add_to_free_area(struct buddy_page *page, struct free_area *area) {
-    buddy_page_assert_tag(page, PAGE_TAG_BUDDY);
-    buddy_page_set_next_pfn(page, buddy_page_get_pfn(area->next));
-    area->next = page;
-    area->nr_free++;
-    buddy_page_set_free(page, true);
-}
-
-struct buddy_page *buddy_remove_from_free_area(struct free_area *area) {
-    if (area->nr_free == 0 || area->next == NULL)
-        return NULL;
-
-    struct buddy_page *page = area->next;
-    area->next = buddy_page_get_next(page);
-    area->nr_free--;
-    buddy_page_set_free(page, false);
-    return page;
-}
-
 void buddy_add_entry(struct page *page_array, struct limine_memmap_entry *entry,
-                     struct free_area *farea) {
+                     struct buddy_free_area *farea) {
     if (entry->type != LIMINE_MEMMAP_USABLE)
         return;
 
@@ -174,7 +155,8 @@ void buddy_init(void) {
     mid_init_buddy(pages_needed);
 
     for (int i = 0; i < MAX_ORDER; i++) {
-        global.buddy_free_area[i].next = NULL;
+        memset(&global.buddy_free_area[i].hash_table, 0,
+               sizeof(struct buddy_hash_table));
         global.buddy_free_area[i].nr_free = 0;
     }
 

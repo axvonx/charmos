@@ -1,5 +1,6 @@
 #pragma once
 #include <compiler.h>
+#include <math/hash.h>
 #include <math/min_max.h>
 #include <mem/bitmap.h>
 #include <mem/buddy.h>
@@ -16,14 +17,18 @@
  * Layout of buddy_page::meta
  *   bits [0,  2]  : page tag (PAGE_TAG_*)
  *   bit  [3]      : is_free
- *   bits [4, 11]  : order (8 bits)
+ *   bit  [4]      : is_zeroed
+ *   bits [5, 11]  : order (7 bits)
  *   bits [12, 63] : next_pfn (52 bits)
  */
 #define BUDDY_IS_FREE_SHIFT 3
 #define BUDDY_IS_FREE_MASK (1ULL << BUDDY_IS_FREE_SHIFT)
 
-#define BUDDY_ORDER_SHIFT 4
-#define BUDDY_ORDER_BITS 8
+#define BUDDY_IS_ZEROED_SHIFT 4
+#define BUDDY_IS_ZEROED_MASK (1ULL << BUDDY_IS_ZEROED_SHIFT)
+
+#define BUDDY_ORDER_SHIFT 5
+#define BUDDY_ORDER_BITS 7
 #define BUDDY_ORDER_MASK (((1ULL << BUDDY_ORDER_BITS) - 1) << BUDDY_ORDER_SHIFT)
 
 #define BUDDY_NEXT_PFN_SHIFT PAGE_4K_SHIFT
@@ -63,14 +68,23 @@ static inline void buddy_page_set_free(struct buddy_page *bp, bool is_free) {
         (bp->meta & ~BUDDY_IS_FREE_MASK) | (is_free ? BUDDY_IS_FREE_MASK : 0);
 }
 
+static inline bool buddy_page_is_zeroed(const struct buddy_page *bp) {
+    return (bp->meta & BUDDY_IS_ZEROED_MASK) != 0;
+}
+
+static inline void buddy_page_set_zeroed(struct buddy_page *bp,
+                                         bool is_zeroed) {
+    bp->meta = (bp->meta & ~BUDDY_IS_ZEROED_MASK) |
+               (is_zeroed ? BUDDY_IS_ZEROED_MASK : 0);
+}
+
 static inline bool page_pfn_allocated_in_boot_bitmap(pfn_t pfn) {
     return test_bit(pfn);
 }
 
 static inline bool buddy_page_pfn_free(pfn_t pfn) {
-    if (pfn >= global.last_pfn) {
+    if (pfn >= global.last_pfn)
         return false;
-    }
 
     struct page *p = &global.page_array[pfn];
 
@@ -87,6 +101,14 @@ static inline pfn_t buddy_page_get_pfn(struct buddy_page *bp) {
 
 static inline paddr_t buddy_page_get_paddr(struct buddy_page *bp) {
     return PFN_TO_PAGE(buddy_page_get_pfn(bp));
+}
+
+static inline void buddy_page_set_next(struct buddy_page *bp,
+                                       struct buddy_page *next) {
+    if (!next)
+        return buddy_page_set_next_pfn(bp, 0);
+
+    buddy_page_set_next_pfn(bp, buddy_page_get_pfn(next));
 }
 
 static inline struct buddy_page *buddy_page_get_next(struct buddy_page *bp) {
@@ -112,3 +134,10 @@ static inline void buddy_page_assert_tag(struct buddy_page *page,
     if (page)
         page_assert_tag(BUDDY_PAGE_TO_PAGE(page), tag);
 }
+
+void buddy_hash_table_insert(struct buddy_hash_table *ht,
+                             struct buddy_page *bp);
+void buddy_hash_table_remove(struct buddy_hash_table *ht,
+                             struct buddy_page *bp);
+struct buddy_page *buddy_hash_table_get_any(struct buddy_hash_table *ht);
+struct buddy_page *buddy_hash_table_get_zeroed(struct buddy_hash_table *ht);

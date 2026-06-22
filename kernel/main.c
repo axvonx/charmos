@@ -71,7 +71,10 @@ __no_sanitize_address void k_main(void) {
     address_ranges_init();
     slab_allocator_init();
     page_alloc_init();
+
+#ifdef DEBUG_ASAN
     asan_init();
+#endif
 
     log_sites_init();
     bootstage_advance(BOOTSTAGE_EARLY_ALLOCATORS);

@@ -6,11 +6,9 @@
 #include "internal.h"
 
 static void slab_magazine_zero_check(struct slab_magazine *mag) {
+#ifdef DEBUG_SLAB_DEEP
     if (mag->type != SLAB_MAGAZINE_ZERO)
         return;
-
-    /* TODO: make this run in debug mode */
-    return;
 
     for (size_t i = 0; i < SLAB_MAG_ENTRIES; i++) {
         if (mag->objs[i]) {
@@ -37,6 +35,7 @@ static void slab_magazine_zero_check(struct slab_magazine *mag) {
             }
         }
     }
+#endif
 }
 
 static bool slab_magazine_has(struct slab_magazine *mag, vaddr_t obj) {
@@ -48,9 +47,11 @@ static bool slab_magazine_has(struct slab_magazine *mag, vaddr_t obj) {
 }
 
 bool slab_magazine_push(struct slab_magazine *mag, vaddr_t obj) {
+#ifdef DEBUG_SLAB
     if (mag->type == SLAB_MAGAZINE_ZERO &&
         !is_buffer_uniform((void *) obj, mag->obj_size, 0))
         panic("buffer of size %zu is not uniform\n", mag->obj_size);
+#endif
 
     kassert(mag->parent == slab_percpu_cache_local());
     kassert(!slab_magazine_has(mag, obj));
@@ -166,9 +167,12 @@ static vaddr_t slab_percpu_refill_for_mag_and_cache(
     vaddr_t first = pc->shadow_objs[0];
 
     for (size_t i = 1; i <= to_insert; i++) {
+
+#ifdef DEBUG_SLAB
         if (mag->type == SLAB_MAGAZINE_ZERO &&
             !is_buffer_uniform((void *) pc->shadow_objs[i], mag->obj_size, 0))
             panic("buffer of size %zu is not uniform\n", mag->obj_size);
+#endif
 
         mag->objs[mag->count++] = pc->shadow_objs[i];
         pc->shadow_objs[i] = 0;

@@ -41,8 +41,7 @@ static uint8_t idx_of_val(uint8_t *buf, size_t len, size_t search_for) {
         if (buf[i] == search_for)
             return i;
 
-    kassert_unreachable();
-    return 0;
+    kassert_unreachable("invalid search_for or buffer");
 }
 
 void numa_construct_relative_distances(struct numa_node *node) {
