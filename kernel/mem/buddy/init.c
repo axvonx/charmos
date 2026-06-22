@@ -155,8 +155,7 @@ void buddy_init(void) {
     mid_init_buddy(pages_needed);
 
     for (int i = 0; i < MAX_ORDER; i++) {
-        memset(&global.buddy_free_area[i].hash_table, 0,
-               sizeof(struct buddy_hash_table));
+        global.buddy_free_area[i].head = NULL;
         global.buddy_free_area[i].nr_free = 0;
     }
 

@@ -1,6 +1,5 @@
 #pragma once
 #include <compiler.h>
-#include <math/hash.h>
 #include <math/min_max.h>
 #include <mem/bitmap.h>
 #include <mem/buddy.h>
@@ -119,6 +118,25 @@ static inline struct buddy_page *buddy_page_get_next(struct buddy_page *bp) {
     return buddy_page_for_pfn(pfn);
 }
 
+struct buddy_free_link {
+    struct buddy_page *prev;
+};
+
+static inline struct buddy_free_link *
+buddy_page_free_link(struct buddy_page *bp) {
+    return (struct buddy_free_link *) hhdm_paddr_to_ptr(
+        buddy_page_get_paddr(bp));
+}
+
+static inline struct buddy_page *buddy_page_get_prev(struct buddy_page *bp) {
+    return buddy_page_free_link(bp)->prev;
+}
+
+static inline void buddy_page_set_prev(struct buddy_page *bp,
+                                       struct buddy_page *prev) {
+    buddy_page_free_link(bp)->prev = prev;
+}
+
 static inline void buddy_page_tag(struct buddy_page *page) {
     if (page)
         page_set_tag(BUDDY_PAGE_TO_PAGE(page), PAGE_TAG_BUDDY);
@@ -135,9 +153,5 @@ static inline void buddy_page_assert_tag(struct buddy_page *page,
         page_assert_tag(BUDDY_PAGE_TO_PAGE(page), tag);
 }
 
-void buddy_hash_table_insert(struct buddy_hash_table *ht,
-                             struct buddy_page *bp);
-void buddy_hash_table_remove(struct buddy_hash_table *ht,
-                             struct buddy_page *bp);
-struct buddy_page *buddy_hash_table_get_any(struct buddy_hash_table *ht);
-struct buddy_page *buddy_hash_table_get_zeroed(struct buddy_hash_table *ht);
+void buddy_remove_specific(struct buddy_free_area *area,
+                           struct buddy_page *page);

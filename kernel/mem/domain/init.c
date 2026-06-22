@@ -105,10 +105,6 @@ static void domain_claim_global_blocks(struct domain_buddy *dom,
     for (int order = MAX_ORDER - 1; order >= 0; order--) {
         struct buddy_free_area *fa = &global.buddy_free_area[order];
 
-        /* buddy_hash_table has no iteration order and distribution changes
-         * the global free area, so drain the whole order into a temporary list
-         * in order to prevent blocks we hand back to the global allocator from
-         * being checked again in this current pass */
         struct buddy_page *pending = NULL;
         struct buddy_page *page;
         while ((page = buddy_remove_from_free_area(fa))) {
@@ -130,8 +126,7 @@ static void domain_claim_global_blocks(struct domain_buddy *dom,
 
 static void domain_buddy_init(struct domain_buddy *dom) {
     for (int i = 0; i < MAX_ORDER; i++) {
-        memset(&dom->free_area[i].hash_table, 0,
-               sizeof(struct buddy_hash_table));
+        dom->free_area[i].head = NULL;
         dom->free_area[i].nr_free = 0;
     }
 
