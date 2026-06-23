@@ -16,7 +16,7 @@
  * AKA, split into global and rw_global
  */
 struct globals {
-    volatile atomic_bool panicked;
+    atomic_bool panicked;
     volatile enum bootstage current_bootstage;
 
     char *root_partition;

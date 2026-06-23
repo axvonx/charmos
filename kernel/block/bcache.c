@@ -4,6 +4,7 @@
 #include <console/panic.h>
 #include <math/align.h>
 #include <mem/alloc.h>
+#include <mem/alloc_or_die.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -414,8 +415,6 @@ void bcache_init(struct bcache *cache, uint64_t capacity) {
     spinlock_init(&cache->lock);
     cache->capacity = capacity;
     cache->count = 0;
-    cache->entries =
-        kmalloc(sizeof(struct bcache_wrapper *) * capacity, ALLOC_FLAGS_ZERO);
-    if (!cache->entries)
-        panic("Block cache initialization allocation failed");
+    cache->entries = alloc_or_die(
+        kmalloc(sizeof(struct bcache_wrapper *) * capacity, ALLOC_FLAGS_ZERO));
 }

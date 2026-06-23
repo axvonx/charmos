@@ -3,6 +3,7 @@
 #include <acpi/lapic.h>
 #include <irq/idt.h>
 #include <mem/alloc.h>
+#include <mem/alloc_or_die.h>
 #include <sch/sched.h>
 #include <sync/semaphore.h>
 #include <sync/spinlock.h>
@@ -111,15 +112,12 @@ bool defer_enqueue(work_function func, struct work_args args,
 }
 
 void defer_init(void) {
-    defer_queues =
+    defer_queues = alloc_or_die(
         kmalloc(sizeof(struct deferred_event_queue) * hpet_timer_count,
-                ALLOC_FLAGS_ZERO);
-    if (!defer_queues)
-        panic("Defer queue allocation failed!");
+                ALLOC_FLAGS_ZERO));
 
     struct cpu_mask mask;
-    if (!cpu_mask_init(&mask, global.core_count))
-        panic("workqueue creation failed");
+    alloc_or_die(cpu_mask_init(&mask, global.core_count));
 
     cpu_mask_set_all(&mask);
     struct workqueue_attributes attrs = {

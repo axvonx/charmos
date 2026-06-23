@@ -83,7 +83,7 @@ static void daemon_work_execute(struct daemon_work *w,
                                 struct daemon_thread *self) {
     mark_daemon_thread_executing(self, true);
 
-    self->command = w->function(w, self, w->args.arg1, w->args.arg2);
+    self->command = w->function(w->args.arg1, w->args.arg2);
 
     mark_daemon_thread_executing(self, false);
 
@@ -202,10 +202,14 @@ struct daemon *daemon_create(const char *fmt, struct daemon_attributes *attrs,
     if (!daemon)
         goto err;
 
-    if (attrs->thread_cpu_mask.nbits == 0)
-        panic("please set a valid CPU mask");
-
     daemon->attrs = *attrs;
+
+    kassert(attrs->thread_cpu_mask.nbits != 0, "please set a valid CPU mask");
+    kassert(attrs->min_timesharing_threads <= attrs->max_timesharing_threads);
+
+    if (!DAEMON_FLAG_TEST(daemon, DAEMON_FLAG_NO_TS_THREADS))
+        kassert(attrs->min_timesharing_threads,
+                "needs min timesharing threads");
 
     if (DAEMON_FLAG_TEST(daemon, DAEMON_FLAG_HAS_NAME)) {
         va_list args_copy;
@@ -248,11 +252,13 @@ struct daemon *daemon_create(const char *fmt, struct daemon_attributes *attrs,
 
     if (!DAEMON_FLAG_TEST(daemon, DAEMON_FLAG_NO_TS_THREADS) &&
         timesharing_work) {
-        dt = daemon_thread_spawn(daemon, daemon_thread_create);
-        if (!dt)
-            goto err;
+        for (size_t i = 0; i < attrs->min_timesharing_threads; i++) {
+            dt = daemon_thread_spawn(daemon, daemon_thread_create);
+            if (!dt)
+                goto err;
 
-        daemon_list_add(daemon, dt);
+            daemon_list_add(daemon, dt);
+        }
     }
 
     if (background_work) {
@@ -360,6 +366,13 @@ void daemon_wake_timesharing_worker(struct daemon *daemon) {
         daemon_spawn_worker(daemon);
 
     semaphore_post(&daemon->ts_sem);
+}
+
+void daemon_wake_all_idle_timesharing_workers(struct daemon *daemon) {
+    if (daemon_needs_spawn_worker(daemon))
+        daemon_spawn_worker(daemon);
+
+    semaphore_postn(&daemon->ts_sem, idle_ts_workers(daemon));
 }
 
 void daemon_print(struct daemon *daemon) {

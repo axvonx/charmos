@@ -75,8 +75,8 @@ typedef ptrdiff_t ssize_t;
 #define FX32_32_MAX INT64_MAX
 #define FX32_32_MIN INT64_MIN
 
-#define NICE_MAX INT32_MAX
-#define NICE_MIN INT32_MIN
+#define NICE_MAX 19
+#define NICE_MIN -20
 
 #define SSIZE_MAX ((ssize_t) (SIZE_MAX >> 1))
 #define SSIZE_MIN ((ssize_t) (-SSIZE_MAX - 1))

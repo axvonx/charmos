@@ -97,11 +97,19 @@ SECTIONS {
         . = ALIGN(64);
         __ekernel_percpu_desc = .;
     } :data
+
     .kernel_perdomain_desc : ALIGN(64) {
         __skernel_perdomain_desc = .;
         KEEP(*(.kernel_perdomain_desc))
         . = ALIGN(64);
         __ekernel_perdomain_desc = .;
+    } :data
+    
+    .kernel_pernode_desc : ALIGN(64) {
+        __skernel_pernode_desc = .;
+        KEEP(*(.kernel_pernode_desc))
+        . = ALIGN(64);
+        __ekernel_pernode_desc = .;
     } :data
 
     .kernel_sched_periodic_work : ALIGN(64) {

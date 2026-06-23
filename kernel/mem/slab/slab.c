@@ -120,15 +120,6 @@
  * The GC list uses a red-black tree ordered by slab enqueue time,
  * so the oldest slab can be picked for deletion in amortized time.
  *
- * The freequeue contains both a ringbuffer and a singly linked list.
- *
- * The ringbuffer is used for fast, one-shot enqueues and is fully
- * lockless. The singly linked list uses *next pointers that are
- * threaded through the memory that is to be freed. This can be
- * done because the minimum slab object size is the pointer size,
- * and thus, each pointer to memory being returned is guaranteed
- * to be enough to hold at least a pointer.
- *
  */
 
 #include <console/printf.h>
@@ -357,8 +348,6 @@ struct slab *slab_init(struct slab *slab, struct slab_cache *parent) {
     slab->type = parent->type;
     rbt_init_node(&slab->rb);
     INIT_LIST_HEAD(&slab->list);
-    kassert(slab->live_magic != SLAB_LIVE_MAGIC);
-    slab->live_magic = SLAB_LIVE_MAGIC;
     memset(slab->bitmap, 0, parent->bitmap_bytes);
 
     if (slab->type == SLAB_TYPE_NONPAGEABLE_ZERO) {
@@ -472,7 +461,6 @@ static void *slab_alloc_from(struct slab_cache *cache, struct slab *slab) {
 }
 
 void slab_destroy(struct slab *slab) {
-    slab->live_magic = 0;
     slab_list_del(slab);
     slab_free_virt_and_phys(slab);
 }
@@ -852,7 +840,7 @@ void *kmalloc_try_from_magazine(struct slab_domain *domain,
         if (mtype == SLAB_MAGAZINE_ZERO &&
             !is_buffer_uniform(ret, mag->obj_size, 0)) {
 #ifdef DEBUG_SLAB_DEEP
-            slab_dump_corruption(ret, mag);
+            slab_dump_corruption(ret, mag, 0);
 #endif
             panic("buffer size %zu idx %zu not uniform", size, class_idx);
         }
@@ -1015,12 +1003,62 @@ void *slab_alloc(struct slab_cache *cache, enum alloc_behavior behavior) {
 out:
     spin_unlock(&cache->lock, irql);
 
+#if DEBUG_SLAB
     if (ret && (cache->type == SLAB_TYPE_NONPAGEABLE_ZERO ||
                 cache->type == SLAB_TYPE_PAGEABLE_ZERO)) {
         if (!is_buffer_uniform(ret, cache->obj_size, 0)) {
+#ifdef DEBUG_SLAB_DEEP
+            slab_dump_corruption(ret, NULL, cache->obj_size);
+#endif
+            const uint8_t *bb = (const uint8_t *) ret;
+            size_t bad = 0;
+            for (size_t i = 0; i < cache->obj_size; i++)
+                if (bb[i]) {
+                    bad = i;
+                    break;
+                }
+
+            struct slab *dslab = slab_for_ptr(ret);
+            vaddr_t soff = (vaddr_t) ret - (vaddr_t) dslab;
+            size_t obj_idx = ((vaddr_t) ret - dslab->mem) / cache->obj_stride;
+
+            slab_err(
+                "NON-UNIFORM ZERO BUF: sz=%zu type=%d ppslab=%zu stride=%u",
+                cache->obj_size, (int) cache->type, cache->pages_per_slab,
+                cache->obj_stride);
+            slab_err("  ret=%p slab=%p slaboff=%zu page=%zu objidx=%zu used=%u "
+                     "badoff=%zu badval=0x%02x",
+                     ret, (void *) dslab, (size_t) soff,
+                     (size_t) (soff / PAGE_SIZE), obj_idx, dslab->used, bad,
+                     bb[bad]);
+
+            for (size_t i = 0; i < cache->obj_size; i += 16) {
+                uint8_t r[16] = {0};
+                char ascii[17];
+                size_t n = cache->obj_size - i;
+                if (n > 16)
+                    n = 16;
+                for (size_t j = 0; j < 16; j++) {
+                    if (j < n) {
+                        r[j] = bb[i + j];
+                        ascii[j] =
+                            (r[j] >= 0x20 && r[j] < 0x7f) ? (char) r[j] : '.';
+                    } else {
+                        ascii[j] = ' ';
+                    }
+                }
+                ascii[16] = '\0';
+                slab_err("  +%03zu: %02x %02x %02x %02x %02x %02x %02x %02x  "
+                         "%02x %02x %02x %02x %02x %02x %02x %02x  |%s|",
+                         i, r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7],
+                         r[8], r[9], r[10], r[11], r[12], r[13], r[14], r[15],
+                         ascii);
+            }
+
             panic("buffer size %zu not uniform", cache->obj_size);
         }
     }
+#endif
 
     return ret;
 }

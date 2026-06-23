@@ -49,4 +49,6 @@
 
 struct page_zeroer_quota {};
 
-struct page_zeroer {};
+struct page_zeroer {
+    struct daemon *daemon;
+};

@@ -142,9 +142,7 @@ void slab_domain_init(void) {
     for (size_t i = 0; i < global.domain_count; i++) {
         struct domain *domain = global.domains[i];
         struct slab_domain *sdomain =
-            kmalloc(sizeof(struct slab_domain), ALLOC_FLAGS_ZERO);
-        if (!sdomain)
-            panic("Failed to allocate slab domain!");
+            alloc_or_die(kmalloc(sizeof(struct slab_domain), ALLOC_FLAGS_ZERO));
 
         sdomain->domain = domain;
         domain->slab_domain = sdomain;

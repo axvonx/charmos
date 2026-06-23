@@ -31,10 +31,8 @@ struct daemon_thread {
 struct daemon_work;
 
 typedef enum daemon_thread_command (*daemon_fn)(
-    struct daemon_work *work,       /* Work in question */
-    struct daemon_thread *executor, /* Current executing thread */
-    void *arg,                      /* Daemon work provided arg1 */
-    void *arg2                      /* Daemon work provided arg2 */
+    void *arg, /* Daemon work provided arg1 */
+    void *arg2 /* Daemon work provided arg2 */
 );
 
 struct daemon_work {
@@ -56,6 +54,7 @@ enum daemon_flags {
 
 struct daemon_attributes {
     size_t max_timesharing_threads;
+    size_t min_timesharing_threads;
 
     atomic_size_t timesharing_threads;      /* Internal */
     atomic_size_t idle_timesharing_threads; /* Internal */
@@ -122,5 +121,6 @@ enum workqueue_error daemon_submit_work(struct daemon *daemon,
 void daemon_print(struct daemon *daemon);
 void daemon_wake_background_worker(struct daemon *daemon);
 void daemon_wake_timesharing_worker(struct daemon *daemon);
+void daemon_wake_all_idle_timesharing_workers(struct daemon *daemon);
 
 #define DAEMON_FLAG_TEST(daemon, flag) (daemon->attrs.flags & flag)

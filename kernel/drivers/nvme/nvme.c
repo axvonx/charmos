@@ -105,9 +105,10 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
     nvme_log(LOG_INFO, "Controller max transfer size is %u bytes",
              nvme->max_transfer_size);
 
-    nvme->isr_index = kmalloc(sizeof(uint8_t) * sqs_to_make, ALLOC_FLAGS_ZERO);
-    nvme->io_queues =
-        kmalloc(sizeof(struct nvme_queue *) * sqs_to_make, ALLOC_FLAGS_ZERO);
+    nvme->isr_index =
+        kmalloc(sizeof(uint8_t) * (sqs_to_make + 1), ALLOC_FLAGS_ZERO);
+    nvme->io_queues = kmalloc(sizeof(struct nvme_queue *) * (sqs_to_make + 1),
+                              ALLOC_FLAGS_ZERO);
     if (unlikely(!nvme->isr_index || !nvme->io_queues))
         panic("Could not allocate space for NVMe structures");
 

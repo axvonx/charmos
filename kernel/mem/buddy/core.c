@@ -12,39 +12,85 @@
 
 #include "internal.h"
 
-void buddy_add_to_free_area(struct buddy_page *page,
-                            struct buddy_free_area *area) {
-    buddy_page_assert_tag(page, PAGE_TAG_BUDDY);
+bool buddy_fa_empty(struct buddy_free_area *area) {
+    return area->head == NULL;
+}
 
+struct buddy_page *buddy_fa_get_head(struct buddy_free_area *area) {
+    return area->head;
+}
+
+struct buddy_page *buddy_fa_get_tail(struct buddy_free_area *area) {
+    return area->tail;
+}
+
+void buddy_fa_push_head(struct buddy_free_area *area, struct buddy_page *page) {
     struct buddy_page *old_head = area->head;
-    buddy_page_set_next(page, old_head);
+
     buddy_page_set_prev(page, NULL);
+    buddy_page_set_next(page, old_head);
+
     if (old_head)
         buddy_page_set_prev(old_head, page);
+    else
+        area->tail = page;
 
     area->head = page;
     area->nr_free++;
-    buddy_page_set_free(page, true);
 }
 
-struct buddy_page *buddy_remove_from_free_area(struct buddy_free_area *area) {
+void buddy_fa_push_tail(struct buddy_free_area *area, struct buddy_page *page) {
+    struct buddy_page *old_tail = area->tail;
+
+    buddy_page_set_next(page, NULL);
+    buddy_page_set_prev(page, old_tail);
+
+    if (old_tail)
+        buddy_page_set_next(old_tail, page);
+    else
+        area->head = page;
+
+    area->tail = page;
+    area->nr_free++;
+}
+
+struct buddy_page *buddy_fa_pop_head(struct buddy_free_area *area) {
     struct buddy_page *page = area->head;
     if (!page)
         return NULL;
 
     struct buddy_page *next = buddy_page_get_next(page);
     area->head = next;
+
     if (next)
         buddy_page_set_prev(next, NULL);
+    else
+        area->tail = NULL;
 
     buddy_page_set_next(page, NULL);
     area->nr_free--;
-    buddy_page_set_free(page, false);
     return page;
 }
 
-void buddy_remove_specific(struct buddy_free_area *area,
-                           struct buddy_page *page) {
+struct buddy_page *buddy_fa_pop_tail(struct buddy_free_area *area) {
+    struct buddy_page *page = area->tail;
+    if (!page)
+        return NULL;
+
+    struct buddy_page *prev = buddy_page_get_prev(page);
+    area->tail = prev;
+
+    if (prev)
+        buddy_page_set_next(prev, NULL);
+    else
+        area->head = NULL;
+
+    buddy_page_set_prev(page, NULL);
+    area->nr_free--;
+    return page;
+}
+
+void buddy_fa_remove(struct buddy_free_area *area, struct buddy_page *page) {
     struct buddy_page *prev = buddy_page_get_prev(page);
     struct buddy_page *next = buddy_page_get_next(page);
 
@@ -55,9 +101,28 @@ void buddy_remove_specific(struct buddy_free_area *area,
 
     if (next)
         buddy_page_set_prev(next, prev);
+    else
+        area->tail = prev;
 
     buddy_page_set_next(page, NULL);
+    buddy_page_set_prev(page, NULL);
     area->nr_free--;
+}
+
+void buddy_add_to_free_area(struct buddy_page *page,
+                            struct buddy_free_area *area) {
+    buddy_page_assert_tag(page, PAGE_TAG_BUDDY);
+    buddy_fa_push_tail(area, page);
+    buddy_page_set_free(page, true);
+}
+
+struct buddy_page *buddy_remove_from_free_area(struct buddy_free_area *area) {
+    struct buddy_page *page = buddy_fa_pop_head(area);
+    if (!page)
+        return NULL;
+
+    buddy_page_set_free(page, false);
+    return page;
 }
 
 paddr_t buddy_alloc_pages(struct buddy_free_area *free_area, size_t count) {
@@ -151,7 +216,7 @@ void buddy_free_pages(paddr_t addr, size_t count,
             break;
 
         buddy_page_tag(buddy);
-        buddy_remove_specific(&free_area[order], buddy);
+        buddy_fa_remove(&free_area[order], buddy);
 
         pfn = (pfn < buddy_pfn) ? pfn : buddy_pfn;
         page = buddy_page_for_pfn(pfn);

@@ -3,6 +3,8 @@
 
 #define __noinline __attribute__((noinline))
 
+#define __always_inline __attribute__((always_inline))
+
 #define __noreturn __attribute__((noreturn))
 
 #define __unused __attribute__((unused))

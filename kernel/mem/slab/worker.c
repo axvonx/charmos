@@ -11,9 +11,7 @@
 /* We first want to go ahead and flush our freequeue. We'll trylock
  * the individual per-cpu caches to see if we can sneak some of the
  * elements in there */
-static enum daemon_thread_command
-slab_background_work(struct daemon_work *work, struct daemon_thread *thread,
-                     void *a, void *b) {
+static enum daemon_thread_command slab_background_work(void *a, void *b) {
     /* TODO: */
     return DAEMON_THREAD_COMMAND_DEFAULT;
 }
@@ -56,6 +54,7 @@ void slab_domain_init_daemon(struct slab_domain *domain) {
     domain_set_cpu_mask(&cmask, domain->domain);
     struct daemon_attributes attrs = {
         .max_timesharing_threads = 0,
+        .min_timesharing_threads = 0,
         .thread_cpu_mask = cmask,
         .flags = DAEMON_FLAG_NO_TS_THREADS | DAEMON_FLAG_HAS_NAME,
     };
@@ -71,8 +70,7 @@ void slab_domain_init_daemon(struct slab_domain *domain) {
 
 void slab_domain_init_workqueue(struct slab_domain *domain) {
     struct cpu_mask mask = {0};
-    if (!cpu_mask_init(&mask, global.core_count))
-        panic("CPU mask initialization failed");
+    alloc_or_die(cpu_mask_init(&mask, global.core_count));
 
     domain_set_cpu_mask(&mask, domain->domain);
 
@@ -82,8 +80,8 @@ void slab_domain_init_workqueue(struct slab_domain *domain) {
         /* We set static_workers and spawn_via_request to make these safe
          * here since if those weren't set the dynamic memory allocation
          * could potentially spiral into bigger problems... */
-        .flags = WORKQUEUE_FLAG_DEFAULTS | WORKQUEUE_FLAG_STATIC_WORKERS |
-                 WORKQUEUE_FLAG_NAMED | WORKQUEUE_FLAG_NO_WORKER_GC,
+        .flags = WORKQUEUE_FLAG_STATIC_WORKERS | WORKQUEUE_FLAG_NAMED |
+                 WORKQUEUE_FLAG_NO_WORKER_GC,
         .max_workers = domain->domain->num_cores,
         .min_workers = 1,
         .spawn_delay = WORKQUEUE_DEFAULT_SPAWN_DELAY,

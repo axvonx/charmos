@@ -127,9 +127,9 @@ set(QEMU_SMP_TOPO  "sockets=2,cores=2,threads=2"
 
 set(KERNEL_WARNINGS
     -Wall -Wextra
-    -Wno-unused-function -Wno-unused-parameter -Wno-initializer-overrides
+    -Wno-initializer-overrides
+    -Wno-override-init
     -Wpointer-sign -Wenum-compare
-    -Wno-address-of-packed-member
 )
 
 set(KERNEL_FREESTANDING
@@ -152,9 +152,10 @@ set(KERNEL_DEFINES
     -DUACPI_DEFAULT_LOG_LEVEL=4
 )
 
-set(CMAKE_C_FLAGS_DEBUG          "-O0 -ggdb -g3")
+# In release builds we let the noisy warnings yap
+set(CMAKE_C_FLAGS_DEBUG          "-O0 -ggdb -g3 -Wno-unused-function -Wno-unused-parameter")
 set(CMAKE_C_FLAGS_RELEASE        "-O3")
-set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -ggdb -g3")
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -ggdb -g3 -Wno-unused-function -Wno-unused-parameter")
 set(CMAKE_C_FLAGS_MINSIZEREL     "-Os")
 
 option(KERNEL_STACK_USAGE "Emit .su files with -fstack-usage" ON)

@@ -277,7 +277,7 @@ TEST_REGISTER(kmalloc_new_behavior_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
 
 /* -------------------- Multithreaded stress test -------------------- */
 
-#define STRESS_THREADS 3
+#define STRESS_THREADS 7
 #define STRESS_ITERS 50000
 #define MAX_LIVE_ALLOCS 1024
 #define SHOULD_FREE true

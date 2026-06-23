@@ -97,9 +97,8 @@ void nvme_alloc_io_queues(struct nvme_device *nvme, uint32_t qid) {
     if (!qid)
         panic("Can't allocate IO queue zero!");
 
-    nvme->io_queues[qid] = kmalloc(sizeof(struct nvme_queue), ALLOC_FLAGS_ZERO);
-    if (unlikely(!nvme->io_queues[qid]))
-        panic("NVMe IO queue allocation failed!");
+    nvme->io_queues[qid] =
+        alloc_or_die(kmalloc(sizeof(struct nvme_queue), ALLOC_FLAGS_ZERO));
 
     struct nvme_queue *this_queue = nvme->io_queues[qid];
 

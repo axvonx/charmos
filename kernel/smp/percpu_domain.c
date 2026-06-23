@@ -6,6 +6,7 @@
 #include <smp/domain.h>
 #include <smp/percpu.h>
 #include <smp/perdomain.h>
+#include <smp/pernode.h>
 
 void percpu_obj_init(void) {
     for (struct percpu_descriptor *d = __skernel_percpu_desc;
@@ -38,6 +39,21 @@ void perdomain_obj_init(void) {
 
             if (d->constructor)
                 d->constructor(d->perdomain_ptrs[id], id);
+        }
+    }
+}
+
+void pernode_obj_init(void) {
+    for (struct pernode_descriptor *d = __skernel_pernode_desc;
+         d < __ekernel_pernode_desc; d++) {
+        d->pernode_ptrs =
+            alloc_or_die(kmalloc(sizeof(void *) * global.numa_node_count));
+
+        for (size_t i = 0; i < global.numa_node_count; i++) {
+            d->pernode_ptrs[i] = alloc_or_die(
+                kmalloc_aligned(d->size, d->align, ALLOC_FLAGS_ZERO));
+            if (d->constructor)
+                d->constructor(d->pernode_ptrs[i], i);
         }
     }
 }

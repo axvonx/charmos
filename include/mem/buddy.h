@@ -13,7 +13,8 @@ struct buddy_page;
 struct limine_memmap_entry;
 
 struct buddy_free_area {
-    struct buddy_page *head; /* head->prev == NULL, NULL-terminated forward */
+    struct buddy_page *head; /* head->prev == NULL */
+    struct buddy_page *tail; /* tail->next == NULL */
     uint64_t nr_free;
 };
 

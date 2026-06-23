@@ -5,6 +5,7 @@
 #include <global.h>
 #include <kassert.h>
 #include <mem/alloc.h>
+#include <mem/alloc_or_die.h>
 #include <string.h>
 
 #define MAX_VAR_LEN 128
@@ -56,9 +57,7 @@ static void cmdline_dispatch(const char *var, const char *val) {
         if (e->callback) {
             e->callback(val);
         } else if (e->value) {
-            char *copy = kmalloc(strlen(val) + 1);
-            if (!copy)
-                panic("alloc failed for %s", var);
+            char *copy = alloc_or_die(kmalloc(strlen(val) + 1));
             memcpy(copy, val, strlen(val) + 1);
             *e->value = copy;
             log_msg(LOG_INFO, "command line entry '%s' set to '%s'", e->name,

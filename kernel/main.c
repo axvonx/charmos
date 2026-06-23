@@ -40,6 +40,7 @@
 #include <smp/domain.h>
 #include <smp/percpu.h>
 #include <smp/perdomain.h>
+#include <smp/pernode.h>
 #include <smp/smp.h>
 #include <stdint.h>
 #include <sync/rcu.h>
@@ -124,6 +125,7 @@ __no_sanitize_address void k_main(void) {
 
     percpu_obj_init();
     perdomain_obj_init();
+    pernode_obj_init();
     scheduler_periodic_work_init();
     movealloc_exec_all();
     bootstage_advance(BOOTSTAGE_MID_ALLOCATORS);

@@ -153,5 +153,11 @@ static inline void buddy_page_assert_tag(struct buddy_page *page,
         page_assert_tag(BUDDY_PAGE_TO_PAGE(page), tag);
 }
 
-void buddy_remove_specific(struct buddy_free_area *area,
-                           struct buddy_page *page);
+bool buddy_fa_empty(struct buddy_free_area *area);
+struct buddy_page *buddy_fa_get_head(struct buddy_free_area *area);
+struct buddy_page *buddy_fa_get_tail(struct buddy_free_area *area);
+void buddy_fa_push_head(struct buddy_free_area *area, struct buddy_page *page);
+void buddy_fa_push_tail(struct buddy_free_area *area, struct buddy_page *page);
+struct buddy_page *buddy_fa_pop_head(struct buddy_free_area *area);
+struct buddy_page *buddy_fa_pop_tail(struct buddy_free_area *area);
+void buddy_fa_remove(struct buddy_free_area *area, struct buddy_page *page);

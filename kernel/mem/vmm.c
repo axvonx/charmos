@@ -420,7 +420,14 @@ static enum errno vmm_pt_apply(struct vmm_map_request *rq) {
 
     int level = 0;
     for (level = 0; level < leaf_level; level++) {
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+
         pte_t *entry = &tables[level]->entries[pt_index(virt, level)];
+
+#pragma GCC diagnostic pop
+
         entries[level] = entry;
         irqls[level] = pte_lock(entry);
 
@@ -443,8 +450,14 @@ static enum errno vmm_pt_apply(struct vmm_map_request *rq) {
         tables[level + 1] = pt_next_table(*entry);
     }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+
     pte_t *last_entry =
         &tables[leaf_level]->entries[pt_index(virt, leaf_level)];
+
+#pragma GCC diagnostic pop
+
     enum irql last_irql = pte_lock(last_entry);
 
     bool was_present = *last_entry & PAGE_PRESENT;
@@ -629,8 +642,14 @@ static pte_t vmm_walk_leaf(struct page_table *root, vaddr_t virt,
 
     for (level = 0; level < PT_LEVEL_PT; level++) {
         uint64_t index = pt_index(virt, level);
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+
         snap = atomic_load_explicit((_Atomic pte_t *) &table->entries[index],
                                     memory_order_acquire);
+
+#pragma GCC diagnostic pop
 
         if (!(snap & PAGE_PRESENT)) {
             snap = 0;
@@ -643,9 +662,14 @@ static pte_t vmm_walk_leaf(struct page_table *root, vaddr_t virt,
         table = pt_next_table(snap);
     }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+
     snap = atomic_load_explicit(
         (_Atomic pte_t *) &table->entries[pt_index(virt, PT_LEVEL_PT)],
         memory_order_acquire);
+
+#pragma GCC diagnostic pop
 
 out:
     pt_walk_exit();

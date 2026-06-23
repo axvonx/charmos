@@ -92,13 +92,14 @@ static enum errno detect_mbr_partitions(struct block_device *disk,
     return ERR_OK;
 }
 
-static bool detect_gpt_partitions(struct block_device *disk, uint8_t *sector) {
+static enum errno detect_gpt_partitions(struct block_device *disk,
+                                        uint8_t *sector) {
     if (!disk->read_sector(disk, 1, sector, 1))
-        return false;
+        return ERR_NO_MEM;
 
     struct gpt_header *gpt = (struct gpt_header *) sector;
     if (gpt->signature != 0x5452415020494645ULL)
-        return false;
+        return ERR_NO_ENT;
 
     uint32_t count = gpt->num_partition_entries;
     uint32_t size = gpt->size_of_partition_entry;
@@ -119,7 +120,7 @@ static bool detect_gpt_partitions(struct block_device *disk, uint8_t *sector) {
     }
 
     if (valid_count == 0)
-        return false;
+        return ERR_NO_ENT;
 
     disk->partition_count = valid_count;
     disk->partitions =
@@ -140,7 +141,7 @@ static bool detect_gpt_partitions(struct block_device *disk, uint8_t *sector) {
             make_partition(part, disk, entry->first_lba, sector_count, idx);
         }
     }
-    return true;
+    return ERR_OK;
 }
 
 static enum fs_type detect_partition_fs(struct block_device *disk,
@@ -216,18 +217,18 @@ enum fs_type detect_fs(struct block_device *disk) {
 
     fs_detect_info("read sector 0 of %s", disk->name);
 
-    bool found_partitions = false;
+    enum errno found_partitions_err = ERR_NO_ENT;
     struct mbr *mbr = (struct mbr *) sector;
 
     if (mbr->signature == 0xAA55) {
         if (mbr->partitions[0].type == 0xEE) {
-            found_partitions = detect_gpt_partitions(disk, sector);
+            found_partitions_err = detect_gpt_partitions(disk, sector);
         } else {
-            found_partitions = detect_mbr_partitions(disk, sector);
+            found_partitions_err = detect_mbr_partitions(disk, sector);
         }
     }
 
-    if (!found_partitions) {
+    if (found_partitions_err < 0) {
         /* No partition table - create one big partition spanning the disk */
         disk->partition_count = 1;
         disk->partitions = kmalloc(sizeof(struct partition), ALLOC_FLAGS_ZERO);

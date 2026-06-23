@@ -130,10 +130,7 @@ TEST_REGISTER(workqueue_test_2, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
 }
 
 static atomic_bool daemon_work_run = false;
-static enum daemon_thread_command daemon_work(struct daemon_work *work,
-                                              struct daemon_thread *thread,
-                                              void *a, void *b) {
-    (void) work, (void) a, (void) b;
+static enum daemon_thread_command daemon_work(void *a, void *b) {
     atomic_store(&daemon_work_run, true);
     return DAEMON_THREAD_COMMAND_SLEEP;
 }
@@ -150,6 +147,7 @@ TEST_REGISTER(daemon_test, SHOULD_NOT_FAIL, IS_UNIT_TEST) {
         .max_timesharing_threads = 67,
         .flags = DAEMON_FLAG_AUTO_SPAWN | DAEMON_FLAG_HAS_NAME,
         .thread_cpu_mask = cmask,
+        .min_timesharing_threads = 4,
     };
 
     struct daemon *daemon =

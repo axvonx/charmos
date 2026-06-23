@@ -1,6 +1,7 @@
 #include <math/align.h>
 #include <math/sort.h>
 #include <mem/alloc.h>
+#include <mem/alloc_or_die.h>
 #include <mem/buddy.h>
 #include <mem/numa.h>
 #include <mem/pmm.h>
@@ -127,6 +128,7 @@ static void domain_claim_global_blocks(struct domain_buddy *dom,
 static void domain_buddy_init(struct domain_buddy *dom) {
     for (int i = 0; i < MAX_ORDER; i++) {
         dom->free_area[i].head = NULL;
+        dom->free_area[i].tail = NULL;
         dom->free_area[i].nr_free = 0;
     }
 
@@ -144,29 +146,22 @@ static void domain_structs_init(struct domain_buddy *dom, size_t arena_capacity,
                                 size_t fq_capacity,
                                 struct domain *core_domain) {
     dom->domain = core_domain;
-    dom->free_area = alloc_up(sizeof(struct buddy_free_area) * MAX_ORDER);
-    if (!dom->free_area)
-        panic("Failed to allocate domain free area");
+    dom->free_area =
+        alloc_or_die(alloc_up(sizeof(struct buddy_free_area) * MAX_ORDER));
 
-    dom->zonelist.entries =
-        alloc_up(sizeof(struct domain_zonelist_entry) * global.domain_count);
-    if (!dom->zonelist.entries)
-        panic("Failed to allocate domain zonelist entries");
+    dom->zonelist.entries = alloc_or_die(
+        alloc_up(sizeof(struct domain_zonelist_entry) * global.domain_count));
 
-    dom->arenas = alloc_up(sizeof(struct domain_arena *) * dom->core_count);
-    if (!dom->arenas)
-        panic("Failed to allocate domain arena");
+    dom->arenas =
+        alloc_or_die(alloc_up(sizeof(struct domain_arena *) * dom->core_count));
 
     core_domain->domain_buddy = dom;
     for (size_t i = 0; i < dom->core_count; i++) {
-        dom->arenas[i] = alloc_up(sizeof(struct domain_arena));
-        if (!dom->arenas[i])
-            panic("Failed to allocate domain arena");
+        dom->arenas[i] = alloc_or_die(alloc_up(sizeof(struct domain_arena)));
 
         struct domain_arena *this = dom->arenas[i];
-        this->pages = alloc_up(sizeof(struct page *) * arena_capacity);
-        if (!this->pages)
-            panic("Failed to allocate domain arena pages");
+        this->pages =
+            alloc_or_die(alloc_up(sizeof(struct page *) * arena_capacity));
 
         this->head = 0;
         this->tail = 0;
@@ -180,14 +175,10 @@ static void domain_structs_init(struct domain_buddy *dom, size_t arena_capacity,
             global.cores[i]->domain_arena = this;
     }
 
-    dom->free_queue = alloc_up(sizeof(struct domain_free_queue));
-    if (!dom->free_queue)
-        panic("Failed to allocate domain free queue");
+    dom->free_queue = alloc_or_die(alloc_up(sizeof(struct domain_free_queue)));
 
     size_t fq_size = sizeof(*dom->free_queue->queue) * fq_capacity;
-    dom->free_queue->queue = alloc_up(fq_size);
-    if (!dom->free_queue->queue)
-        panic("Failed to allocate domain free queue array");
+    dom->free_queue->queue = alloc_or_die(alloc_up(fq_size));
 
     dom->free_queue->head = 0;
     dom->free_queue->tail = 0;

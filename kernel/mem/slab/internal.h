@@ -227,9 +227,6 @@ struct slab {
                            * recycled from the GC list? */
 
     size_t page_count;
-    uint64_t live_magic; /* DEBUG: SLAB_LIVE_MAGIC while initialized/live, 0
-                          * once destroyed. Used to catch the chunk allocator
-                          * handing out a slot that is still a live slab. */
     _Atomic(struct page *) backing_pages[];
 };
 
@@ -618,7 +615,8 @@ void slab_chunks_init(struct slab_chunks *sc, struct slab_cache *parent);
 void slab_track_event(vaddr_t addr, uint64_t ra0, uint64_t ra1, bool is_alloc);
 void slab_track_dump(const char *label, vaddr_t addr);
 void slab_debug_assert_not_already_free(vaddr_t v, int32_t class);
-void slab_dump_corruption(void *obj, struct slab_magazine *popped_mag);
+void slab_dump_corruption(void *obj, struct slab_magazine *popped_mag,
+                          size_t obj_size);
 #endif
 
 extern struct slab_globals slab_global;

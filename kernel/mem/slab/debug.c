@@ -91,7 +91,8 @@ void slab_debug_assert_not_already_free(vaddr_t v, int32_t class) {
     }
 }
 
-void slab_dump_corruption(void *obj, struct slab_magazine *popped_mag) {
+void slab_dump_corruption(void *obj, struct slab_magazine *popped_mag,
+                          size_t obj_size) {
     panic_broadcast_nmi(); /* Get everyone to stop yapping
                             * so we have a clean view */
     vaddr_t v = (vaddr_t) obj;
@@ -101,7 +102,6 @@ void slab_dump_corruption(void *obj, struct slab_magazine *popped_mag) {
     slab_index_and_mask(s, obj, &byte_idx, &bit_mask);
     size_t obj_idx = (v - s->mem) / s->parent_cache->obj_stride;
 
-    slab_err("=== MAGAZINE CORRUPTION ===");
     slab_err("obj=%p region=%s", (void *) v, slab_addr_region(v));
     slab_err("slab=%p base_off=%#zx obj_idx=%zu type=%d obj_size=%zu "
              "page_count=%zu used=%zu bit_set=%d",
@@ -111,7 +111,14 @@ void slab_dump_corruption(void *obj, struct slab_magazine *popped_mag) {
 
     slab_track_dump("victim", v);
 
-    size_t words = popped_mag->obj_size / sizeof(uint64_t);
+    size_t words;
+
+    if (popped_mag) {
+        words = popped_mag->obj_size / sizeof(uint64_t);
+    } else {
+        words = obj_size / sizeof(uint64_t);
+    }
+
     for (size_t w = 0; w < words; w++) {
         uint64_t val = ((uint64_t *) obj)[w];
         if (!val)
@@ -168,11 +175,9 @@ void slab_dump_corruption(void *obj, struct slab_magazine *popped_mag) {
                         struct slab_magazine *m = &pc->mags[t][k];
                         for (size_t i = 0; i < SLAB_MAG_ENTRIES; i++) {
                             if (m->objs[i] == v) {
-                                bool same = (m == popped_mag);
                                 slab_err("  ALSO IN mag d=%zu cpu=%zu type=%d "
-                                         "class=%zu idx=%zu%s",
-                                         d, c, t, k, i,
-                                         same ? " (the popped mag!)" : "");
+                                         "class=%zu idx=%zu",
+                                         d, c, t, k, i);
                                 found++;
                             }
                         }
@@ -212,6 +217,5 @@ void slab_dump_corruption(void *obj, struct slab_magazine *popped_mag) {
         }
     }
     slab_err("total duplicate locations found (excl. nothing): %zu", found);
-    slab_err("=== END CORRUPTION DUMP ===");
 }
 #endif
