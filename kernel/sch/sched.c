@@ -129,9 +129,12 @@ static inline bool migrate_to_destination(struct thread *t, time_t time) {
     if (dst == (int64_t) smp_core_id())
         return false;
 
+    enum irql irql_us, irql_other;
     struct scheduler *us = smp_core_scheduler();
     struct scheduler *other = global.schedulers[dst];
-    scheduler_acquire_two_raw_locks(us, other);
+
+    /* They're both DISPATCH */
+    scheduler_acquire_two_locks(us, other, &irql_us, &irql_other);
 
     /* mark our own other_locked as `other` so that
      * upon the switch-in, the lock is dropped */
@@ -301,7 +304,14 @@ void schedule(void) {
      * have to acquire it or save the thread to our CPU since
      * that happened in migrate_to_destination */
     if (!migrate_to_destination(curr, time)) {
-        spin_lock_raw(&sched->lock);
+
+        /* We have to disable interrupts here: why? well,
+         * because if we don't, we can get an IRQ right now,
+         * and in that ISR we can attempt to acquire this lock,
+         * and then we are in a big pickle since we deadlock */
+        enum irql irql = spin_lock_irq_disable(&sched->lock);
+        (void) irql;
+
         save_thread(sched, curr, time);
     }
 
@@ -335,9 +345,12 @@ void scheduler_switch_in() {
     kassert(us != other);
 
     if (!other) {
-        spin_unlock_raw(&us->lock);
+        /* guaranteed to be the last IRQL, we always
+         * raise there, so it can't be any other */
+        spin_unlock(&us->lock, IRQL_DISPATCH_LEVEL);
     } else {
-        scheduler_release_two_raw_locks(us, other);
+        scheduler_release_two_locks(us, other, IRQL_DISPATCH_LEVEL,
+                                    IRQL_DISPATCH_LEVEL);
     }
 
     struct thread *drop = us->drop_last_ref;

@@ -43,22 +43,20 @@ void gdt_load(struct gdt_entry *gdt, uint64_t n_entries) {
 }
 
 void reload_segment_registers(uint16_t cs_selector, uint16_t ds_selector) {
-    asm volatile(".intel_syntax noprefix\n\t"
-                 "push %0\n\t"
-                 "lea rax, [rip + 1f]\n\t"
-                 "push rax\n\t"
-                 "retfq\n\t"
+    asm volatile("pushq %0\n\t"
+                 "leaq 1f(%%rip), %%rax\n\t"
+                 "pushq %%rax\n\t"
+                 "lretq\n\t"
                  "1:\n\t"
-                 "mov ax, %1\n\t"
-                 "mov ds, ax\n\t"
-                 "mov es, ax\n\t"
-                 "mov fs, ax\n\t"
-                 "mov gs, ax\n\t"
-                 "mov ss, ax\n\t"
-                 ".att_syntax prefix\n\t"
+                 "movw %w1, %%ax\n\t"
+                 "movw %%ax, %%ds\n\t"
+                 "movw %%ax, %%es\n\t"
+                 "movw %%ax, %%fs\n\t"
+                 "movw %%ax, %%gs\n\t"
+                 "movw %%ax, %%ss\n\t"
                  :
                  : "r"((uint64_t) cs_selector), "r"(ds_selector)
-                 : "rax", "ax", "memory");
+                 : "rax", "memory");
 }
 
 void gdt_init(struct gdt_entry *gdt, struct tss *tss) {

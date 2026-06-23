@@ -27,16 +27,21 @@ include(uACPI/uacpi.cmake)
 
 set(EARLY_INIT_FILES
     ${CMAKE_SOURCE_DIR}/kernel/main.c
-    ${CMAKE_SOURCE_DIR}/kernel/smp/mp.c
+    ${CMAKE_SOURCE_DIR}/kernel/smp/smp.c
     ${CMAKE_SOURCE_DIR}/kernel/bootstage.c
-    ${CMAKE_SOURCE_DIR}/kernel/misc/string.c
+    ${CMAKE_SOURCE_DIR}/kernel/string.c
     ${CMAKE_SOURCE_DIR}/kernel/console/printf.c
     ${CMAKE_SOURCE_DIR}/kernel/mem/asan.c
+    ${CMAKE_SOURCE_DIR}/kernel/mem/pmm.c
     ${CMAKE_SOURCE_DIR}/kernel/mem/buddy/init.c
     ${CMAKE_SOURCE_DIR}/kernel/mem/bitmap.c
     ${CMAKE_SOURCE_DIR}/kernel/mem/vmm.c
     ${CMAKE_SOURCE_DIR}/kernel/mem/buddy/core.c
     ${CMAKE_SOURCE_DIR}/kernel/sch/irql.c
+    ${CMAKE_SOURCE_DIR}/kernel/mem/page_alloc.c
+    ${CMAKE_SOURCE_DIR}/kernel/mem/slab/slab.c
+    ${CMAKE_SOURCE_DIR}/kernel/mem/slab/percpu.c
+    ${CMAKE_SOURCE_DIR}/kernel/mem/slab/free_queue.c
 )
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/kernel/syms/fullsyms.c")
@@ -48,6 +53,11 @@ else()
 endif()
 
 add_executable(kernel ${C_SOURCES} ${ASM_SOURCES} ${NASM_SOURCES})
+
+if(DEBUG_ASAN)
+    set_source_files_properties(${EARLY_INIT_FILES} ${UACPI_SOURCES}
+        PROPERTIES COMPILE_OPTIONS "-fno-sanitize=kernel-address")
+endif()
 
 target_sources(kernel
     PRIVATE

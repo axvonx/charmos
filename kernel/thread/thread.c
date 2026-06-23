@@ -71,9 +71,9 @@ void thread_entry_wrapper(void) {
     void *arg;
     asm volatile("mov %%r13, %0" : "=r"(arg));
 
-    kassert(irql_get() < IRQL_HIGH_LEVEL);
-
     scheduler_switch_in();
+
+    kassert(irql_get() < IRQL_HIGH_LEVEL);
 
     scheduler_mark_self_in_resched(false);
 

@@ -1,5 +1,6 @@
 #include <math/kb_mb_gb_tb.h>
 #include <mem/address_range.h>
+#include <mem/asan.h>
 #include <mem/hhdm.h>
 #include <mem/page.h>
 #include <mem/page_alloc.h>
@@ -85,23 +86,43 @@ static bool page_alloc_pf_valid(struct page_fault_info *pfi) {
 
 void *page_alloc_internal(size_t n_pages, enum alloc_flags flags,
                           enum alloc_behavior bh) {
+    void *ret;
     if (n_pages == 1 || flags & ALLOC_FLAG_CONTIGUOUS) {
         paddr_t phys = pmm_alloc_pages(n_pages);
         if (!phys)
             return NULL;
 
-        return hhdm_paddr_to_ptr(phys);
+        ret = hhdm_paddr_to_ptr(phys);
     } else {
-        return page_alloc_vas_mapped_pages(n_pages, flags, false);
+        ret = page_alloc_vas_mapped_pages(n_pages, flags, false);
     }
+
+#ifdef DEBUG_ASAN
+    if (ret)
+        asan_unpoison(ret, n_pages * PAGE_SIZE);
+#endif
+    return ret;
 }
 
 void *page_alloc_demand_internal(size_t n_pages, enum alloc_flags flags,
                                  enum alloc_behavior bh) {
-    return page_alloc_vas_mapped_pages(n_pages, flags, true);
+    void *ret = page_alloc_vas_mapped_pages(n_pages, flags, true);
+
+#ifdef DEBUG_ASAN
+    /* NOTE: these pages are not yet backed; the shadow write here assumes the
+     * shadow itself is mapped for this VA range. */
+    if (ret)
+        asan_unpoison(ret, n_pages * PAGE_SIZE);
+#endif
+    return ret;
 }
 
 void page_free_internal(void *ptr, size_t n_pages, enum alloc_behavior b) {
+#ifdef DEBUG_ASAN
+    if (ptr)
+        asan_poison(ptr, n_pages * PAGE_SIZE);
+#endif
+
     if (hhdm_ptr_in_range(ptr)) {
         pmm_free_pages(hhdm_ptr_to_paddr(ptr), n_pages);
     } else {

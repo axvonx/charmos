@@ -16,25 +16,25 @@ static inline uint32_t scheduler_preemption_disable(void) {
     kassert(!are_interrupts_enabled());
     struct core *cpu = smp_core();
 
-    uint32_t old = cpu->scheduler_preemption_disable_depth;
+    uint32_t old = cpu->preempt_disable_depth;
 
     if (old == UINT32_MAX)
         panic("overflow");
 
-    cpu->scheduler_preemption_disable_depth++;
+    cpu->preempt_disable_depth++;
     return old + 1;
 }
 
 static inline uint32_t scheduler_preemption_enable(void) {
     struct core *cpu = smp_core();
 
-    uint32_t old = cpu->scheduler_preemption_disable_depth;
+    uint32_t old = cpu->preempt_disable_depth;
 
     if (old == 0) {
         panic("underflow");
     }
 
-    cpu->scheduler_preemption_disable_depth--;
+    cpu->preempt_disable_depth--;
     return old - 1;
 }
 

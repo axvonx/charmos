@@ -209,5 +209,5 @@ static inline void scheduler_force_resched(struct scheduler *sched) {
 }
 
 static inline bool scheduler_preemption_disabled(void) {
-    return atomic_load(&smp_core()->scheduler_preemption_disable_depth) > 0;
+    return smp_core()->preempt_disable_depth > 0;
 }

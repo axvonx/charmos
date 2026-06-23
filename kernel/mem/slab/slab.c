@@ -131,6 +131,7 @@
 #include <math/sort.h>
 #include <mem/address_range.h>
 #include <mem/alloc.h>
+#include <mem/asan.h>
 #include <mem/domain.h>
 #include <mem/pmm.h>
 #include <mem/simple_alloc.h>
@@ -1402,6 +1403,13 @@ void *kmalloc_internal(size_t size, enum alloc_flags flags,
                        enum alloc_behavior behavior) {
     void *p = alloc(size, flags, behavior);
 
+#ifdef DEBUG_ASAN
+    /* Object is now live: make its full slot accessible to instrumented code.
+     */
+    if (p)
+        asan_unpoison(p, ksize(p));
+#endif
+
 #ifdef DEBUG_SLAB
     /* TODO: This should go away on release builds. When we bring
      * in non-fatal assertions/debug only assertions, this should
@@ -1436,6 +1444,10 @@ void kfree_internal(void *p, enum alloc_behavior behavior) {
 
 #ifdef DEBUG_SLAB
     memset(p, 0x67, ksize(p));
+#endif
+
+#ifdef DEBUG_ASAN
+    asan_poison(p, ksize(p));
 #endif
 
     free(p, behavior);

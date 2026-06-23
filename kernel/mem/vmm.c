@@ -646,7 +646,10 @@ static pte_t vmm_walk_leaf(struct page_table *root, vaddr_t virt,
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Waddress-of-packed-member"
 
-        snap = atomic_load_explicit((_Atomic pte_t *) &table->entries[index],
+        /* assert so that clang inlines this instead of creating a call to
+         * __atomic_load (from c lib, breaks under -nostdlib), gcc inlines */
+        snap = atomic_load_explicit((_Atomic pte_t *) __builtin_assume_aligned(
+                                        &table->entries[index], sizeof(pte_t)),
                                     memory_order_acquire);
 
 #pragma GCC diagnostic pop
@@ -666,7 +669,8 @@ static pte_t vmm_walk_leaf(struct page_table *root, vaddr_t virt,
 #pragma GCC diagnostic ignored "-Waddress-of-packed-member"
 
     snap = atomic_load_explicit(
-        (_Atomic pte_t *) &table->entries[pt_index(virt, PT_LEVEL_PT)],
+        (_Atomic pte_t *) __builtin_assume_aligned(
+            &table->entries[pt_index(virt, PT_LEVEL_PT)], sizeof(pte_t)),
         memory_order_acquire);
 
 #pragma GCC diagnostic pop

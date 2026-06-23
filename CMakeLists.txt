@@ -43,7 +43,6 @@ set(DEBUG_FLAGS
     DEBUG_USB_XHCI
     DEBUG_SLAB
     DEBUG_SLAB_DEEP
-    DEBUG_ASAN
 )
 
 set(PROFILING_FLAGS
@@ -188,6 +187,72 @@ if(APPLE)
 else()
     set(CMAKE_EXE_LINKER_FLAGS
         "${CMAKE_EXE_LINKER_FLAGS} -Wl,--build-id=none -nostdlib -static -z max-page-size=0x1000 -Wl,--gc-sections -T ../../kernel/linker-${ARCH}.ld")
+endif()
+
+if(CMAKE_C_COMPILER_ID STREQUAL "Clang")
+    find_program(LLD_LINKER ld.lld)
+    if(LLD_LINKER)
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=lld")
+    else()
+        find_program(ELF_LD x86_64-elf-ld)
+        if(NOT ELF_LD)
+            message(FATAL_ERROR
+                "clang build needs an ELF linker: install lld (brew install lld) "
+                "or x86_64-elf-ld")
+        endif()
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=${ELF_LD}")
+    endif()
+endif()
+
+option(DEBUG_ASAN "Enable KASAN address sanitizer (clang only)" OFF)
+if(DEBUG_ASAN)
+    if(NOT CMAKE_C_COMPILER_ID STREQUAL "Clang")
+        message(FATAL_ERROR
+            "DEBUG_ASAN (KASAN) requires the clang toolchain. Reconfigure with:\n"
+            "    scripts/build.sh --compiler clang -- -DDEBUG_ASAN=ON")
+    endif()
+    message(STATUS "charmOS: KASAN enabled (DEBUG_ASAN, outline instrumentation)")
+    add_compile_definitions(DEBUG_ASAN)
+    set(KERNEL_KASAN_FLAGS
+        -fsanitize=kernel-address
+        -mllvm -asan-instrumentation-with-call-threshold=0
+        -mllvm -asan-globals=0
+        -mllvm -asan-stack=0
+    )
+    string(REPLACE ";" " " KERNEL_KASAN_FLAGS_STR "${KERNEL_KASAN_FLAGS}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${KERNEL_KASAN_FLAGS_STR}")
+endif()
+
+option(KERNEL_RANDCONFIG "Append a random subset of codegen flags (build fuzz)" OFF)
+set(KERNEL_RANDCONFIG_SEED "0" CACHE STRING "Seed for KERNEL_RANDCONFIG selection")
+if(KERNEL_RANDCONFIG)
+    set(KERNEL_RANDCONFIG_POOL
+        -funroll-loops
+        -fno-strict-aliasing
+        -fwrapv
+        -fno-jump-tables
+        -fno-common
+        -fmerge-all-constants
+        -fno-asynchronous-unwind-tables
+        -fno-strict-overflow
+        -finline-functions
+        -fno-inline-functions
+    )
+
+    string(RANDOM LENGTH 1 ALPHABET "01" RANDOM_SEED "${KERNEL_RANDCONFIG_SEED}" _rc_ignore)
+    set(KERNEL_RANDCONFIG_CHOSEN "")
+    foreach(_rc_flag ${KERNEL_RANDCONFIG_POOL})
+        string(RANDOM LENGTH 1 ALPHABET "01" _rc_bit)
+        if(_rc_bit STREQUAL "1")
+            list(APPEND KERNEL_RANDCONFIG_CHOSEN "${_rc_flag}")
+        endif()
+    endforeach()
+    if(KERNEL_RANDCONFIG_CHOSEN)
+        string(REPLACE ";" " " _rc_str "${KERNEL_RANDCONFIG_CHOSEN}")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${_rc_str}")
+    endif()
+    message(STATUS "charmOS: RANDCONFIG seed=${KERNEL_RANDCONFIG_SEED} "
+                   "flags=[${KERNEL_RANDCONFIG_CHOSEN}]")
 endif()
 
 enable_language(ASM_NASM)

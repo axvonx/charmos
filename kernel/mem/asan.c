@@ -528,8 +528,6 @@ void __asan_allocas_unpoison(void *addr, size_t size) {
     __asan_unpoison_memory_region(addr, size);
 }
 
-/* Extra aliases that some toolchains expect (no-ops or forwards).
-   Provide weak aliases so they can be overridden if needed. */
 __attribute__((weak)) void __asan_alloca_poison_0(void *addr, size_t size) {
     __asan_alloca_poison(addr, size);
 }
@@ -537,4 +535,36 @@ __attribute__((weak)) void __asan_alloca_poison_0(void *addr, size_t size) {
 __attribute__((weak)) void __asan_allocas_unpoison_0(void *addr, size_t size) {
     __asan_allocas_unpoison(addr, size);
 }
+
+#define ASAN_ALIAS(name, target) __attribute__((alias(#target))) void name
+
+/* Outline callbacks (forced via -asan-instrumentation-with-call-threshold=0).
+ */
+ASAN_ALIAS(__asan_load1_noabort, __asan_load1)(const void *addr);
+ASAN_ALIAS(__asan_load2_noabort, __asan_load2)(const void *addr);
+ASAN_ALIAS(__asan_load4_noabort, __asan_load4)(const void *addr);
+ASAN_ALIAS(__asan_load8_noabort, __asan_load8)(const void *addr);
+ASAN_ALIAS(__asan_load16_noabort, __asan_load16)(const void *addr);
+ASAN_ALIAS(__asan_store1_noabort, __asan_store1)(const void *addr);
+ASAN_ALIAS(__asan_store2_noabort, __asan_store2)(const void *addr);
+ASAN_ALIAS(__asan_store4_noabort, __asan_store4)(const void *addr);
+ASAN_ALIAS(__asan_store8_noabort, __asan_store8)(const void *addr);
+ASAN_ALIAS(__asan_store16_noabort, __asan_store16)(const void *addr);
+ASAN_ALIAS(__asan_loadN_noabort, __asan_loadN)(const void *addr, size_t size);
+ASAN_ALIAS(__asan_storeN_noabort, __asan_storeN)(const void *addr, size_t size);
+
+ASAN_ALIAS(__asan_report_load1_noabort, __asan_report_load1)(void *addr);
+ASAN_ALIAS(__asan_report_load2_noabort, __asan_report_load2)(void *addr);
+ASAN_ALIAS(__asan_report_load4_noabort, __asan_report_load4)(void *addr);
+ASAN_ALIAS(__asan_report_load8_noabort, __asan_report_load8)(void *addr);
+ASAN_ALIAS(__asan_report_load16_noabort, __asan_report_load16)(void *addr);
+ASAN_ALIAS(__asan_report_store1_noabort, __asan_report_store1)(void *addr);
+ASAN_ALIAS(__asan_report_store2_noabort, __asan_report_store2)(void *addr);
+ASAN_ALIAS(__asan_report_store4_noabort, __asan_report_store4)(void *addr);
+ASAN_ALIAS(__asan_report_store8_noabort, __asan_report_store8)(void *addr);
+ASAN_ALIAS(__asan_report_store16_noabort, __asan_report_store16)(void *addr);
+ASAN_ALIAS(__asan_report_load_n_noabort, __asan_report_load_n)(void *addr,
+                                                               size_t size);
+ASAN_ALIAS(__asan_report_store_n_noabort, __asan_report_store_n)(void *addr,
+                                                                 size_t size);
 #endif

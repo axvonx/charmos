@@ -16,6 +16,7 @@ QUIET=false
 CLEAN=false
 COMPDB=false
 BUILD_TYPE="Debug"
+COMPILER="gcc"
 BUILD_DIR="build"
 JOBS="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)"
 CMAKE_EXTRA_ARGS=()
@@ -35,6 +36,9 @@ ${BOLD}Options:${NC}
   -C, --compdb            Generate compile_commands.json in project root
   -t, --type TYPE         Build type: Debug, Release, RelWithDebInfo, MinSizeRel
                           (default: Debug)
+  -k, --compiler COMP     Compiler toolchain: gcc or clang (default: gcc)
+                          clang is required for DEBUG_ASAN (KASAN)
+      --clang             Shorthand for --compiler clang
   -j, --jobs N            Parallel jobs (default: detected CPU count = ${JOBS})
   -B, --build-dir DIR     Build directory (default: build)
   --                      End of script options; remaining args go to cmake
@@ -68,6 +72,8 @@ while [[ $# -gt 0 ]]; do
         -c|--clean)            CLEAN=true; shift ;;
         -C|--compdb)           COMPDB=true; shift ;;
         -t|--type)             BUILD_TYPE="$2"; shift 2 ;;
+        -k|--compiler)         COMPILER="$2"; shift 2 ;;
+        --clang)               COMPILER="clang"; shift ;;
         -j|--jobs)             JOBS="$2"; shift 2 ;;
         -B|--build-dir)        BUILD_DIR="$2"; shift 2 ;;
         --)                    PASSTHROUGH=true; shift ;;
@@ -83,6 +89,11 @@ fi
 case "$BUILD_TYPE" in
     Debug|Release|RelWithDebInfo|MinSizeRel) ;;
     *) echo "${RED}Invalid build type: $BUILD_TYPE${NC}" >&2; exit 1 ;;
+esac
+
+case "$COMPILER" in
+    gcc|clang) ;;
+    *) echo "${RED}Invalid compiler: $COMPILER (expected gcc or clang)${NC}" >&2; exit 1 ;;
 esac
 
 log()    { $QUIET || echo -e "${GREEN}==>${NC} $*"; }
@@ -139,7 +150,58 @@ check_required_tools() {
     [[ $failed -eq 0 ]] || { err "fix missing tools and rerun"; exit 1; }
 }
 
+find_kasan_clang() {
+    local c
+    for c in /opt/homebrew/opt/llvm/bin/clang /usr/local/opt/llvm/bin/clang clang; do
+        command -v "$c" >/dev/null 2>&1 || continue
+        echo "$c"
+        return 0
+    done
+    return 1
+}
+
+check_compiler_toolchain() {
+    log "verifying ${COMPILER} toolchain"
+    local failed=0
+
+    if [[ "$COMPILER" == "clang" ]]; then
+        local clang_bin
+        if ! clang_bin="$(find_kasan_clang)"; then
+            err "clang not found"
+            echo "       install LLVM: brew install llvm lld" >&2
+            failed=1
+        else
+            note "using clang: ${clang_bin}"
+            if ! echo 'int x;' | "$clang_bin" --target=x86_64-unknown-linux-elf \
+                    -fsanitize=kernel-address -ffreestanding -mno-red-zone \
+                    -c -x c - -o /dev/null >/dev/null 2>&1; then
+                err "${clang_bin} cannot compile with -fsanitize=kernel-address"
+                echo "       Apple Clang lacks KASAN; install Homebrew LLVM: brew install llvm" >&2
+                failed=1
+            fi
+        fi
+
+        if ! command -v ld.lld >/dev/null 2>&1 && \
+           ! command -v x86_64-elf-ld >/dev/null 2>&1; then
+            err "no ELF linker found for clang builds (need ld.lld or x86_64-elf-ld)"
+            echo "       brew install lld" >&2
+            failed=1
+        fi
+    else
+        if [[ "$(uname -s)" == "Darwin" ]]; then
+            check_tool x86_64-elf-gcc "install the cross GCC: brew install x86_64-elf-gcc" || failed=1
+        elif [[ "$(uname -m)" == "aarch64" ]]; then
+            check_tool x86_64-linux-gnu-gcc "install the cross GCC toolchain (gcc-x86-64-linux-gnu)" || failed=1
+        else
+            check_tool gcc "install gcc via your package manager" || failed=1
+        fi
+    fi
+
+    [[ $failed -eq 0 ]] || { err "fix the ${COMPILER} toolchain and rerun"; exit 1; }
+}
+
 check_required_tools
+check_compiler_toolchain
 
 log "syncing submodules"
 run_cmd git submodule update --init --recursive
@@ -160,7 +222,10 @@ mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
 
 TOOLCHAIN_ARGS=()
-if [[ "$(uname -s)" == "Darwin" ]]; then
+if [[ "$COMPILER" == "clang" ]]; then
+    note "using clang toolchain (clang_toolchain.cmake)"
+    TOOLCHAIN_ARGS=(-DCMAKE_TOOLCHAIN_FILE=../scripts/clang_toolchain.cmake)
+elif [[ "$(uname -s)" == "Darwin" ]]; then
     note "detected macOS — using macos_toolchain.cmake"
     TOOLCHAIN_ARGS=(-DCMAKE_TOOLCHAIN_FILE=../scripts/macos_toolchain.cmake)
 elif [[ "$(uname -m)" == "aarch64" ]]; then
