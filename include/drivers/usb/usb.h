@@ -332,7 +332,7 @@ struct usb_driver {
     enum usb_error (*bringup)(struct usb_device *dev); /* Called on connect */
     void (*teardown)(struct usb_device *dev); /* Called on disconnect */
     void (*free)(struct usb_device *dev);     /* Called on last ref drop */
-} __linker_aligned;
+};
 
 struct usb_device {
     struct list_head hc_list;

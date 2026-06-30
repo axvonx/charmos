@@ -140,6 +140,7 @@
 #include <mem/vmm.h>
 #include <sch/sched.h>
 #include <smp/core.h>
+#include <static_call.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
@@ -1379,29 +1380,27 @@ done:
     irql_lower(outer);
 }
 
-static void *kmalloc_init(size_t size, enum alloc_flags f,
-                          enum alloc_behavior b) {
+void *kmalloc_init(size_t size, enum alloc_flags f, enum alloc_behavior b) {
     (void) b;
     return kmalloc_old(size, f);
 }
 
-static void kfree_init(void *p, enum alloc_behavior b) {
+void kfree_init(void *p, enum alloc_behavior b) {
     (void) b;
     kfree_old(p);
 }
 
-static void *(*alloc)(size_t, enum alloc_flags,
-                      enum alloc_behavior) = kmalloc_init;
-static void (*free)(void *, enum alloc_behavior) = kfree_init;
+STATIC_CALL_DECLARE(alloc, kmalloc_init);
+STATIC_CALL_DECLARE(free, kfree_init);
 
 void slab_switch_to_domain_allocations(void) {
-    alloc = kmalloc_new;
-    free = kfree_new;
+    static_call_update(alloc, kmalloc_new);
+    static_call_update(free, kfree_new);
 }
 
 void *kmalloc_internal(size_t size, enum alloc_flags flags,
                        enum alloc_behavior behavior) {
-    void *p = alloc(size, flags, behavior);
+    void *p = static_call(alloc)(size, flags, behavior);
 
 #ifdef DEBUG_ASAN
     /* Object is now live: make its full slot accessible to instrumented code.
@@ -1450,7 +1449,7 @@ void kfree_internal(void *p, enum alloc_behavior behavior) {
     asan_poison(p, ksize(p));
 #endif
 
-    free(p, behavior);
+    static_call(free)(p, behavior);
 }
 
 void *krealloc_internal(void *ptr, size_t size, enum alloc_flags flags,

@@ -20,7 +20,7 @@ struct kernel_test {
 
     uint64_t message_count;
     char **messages;
-} __linker_aligned;
+};
 
 #define TEST_REGISTER(name, should_fail, is_integration)                       \
     static void name(void);                                                    \

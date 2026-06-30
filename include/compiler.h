@@ -17,8 +17,6 @@
 
 #define __cache_aligned __attribute__((aligned(64)))
 
-#define __linker_aligned __attribute__((aligned(64)))
-
 #define __used __attribute__((used))
 
 #define __section(x) __attribute__((section(x)))
@@ -91,3 +89,6 @@
 
 #define PP_NARG_HELPER(...) PP_ARG_N(__VA_ARGS__)
 #define PP_NARG(...) PP_NARG_HELPER(_, ##__VA_ARGS__, PP_RSEQ_N())
+
+#define CONCAT_(a, b) a##b
+#define CONCAT(a, b) CONCAT_(a, b)

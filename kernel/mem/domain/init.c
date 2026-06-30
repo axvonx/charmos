@@ -49,7 +49,7 @@ void domain_buddy_track_pages(struct domain_buddy *dom) {
     size_t total_pages = dom->length / PAGE_SIZE;
     size_t free_pages = 0;
 
-    for (size_t order = 0; order < MAX_ORDER; order++)
+    for (size_t order = 0; order < BUDDY_MAX_ORDER; order++)
         free_pages += dom->free_area[order].nr_free << order;
 
     dom->total_pages = total_pages;
@@ -103,7 +103,7 @@ static void domain_distribute_block(struct domain_buddy *dom, size_t start_pfn,
 
 static void domain_claim_global_blocks(struct domain_buddy *dom,
                                        size_t dom_start, size_t dom_end) {
-    for (int order = MAX_ORDER - 1; order >= 0; order--) {
+    for (int order = BUDDY_MAX_ORDER - 1; order >= 0; order--) {
         struct buddy_free_area *fa = &global.buddy_free_area[order];
 
         struct buddy_page *pending = NULL;
@@ -126,7 +126,7 @@ static void domain_claim_global_blocks(struct domain_buddy *dom,
 }
 
 static void domain_buddy_init(struct domain_buddy *dom) {
-    for (int i = 0; i < MAX_ORDER; i++) {
+    for (int i = 0; i < BUDDY_MAX_ORDER; i++) {
         dom->free_area[i].head = NULL;
         dom->free_area[i].tail = NULL;
         dom->free_area[i].nr_free = 0;
@@ -146,8 +146,8 @@ static void domain_structs_init(struct domain_buddy *dom, size_t arena_capacity,
                                 size_t fq_capacity,
                                 struct domain *core_domain) {
     dom->domain = core_domain;
-    dom->free_area =
-        alloc_or_die(alloc_up(sizeof(struct buddy_free_area) * MAX_ORDER));
+    dom->free_area = alloc_or_die(
+        alloc_up(sizeof(struct buddy_free_area) * BUDDY_MAX_ORDER));
 
     dom->zonelist.entries = alloc_or_die(
         alloc_up(sizeof(struct domain_zonelist_entry) * global.domain_count));

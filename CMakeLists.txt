@@ -162,6 +162,14 @@ if(KERNEL_STACK_USAGE)
     list(APPEND KERNEL_FREESTANDING -fstack-usage)
 endif()
 
+#[[
+GCC defaults to -malign-data=compat, which messes up the static objects size >= 32
+bytes, breaking natural alignment and causing big sad in the linker section objs
+]]
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    list(APPEND KERNEL_FREESTANDING -malign-data=abi)
+endif()
+
 set(KERNEL_C_FLAGS_LIST
     ${KERNEL_WARNINGS}
     ${KERNEL_FREESTANDING}

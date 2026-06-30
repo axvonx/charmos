@@ -22,7 +22,7 @@ struct slab_size_constant {
     struct {
         struct slab_elcm_candidate cand;
     } internal;
-} __linker_aligned;
+};
 
 #define SLAB_SIZE_REGISTER(n, s, a)                                            \
     LINKER_SECTION_OBJECT(struct slab_size_constant, slab_sizes)               \

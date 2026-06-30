@@ -30,7 +30,7 @@ struct scheduler_periodic_work_linker_object {
 
     enum scheduler_periodic_work_type type;
     enum scheduler_periodic_work_prio prio;
-} __linker_aligned;
+};
 
 struct scheduler_periodic_work {
     enum scheduler_periodic_work_type type;

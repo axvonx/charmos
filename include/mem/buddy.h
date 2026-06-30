@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <types/types.h>
 
-#define MAX_ORDER 23
+#define BUDDY_MAX_ORDER 18
 
 struct page;
 struct buddy_page;

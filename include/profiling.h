@@ -13,7 +13,7 @@ struct profiling_entry {
     const char *(*to_str)(void *data);
     void (*log)(void *data);
     struct list_head list_node;
-} __linker_aligned;
+};
 
 /* Current set of profiling flags:
  *

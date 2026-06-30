@@ -117,7 +117,7 @@ struct log_site {
     uint32_t dropped; /* Accumulation of all missed logs */
     enum log_site_flags flags;
     struct log_dump_options dump_opts; /* If LOG_SITE_PRINT, use this */
-} __linker_aligned;
+};
 
 static inline const char *log_level_color(enum log_level l) {
     switch (l) {

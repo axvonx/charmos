@@ -23,7 +23,7 @@ struct exception_sync_cb {
     uint8_t vector;
     exception_sync_cb_fn fn;
     void *private;
-} __linker_aligned;
+};
 
 LINKER_SECTION_DEFINE(struct exception_sync_cb, exception_sync_cbs);
 #define EXCEPTION_SYNC_CB_REGISTER(n, v, func, priv)                           \

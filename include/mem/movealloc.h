@@ -27,7 +27,7 @@ struct movealloc_callback_node {
     movealloc_callback callback;
     void *a, *b;
     struct list_head list;
-} __linker_aligned;
+};
 
 struct movealloc_callback_chain {
     struct list_head list;

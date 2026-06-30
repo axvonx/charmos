@@ -15,7 +15,7 @@ struct pernode_descriptor {
     size_t align;
     void **pernode_ptrs;
     pernode_descriptor_constructor constructor;
-} __linker_aligned;
+};
 
 LINKER_SECTION_DEFINE(struct pernode_descriptor, pernode_desc);
 

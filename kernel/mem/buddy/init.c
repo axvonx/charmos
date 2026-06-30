@@ -64,7 +64,7 @@ void buddy_add_entry(struct page *page_array, struct limine_memmap_entry *entry,
     uint64_t region_size = (end - start) / PAGE_SIZE;
 
     while (region_size > 0) {
-        int order = MIN(order_base_2(region_size), MAX_ORDER - 1);
+        int order = MIN(order_base_2(region_size), BUDDY_MAX_ORDER - 1);
         size_t block_size = 1ULL << order;
 
         while ((region_start & (block_size - 1)) != 0 && order > 0) {
@@ -128,7 +128,7 @@ void buddy_init(void) {
 
     mid_init_buddy(pages_needed);
 
-    for (int i = 0; i < MAX_ORDER; i++) {
+    for (int i = 0; i < BUDDY_MAX_ORDER; i++) {
         global.buddy_free_area[i].head = NULL;
         global.buddy_free_area[i].tail = NULL;
         global.buddy_free_area[i].nr_free = 0;

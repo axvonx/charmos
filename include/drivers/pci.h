@@ -32,7 +32,7 @@ struct pci_driver {
     uint8_t subclass;
     uint8_t prog_if;
     uint16_t vendor_id;
-} __linker_aligned;
+};
 
 LINKER_SECTION_DEFINE(struct pci_driver, pci_devices);
 

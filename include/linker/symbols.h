@@ -16,7 +16,6 @@ extern uint64_t __kernel_virt_end;
     __attribute__((section(".kernel_" #n), used))
 
 #define LINKER_SECTION_OBJECT(type, section)                                   \
-    static_assert(_Alignof(type) == 64);                                       \
     LINKER_SECTION_ATTRIBUTE(section) static type
 
 #define LINKER_SECTION_DEFINE(type, name)                                      \

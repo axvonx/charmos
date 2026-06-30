@@ -1,3 +1,4 @@
+#include <bootstage_condition.h>
 #include <sch/periodic_work.h>
 #include <sch/sched.h>
 #include <smp/core.h>
@@ -39,8 +40,9 @@ static inline uint32_t scheduler_preemption_enable(void) {
 }
 
 enum irql irql_raise(enum irql new_level) {
-    if (global.current_bootstage < BOOTSTAGE_LATE)
+    BOOTSTAGE_IF_LT(BOOTSTAGE_LATE) {
         return IRQL_NONE;
+    }
 
     bool iflag = are_interrupts_enabled();
     disable_interrupts();
@@ -68,8 +70,11 @@ enum irql irql_raise(enum irql new_level) {
 }
 
 void irql_lower(enum irql new_level) {
-    if (global.current_bootstage < BOOTSTAGE_LATE || new_level == IRQL_NONE)
+    BOOTSTAGE_IF_LT(BOOTSTAGE_LATE) {
         return;
+    }
+
+    kassert(new_level != IRQL_NONE);
 
     enum irql old = irql_get();
 

@@ -15,7 +15,7 @@ struct perdomain_descriptor {
     size_t align;
     void **perdomain_ptrs;
     perdomain_descriptor_constructor constructor;
-} __linker_aligned;
+};
 
 LINKER_SECTION_DEFINE(struct perdomain_descriptor, perdomain_desc);
 

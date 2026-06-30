@@ -24,7 +24,7 @@ struct address_range {
     enum address_range_flags flags;
     struct rbt_node rbt_node_internal;
     struct page_fault_handler *page_fault_handler;
-} __linker_aligned;
+};
 
 #define ADDRESS_RANGE_DECLARE(sym, ...)                                        \
     LINKER_SECTION_OBJECT(struct address_range, address_ranges)                \

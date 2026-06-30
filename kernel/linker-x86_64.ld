@@ -42,102 +42,109 @@ SECTIONS {
     .kernel_tests : ALIGN(64) {
         __skernel_tests = .;
         KEEP(*(.kernel_tests))
-        . = ALIGN(64);
         __ekernel_tests = .;
+        . = ALIGN(64);
     } :data
     .kernel_nightmare_tests : ALIGN(64) {
         __skernel_nightmare_tests = .;
         KEEP(*(.kernel_nightmare_tests))
-        . = ALIGN(64);
         __ekernel_nightmare_tests = .;
+        . = ALIGN(64);
     } :data
 
     .kernel_pci_devices : ALIGN(64) {
         __skernel_pci_devices = .;
         KEEP(*(.kernel_pci_devices))
-        . = ALIGN(64);
         __ekernel_pci_devices = .;
+        . = ALIGN(64);
     } :data
     .kernel_usb_drivers : ALIGN(64) {
         __skernel_usb_drivers = .;
         KEEP(*(.kernel_usb_drivers))
-        . = ALIGN(64);
         __ekernel_usb_drivers = .;
+        . = ALIGN(64);
     } :data
 
     .kernel_profiling_data : ALIGN(64) {
         __skernel_profiling_data = .;
         KEEP(*(.kernel_profiling_data))
-        . = ALIGN(64);
         __ekernel_profiling_data = .;
+        . = ALIGN(64);
     } :data
 
     .kernel_movealloc_callbacks : ALIGN(64) {
         __skernel_movealloc_callbacks = .;
         KEEP(*(.kernel_movealloc_callbacks))
-        . = ALIGN(64);
         __ekernel_movealloc_callbacks = .;
+        . = ALIGN(64);
     } :data
     .kernel_slab_sizes : ALIGN(64) {
         __skernel_slab_sizes = .;
         KEEP(*(.kernel_slab_sizes))
-        . = ALIGN(64);
         __ekernel_slab_sizes = .;
+        . = ALIGN(64);
     } :data
     .kernel_address_ranges : ALIGN(64) {
         __skernel_address_ranges = .;
         KEEP(*(.kernel_address_ranges))
-        . = ALIGN(64);
         __ekernel_address_ranges = .;
+        . = ALIGN(64);
     } :data
 
     .kernel_percpu_desc : ALIGN(64) {
         __skernel_percpu_desc = .;
         KEEP(*(.kernel_percpu_desc))
-        . = ALIGN(64);
         __ekernel_percpu_desc = .;
+        . = ALIGN(64);
     } :data
 
     .kernel_perdomain_desc : ALIGN(64) {
         __skernel_perdomain_desc = .;
         KEEP(*(.kernel_perdomain_desc))
-        . = ALIGN(64);
         __ekernel_perdomain_desc = .;
+        . = ALIGN(64);
     } :data
     
     .kernel_pernode_desc : ALIGN(64) {
         __skernel_pernode_desc = .;
         KEEP(*(.kernel_pernode_desc))
-        . = ALIGN(64);
         __ekernel_pernode_desc = .;
+        . = ALIGN(64);
     } :data
 
     .kernel_sched_periodic_work : ALIGN(64) {
         __skernel_sched_periodic_work = .;
         KEEP(*(.kernel_sched_periodic_work))
-        . = ALIGN(64);
         __ekernel_sched_periodic_work = .;
+        . = ALIGN(64);
     } :data
 
     .kernel_log_sites : ALIGN(64) {
         __skernel_log_sites = .;
         KEEP(*(.kernel_log_sites))
-        . = ALIGN(64);
         __ekernel_log_sites = .;
+        . = ALIGN(64);
     } :data
 
     .kernel_cmdline_entries : ALIGN(64) {
         __skernel_cmdline_entries = .;
         KEEP(*(.kernel_cmdline_entries))
-        . = ALIGN(64);
         __ekernel_cmdline_entries = .;
+        . = ALIGN(64);
     } :data
 
     .kernel_exception_sync_cbs : ALIGN(64) {
         __skernel_exception_sync_cbs = .;
         KEEP(*(.kernel_exception_sync_cbs))
-        . = ALIGN(64);
         __ekernel_exception_sync_cbs = .;
+        . = ALIGN(64);
+    } :data
+
+    .kernel_bootstage_condition_entries : ALIGN(64) {
+        __skernel_bootstage_condition_entries = .;
+        KEEP(*(.kernel_bootstage_condition_entries))
+        __ekernel_bootstage_condition_entries = .;
+        . = ALIGN(64);
     } :data
 
     /* BSS */

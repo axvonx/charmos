@@ -1,6 +1,8 @@
 /* @title: Page Zeroer Subsystem */
 #pragma once
+#include <math/ewma.h>
 #include <math/fixed.h>
+#include <mem/buddy.h>
 #include <thread/daemon.h>
 #include <thread/workqueue.h>
 #include <types/types.h>
@@ -47,8 +49,38 @@
  *
  */
 
-struct page_zeroer_quota {};
+struct page_zeroer_demand {
+    struct ewma rate;             /* consumed blocks per epoch */
+    struct ewma mad;              /* mean abs deviation of `rate` */
+    atomic_size_t consumed_epoch; /* fast-path inc, bg drain */
+    atomic_size_t stockout_epoch; /* sync-zero fallbacks */
+};
+
+struct page_zeroer_rate {
+    size_t batch_blocks;     /* blocks TS thread zeros per wake */
+    fx32_32_t safety_factor; /* multiplier on demand for min_blocks */
+    fx32_32_t integral;      /* PI integral state */
+    fx32_32_t idle_scale;    /* [0, 1] until scheduler idle features come */
+};
+
+struct page_zeroer_watermark {
+    size_t min_min_blocks;
+    size_t max_max_blocks;
+
+    size_t min_blocks; /* These are dynamic */
+    size_t max_blocks;
+};
+
+/* TODO: once we get scheduler idleness integration, add it here */
+struct page_zeroer_quota {
+    struct page_zeroer_watermark wm;
+    struct page_zeroer_rate rate;
+    struct page_zeroer_demand demand;
+    time_t zero_block_time_ns;
+    atomic_size_t num_zero_blocks;
+};
 
 struct page_zeroer {
+    struct page_zeroer_quota quotas[BUDDY_MAX_ORDER];
     struct daemon *daemon;
 };

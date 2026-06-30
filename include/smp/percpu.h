@@ -15,7 +15,7 @@ struct percpu_descriptor {
     size_t align;
     void **percpu_ptrs;
     percpu_descriptor_constructor constructor;
-} __linker_aligned;
+};
 
 LINKER_SECTION_DEFINE(struct percpu_descriptor, percpu_desc);
 

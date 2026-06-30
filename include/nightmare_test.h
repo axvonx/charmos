@@ -87,7 +87,7 @@ struct nightmare_test {
     size_t message_count;
     char **messages;
     void *private;
-} __linker_aligned;
+};
 
 struct nightmare_local {
     void *data;

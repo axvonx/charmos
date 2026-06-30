@@ -288,6 +288,8 @@ void vmm_init(struct limine_memmap_response *memmap,
 
     enum errno e;
 
+    /* We leave the kernel writable to do boot time patching, but
+     * TODO: lock the kernel down and make it RO later on */
     for (uint64_t i = 0; i < kernel_size; i += PAGE_SIZE) {
         e = vmm_map_page(kernel_virt_start + i, kernel_phys_start + i,
                          PAGE_WRITE | PAGE_PRESENT, VMM_FLAG_NONE);
