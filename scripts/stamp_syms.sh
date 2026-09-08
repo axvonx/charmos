@@ -21,6 +21,10 @@ KERNEL="$5"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 
+if command -v python3 >/dev/null 2>&1 && [[ -f "$HERE/stamp_syms.py" ]]; then
+    exec python3 "$HERE/stamp_syms.py" "$@"
+fi
+
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
