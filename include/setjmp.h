@@ -1,7 +1,7 @@
 /* @title: setjmp */
 #pragma once
 #include <compiler.h>
-#include <thread/thread.h>
+#include <stdint.h>
 
 typedef uint64_t jmp_buf[8];
 __naked int setjmp(jmp_buf env);

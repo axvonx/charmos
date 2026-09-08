@@ -180,6 +180,7 @@ struct thread {
      * in mind that all nodes get need to get
      * reset if unions are to be used */
 
+    struct crash_perthread crash_data;
     struct list_head reaper_list; /* reaper list */
     struct list_head thread_list; /* global list of threads */
 
@@ -348,6 +349,7 @@ struct thread {
 
     /* ========== Profiling data ========== */
     struct log_site *log_site;
+    struct log_handle log_handle;
     size_t context_switches; /* Total context switches */
 
     size_t preemptions;
@@ -378,6 +380,19 @@ struct thread {
     (container_of(ln, struct thread, wq_list_node))
 #define thread_from_wq_rbt_node(ln)                                            \
     (container_of(ln, struct thread, wq_tree_node))
+
+#define thread_log(lvl, fmt, ...)                                              \
+    ({                                                                         \
+        if (global.current_bootstage >= BOOTSTAGE_LATE)                        \
+            log(thread_get_current()->log_site,                                \
+                &thread_get_current()->log_handle, lvl, fmt, ##__VA_ARGS__);   \
+    })
+
+#define thread_err(fmt, ...) thread_log(LOG_ERROR, fmt, ##__VA_ARGS__)
+#define thread_warn(fmt, ...) thread_log(LOG_WARN, fmt, ##__VA_ARGS__)
+#define thread_info(fmt, ...) thread_log(LOG_INFO, fmt, ##__VA_ARGS__)
+#define thread_debug(fmt, ...) thread_log(LOG_DEBUG, fmt, ##__VA_ARGS__)
+#define thread_trace(fmt, ...) thread_log(LOG_TRACE, fmt, ##__VA_ARGS__)
 
 struct thread *thread_create_internal(char *name, void (*entry_point)(void *),
                                       void *arg, size_t stack_size,
@@ -480,6 +495,12 @@ void thread_unlock_thread_and_rq(struct scheduler *thread_rq,
                                  struct scheduler *other_rq,
                                  enum irql irq_first, enum irql irq_second);
 
+bool thread_in_context(void);
+REFCOUNT_GENERATE_GET_FOR_STRUCT_WITH_FAILURE_COND(thread, refcount, flags,
+                                                   &THREAD_FLAG_DYING);
+void reaper_enqueue(struct thread *t);
+void thread_put(struct thread *t);
+
 /* Yield nesting work:
  *
  * scheduler_yield() can re-enter, and we're using this to debug,
@@ -508,8 +529,6 @@ static inline void scheduler_yield_nesting_enter(struct thread *t) {
 #endif
 }
 
-/* The deepest this thread's yields have ever nested. 1 is the expected value:
- * one scheduler_yield() frame and no re-entry. */
 static inline uint32_t scheduler_yield_nesting_max(struct thread *t) {
     return t ? t->yield_nesting_max : 0;
 }
@@ -522,13 +541,9 @@ static inline void scheduler_yield_nesting_exit(struct thread *t) {
 static inline void scheduler_yield_nesting_reset(struct thread *t) {
     if (t)
         t->yield_nesting = 0;
-    /* yield_nesting_max is deliberately not reset: it is a per-thread record
-     * for the whole life of the thread, and thread_entry_wrapper() clears the
-     * live count because a thread whose stack context_switch() abandoned never
-     * ran its decrement -- that is a bookkeeping repair, not a new thread. */
 }
 
-static inline struct thread *thread_get_current() {
+static inline struct thread *thread_get_current(void) {
     uintptr_t thread;
     asm volatile("movq %%gs:%c1, %0"
                  : "=r"(thread)
@@ -590,11 +605,6 @@ static inline void thread_set_runqueue(struct thread *t, struct scheduler *s) {
     atomic_fetch_add_explicit(&t->migration_generation, 1,
                               memory_order_release);
 }
-
-REFCOUNT_GENERATE_GET_FOR_STRUCT_WITH_FAILURE_COND(thread, refcount, flags,
-                                                   &THREAD_FLAG_DYING);
-void reaper_enqueue(struct thread *t);
-void thread_put(struct thread *t);
 
 /* RCU keeps the thread memory allocated so we inc_not_zero here
  * and everything is fine and dandy, everything must be in a

@@ -15,6 +15,7 @@
 #include <smp/topology.h>
 #include <stdatomic.h>
 #include <sync/spinlock.h>
+#include <thread/thread.h>
 
 static struct topology_node *smt_nodes;
 static struct topology_node *core_nodes;
@@ -533,4 +534,63 @@ struct core *topology_find_idle_core(struct core *local_core,
     }
 
     return NULL;
+}
+
+struct cpu_mask topology_level_mask(cpu_id_t id, enum topology_level level) {
+    if (level == TOPOLOGY_LEVEL_DOMAIN) {
+        domain_id_t domain = global.cores[id]->domain->id;
+        struct cpu_mask ret;
+        domain_set_cpu_mask(&ret, global.domains[domain]);
+        return ret;
+    }
+
+    struct topology_node *nodes = global.topology.level[level];
+    uint16_t count = global.topology.count[level];
+    for (uint16_t i = 0; i < count; i++) {
+        struct topology_node *node = &nodes[i];
+        if (cpu_mask_test(&node->cpus, id))
+            return node->cpus;
+    }
+    unreachable();
+}
+
+bool topology_contract_verify(struct topology_contract c) {
+    enum topology_level scope = c.scope;
+    enum topology_caller caller = c.caller;
+
+    if (caller != TOPC_NONE) {
+        bool valid = false;
+
+        if (caller & TOPC_IFLAG)
+            valid = !are_interrupts_enabled();
+
+        valid = valid || global.current_bootstage < BOOTSTAGE_LATE;
+
+        /* Short circuiting here matters: if EARLY and IRQL are set
+         * before IRQLs are available to read, we are not able to
+         * call irql_get (it would crash) */
+        if (caller & TOPC_IRQL)
+            valid = valid || irql_get() >= IRQL_DISPATCH_LEVEL;
+
+        if (caller & TOPC_PINNED) {
+            kassert(irq_not_in_interrupt());
+            valid = valid || (thread_get_flags(thread_get_current()) &
+                              THREAD_FLAG_PINNED);
+            if (!valid) {
+                /* This is where scope actually means something,
+                 * we check that the thread's allowed_cpus ∈ scope_cpus */
+                cpu_id_t cpu = smp_id(TOPC_NONE);
+                struct cpu_mask scope_cpus = topology_level_mask(cpu, scope);
+                struct thread *self = thread_get_current();
+                valid = cpu_mask_subset(&self->allowed_cpus, &scope_cpus);
+            }
+        }
+
+        if (caller & TOPC_IRQ)
+            valid = valid || (irq_in_interrupt() || irq_in_nmi());
+
+        return valid;
+    }
+
+    return true;
 }

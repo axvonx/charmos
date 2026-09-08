@@ -22,8 +22,7 @@ SCHEDULER_PERIODIC_WORK_REGISTER_PER_PERIOD(climb_per_period_hook,
 LOG_SITE_DECLARE(climb, .flags = LOG_SITE_PRINT | LOG_SITE_DEFAULT,
                  .capacity = LOG_SITE_CAPACITY_DEFAULT,
                  .enabled_mask = CLIMB_FLAGS,
-                 .dump_opts = ((struct log_dump_options){.show_tid = true,
-                                                         .show_args = true}));
+                 .dump_opts = ((struct log_dump_options){.show_tid = true}));
 
 LOG_HANDLE_DECLARE_PRINT(climb);
 #define climb_log(lvl, fmt, ...)                                               \

@@ -173,7 +173,7 @@ static bool mutex_owner_running(struct mutex *mutex) {
 }
 
 static void mutex_sanity_check() {
-    kassert(irq_in_thread_context());
+    kassert(irq_not_in_interrupt());
     kassert(irql_get() <= IRQL_APC_LEVEL);
 }
 
@@ -190,6 +190,7 @@ void mutex_lock_subclass_internal(struct mutex *mutex, unsigned int subclass,
     /* easy peasy nothing to do */
     if (mutex_try_lock(mutex, current_thread)) {
         mutex_chk_locked(&chk_state);
+        crash_unwind_enter_mutex(mutex);
         return;
     }
 
@@ -275,6 +276,7 @@ void mutex_lock_subclass_internal(struct mutex *mutex, unsigned int subclass,
     /* hey ho! we got the mutex! */
     kassert(mutex_get_owner(mutex) == current_thread);
     mutex_chk_locked(&chk_state);
+    crash_unwind_enter_mutex(mutex);
 }
 
 void mutex_lock_internal(struct mutex *mutex,
@@ -300,6 +302,7 @@ void mutex_unlock_internal(struct mutex *mutex,
     mutex_chk_before_unlock(&chk_state, mutex, site);
     mutex_lock_word_unlock(mutex);
     mutex_chk_unlocked(&chk_state);
+    crash_unwind_exit_mutex(mutex);
 
     /* no turnstile :) */
     if (!ts) {

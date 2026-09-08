@@ -56,7 +56,7 @@ static inline void percpu_rc_get(struct percpu_rc *ref) {
 
     if (likely(percpu_rc_is_percpu(pcpu))) {
         int64_t *counters = (int64_t *) (pcpu & PERCPU_RC_PTR_MASK);
-        counters[smp_core_id()]++;
+        counters[smp_id(TOPC_NONE)]++;
     } else {
         atomic_fetch_add_explicit(&ref->count, 1, memory_order_relaxed);
     }
@@ -70,7 +70,7 @@ static inline void percpu_rc_put(struct percpu_rc *ref) {
 
     if (likely(percpu_rc_is_percpu(pcpu))) {
         int64_t *counters = (int64_t *) (pcpu & PERCPU_RC_PTR_MASK);
-        counters[smp_core_id()]--;
+        counters[smp_id(TOPC_NONE)]--;
         rcu_read_unlock();
     } else {
         rcu_read_unlock();
@@ -89,7 +89,7 @@ static inline bool percpu_rc_tryget(struct percpu_rc *ref) {
 
     if (likely(percpu_rc_is_percpu(pcpu))) {
         int64_t *counters = (int64_t *) (pcpu & PERCPU_RC_PTR_MASK);
-        counters[smp_core_id()]++;
+        counters[smp_id(TOPC_NONE)]++;
         rcu_read_unlock();
         return true;
     }
@@ -111,7 +111,7 @@ static inline bool percpu_rc_tryget_live(struct percpu_rc *ref) {
 
     if (likely(percpu_rc_is_percpu(pcpu))) {
         int64_t *counters = (int64_t *) (pcpu & PERCPU_RC_PTR_MASK);
-        counters[smp_core_id()]++;
+        counters[smp_id(TOPC_NONE)]++;
         rcu_read_unlock();
         return true;
     }

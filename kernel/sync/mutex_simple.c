@@ -138,7 +138,7 @@ void mutex_simple_reinit_chk(struct mutex_simple *m,
 #endif /* DEBUG_LOCK_CHK */
 
 static void mutex_simple_sanity_check(void) {
-    kassert(irq_in_thread_context());
+    kassert(irq_not_in_interrupt());
     kassert(irql_get() <= IRQL_APC_LEVEL);
 }
 

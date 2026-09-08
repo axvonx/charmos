@@ -8,7 +8,7 @@ static atomic_uint left = 0;
 static atomic_bool at_least_one_migrated = false;
 
 static void sched_push_try(void *) {
-    while (smp_core_id() == 0 && !atomic_load(&at_least_one_migrated))
+    while (smp_id(TOPC_NONE) == 0 && !atomic_load(&at_least_one_migrated))
         scheduler_yield();
 
     atomic_fetch_sub(&left, 1);

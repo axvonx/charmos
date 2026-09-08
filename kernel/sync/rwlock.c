@@ -168,7 +168,7 @@ void rw_lock_internal(struct rwlock *lock, enum rwlock_acquire_type acq_type,
     kassert(acq_type == RWLOCK_ACQUIRE_READ ||
             acq_type == RWLOCK_ACQUIRE_WRITE);
 
-    kassert(irq_in_thread_context());
+    kassert(irq_not_in_interrupt());
     kassert(irql_get() <= IRQL_APC_LEVEL);
 
 #ifdef DEBUG_LOCK_CHK
@@ -202,6 +202,7 @@ void rw_lock_internal(struct rwlock *lock, enum rwlock_acquire_type acq_type,
         if (checked_deep)
             lock_chk_acquired(&token);
 #endif
+        crash_unwind_enter_rwlock(lock);
         return;
     }
 
@@ -295,6 +296,7 @@ void rw_lock_internal(struct rwlock *lock, enum rwlock_acquire_type acq_type,
     if (checked_deep)
         lock_chk_acquired(&token);
 #endif
+    crash_unwind_enter_rwlock(lock);
 }
 
 /* return the number of readers we want to wake,
@@ -357,7 +359,7 @@ static uintptr_t rwlock_unlock_get_val_to_sub(struct rwlock *lock) {
 }
 
 void rw_unlock_internal(struct rwlock *lock, const struct lock_chk_site *site) {
-    kassert(irq_in_thread_context());
+    kassert(irq_not_in_interrupt());
     kassert(irql_get() <= IRQL_APC_LEVEL);
 
 #ifdef DEBUG_LOCK_CHK
@@ -457,6 +459,7 @@ void rw_unlock_internal(struct rwlock *lock, const struct lock_chk_site *site) {
     if (checked_deep)
         lock_chk_released(&token);
 #endif /* DEBUG_LOCK_CHK */
+    crash_unwind_exit_rwlock(lock);
 
     thread_unboost_self();
 }

@@ -254,3 +254,12 @@ register_run_target(
     stdio
     -no-shutdown
     -no-reboot)
+register_run_target(
+    tests-debug
+    NDJSON
+    -nographic
+    -s
+    -serial
+    mon:stdio
+    -no-shutdown
+    -no-reboot)

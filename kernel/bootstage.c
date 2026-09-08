@@ -55,7 +55,7 @@ static bool bootstage_taken(struct bootstage_condition_entry *ent,
     case BOOTSTAGE_CONDITION_LT: return bs < ebs;
     case BOOTSTAGE_CONDITION_GE: return bs >= ebs;
     case BOOTSTAGE_CONDITION_GT: return bs > ebs;
-    default: kassert_unreachable("invalid bootstage_condition_entry condition");
+    default: unreachable("invalid bootstage_condition_entry condition");
     }
 }
 

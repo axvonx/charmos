@@ -195,8 +195,10 @@ struct nightmare_progress_counter {
 PERCPU_DEFINE(nightmare_progress, struct nightmare_progress_counter);
 
 static inline void nightmare_progress_tick(void) {
-    atomic_fetch_add_explicit(&PERCPU_PTR(nightmare_progress)->count, 1,
-                              memory_order_relaxed);
+    /* No contract enforced at this level, tests do whatever,
+     * this is a heuristic anyways */
+    atomic_fetch_add_explicit(&PERCPU_PTR(TOPC_NONE, nightmare_progress)->count,
+                              1, memory_order_relaxed);
 }
 
 #define NIGHTMARE_PROGRESS() nightmare_progress_tick()

@@ -367,7 +367,7 @@ static void setup_new_rt_scheduler(struct rt_scheduler *rts,
     kassert(!rts->failed_internal);
     rts->mapping_source = rtm;
     log_trace(rts->log_site, &rts->log_handle, "rts %p setting up by %zu", rts,
-              smp_core_id());
+              smp_id(TOPC_IRQL));
 }
 
 /* On NUMA systems, we'll iterate to the next closest node
@@ -402,15 +402,15 @@ out:
 }
 
 static inline bool check_active(struct rt_scheduler_mapping *rtm) {
-    return cpu_mask_test_atomic(&rtm->active, smp_core_id());
+    return cpu_mask_test_atomic(&rtm->active, smp_id(TOPC_IRQL));
 }
 
 static inline void mark_active(struct rt_scheduler_mapping *rtm) {
-    cpu_mask_set_atomic(&rtm->active, smp_core_id());
+    cpu_mask_set_atomic(&rtm->active, smp_id(TOPC_IRQL));
 }
 
 static inline void unmark_active(struct rt_scheduler_mapping *rtm) {
-    cpu_mask_clear_atomic(&rtm->active, smp_core_id());
+    cpu_mask_clear_atomic(&rtm->active, smp_id(TOPC_IRQL));
 }
 
 static inline void clear_switch_and_post(struct rt_scheduler_percpu *rts,
@@ -438,17 +438,18 @@ void rt_scheduler_switch() {
     bool put_into = false;
 
     struct rt_scheduler_mapping *curr = pcpu->active_mapping;
-    struct rt_scheduler_mapping *next = rt_lookup_mapping(into, smp_core());
+    struct rt_scheduler_mapping *next =
+        rt_lookup_mapping(into, smp_core(TOPC_IRQL));
     bool next_exists = next->rts;
     rt_sched_trace(
         "CPU %zu wants to switch from mapping %zu to mapping %zu (exists: %d)",
-        smp_core_id(), curr->id, next->id, next_exists);
+        smp_id(TOPC_IRQL), curr->id, next->id, next_exists);
 
     if (curr == next) {
         /* No switch needed, just signal the waiting thread and return */
         rt_sched_trace(
             "No switch needed for CPU %zu, already on the right mapping",
-            smp_core_id());
+            smp_id(TOPC_IRQL));
 
         clear_switch_and_post(pcpu, err);
         spin_unlock(&rt_global.switch_lock, girql);
@@ -472,7 +473,7 @@ void rt_scheduler_switch() {
      * a safe place to get migrated to. If they DO NOT, then
      * we FAIL the migration with IMPOSSIBLE
      */
-    kassert(cpu_mask_test(&curr->active, smp_core_id()));
+    kassert(cpu_mask_test(&curr->active, smp_id(TOPC_IRQL)));
     bool only_cpu = cpu_mask_popcount(&curr->active) == 1;
 
     bool can_switch = true;
@@ -519,13 +520,13 @@ void rt_scheduler_switch() {
     struct rt_scheduler *next_rts = NULL;
 
     if (donate)
-        locked_list_add(&rt_global.sch_pool[domain_local_id()],
+        locked_list_add(&rt_global.sch_pool[domain_local_id(TOPC_IRQL)],
                         &curr->rts->list);
 
     /* Switch out is completed */
     if (need_new) {
         /* Get a new one, nothing exists for this mapping */
-        next_rts = get_new_rt_scheduler(domain_local_id());
+        next_rts = get_new_rt_scheduler(domain_local_id(TOPC_IRQL));
     } else {
         next_rts = next->rts;
     }

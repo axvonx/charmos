@@ -7,7 +7,7 @@
 #include "sch/internal.h"
 
 static inline bool safe_to_exec_apcs(void) {
-    if (irql_get() != IRQL_PASSIVE_LEVEL || !irq_in_thread_context())
+    if (irql_get() != IRQL_PASSIVE_LEVEL || !irq_not_in_interrupt())
         return false;
 
     struct thread *curr = thread_get_current();

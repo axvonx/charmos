@@ -4,6 +4,7 @@
 #include <mem/alloc_or_die.h>
 #include <mem/buddy.h>
 #include <mem/numa.h>
+#include <mem/page_alloc.h>
 #include <mem/pmm.h>
 #include <mem/vmm.h>
 #include <sch/sched.h>
@@ -139,29 +140,27 @@ static void domain_buddy_init(struct domain_buddy *dom) {
 }
 
 static void *alloc_up(size_t size) {
-    return kmalloc(PAGE_ALIGN_UP(size), ALLOC_FLAGS_ZERO);
+    return alloc_or_die(
+        kmalloc_pages(PAGES_NEEDED_FOR(size), ALLOC_FLAGS_ZERO));
 }
 
 static void domain_structs_init(struct domain_buddy *dom, size_t arena_capacity,
                                 size_t fq_capacity,
                                 struct domain *core_domain) {
     dom->domain = core_domain;
-    dom->free_area = alloc_or_die(
-        alloc_up(sizeof(struct buddy_free_area) * BUDDY_MAX_ORDER));
+    dom->free_area = alloc_up(sizeof(struct buddy_free_area) * BUDDY_MAX_ORDER);
 
-    dom->zonelist.entries = alloc_or_die(
-        alloc_up(sizeof(struct domain_zonelist_entry) * global.domain_count));
+    dom->zonelist.entries =
+        alloc_up(sizeof(struct domain_zonelist_entry) * global.domain_count);
 
-    dom->arenas =
-        alloc_or_die(alloc_up(sizeof(struct domain_arena *) * dom->core_count));
+    dom->arenas = alloc_up(sizeof(struct domain_arena *) * dom->core_count);
 
     core_domain->domain_buddy = dom;
     for (size_t i = 0; i < dom->core_count; i++) {
-        dom->arenas[i] = alloc_or_die(alloc_up(sizeof(struct domain_arena)));
+        dom->arenas[i] = alloc_up(sizeof(struct domain_arena));
 
         struct domain_arena *this = dom->arenas[i];
-        this->pages =
-            alloc_or_die(alloc_up(sizeof(struct page *) * arena_capacity));
+        this->pages = alloc_up(sizeof(struct page *) * arena_capacity);
 
         this->head = 0;
         this->tail = 0;
@@ -175,10 +174,10 @@ static void domain_structs_init(struct domain_buddy *dom, size_t arena_capacity,
             global.cores[i]->domain_arena = this;
     }
 
-    dom->free_queue = alloc_or_die(alloc_up(sizeof(struct domain_free_queue)));
+    dom->free_queue = alloc_up(sizeof(struct domain_free_queue));
 
     size_t fq_size = sizeof(*dom->free_queue->queue) * fq_capacity;
-    dom->free_queue->queue = alloc_or_die(alloc_up(fq_size));
+    dom->free_queue->queue = alloc_up(fq_size);
 
     dom->free_queue->head = 0;
     dom->free_queue->tail = 0;

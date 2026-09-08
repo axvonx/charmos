@@ -3,13 +3,21 @@
 #include <asm.h>
 #include <compiler.h>
 #include <linker/symbols.h>
+#include <sch/irql.h>
+#include <setjmp.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <structures/list.h>
 #include <time/time.h>
 #include <types/types.h>
 
+struct spinlock;
+struct qspinlock;
+struct rwlock;
+struct mutex;
+struct thread;
 struct irq_context;
 
 #define CRASH_REG_COUNT 20
@@ -66,6 +74,43 @@ enum crash_format_flags {
     CRASH_FMT_MINIMAL = CRASH_FMT_RAW_SERIAL | CRASH_FMT_NDJSON,
 };
 
+enum crash_hook_flags {
+    CRASH_HOOK_DEFAULT = 0,
+    CRASH_HOOK_FACILITY = 1 << 0, /* Facility granularity.
+                                   * This means that the crash_code the
+                                   * crash_hook contains is only checked for the
+                                   * upper word facility
+                                   */
+
+    CRASH_HOOK_NO_UNWIND = 1 << 1, /* By default, the crash handler will make
+                                    * a best-effort attempt to unwind: it'll
+                                    * try to safely drop locks, exit RCU
+                                    * read-side critical sections, although
+                                    * memory may still leak (this is dependent
+                                    * on the facility implementation).
+                                    *
+                                    * NO_UNWIND allows this behavior to be
+                                    * skipped. This is because in certain cases,
+                                    * the unwinding cannot happen (e.g. lock
+                                    * checking is disabled), and also because
+                                    * the stale state not unwinding
+                                    * leaves can be used as a postmortem
+                                    * for state verification.
+                                    */
+
+};
+
+enum crash_unwind_type {
+    CRASH_UNWIND_NONE, /* should not be reachable */
+    CRASH_UNWIND_RCU,
+    CRASH_UNWIND_MUTEX,
+    CRASH_UNWIND_RWLOCK,
+    CRASH_UNWIND_SPINLOCK,
+    CRASH_UNWIND_QSPINLOCK,
+
+    CRASH_UNWIND_MAX,
+};
+
 struct crash_payload {
     enum crash_code code;
     void *data;
@@ -77,10 +122,105 @@ struct crash_facility {
     uint16_t prefix;
     const char *name;
     const char *desc;
+    uint16_t hookable_threshold; /* We use this to state that if the delta
+                                  * >= this, we treat it as hookable. So,
+                                  * if it's left unset, it'll be 0 and
+                                  * all codes are hookable. We do this
+                                  * because setting some high bit can cause
+                                  * the enum to count funny as it would
+                                  * bump up from there
+                                  *
+                                  * this is basically "First hookable code"
+                                  */
     const char *(*const to_str)(uint16_t delta);
     void (*const dump)(uint16_t delta, struct crash_payload pl);
 
     void (*const emit_ndjson)(uint16_t delta, struct crash_payload pl);
+};
+
+/* The idea here:
+ *
+ * Each thread has a fixed pool of unwind nodes, with a list that stores
+ * the currently active nodes, which are unwound in LIFO order.
+ *
+ * The reason why it's a pool and not a stack is because you can have code
+ * such as
+ *
+ * mutex_lock(&lock);
+ * rcu_read_lock();
+ *
+ * mutex_unlock(&lock);
+ * rcu_read_unlock();
+ *
+ * and with a naive stack, the semantics break here/become tricky because
+ * the thread would have to reorganize the stack, whereas a list_head
+ * can just be yanked out of the middle.
+ *
+ * Thus, the unwind node enqueue path is:
+ *
+ * (1) try to reserve one
+ * (2) list_add_tail it
+ *
+ * And dequeue becomes:
+ *
+ * (1) find the pointer to the current thing in question
+ * (2) dequeue it
+ *
+ * RCU is even simpler: the first rcu_read_lock gets a node,
+ * and every subsequent lock bumps a counter, dec'ing the counter
+ * upon unlock, and the crash path simply rcu_read_unlock's it
+ * that many times.
+ */
+
+struct crash_unwind_node_data {
+    uintptr_t arg;
+    union {
+        void *ptr;
+        size_t rcu_lock_times;
+        enum irql irql;
+        uintptr_t raw;
+    };
+};
+
+struct crash_unwind_node {
+    enum crash_unwind_type type;
+    struct list_head list;
+    struct crash_unwind_node_data data;
+};
+
+#define CRASH_UNWIND_NODES 128
+struct crash_unwind_perthread {
+    struct list_head free_list;
+    struct list_head in_use; /* LIFO */
+    struct crash_unwind_node nodes[CRASH_UNWIND_NODES];
+};
+
+struct crash_perthread {
+    struct crash_unwind_perthread unwind;
+    struct list_head crash_hooks; /* struct crash_hook */
+    bool unwinding;
+    bool in_hook;
+    jmp_buf env;
+};
+
+/*
+ * The idea of crash hooks:
+ *
+ * A hook can hook into a specific code, which is checked
+ * against a facility to verify if it is hookable.
+ *
+ * They are hooked PER-THREAD, so as to not introduce strange
+ * non-determinism bugs and the chance that the crash hook
+ * registration path itself can crash (would be problematic)
+ * due to synchronization violations.
+ *
+ * CRASH_CODE_GENERIC is not hookable
+ */
+struct crash_hook {
+    char *name;
+    struct list_head list;
+    enum crash_code code;
+    enum crash_source source_mask;
 };
 
 struct crash_context {
@@ -145,6 +285,20 @@ const char *crash_code_from_facility_to_str(enum crash_code code);
 __noreturn void crash_nmi_handoff(void *p, struct irq_context *ctx);
 void debug_print_stack(void);
 void crash_facility_printf(const char *fmt, ...);
+void crash_perthread_init(struct thread *t);
+void crash_unwind(void);
+
+/* Enter/exit pairs */
+void crash_unwind_enter_rcu(void);
+void crash_unwind_exit_rcu(void);
+void crash_unwind_enter_mutex(struct mutex *m);
+void crash_unwind_exit_mutex(struct mutex *m);
+void crash_unwind_enter_rwlock(struct rwlock *r);
+void crash_unwind_exit_rwlock(struct rwlock *r);
+void crash_unwind_enter_spinlock(struct spinlock *s, enum irql old);
+void crash_unwind_exit_spinlock(struct spinlock *s);
+void crash_unwind_enter_qspinlock(struct qspinlock *q, enum irql old);
+void crash_unwind_exit_qspinlock(struct qspinlock *q);
 
 static inline void qemu_exit(int code) {
     outb(0xf4, (uint8_t) code);

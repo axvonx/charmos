@@ -71,11 +71,12 @@ LINKER_SECTION_DEFINE(struct perdomain_descriptor, perdomain_desc);
 #define PERDOMAIN_READ_FOR_DOMAIN(name, d)                                     \
     (*((typeof(__perdomain_##name) *) PERDOMAIN_PTR_FOR_DOMAIN(name, d)))
 
-#define PERDOMAIN_PTR(name) PERDOMAIN_PTR_FOR_DOMAIN(name, domain_local_id())
-#define PERDOMAIN_READ(name)                                                   \
-    (*((typeof(__perdomain_##name) *) PERDOMAIN_PTR(name)))
+#define PERDOMAIN_PTR(clr, name)                                               \
+    PERDOMAIN_PTR_FOR_DOMAIN(name, domain_local_id(clr))
+#define PERDOMAIN_READ(clr, name)                                              \
+    (*((typeof(__perdomain_##name) *) PERDOMAIN_PTR(clr, name)))
 
-#define PERDOMAIN_WRITE(name, val) (PERDOMAIN_READ(name) = (val))
+#define PERDOMAIN_WRITE(clr, name, val) (PERDOMAIN_READ(clr, name) = (val))
 
 #define perdomain_for_each_internal(name, var, domain)                         \
     for (domain_id_t domain = 0; domain < global.domain_count; domain++)       \

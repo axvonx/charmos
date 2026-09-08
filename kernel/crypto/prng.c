@@ -10,14 +10,14 @@ struct prng_core {
 };
 
 PERCPU_DECLARE(pcs, struct prng_core, NULL);
-#define prng_core_state PERCPU_READ(pcs)
+#define prng_core_state PERCPU_READ(TOPC_IRQL, pcs)
 
 static void prng_seed_core(uint64_t seed) {
     const char *sigma = "expand 32-byte k";
     uint8_t key[32];
 
-    uint64_t tsc = smp_core()->last_tsc;
-    uint32_t core_id = smp_core()->id;
+    uint64_t tsc = smp_core(TOPC_IRQL)->last_tsc;
+    uint32_t core_id = smp_id(TOPC_IRQL);
 
     for (int i = 0; i < 4; i++) {
         key[i * 8 + 0] = (seed >> (i * 8 + 0)) & 0xff;
@@ -85,6 +85,7 @@ static void chacha20_generate_block(uint8_t out[64], uint32_t state[16]) {
 }
 
 uint64_t prng_next(void) {
+    enum irql irql = irql_raise(IRQL_HIGH_LEVEL);
     if (prng_core_state.pos >= 64) {
         chacha20_generate_block(prng_core_state.buffer, prng_core_state.state);
         prng_core_state.state[12]++;
@@ -95,11 +96,14 @@ uint64_t prng_next(void) {
     memcpy(&val, prng_core_state.buffer + prng_core_state.pos,
            sizeof(uint64_t));
     prng_core_state.pos += 8;
+    irql_lower(irql);
     return val;
 }
 
 void prng_seed(uint64_t seed) {
+    enum irql irql = irql_raise(IRQL_HIGH_LEVEL);
     if (seed == 0)
-        seed = smp_core()->last_tsc;
+        seed = smp_core(TOPC_IRQL)->last_tsc;
     prng_seed_core(seed);
+    irql_lower(irql);
 }

@@ -140,14 +140,14 @@ static inline void pt_walk_enter(void) {
     if (global.current_bootstage >= BOOTSTAGE_MID_MP) {
         uint64_t e =
             atomic_load_explicit(&global.pt_epoch, memory_order_acquire);
-        atomic_store_explicit(&smp_core()->pt_seen_epoch, e,
+        atomic_store_explicit(&smp_core(TOPC_IRQL)->pt_seen_epoch, e,
                               memory_order_release);
     }
 }
 
 static inline void pt_walk_exit(void) {
     if (global.current_bootstage >= BOOTSTAGE_MID_MP) {
-        atomic_store_explicit(&smp_core()->pt_seen_epoch, UINT64_MAX,
+        atomic_store_explicit(&smp_core(TOPC_IRQL)->pt_seen_epoch, UINT64_MAX,
                               memory_order_release);
     }
 }
@@ -175,11 +175,11 @@ void vmm_reclaim_page_tables(void) {
     if (global.current_bootstage < BOOTSTAGE_LATE)
         return;
 
-    if (smp_core()->reclaiming_page_tables)
+    if (smp_read(TOPC_IRQL, reclaiming_page_tables))
         return;
 
     kassert(irql_get() == IRQL_DISPATCH_LEVEL);
-    smp_core()->reclaiming_page_tables = true;
+    smp_write(TOPC_IRQL, reclaiming_page_tables, true);
 
     uint64_t min_epoch = UINT64_MAX;
     struct core *cpu;
@@ -217,7 +217,7 @@ void vmm_reclaim_page_tables(void) {
     }
 
 out:
-    smp_core()->reclaiming_page_tables = false;
+    smp_write(TOPC_IRQL, reclaiming_page_tables, false);
 }
 
 uintptr_t vmm_make_user_pml4(void) {
@@ -678,6 +678,7 @@ enum errno vmm_map_aliased(vaddr_t virt, size_t len, paddr_t phys,
     uint64_t granule = pt_level_granule(parent_level);
     struct page_table *pml4 = kernel_pml4;
 
+    enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
     pt_walk_enter();
 
     enum errno err = ERR_OK;
@@ -696,8 +697,11 @@ enum errno vmm_map_aliased(vaddr_t virt, size_t len, paddr_t phys,
         for (int i = 0; i < built_count; i++)
             pmm_free_page(hhdm_ptr_to_paddr(built[i]));
 
+        irql_lower(irql);
         return err;
     }
+
+    irql_lower(irql);
 
     /* Fresh mappings over non-present entries, so no stale translation can
      * exist, although previously speculative walks may have cached */
@@ -796,6 +800,7 @@ enum errno vmm_unshare_path(vaddr_t virt, enum vmm_map_page_size leaf_size,
 
     tables[0] = kernel_pml4;
 
+    enum irql outer = irql_raise(IRQL_DISPATCH_LEVEL);
     pt_walk_enter();
 
     for (level = 0; level < leaf_level; level++) {
@@ -849,6 +854,9 @@ out:
         barrier_and_shootdown(vflags, virt);
 
     pt_walk_exit();
+
+    irql_lower(outer);
+
     return err;
 }
 
@@ -982,6 +990,7 @@ void vmm_unmap_page_internal(vaddr_t virt, enum vmm_flags vflags,
 
 static pte_t vmm_walk_leaf(struct page_table *root, vaddr_t virt,
                            int *out_level) {
+    enum irql irql = irql_raise(IRQL_HIGH_LEVEL);
     pt_walk_enter();
 
     struct page_table *table = root;
@@ -1028,6 +1037,8 @@ out:
 
     if (out_level)
         *out_level = level;
+
+    irql_lower(irql);
 
     return snap;
 }

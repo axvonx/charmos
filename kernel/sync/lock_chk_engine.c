@@ -28,7 +28,7 @@ static struct lock_chk_guard lock_chk_enter(void) {
         .irqs_enabled = are_interrupts_enabled(),
     };
     disable_interrupts();
-    guard.depth = PERCPU_PTR(lock_chk_recursion_depth);
+    guard.depth = PERCPU_PTR(TOPC_IFLAG, lock_chk_recursion_depth);
     if (*guard.depth != 0)
         panic("Recursive lock validator entry");
     *guard.depth = 1;
@@ -53,7 +53,7 @@ lock_chk_validate_acquire(const struct lock_chk_acquire_request *request,
     if (request->type == LOCK_CHK_TYPE_MUTEX ||
         request->type == LOCK_CHK_TYPE_MUTEX_SIMPLE ||
         request->type == LOCK_CHK_TYPE_RWLOCK) {
-        if (request->in_nmi || request->in_irq || !irq_in_thread_context() ||
+        if (request->in_nmi || request->in_irq || irq_in_interrupt() ||
             request->prev_irql > IRQL_APC_LEVEL)
             return LOCK_CHK_RESULT_BAD_CONTEXT;
     } else {
@@ -62,7 +62,7 @@ lock_chk_validate_acquire(const struct lock_chk_acquire_request *request,
             return LOCK_CHK_RESULT_BAD_CONTEXT;
 
         if (!request->irq_safe && !request->raw_operation) {
-            if (request->in_irq || !irq_in_thread_context())
+            if (request->in_irq || irq_in_interrupt())
                 return LOCK_CHK_RESULT_BAD_CONTEXT;
         }
     }
@@ -257,7 +257,7 @@ void lock_chk_acquired(struct lock_chk_acquire_token *token) {
         .acquire_site = request->site,
         .acquire_tsc = rdtsc_ordered(),
         .prev_irql = request->prev_irql,
-        .cpu = smp_core_id(),
+        .cpu = smp_id(TOPC_IFLAG),
         .flags = request->flags,
         .type = request->type,
         .mode = request->mode,

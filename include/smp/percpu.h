@@ -71,10 +71,11 @@ LINKER_SECTION_DEFINE(struct percpu_descriptor, percpu_desc);
 #define PERCPU_READ_FOR_CPU(name, cpu)                                         \
     (*((typeof(__percpu_##name) *) PERCPU_PTR_FOR_CPU(name, cpu)))
 
-#define PERCPU_PTR(name) PERCPU_PTR_FOR_CPU(name, smp_core_id())
-#define PERCPU_READ(name) (*((typeof(__percpu_##name) *) PERCPU_PTR(name)))
+#define PERCPU_PTR(clr, name) PERCPU_PTR_FOR_CPU(name, smp_id(clr))
+#define PERCPU_READ(clr, name)                                                 \
+    (*((typeof(__percpu_##name) *) PERCPU_PTR(clr, name)))
 
-#define PERCPU_WRITE(name, val) (PERCPU_READ(name) = (val))
+#define PERCPU_WRITE(clr, name, val) (PERCPU_READ(clr, name) = (val))
 
 #define percpu_for_each_internal(name, var, cpu)                               \
     for (cpu_id_t cpu = 0; cpu < global.core_count; cpu++)                     \

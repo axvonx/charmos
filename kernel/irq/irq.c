@@ -79,15 +79,16 @@ void isr_standard_entry(irq_t vector, struct irq_context *irq_ctx) {
     if (!is_exception)
         kassert(old != IRQL_HIGH_LEVEL);
 
-    kassert(smp_core()->irq_entered_irql == IRQL_NONE, "Potential race");
+    /* All IRQ scoped, _raw is fine */
+    kassert(smp_core_raw()->irq_entered_irql == IRQL_NONE, "Potential race");
 
-    smp_core()->irq_entered_irql = old;
-    smp_core()->irq_stack_scratch_buf = scratch_buf;
+    smp_core_raw()->irq_entered_irql = old;
+    smp_core_raw()->irq_stack_scratch_buf = scratch_buf;
 
     irq_execute_vector_handlers(vector, irq_ctx);
 
-    smp_core()->irq_entered_irql = IRQL_NONE;
-    smp_core()->irq_stack_scratch_buf = NULL;
+    smp_core_raw()->irq_entered_irql = IRQL_NONE;
+    smp_core_raw()->irq_stack_scratch_buf = NULL;
 
     /* We explicitly exclude exceptions, since the context
      * might be anywhere, including within RCU itself */
@@ -135,7 +136,7 @@ void isr_standard_entry(irq_t vector, struct irq_context *irq_ctx) {
     if (scheduler_yield_nesting(thread_get_current()) != 0)
         return;
 
-    if (!scheduler_preemption_disabled() &&
+    if (!scheduler_preemption_disabled(TOPC_NONE) &&
         scheduler_mark_self_needs_resched(false)) {
         struct thread *curr = thread_get_current();
         if (curr)

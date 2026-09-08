@@ -1,5 +1,6 @@
 /* @title: Queued Spinlock (MCS-based 4-byte qspinlock) */
 #pragma once
+#include "console/crash.h"
 #include <asm.h>
 #include <bootstage.h>
 #include <compiler.h>
@@ -299,11 +300,6 @@ static inline bool qspin_is_locked(const struct qspinlock *lock) {
 #define QSPINLOCK_ASSERT_LOCKED(l)                                             \
     kassert(qspin_is_locked(l), "qspinlock not locked")
 
-static inline void qspinlock_restore_interrupts(bool enabled) {
-    if (enabled)
-        enable_interrupts();
-}
-
 static inline bool __warn_unused_result qspin_trylock_raw_internal(
     struct qspinlock *lock, const struct lock_chk_site *site) {
     qspinlock_note_use(lock, true);
@@ -412,7 +408,9 @@ static inline void qspin_unlock_internal(struct qspinlock *lock,
         lock_debug_spin_pop(lock, LOCK_CHK_TYPE_QSPIN);
 #endif
 
-    qspinlock_restore_interrupts(irqs_enabled);
+    crash_unwind_exit_qspinlock(lock);
+    if (irqs_enabled)
+        enable_interrupts();
 
     irql_lower(old_irql);
 }
@@ -445,7 +443,7 @@ qspin_lock_subclass_internal(struct qspinlock *lock, unsigned int subclass,
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
     qspin_lock_physical(lock);
 
-    bool irqs_enabled = are_interrupts_enabled();
+    kassert(are_interrupts_enabled());
     disable_interrupts();
 
 #ifdef DEBUG_LOCK_CHK
@@ -456,7 +454,8 @@ qspin_lock_subclass_internal(struct qspinlock *lock, unsigned int subclass,
         lock_chk_acquired(&token);
 #endif
 
-    qspinlock_restore_interrupts(irqs_enabled);
+    crash_unwind_enter_qspinlock(lock, irql);
+    enable_interrupts();
 
     return irql;
 }
@@ -498,6 +497,8 @@ static inline enum irql __warn_unused_result qspin_lock_irq_disable_internal(
         lock_chk_acquired(&token);
 #endif
 
+    crash_unwind_enter_qspinlock(lock, irql);
+
     return irql;
 }
 
@@ -526,7 +527,7 @@ static inline bool __warn_unused_result qspin_trylock_internal(
 
     *out = irql_raise(IRQL_DISPATCH_LEVEL);
     if (qspin_trylock_physical(lock)) {
-        bool irqs_enabled = are_interrupts_enabled();
+        kassert(are_interrupts_enabled()); /* Should not go false */
         disable_interrupts();
 #ifdef DEBUG_LOCK_CHK
         if (checked_shallow)
@@ -535,7 +536,8 @@ static inline bool __warn_unused_result qspin_trylock_internal(
         if (checked_deep)
             lock_chk_acquired(&token);
 #endif
-        qspinlock_restore_interrupts(irqs_enabled);
+        enable_interrupts();
+        crash_unwind_enter_qspinlock(lock, *out);
         return true;
     }
 
@@ -580,6 +582,7 @@ static inline bool __warn_unused_result qspin_trylock_irq_disable_internal(
             lock_chk_acquired(&token);
 #endif
 
+        crash_unwind_enter_qspinlock(lock, *out);
         return true;
     }
 

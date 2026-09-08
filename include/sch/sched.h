@@ -102,7 +102,7 @@ void scheduler_remove_thread(struct scheduler *sched, struct thread *t,
 void schedule(void);
 void k_sch_main(void *);
 void scheduler_idle_main(void *);
-void scheduler_yield();
+void scheduler_yield(void);
 
 void scheduler_period_start(struct scheduler *s, uint64_t now_ms);
 
@@ -137,11 +137,12 @@ struct scheduler_data {
 extern struct scheduler_data scheduler_data;
 
 static inline bool scheduler_self_in_resched() {
-    return atomic_load(&smp_core()->in_resched);
+    return smp_read(TOPC_NONE, in_resched);
 }
 
+/* Because this is always executed at or above DISPATCH it is fine */
 static inline bool scheduler_mark_self_in_resched(bool new) {
-    return atomic_exchange(&smp_core()->in_resched, new);
+    return atomic_exchange(&smp_core(TOPC_IRQL)->in_resched, new);
 }
 
 static inline bool scheduler_mark_core_needs_resched(struct core *c, bool new) {
@@ -149,7 +150,7 @@ static inline bool scheduler_mark_core_needs_resched(struct core *c, bool new) {
 }
 
 static inline bool scheduler_mark_self_needs_resched(bool new) {
-    return scheduler_mark_core_needs_resched(smp_core(), new);
+    return scheduler_mark_core_needs_resched(smp_core(TOPC_NONE), new);
 }
 
 static inline bool scheduler_mark_core_needs_run_dpcs(struct core *c,
@@ -158,17 +159,14 @@ static inline bool scheduler_mark_core_needs_run_dpcs(struct core *c,
 }
 
 static inline bool scheduler_mark_self_needs_run_dpcs(bool new) {
-    return scheduler_mark_core_needs_run_dpcs(smp_core(), new);
-}
-
-static inline bool scheduler_self_needs_resched(void) {
-    return atomic_load(&smp_core()->needs_resched);
+    return scheduler_mark_core_needs_run_dpcs(smp_core(TOPC_NONE), new);
 }
 
 /* this is only ever called when a thread is loaded */
 static inline void scheduler_mark_self_idle(bool new) {
     /* the old value is different from the new one */
-    struct core *c = smp_core();
+    struct core *c = smp_core(TOPC_IRQL); /* Only ever called from
+                                           * the reschedule routine */
 
     if (c->idle != new) {
         c->idle = new;
@@ -197,35 +195,14 @@ static inline bool scheduler_core_idle(struct core *c) {
 }
 
 static inline void scheduler_force_resched(struct scheduler *sched) {
-    if (sched->core_id == smp_core_id()) {
-        scheduler_mark_self_needs_resched(true);
-    } else {
-        struct core *other = global.cores[sched->core_id];
-        if (!other) {
-            ipi_send(sched->core_id, IRQ_SCHEDULER);
-            return;
-        }
-
-        scheduler_mark_core_needs_resched(other, true);
-        ipi_send(sched->core_id, IRQ_SCHEDULER);
-    }
+    scheduler_mark_core_needs_resched(global.cores[sched->core_id], true);
+    ipi_send(sched->core_id, IRQ_SCHEDULER);
 }
 
-static inline void scheduler_force_run_dpcs(struct scheduler *sched) {
-    if (sched->core_id == smp_core_id()) {
-        scheduler_mark_self_needs_run_dpcs(true);
-    } else {
-        struct core *other = global.cores[sched->core_id];
-        if (!other) {
-            ipi_send(sched->core_id, IRQ_DPC);
-            return;
-        }
-
-        scheduler_mark_core_needs_run_dpcs(other, true);
-        ipi_send(sched->core_id, IRQ_DPC);
-    }
+static inline void scheduler_force_run_dpcs(cpu_id_t cpu) {
+    ipi_send(cpu, IRQ_DPC);
 }
 
-static inline bool scheduler_preemption_disabled(void) {
-    return (smp_ctx() & CTX_PREEMPT_MASK) != 0;
+static inline bool scheduler_preemption_disabled(enum topology_caller c) {
+    return (smp_ctx(c) & SMP_CTX_PREEMPT_MASK) != 0;
 }

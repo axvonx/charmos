@@ -10,7 +10,7 @@
 struct spinlock tlb_shootdown_lock = SPINLOCK_INIT;
 
 static void tlb_shootdown_internal(void) {
-    size_t cpu = smp_core_id();
+    size_t cpu = smp_id(TOPC_IRQ);
     struct tlb_shootdown_cpu *c = &global.shootdown_data[cpu];
 
     uint64_t done = atomic_load_explicit(&c->done_gen, memory_order_relaxed);
@@ -74,13 +74,14 @@ void tlb_shootdown(uintptr_t addr, bool synchronous) {
     if (global.current_bootstage < BOOTSTAGE_MID_MP)
         return;
 
+    /* TODO: scale up */
     enum irql lirql = spin_lock(&tlb_shootdown_lock);
 
     uint64_t gen = atomic_fetch_add_explicit(&global.next_tlb_gen, 1,
                                              memory_order_relaxed) +
                    1;
 
-    size_t this_cpu = smp_core_id();
+    size_t this_cpu = smp_id(TOPC_IRQL);
 
     size_t i;
     for_each_cpu_id(i) {

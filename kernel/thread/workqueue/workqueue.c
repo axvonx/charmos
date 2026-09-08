@@ -30,7 +30,7 @@ enum workqueue_error workqueue_add_remote_oneshot(work_function func,
 
 enum workqueue_error workqueue_add_local_oneshot(work_function func,
                                                  struct work_args args) {
-    struct workqueue *queue = global.workqueues[smp_core_id()];
+    struct workqueue *queue = global.workqueues[smp_id_raw()];
     return workqueue_enqueue_oneshot(queue, func, args);
 }
 
@@ -38,13 +38,13 @@ static struct workqueue *find_optimal_domain_wq(void) {
     struct core *pos;
 
     struct workqueue *optimal =
-        global.workqueues[(smp_core_id() + 1) % global.core_count];
+        global.workqueues[(smp_id_raw() + 1) % global.core_count];
 
-    struct workqueue *local = global.workqueues[smp_core_id()];
+    struct workqueue *local = global.workqueues[smp_id_raw()];
 
     size_t least_loaded = WORKQUEUE_NUM_WORKS(optimal);
 
-    domain_for_each_core_local(pos) {
+    domain_for_each_core_local(TOPC_NONE, pos) {
         struct workqueue *queue = global.workqueues[pos->id];
         size_t load = WORKQUEUE_NUM_WORKS(queue);
 
@@ -74,7 +74,7 @@ enum workqueue_error workqueue_add(struct work *work) {
 }
 
 enum workqueue_error workqueue_add_local(struct work *work) {
-    struct workqueue *queue = global.workqueues[smp_core_id()];
+    struct workqueue *queue = global.workqueues[smp_id_raw()];
     return workqueue_enqueue(queue, work);
 }
 

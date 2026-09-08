@@ -274,7 +274,7 @@ static void timer_recalc_next_expiration(struct timer_base *base) {
 
 static struct timer_base *timer_lock_base(struct timer *timer,
                                           enum irql *irql) {
-    for (;;) {
+    while (true) {
         cpu_id_t cpu = timer_cpu_get(timer);
         struct timer_base *base = timer_base_for_cpu(timer->flags, cpu);
 
@@ -305,8 +305,12 @@ static void timer_base_run(struct timer_base *base, enum irql *irql) {
 
 void timer_add_on(struct timer *timer, cpu_id_t cpu) {
     enum irql irql;
-    timer_cpu_set(timer, cpu);
 
+    /* Not pinned: set it to what's provided */
+    if (!(timer->flags & TIMER_FLAG_PINNED))
+        timer_cpu_set(timer, cpu);
+
+    cpu = timer_cpu_get(timer);
     struct timer_base *base = timer_base_for_cpu(timer->flags, cpu);
     irql = spin_lock_irq_disable(&base->lock);
 
@@ -316,7 +320,10 @@ void timer_add_on(struct timer *timer, cpu_id_t cpu) {
 }
 
 void timer_add(struct timer *timer) {
-    timer_add_on(timer, smp_core_id());
+    /* Safe to call the _raw function here: we simply perform
+     * a read of the CPU ID and the caller enforces
+     * its own contracts wrt. this */
+    timer_add_on(timer, smp_id_raw());
 }
 
 void timer_add_local(struct timer *timer) {
@@ -391,6 +398,7 @@ bool timer_shutdown_sync(struct timer *timer) {
 }
 
 bool timer_modify(struct timer *timer, time_us_t new_exp) {
+    enum irql outer = irql_raise(IRQL_HIGH_LEVEL);
     enum irql irql;
     struct timer_base *base = timer_lock_base(timer, &irql);
 
@@ -402,9 +410,11 @@ bool timer_modify(struct timer *timer, time_us_t new_exp) {
             bitmap_clear(base->pending_map, idx);
         }
     } else if (!(timer->flags & TIMER_FLAG_PINNED) &&
-               timer_cpu_get(timer) != smp_core_id()) {
+
+               /* The lock being held verifies the IRQL */
+               timer_cpu_get(timer) != smp_id(TOPC_IRQL)) {
         spin_unlock(&base->lock, irql);
-        timer_cpu_set(timer, smp_core_id());
+        timer_cpu_set(timer, smp_id(TOPC_IRQL)); /* outer verifies this */
         base = timer_lock_base(timer, &irql);
     }
 
@@ -415,6 +425,7 @@ bool timer_modify(struct timer *timer, time_us_t new_exp) {
     spin_unlock(&base->lock, irql);
 
     timer_base_reprogram_hardware(cpu);
+    irql_lower(outer);
     return pending;
 }
 
@@ -443,6 +454,7 @@ bool timer_modify_pending(struct timer *timer, time_us_t new_exp) {
 }
 
 bool timer_modify_reduce(struct timer *timer, time_us_t new_exp) {
+    enum irql outer = irql_raise(IRQL_HIGH_LEVEL);
     enum irql irql;
     struct timer_base *base = timer_lock_base(timer, &irql);
 
@@ -459,9 +471,9 @@ bool timer_modify_reduce(struct timer *timer, time_us_t new_exp) {
             bitmap_clear(base->pending_map, idx);
         }
     } else if (!(timer->flags & TIMER_FLAG_PINNED) &&
-               timer_cpu_get(timer) != smp_core_id()) {
+               timer_cpu_get(timer) != smp_id(TOPC_IRQL)) {
         spin_unlock(&base->lock, irql);
-        timer_cpu_set(timer, smp_core_id());
+        timer_cpu_set(timer, smp_id(TOPC_IRQL)); /* outer */
         base = timer_lock_base(timer, &irql);
     }
 
@@ -472,20 +484,25 @@ bool timer_modify_reduce(struct timer *timer, time_us_t new_exp) {
     spin_unlock(&base->lock, irql);
 
     timer_base_reprogram_hardware(cpu);
+    irql_lower(outer);
     return pending;
 }
 
 void timer_base_reprogram_hardware(cpu_id_t cpu) {
-    if (cpu != smp_core_id()) {
+    enum irql outer = irql_raise(IRQL_HIGH_LEVEL);
+    if (cpu != smp_id(TOPC_IRQL)) {
         ipi_send(cpu, IRQ_TIMER);
+        irql_lower(outer);
         return;
     }
 
     struct timer_percpu *pcpu = PERCPU_PTR_FOR_CPU(timer_percpu, cpu);
     struct clock_evdev *ced = pcpu->active_evdev;
 
-    if (!ced || ced->state != CLOCK_EVDEV_STATE_ONESHOT)
+    if (!ced || ced->state != CLOCK_EVDEV_STATE_ONESHOT) {
+        irql_lower(outer);
         return;
+    }
 
     time_us_t next_us = TIME_US_MAX;
 
@@ -497,8 +514,10 @@ void timer_base_reprogram_hardware(cpu_id_t cpu) {
             MIN(next_us, pcpu->bases[TIMER_BASE_GLOBAL].next_expiration_us);
 
     /* TODO: _DEFERRED handling */
-    if (next_us == TIME_US_MAX || next_us == (time_us_t) -1)
+    if (next_us == TIME_US_MAX || next_us == (time_us_t) -1) {
+        irql_lower(outer);
         return;
+    }
 
     time_us_t now_us = time_get_us();
     time_ns_t delta_ns =
@@ -506,15 +525,16 @@ void timer_base_reprogram_hardware(cpu_id_t cpu) {
 
     CLAMP(delta_ns, ced->min_delta_ns, ced->max_delta_ns);
     ced->set_next_event(ced, delta_ns);
+    irql_lower(outer);
 }
 
 enum irq_result timer_isr(void *ctx, uint8_t vec, struct irq_context *rsp) {
     (void) ctx, (void) vec, (void) rsp;
-    cpu_id_t cpu = smp_core_id();
+    cpu_id_t cpu = smp_id(TOPC_IRQ);
     if (!PERCPU_READY(timer_percpu))
         return IRQ_HANDLED;
 
-    struct timer_percpu *pcpu = PERCPU_PTR(timer_percpu);
+    struct timer_percpu *pcpu = PERCPU_PTR(TOPC_IRQ, timer_percpu);
 
     for (int i = 0; i < TIMER_BASE_MAX; i++) {
         enum irql irql = spin_lock_irq_disable(&pcpu->bases[i].lock);

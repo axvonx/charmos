@@ -76,7 +76,7 @@ static void nightmare_liveness_watchdog_cb(struct watchdog_callback *cb) {
                                         memory_order_acquire);
     uint64_t progress = nightmare_progress_sum_irq();
     time_ms_t now = time_get_ms();
-    cpu_id_t cpu = smp_core_id();
+    cpu_id_t cpu = smp_id(TOPC_NONE); /* Heuristic */
 
     if (nightmare_liveness_eval(state, progress, now, quiesce, active, stop,
                                 cpu)) {

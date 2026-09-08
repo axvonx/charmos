@@ -136,12 +136,14 @@ static inline struct domain_buddy *domain_buddy_for_addr(paddr_t addr) {
     return NULL;
 }
 
+/* These are all fine, they're accessed in either
+ * pinned or non-preemptible ctx */
 static inline struct domain_buddy *domain_buddy_on_this_core(void) {
-    return smp_core()->domain->domain_buddy;
+    return smp_core(TOPC_IRQL | TOPC_PINNED)->domain->domain_buddy;
 }
 
 static inline struct domain_arena *domain_arena_on_this_core(void) {
-    return smp_core()->domain_arena;
+    return smp_core(TOPC_IRQL | TOPC_PINNED)->domain_arena;
 }
 
 static inline struct domain_free_queue *domain_free_queue_on_this_core(void) {
@@ -149,7 +151,7 @@ static inline struct domain_free_queue *domain_free_queue_on_this_core(void) {
 }
 
 static inline size_t *domain_rr_on_this_core(void) {
-    return &smp_core()->rr_current_domain;
+    return &smp_core(TOPC_IRQL | TOPC_PINNED)->rr_current_domain;
 }
 
 static inline void domain_stat_alloc(struct domain_buddy *d, bool remote,

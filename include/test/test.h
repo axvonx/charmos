@@ -351,7 +351,7 @@ static inline const char *test_tier_to_str(enum test_tier tier) {
     case TEST_TIER_SMOKE: return "smoke";
     case TEST_TIER_UNIT: return "unit";
     case TEST_TIER_INTEGRATION: return "integration";
-    default: kassert_unreachable();
+    default: unreachable();
     }
 }
 
@@ -360,7 +360,7 @@ static inline const char *test_tier_to_str_color(enum test_tier tier) {
     case TEST_TIER_SMOKE: return ANSI_GRAY "smoke";
     case TEST_TIER_UNIT: return ANSI_MAGENTA "unit";
     case TEST_TIER_INTEGRATION: return ANSI_YELLOW "integration";
-    default: kassert_unreachable();
+    default: unreachable();
     }
 }
 
@@ -369,7 +369,7 @@ static inline const char *test_result_to_str(enum test_result result) {
     case TEST_RESULT_OK: return ANSI_BLUE "ok" ANSI_RESET;
     case TEST_RESULT_FAILED: return ANSI_RED "failed" ANSI_RESET;
     case TEST_RESULT_SKIPPED: return ANSI_GRAY "skipped" ANSI_RESET;
-    default: kassert_unreachable();
+    default: unreachable();
     }
 }
 
@@ -389,6 +389,6 @@ test_skip_reason_to_str(enum test_skip_reason reason) {
     case TEST_SKIP_RAM_LOW: return "RAM low";
     case TEST_SKIP_UPSTREAM_FAILED: return "upstream failed";
     case TEST_SKIP_DISABLED: return "disabled";
-    default: kassert_unreachable();
+    default: unreachable();
     }
 }

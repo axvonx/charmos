@@ -765,6 +765,15 @@ struct slab *slab_for_ptr(void *ptr) {
     return (struct slab *) ALIGN_DOWN(vp, align);
 }
 
+bool kmalloc_ptr_in_slab_validate(void *ptr) {
+    vaddr_t vaddr = (vaddr_t) ptr;
+    bool in_slab = vaddr >= SLAB_HEAP_START && vaddr <= SLAB_HEAP_END;
+    bool in_page_alloc = page_alloc_vaddr_in_vas(vaddr);
+    kassert(in_slab || in_page_alloc, "invalid pointer");
+
+    return in_slab;
+}
+
 size_t ksize(void *ptr) {
     if (!ptr)
         return 0;
@@ -796,8 +805,6 @@ void *kmalloc_pages_raw(struct slab_domain *parent, stack_handle_t handle,
         vptr = page_alloc_demand(pages, flags, behavior);
     } else {
         vptr = page_alloc(pages, flags, behavior);
-        if (vptr && (flags & ALLOC_FLAG_ZERO_ON_ALLOC))
-            memset(vptr, 0, total_size);
     }
 
     if (!vptr)
@@ -835,6 +842,16 @@ static void *kmalloc_old(size_t size, enum alloc_flags flags) {
     return ptr;
 }
 
+void *kmalloc_pages(size_t n_pages, enum alloc_flags flags) {
+    void *ptr = kmalloc_pages_raw(NULL, NULL, n_pages * PAGE_SIZE,
+                                  ALLOC_FLAGS_DEFAULT, ALLOC_BEHAVIOR_NORMAL);
+
+    if ((flags & ALLOC_FLAG_ZERO_ON_ALLOC) && ptr)
+        memset(ptr, 0, n_pages * PAGE_SIZE);
+
+    return ptr;
+}
+
 void slab_free_page_hdr(struct slab_page_hdr *hdr, enum alloc_behavior bh) {
     uint32_t pages = hdr->pages;
     if (hdr->handle)
@@ -861,9 +878,10 @@ void kfree_old(void *ptr) {
     slab_free_addr_to_cache(ptr, ALLOC_BEHAVIOR_NORMAL);
 }
 
-void *kmalloc_pages(struct slab_domain *domain, stack_handle_t handle,
-                    size_t size, enum alloc_flags flags,
-                    enum alloc_behavior behavior) {
+static void *kmalloc_pages_internal(struct slab_domain *domain,
+                                    stack_handle_t handle, size_t size,
+                                    enum alloc_flags flags,
+                                    enum alloc_behavior behavior) {
     void *ret = kmalloc_pages_raw(domain, handle, size, flags, behavior);
 
     if (alloc_behavior_may_fault(behavior) &&
@@ -1176,7 +1194,7 @@ void *slab_alloc_retry(struct slab_domain *domain, stack_handle_t handle,
     /* ok now we have ran the emergency GC, let's try again... */
     if (!kmalloc_size_fits_in_slab(size)) {
         /* here, `domain` should be the local domain... */
-        return kmalloc_pages(domain, handle, size, flags, behavior);
+        return kmalloc_pages_internal(domain, handle, size, flags, behavior);
     } else {
         /* here, `domain` might be another domain */
 
@@ -1217,7 +1235,7 @@ void *kmalloc_new(size_t size, enum alloc_flags flags,
 
     /* this has its own path */
     if (!kmalloc_size_fits_in_slab(size)) {
-        ret = kmalloc_pages(local_dom, handle, size, flags, behavior);
+        ret = kmalloc_pages_internal(local_dom, handle, size, flags, behavior);
         goto exit;
     }
 
@@ -1275,6 +1293,8 @@ exit:
 }
 
 void *kmalloc_from_domain(domain_id_t domain, size_t size) {
+    enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
+
     size_t index = slab_size_to_index(size);
     struct slab_caches *cs =
         global.domains[domain]->slab_domain->caches[SLAB_TYPE_NONPAGEABLE_ZERO];
@@ -1282,6 +1302,8 @@ void *kmalloc_from_domain(domain_id_t domain, size_t size) {
     void *ret =
         slab_alloc(c, /*handle=*/NULL,
                    ALLOC_BEHAVIOR_NORMAL | SLAB_ALLOC_BEHAVIOR_FROM_ALLOC);
+
+    irql_lower(irql);
 
 #ifdef DEBUG_ASAN
     if (ret)

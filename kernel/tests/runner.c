@@ -100,12 +100,13 @@ static const char *test_tier_plain(enum test_tier t) {
 }
 
 LOG_SITE_DECLARE_PRINT(test_harness);
-LOG_HANDLE_DECLARE_PRINT(test_harness, .flags = LOG_PRINT | LOG_NO_NEWLINE);
+LOG_HANDLE_DECLARE_PRINT(test_harness,
+                         .flags = LOG_HANDLE_PRINT | LOG_HANDLE_NO_NEWLINE);
 
 LOG_SITE_DECLARE(test_ndjson, .flags = LOG_SITE_DEFAULT | LOG_SITE_NDJSON,
                  .capacity = LOG_SITE_CAPACITY_DEFAULT,
                  .dump_opts = LOG_DUMP_DEFAULT, .enabled_mask = LOG_SITE_ALL);
-LOG_HANDLE_DECLARE(test_ndjson, .flags = LOG_DEFAULT);
+LOG_HANDLE_DECLARE(test_ndjson, .flags = LOG_HANDLE_FLAGS_DEFAULT);
 
 #define test_ndjson_log(lvl, fmt, ...)                                         \
     log(LOG_SITE(test_ndjson), LOG_HANDLE(test_ndjson), lvl, fmt, ##__VA_ARGS__)
@@ -606,7 +607,6 @@ static void test_group_run(struct test_group *tg) {
             /* Modifiable by the test */
             struct log_dump_options dopts = {
                 .min_level = LOG_TRACE,
-                .show_args = true,
             };
 
             enum log_site_flags flags = LOG_SITE_NONE;
@@ -623,7 +623,6 @@ static void test_group_run(struct test_group *tg) {
             };
             tctx.site = alloc_or_die(log_site_create(opts));
             test_global.current_test = &tctx;
-            tctx.handle.msg = "test_handle";
             tctx.handle.print = test_handle_print;
             tctx.intensity = t->intensity;
             tctx.seed = !t->seed ? prng_next() : t->seed;
@@ -736,7 +735,7 @@ static void test_group_run(struct test_group *tg) {
                     color = ANSI_RED ANSI_BOLD;
                     status = "error";
                     break;
-                default: kassert_unreachable();
+                default: unreachable();
                 }
                 printf(" %s%s" ANSI_RESET " in " ANSI_BOLD "%zu" ANSI_RESET
                        " ms",

@@ -626,6 +626,7 @@ vaddr_t slab_chunks_alloc(struct slab_chunks *sc, struct slab_chunk **out);
 void slab_chunks_free(struct slab_chunks *sc, struct slab_chunk *chunk,
                       vaddr_t addr);
 void slab_chunks_init(struct slab_chunks *sc, struct slab_cache *parent);
+bool kmalloc_ptr_in_slab_validate(void *ptr);
 
 /* Debug checks */
 #ifdef DEBUG_SLAB_DEEP
@@ -676,12 +677,14 @@ static inline size_t slab_object_size(struct slab *slab) {
     return slab->parent_cache->obj_size;
 }
 
+/* IRQL_DISPATCH is guaranteed when entering the allocator */
 static inline struct slab_domain *slab_domain_local(void) {
-    return smp_core()->domain->slab_domain;
+    return smp_core(TOPC_IRQL)->domain->slab_domain;
 }
 
 static inline struct slab_percpu_cache *slab_percpu_cache_local(void) {
-    return slab_domain_local()->percpu_caches[smp_core()->domain_cpu_id];
+    return slab_domain_local()
+        ->percpu_caches[smp_core(TOPC_IRQL)->domain_cpu_id];
 }
 
 static inline void slab_list_del(struct slab *slab) {
@@ -779,15 +782,6 @@ static inline uint64_t slab_page_flags(enum slab_type type) {
 static inline bool slab_ptr_in_slab(void *ptr) {
     vaddr_t vaddr = (vaddr_t) ptr;
     return vaddr >= SLAB_HEAP_START && vaddr <= SLAB_HEAP_END;
-}
-
-static inline bool kmalloc_ptr_in_slab_validate(void *ptr) {
-    vaddr_t vaddr = (vaddr_t) ptr;
-    bool in_slab = vaddr >= SLAB_HEAP_START && vaddr <= SLAB_HEAP_END;
-    bool in_page_alloc = page_alloc_vaddr_in_vas(vaddr);
-    kassert(in_slab || in_page_alloc, "invalid pointer");
-
-    return in_slab;
 }
 
 static inline size_t slab_cache_pow2_order(struct slab_cache *sc) {

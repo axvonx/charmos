@@ -33,14 +33,6 @@ struct domain {
     struct cpu_mask cpu_mask;
 };
 
-static inline struct domain *domain_local(void) {
-    return smp_core()->domain;
-}
-
-static inline domain_id_t domain_local_id(void) {
-    return domain_local()->id;
-}
-
 void domain_init(void);
 struct cpu_mask *domain_create_cpu_mask(struct domain *domain);
 void domain_set_cpu_mask(struct cpu_mask *mask, struct domain *domain);
@@ -48,7 +40,21 @@ bool domain_idle(struct domain *domain);
 numa_node_t numa_node_for_cpu(cpu_id_t cpu);
 domain_id_t domain_for_cpu(cpu_id_t cpu);
 void domain_init_after_smp();
+void domain_caller_verify(enum topology_caller caller);
 void domain_dump(void);
+
+static inline struct domain *domain_local(enum topology_caller c) {
+    domain_caller_verify(c);
+
+    /* TOPOC_NONE is set here because technically it's not
+     * a big deal if we read the 'wrong CPU' since it's
+     * guaranteed that we're in a domain */
+    return smp_read(TOPC_NONE, domain);
+}
+
+static inline domain_id_t domain_local_id(enum topology_caller c) {
+    return domain_local(c)->id;
+}
 
 #define domain_for_each_domain(__dom)                                          \
     for (domain_id_t __i = 0;                                                  \
@@ -66,5 +72,5 @@ void domain_dump(void);
     for (domain_id_t __i = 0;                                                  \
          (__pos = __dom->cores[__i]->id), (__i < __dom->num_cores); __i++)
 
-#define domain_for_each_core_local(__pos)                                      \
-    domain_for_each_core(__pos, smp_core()->domain)
+#define domain_for_each_core_local(__clr, __pos)                               \
+    domain_for_each_core(__pos, smp_core(__clr)->domain)

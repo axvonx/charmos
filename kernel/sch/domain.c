@@ -163,8 +163,9 @@ void scheduler_domain_mark_self_idle(bool idle) {
     if (!global.scheduler_domains_ready)
         return;
 
-    struct core *c = smp_core();
-    size_t cpu = smp_core_id();
+    /* Caller upholds the contract */
+    struct core *c = smp_core(TOPC_IRQL);
+    size_t cpu = smp_id(TOPC_IRQL);
 
     for (size_t lvl = 0; lvl < TOPOLOGY_LEVEL_MAX; lvl++) {
         struct scheduler_domain *d = c->domains[lvl];

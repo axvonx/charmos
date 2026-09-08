@@ -72,10 +72,12 @@ void pernode_obj_init(void);
 #define PERNODE_READ_FOR_NODE(name, d)                                         \
     (*((typeof(__pernode_##name) *) PERNODE_PTR_FOR_NODE(name, d)))
 
-#define PERNODE_PTR(name) PERNODE_PTR_FOR_NODE(name, smp_core()->numa_node)
-#define PERNODE_READ(name) (*((typeof(__pernode_##name) *) PERNODE_PTR(name)))
+#define PERNODE_PTR(clr, name)                                                 \
+    PERNODE_PTR_FOR_NODE(name, smp_core(clr)->numa_node)
+#define PERNODE_READ(clr, name)                                                \
+    (*((typeof(__pernode_##name) *) PERNODE_PTR(clr, name)))
 
-#define PERNODE_WRITE(name, val) (PERNODE_READ(name) = (val))
+#define PERNODE_WRITE(clr, name, val) (PERNODE_READ(clr, name) = (val))
 
 #define pernode_for_each_internal(name, var, node)                             \
     for (node_id_t node = 0; node < global.node_count; node++)                 \

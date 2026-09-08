@@ -29,7 +29,7 @@ static struct list_head *chunk_list_for(struct slab_chunks *sc,
     switch (s) {
     case SLAB_CHUNK_PARTIAL: return &sc->partial_list;
     case SLAB_CHUNK_USED: return &sc->used_list;
-    default: kassert_unreachable("invalid slab chunk state");
+    default: unreachable("invalid slab chunk state");
     }
 }
 
@@ -124,7 +124,7 @@ static vaddr_t alloc_from(struct slab_chunks *chunks,
         }
     }
 
-    kassert_unreachable("alloc_from slab chunk should not fail");
+    unreachable("alloc_from slab chunk should not fail");
 }
 
 static void free_to(struct slab_chunks *chunks, struct slab_chunk *chunk,

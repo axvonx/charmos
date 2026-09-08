@@ -43,7 +43,7 @@ static void dpc_execute_all_in_queue(struct dpc_queue *dq) {
 }
 
 void dpc_drain_local(void) {
-    struct core *me = smp_core();
+    struct core *me = smp_core(TOPC_IRQL);
     if (me->in_resched)
         return;
 
@@ -106,14 +106,15 @@ bool dpc_enqueue_on_cpu(size_t cpu, struct dpc *d) {
     struct dpc_queue *dq = &dc->queue;
     dpc_queue_enqueue(dq, d);
 
-    scheduler_force_run_dpcs(global.schedulers[cpu]);
+    scheduler_force_run_dpcs(cpu);
 
     return true;
 }
 
 /* Convenience: enqueue on current cpu */
 bool dpc_enqueue_local(struct dpc *d) {
-    bool ret = dpc_enqueue_on_cpu(smp_core_id(), d);
+    /* Snapshot it */
+    bool ret = dpc_enqueue_on_cpu(smp_id_raw(), d);
     return ret;
 }
 

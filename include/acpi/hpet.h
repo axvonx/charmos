@@ -30,7 +30,9 @@ extern uint64_t hpet_fs_per_tick;
 
 #define HPET_TIMER_CONF_OFFSET(num) (0x100 + (num * 0x20))
 #define HPET_TIMER_COMPARATOR_OFFSET(num) (HPET_TIMER_CONF_OFFSET(num) + 0x8)
-#define HPET_CURRENT (smp_core_id() % hpet_timer_count)
+
+/* TODO: We need to start using the HPET and figure out a caller contract */
+#define HPET_CURRENT (smp_id_raw() % hpet_timer_count)
 
 #define HPET_IRQ_LINE 2
 

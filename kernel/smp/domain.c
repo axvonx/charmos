@@ -4,6 +4,7 @@
 #include <mem/alloc.h>
 #include <mem/alloc_or_die.h>
 #include <mem/numa.h>
+#include <mem/page.h>
 #include <sch/sched.h>
 #include <smp/domain.h>
 #include <stdbool.h>
@@ -30,8 +31,8 @@ static void init_global_domain(uint64_t domain_count) {
 
         /* We align this up to the page so that they can all be
          * migrated later on to pages on each domain... */
-        global.domains[i] = alloc_or_die(
-            kmalloc(PAGE_ALIGN_UP(sizeof(struct domain)), ALLOC_FLAGS_ZERO));
+        global.domains[i] = alloc_or_die(kmalloc_pages(
+            PAGES_NEEDED_FOR(sizeof(struct domain)), ALLOC_FLAGS_ZERO));
 
         global.domains[i]->id = i;
     }
@@ -219,8 +220,18 @@ domain_id_t domain_for_cpu(cpu_id_t cpu) {
             return d->id;
     }
 
-    kassert_unreachable();
+    unreachable();
 }
 
 MOVEALLOC_REGISTER_CALL(domain_move, domains_move, /* a = */ NULL,
                         /* b = */ NULL);
+
+void domain_caller_verify(enum topology_caller caller) {
+    struct topology_contract tct = {
+        .caller = caller,
+        .scope = TOPOLOGY_LEVEL_DOMAIN,
+    };
+
+    bool valid = topology_contract_verify(tct);
+    kassert(valid, "Caller 0x%lx was not satisfied", caller);
+}

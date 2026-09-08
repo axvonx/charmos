@@ -109,8 +109,10 @@ enum wake_reason condvar_wait_timeout(struct condvar *cv, struct spinlock *lock,
     condvar_prepare_wait(cv);
     cwcb->cookie = curr->wait_cookie;
     timer_init(&cwcb->timer, condvar_timeout_wakeup, cwcb);
+
+    /* TOPC_NONE because it is not imperative that we have the timer run here */
     cwcb->timer.flags =
-        TIMER_FLAG_IRQ | TIMER_FLAG_PINNED | TIMER_FLAG_CPU(smp_core_id());
+        TIMER_FLAG_IRQ | TIMER_FLAG_PINNED | TIMER_FLAG_CPU(smp_id(TOPC_NONE));
     timer_modify(&cwcb->timer, timer_delta_us(MS_TO_US(timeout_ms)));
 
     enum wake_reason reason = condvar_finish_wait(cv, lock, irql, out);

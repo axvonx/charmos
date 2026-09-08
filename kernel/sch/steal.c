@@ -73,7 +73,7 @@ static struct thread *steal_from_thread_rbt(struct scheduler *victim,
 
         /* we must first set the thread as `being_moved` before we
          * check if we can steal the thread... */
-        if (!scheduler_can_take_thread(smp_core_id(), target))
+        if (!scheduler_can_take_thread(smp_id(TOPC_IRQL), target))
             continue;
 
         rbt_delete(tree, node);
@@ -107,7 +107,7 @@ static struct thread *steal_from_special_threads(struct scheduler *victim,
     if (list_empty(q))
         return NULL;
 
-    size_t core = smp_core_id();
+    size_t core = smp_id(TOPC_IRQL);
 
     struct list_head *pos, *n;
     list_for_each_safe(pos, n, q) {

@@ -88,7 +88,9 @@ void fixed_size_range_init(struct fixed_size_range *fsr,
 
 #define FSR_PERDOMAIN_ENABLED(name) __fsr_##name##_enabled
 #define FSR_PERDOMAIN(name) PERDOMAIN(__##name##_fsr)
-#define FSR_PERDOMAIN_THIS(name) PERDOMAIN_PTR(__##name##_fsr)
+
+/* _NONE here: domains are an optimization anyways */
+#define FSR_PERDOMAIN_THIS(name) PERDOMAIN_PTR(TOPC_NONE, __##name##_fsr)
 #define FSR_PERDOMAIN_ALLOC(name) fixed_size_alloc(FSR_PERDOMAIN_THIS(name))
 #define FSR_PERDOMAIN_FREE(name, obj)                                          \
     fixed_size_free(FSR_PERDOMAIN_THIS(name), (obj))

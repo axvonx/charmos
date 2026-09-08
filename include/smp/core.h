@@ -74,7 +74,7 @@ struct core {
      * For exception_sync_cb, it is passed into the callback as a parameter */
     uint8_t *irq_stack_scratch_buf;
 
-    /* Execution context in one word, using CTX_* below */
+    /* Execution context in one word, using SMP_CTX_* below */
     uint32_t ctx;
 
     enum irql current_irql;
@@ -116,20 +116,118 @@ struct core {
     bool reclaiming_page_tables;
 };
 
-static inline uint64_t smp_core_id(void) {
-    uint64_t id;
-    asm volatile("movq %%gs:%c1, %0"
-                 : "=r"(id)
-                 : "i"(offsetof(struct core, id)));
-    return id;
+void smp_caller_verify(enum topology_caller caller);
+#define smp_read8(off)                                                         \
+    ({                                                                         \
+        uint8_t __v;                                                           \
+        asm volatile("movb %%gs:%c1, %b0" : "=q"(__v) : "i"(off) : "memory");  \
+        __v;                                                                   \
+    })
+
+#define smp_read16(off)                                                        \
+    ({                                                                         \
+        uint16_t __v;                                                          \
+        asm volatile("movw %%gs:%c1, %w0" : "=r"(__v) : "i"(off) : "memory");  \
+        __v;                                                                   \
+    })
+
+#define smp_read32(off)                                                        \
+    ({                                                                         \
+        uint32_t __v;                                                          \
+        asm volatile("movl %%gs:%c1, %k0" : "=r"(__v) : "i"(off) : "memory");  \
+        __v;                                                                   \
+    })
+
+#define smp_read64(off)                                                        \
+    ({                                                                         \
+        uint64_t __v;                                                          \
+        asm volatile("movq %%gs:%c1, %0" : "=r"(__v) : "i"(off) : "memory");   \
+        __v;                                                                   \
+    })
+
+#define smp_member_size(member) sizeof(typeof(((struct core *) 0)->member))
+
+#define smp_read(cond, member)                                                 \
+    ({                                                                         \
+        smp_caller_verify(cond);                                               \
+        static_assert(                                                         \
+            smp_member_size(member) == 1 || smp_member_size(member) == 2 ||    \
+                smp_member_size(member) == 4 || smp_member_size(member) == 8,  \
+            "smp_core_read: unsupported member size");                         \
+        uint64_t _raw;                                                         \
+        switch (smp_member_size(member)) {                                     \
+        case 1: _raw = smp_read8(offsetof(struct core, member)); break;        \
+        case 2: _raw = smp_read16(offsetof(struct core, member)); break;       \
+        case 4: _raw = smp_read32(offsetof(struct core, member)); break;       \
+        case 8: _raw = smp_read64(offsetof(struct core, member)); break;       \
+        default: __builtin_unreachable();                                      \
+        }                                                                      \
+        (typeof(__comptime_decay(                                              \
+            ((struct core *) 0)->member))) (uintptr_t) _raw;                   \
+    })
+
+#define smp_write8(off, v)                                                     \
+    ({                                                                         \
+        uint8_t __v = (v);                                                     \
+        asm volatile("movb %b0, %%gs:%c1" : : "q"(__v), "i"(off) : "memory");  \
+    })
+
+#define smp_write16(off, v)                                                    \
+    ({                                                                         \
+        uint16_t __v = (v);                                                    \
+        asm volatile("movw %w0, %%gs:%c1" : : "r"(__v), "i"(off) : "memory");  \
+    })
+
+#define smp_write32(off, v)                                                    \
+    ({                                                                         \
+        uint32_t __v = (v);                                                    \
+        asm volatile("movl %0, %%gs:%c1" : : "r"(__v), "i"(off) : "memory");   \
+    })
+
+#define smp_write64(off, v)                                                    \
+    ({                                                                         \
+        uint64_t __v = (v);                                                    \
+        asm volatile("movq %0, %%gs:%c1" : : "r"(__v), "i"(off) : "memory");   \
+    })
+
+#define smp_write(cond, member, val)                                           \
+    do {                                                                       \
+        smp_caller_verify(cond);                                               \
+        static_assert(                                                         \
+            smp_member_size(member) == 1 || smp_member_size(member) == 2 ||    \
+                smp_member_size(member) == 4 || smp_member_size(member) == 8,  \
+            "smp_core_write: unsupported member size");                        \
+        typeof(((struct core *) 0)->member) _val = (val);                      \
+        uint64_t _raw = (uint64_t) (uintptr_t) _val;                           \
+        switch (smp_member_size(member)) {                                     \
+        case 1:                                                                \
+            smp_write8(offsetof(struct core, member), (uint8_t) _raw);         \
+            break;                                                             \
+        case 2:                                                                \
+            smp_write16(offsetof(struct core, member), (uint16_t) _raw);       \
+            break;                                                             \
+        case 4:                                                                \
+            smp_write32(offsetof(struct core, member), (uint32_t) _raw);       \
+            break;                                                             \
+        case 8: smp_write64(offsetof(struct core, member), _raw); break;       \
+        default: __builtin_unreachable();                                      \
+        }                                                                      \
+    } while (0)
+
+static inline cpu_id_t smp_id(enum topology_caller cond) {
+    return smp_read(cond, id);
 }
 
-static inline struct core *smp_core(void) {
-    uintptr_t core;
-    asm volatile("movq %%gs:%c1, %0"
-                 : "=r"(core)
-                 : "i"(offsetof(struct core, self)));
-    return (struct core *) core;
+static inline cpu_id_t smp_id_raw(void) {
+    return smp_read(TOPC_NONE, id);
+}
+
+static inline struct core *smp_core(enum topology_caller cond) {
+    return smp_read(cond, self);
+}
+
+static inline struct core *smp_core_raw(void) {
+    return smp_read(TOPC_NONE, self);
 }
 
 /* The idea with this (TODO: Consider an enum) is that if a migration happens
@@ -141,62 +239,67 @@ static inline struct core *smp_core(void) {
  * NOTE: needs_resched is not tracked here because that's for other
  * CPUs to write, and this is purely local
  */
-#define CTX_PREEMPT_SHIFT 0
-#define CTX_PREEMPT_BITS 8
-#define CTX_IRQ_SHIFT 8
-#define CTX_IRQ_BITS 8
-#define CTX_NMI_SHIFT 16
-#define CTX_NMI_BITS 4
+#define SMP_CTX_PREEMPT_SHIFT 0
+#define SMP_CTX_PREEMPT_BITS 8
+#define SMP_CTX_IRQ_SHIFT 8
+#define SMP_CTX_IRQ_BITS 8
+#define SMP_CTX_NMI_SHIFT 16
+#define SMP_CTX_NMI_BITS 4
 
-#define CTX_FIELD_MAX(bits) ((1u << (bits)) - 1u)
+#define SMP_CTX_FIELD_MAX(bits) ((1u << (bits)) - 1u)
 
-#define CTX_PREEMPT_MASK (CTX_FIELD_MAX(CTX_PREEMPT_BITS) << CTX_PREEMPT_SHIFT)
-#define CTX_IRQ_MASK (CTX_FIELD_MAX(CTX_IRQ_BITS) << CTX_IRQ_SHIFT)
-#define CTX_NMI_MASK (CTX_FIELD_MAX(CTX_NMI_BITS) << CTX_NMI_SHIFT)
+#define SMP_CTX_PREEMPT_MASK                                                   \
+    (SMP_CTX_FIELD_MAX(SMP_CTX_PREEMPT_BITS) << SMP_CTX_PREEMPT_SHIFT)
+#define SMP_CTX_IRQ_MASK                                                       \
+    (SMP_CTX_FIELD_MAX(SMP_CTX_IRQ_BITS) << SMP_CTX_IRQ_SHIFT)
+#define SMP_CTX_NMI_MASK                                                       \
+    (SMP_CTX_FIELD_MAX(SMP_CTX_NMI_BITS) << SMP_CTX_NMI_SHIFT)
 
-#define CTX_PREEMPT_ONE (1u << CTX_PREEMPT_SHIFT)
-#define CTX_IRQ_ONE (1u << CTX_IRQ_SHIFT)
-#define CTX_NMI_ONE (1u << CTX_NMI_SHIFT)
+#define SMP_CTX_PREEMPT_ONE (1u << SMP_CTX_PREEMPT_SHIFT)
+#define SMP_CTX_IRQ_ONE (1u << SMP_CTX_IRQ_SHIFT)
+#define SMP_CTX_NMI_ONE (1u << SMP_CTX_NMI_SHIFT)
 
 /* "not plain thread context" */
-#define CTX_IN_INTERRUPT_MASK (CTX_IRQ_MASK | CTX_NMI_MASK)
+#define SMP_CTX_IN_INTERRUPT_MASK (SMP_CTX_IRQ_MASK | SMP_CTX_NMI_MASK)
 
-static inline uint32_t smp_ctx(void) {
-    return smp_core()->ctx;
+struct core *smp_bsp(void);
+static inline uint32_t smp_ctx(enum topology_caller c) {
+    return smp_read(c, ctx);
 }
 
-static inline uint32_t ctx_preempt_count(uint32_t ctx) {
-    return (ctx & CTX_PREEMPT_MASK) >> CTX_PREEMPT_SHIFT;
+static inline uint32_t smp_ctx_preempt_count(uint32_t smp_ctx) {
+    return (smp_ctx & SMP_CTX_PREEMPT_MASK) >> SMP_CTX_PREEMPT_SHIFT;
 }
 
-static inline uint32_t ctx_irq_count(uint32_t ctx) {
-    return (ctx & CTX_IRQ_MASK) >> CTX_IRQ_SHIFT;
+static inline uint32_t smp_ctx_irq_count(uint32_t smp_ctx) {
+    return (smp_ctx & SMP_CTX_IRQ_MASK) >> SMP_CTX_IRQ_SHIFT;
 }
 
-static inline uint32_t ctx_nmi_count(uint32_t ctx) {
-    return (ctx & CTX_NMI_MASK) >> CTX_NMI_SHIFT;
+static inline uint32_t smp_ctx_nmi_count(uint32_t smp_ctx) {
+    return (smp_ctx & SMP_CTX_NMI_MASK) >> SMP_CTX_NMI_SHIFT;
 }
 
-/* Add a CTX_*_ONE to its field */
-static inline uint32_t ctx_add(uint32_t one, uint32_t mask) {
-    struct core *cpu = smp_core();
+/* Add a SMP_CTX_*_ONE to its field */
+static inline uint32_t smp_ctx_add(enum topology_caller c, uint32_t one,
+                                   uint32_t mask) {
+    struct core *cpu = smp_core(c);
     if (unlikely((cpu->ctx & mask) == mask))
-        panic("ctx field overflow, mask %#x, ctx %#x", mask, cpu->ctx);
+        panic("smp_ctx field overflow, mask %#x, smp_ctx %#x", mask, cpu->ctx);
 
     cpu->ctx += one;
     return cpu->ctx;
 }
 
-static inline uint32_t ctx_sub(uint32_t one, uint32_t mask) {
-    struct core *cpu = smp_core();
+static inline uint32_t smp_ctx_sub(enum topology_caller c, uint32_t one,
+                                   uint32_t mask) {
+    struct core *cpu = smp_core(c);
     if (unlikely((cpu->ctx & mask) == 0))
-        panic("ctx field underflow, mask %#x, ctx %#x", mask, cpu->ctx);
+        panic("smp_ctx field underflow, mask %#x, smp_ctx %#x", mask, cpu->ctx);
 
     cpu->ctx -= one;
     return cpu->ctx;
 }
 
-struct core *smp_bsp(void);
 #define for_each_cpu_struct(__iter)                                            \
     for (size_t __id = 0;                                                      \
          ((__iter = global.cores[__id]), __id < global.core_count); __id++)

@@ -14,14 +14,14 @@
 struct log_site;
 struct log_record;
 
-enum log_flags : uint32_t {
-    LOG_PRINT = 1 << 0,     /* emit to console immediately */
-    LOG_IMPORTANT = 1 << 1, /* never drop / elevated visibility */
-    LOG_RATELIMIT = 1 << 2, /* suppress floods */
-    LOG_ONCE = 1 << 3,      /* print only first occurrence */
-    LOG_PANIC = 1 << 5,     /* fatal if level >= ERROR */
-    LOG_NO_NEWLINE = 1 << 6,
-    LOG_DEFAULT = 0,
+enum log_handle_flags : uint32_t {
+    LOG_HANDLE_PRINT = 1 << 0,     /* emit to console immediately */
+    LOG_HANDLE_IMPORTANT = 1 << 1, /* never drop / elevated visibility */
+    LOG_HANDLE_RATELIMIT = 1 << 2, /* suppress floods */
+    LOG_HANDLE_ONCE = 1 << 3,      /* print only first occurrence */
+    LOG_HANDLE_PANIC = 1 << 4,     /* fatal if level >= ERROR */
+    LOG_HANDLE_NO_NEWLINE = 1 << 5,
+    LOG_HANDLE_FLAGS_DEFAULT = 0,
 };
 
 enum log_level : uint8_t {
@@ -57,7 +57,6 @@ enum log_record_flags : uint16_t {
 /* Governs what to print */
 struct log_dump_options {
     uint8_t min_level;
-    bool show_args : 1;
     bool show_cpu : 1;
     bool show_tid : 1;
     bool show_irql : 1;
@@ -69,8 +68,7 @@ struct log_dump_options {
 struct log_handle {
     void (*print)(const struct log_site *site, const struct log_record *rec,
                   void (*print)(const char *fmt, ...));
-    char *msg;
-    enum log_flags flags;
+    enum log_handle_flags flags;
     _Atomic uint32_t seen_internal;
     _Atomic uint64_t last_ts_internal;
 };
@@ -112,6 +110,7 @@ struct log_ringbuf {
     _Atomic uint64_t tail;
 };
 
+/* Ephemeral argument passed in creation */
 struct log_site_options {
     char *name;
     enum log_site_flags flags;
@@ -133,7 +132,6 @@ struct log_site {
 
     /* Only relevant for dynamic log sites */
     refcount_t refcount;
-    atomic_bool enabled;
 
     size_t msg_max_len;
     uint32_t dropped; /* Accumulation of all missed logs */
@@ -155,20 +153,16 @@ static inline const char *log_level_color(enum log_level l) {
 static inline bool log_handle_should_print(const struct log_handle *h,
                                            const struct log_site *s,
                                            uint8_t level) {
-    if (h->flags & LOG_PRINT)
+    if (h->flags & LOG_HANDLE_PRINT)
         return true;
 
     if (s && (s->flags & LOG_SITE_PRINT))
         return true;
 
-    if ((h->flags & LOG_PANIC) && level >= LOG_ERROR)
+    if ((h->flags & LOG_HANDLE_PANIC) && level >= LOG_ERROR)
         return true;
 
     return false;
-}
-
-static inline bool log_site_accepts(struct log_site *s) {
-    return atomic_load_explicit(&s->enabled, memory_order_relaxed);
 }
 
 static inline bool log_site_enabled(const struct log_site *ss, uint8_t level) {
@@ -189,6 +183,7 @@ void log_dump_panic(void);
 void log_sites_init(void);
 void log_site_free(struct log_site *site);
 struct log_site *log_site_create(struct log_site_options opts);
+void log_handle_init(struct log_handle *h, enum log_handle_flags f);
 
 static inline bool log_site_get(struct log_site *site) {
     return refcount_inc_not_zero(&site->refcount);
@@ -199,7 +194,7 @@ static inline void log_site_put(struct log_site *site) {
         log_site_free(site);
 }
 
-/* NOTE: RACY */
+/* NOTE: RACY, only usable as a heuristic */
 static inline size_t log_site_message_count(struct log_site *site) {
     uint64_t head = atomic_load_explicit(&site->rb.head, memory_order_acquire);
     uint64_t tail = atomic_load_explicit(&site->rb.tail, memory_order_acquire);
@@ -207,18 +202,23 @@ static inline size_t log_site_message_count(struct log_site *site) {
     return head - tail;
 }
 
+#define LOG_HANDLE_DEFAULT                                                     \
+    (struct log_handle){.flags = LOG_HANDLE_FLAGS_DEFAULT,                     \
+                        .seen_internal = 0,                                    \
+                        .last_ts_internal = 0}
+
 #define LOG_DUMP_DEFAULT                                                       \
     (struct log_dump_options) {                                                \
-        .min_level = LOG_TRACE, .show_args = true, .show_cpu = true,           \
-        .show_tid = true, .show_irql = true, .show_caller = true,              \
-        .resolve_symbols = true, .clear_after_dump = false,                    \
+        .min_level = LOG_TRACE, .show_cpu = true, .show_tid = true,            \
+        .show_irql = true, .show_caller = true, .resolve_symbols = true,       \
+        .clear_after_dump = false,                                             \
     }
 
 #define LOG_DUMP_CONSOLE                                                       \
     (struct log_dump_options) {                                                \
-        .min_level = LOG_TRACE, .show_args = true, .show_cpu = false,          \
-        .show_tid = false, .show_irql = false, .show_caller = false,           \
-        .resolve_symbols = false, .clear_after_dump = false,                   \
+        .min_level = LOG_TRACE, .show_cpu = false, .show_tid = false,          \
+        .show_irql = false, .show_caller = false, .resolve_symbols = false,    \
+        .clear_after_dump = false,                                             \
     }
 
 #define log_msg(lvl, fmt, ...)                                                 \
@@ -296,22 +296,15 @@ static inline size_t log_site_message_count(struct log_site *site) {
 
 #define LOG_SITE(name) (&(__log_site_##name))
 
-#define LOG_HANDLE_DEFAULT                                                     \
-    (struct log_handle){.msg = "",                                             \
-                        .flags = LOG_DEFAULT,                                  \
-                        .seen_internal = 0,                                    \
-                        .last_ts_internal = 0}
-
 #define LOG_HANDLE_SUBSYSTEM_NONE NULL
 #define LOG_HANDLE_EXTERN(name) extern struct log_handle __log_handle_##name
 
 #define LOG_HANDLE_DECLARE(_name, ...)                                         \
     struct log_handle __log_handle_##_name = {                                 \
-        .msg = #_name, .seen_internal = 0, .last_ts_internal = 0, __VA_ARGS__}
+        .seen_internal = 0, .last_ts_internal = 0, __VA_ARGS__}
 
 #define LOG_HANDLE_DECLARE_PRINT(n, ...)                                       \
-    struct log_handle __log_handle_##n = {.msg = #n,                           \
-                                          .flags = LOG_PRINT,                  \
+    struct log_handle __log_handle_##n = {.flags = LOG_HANDLE_PRINT,           \
                                           .seen_internal = 0,                  \
                                           .last_ts_internal = 0,               \
                                           __VA_ARGS__}

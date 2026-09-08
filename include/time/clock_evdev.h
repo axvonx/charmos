@@ -29,6 +29,8 @@ enum clock_evdev_group_flags {
 
 struct clock_evdev {
     char *name;
+
+    /* Guaranteed to be called at IRQL_HIGH_LEVEL */
     enum errno (*set_next_event)(struct clock_evdev *, time_ns_t delta_ns);
     timestamp_t next_event;
 

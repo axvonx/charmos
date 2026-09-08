@@ -143,7 +143,7 @@ static inline bool migrate_to_destination(struct thread *t, time_ms_t time) {
     if (!t || (dst = thread_set_migration_target(t, -1)) == -1)
         return false;
 
-    if (dst == (int64_t) smp_core_id())
+    if (dst == (int64_t) smp_id(TOPC_IRQL))
         return false;
 
     enum irql irql_us, irql_other;
@@ -217,7 +217,7 @@ static struct thread *pick_thread(struct scheduler *sched, time_ms_t now_ms) {
 static void load_thread(struct scheduler *sched, struct thread *next,
                         time_ms_t time) {
     sched->current = next;
-    smp_core()->current_thread = next;
+    smp_core(TOPC_IRQL)->current_thread = next;
 
     kassert(next);
 
@@ -228,7 +228,7 @@ static void load_thread(struct scheduler *sched, struct thread *next,
         thread_set_state(next, THREAD_STATE_RUNNING);
 
     thread_set_runqueue(next, sched);
-    next->curr_core = smp_core_id();
+    next->curr_core = smp_id(TOPC_IRQL);
     next->run_start_time = time;
 
     thread_calculate_activity_data(next);
@@ -384,7 +384,8 @@ void scheduler_switch_in() {
 
     scheduler_periodic_work_execute(PERIODIC_WORK_PERIOD_BASED);
     vmm_reclaim_page_tables();
-    atomic_store(&smp_core()->pt_seen_epoch, atomic_load(&global.pt_epoch));
+    atomic_store(&smp_core(TOPC_IRQL)->pt_seen_epoch,
+                 atomic_load(&global.pt_epoch));
     watchdog_pet();
 }
 
@@ -407,20 +408,11 @@ static void scheduler_yield_loop(void) {
     } while (scheduler_mark_self_needs_resched(false));
 }
 
-void scheduler_yield() {
-
-    /* Read GS without interrupts on, a temporary HACK: */
-    bool iflag = are_interrupts_enabled();
-    disable_interrupts();
-
-    struct core *c = smp_core();
+void scheduler_yield(void) {
+    struct core *c = smp_core(TOPC_NONE);
     bool entry_in_resched = atomic_load(&c->in_resched);
-    uint32_t entry_depth = ctx_preempt_count(c->ctx);
+    uint32_t entry_depth = smp_ctx_preempt_count(c->ctx);
     cpu_id_t entry_cpu = c->id;
-
-    if (iflag)
-        enable_interrupts();
-
     kassert(!entry_in_resched, "yielding while already in resched on cpu %zu",
             (size_t) entry_cpu);
     kassert(entry_depth == 0, "yielding on cpu %zu with preempt depth %u",

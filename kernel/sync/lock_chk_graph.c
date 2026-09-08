@@ -49,7 +49,7 @@ static enum lock_chk_result lock_chk_graph_record_context_locked(
         return LOCK_CHK_RESULT_OK;
 
     uint8_t ctx = 0;
-    if (request->in_irq || !irq_in_thread_context()) {
+    if (request->in_irq || irq_in_interrupt()) {
         ctx = LOCK_CHK_CTX_IRQ;
     } else if (request->raw_operation) {
         if (request->prev_irql >= IRQL_HIGH_LEVEL || !request->irqs_enabled)

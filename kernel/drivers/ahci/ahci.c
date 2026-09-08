@@ -49,7 +49,7 @@ struct ahci_disk *ahci_discover_device(uint8_t bus, uint8_t device,
         return NULL;
     }
 
-    uint64_t core = smp_core_id();
+    uint64_t core = 0; /* TODO: BSP only for now */
     irq_register("ahci", disk->device->irq_num, ahci_isr_handler, disk->device,
                  IRQ_FLAG_NONE);
     irq_set_chip(disk->device->irq_num, lapic_get_chip(), NULL);

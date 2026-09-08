@@ -42,12 +42,6 @@ void lapic_timer_init(cpu_id_t core_id) {
     lapic_timer_disable();
 }
 
-void lapic_timer_set_ms(uint32_t ms) {
-    uint32_t ticks = smp_core()->lapic_khz * ms;
-
-    lapic_write(LAPIC_REG_TIMER_INIT, ticks);
-}
-
 void lapic_timer_disable() {
     uint32_t lvt = lapic_read(LAPIC_REG_LVT_TIMER);
     lvt |= LAPIC_LVT_MASK;
@@ -103,8 +97,8 @@ void panic_broadcast(uint64_t exclude_core) {
 }
 
 void nmi_send(uint32_t apic_id) {
-    kassert(apic_id != smp_core_id()); /* NMI'ing ourselves is a MASSIVE risk,
-                                        * likely buggy code, panic */
+    kassert(apic_id != smp_id(TOPC_NONE)); /* NMI'ing ourselves is a MASSIVE
+                                            * risk, likely buggy code, panic */
 
     if (x2apic_enabled) {
         uint64_t icr = 0;
@@ -198,7 +192,8 @@ static enum errno lapic_evdev_set_next_event(struct clock_evdev *ced,
                                              time_ns_t delta_ns) {
     (void) ced;
 
-    freq_khz_t freq_khz = smp_core()->lapic_khz;
+    /* The timer context guarantees that set_next_event happens under HIGH */
+    freq_khz_t freq_khz = smp_core(TOPC_IRQL)->lapic_khz;
     uint64_t ticks = (freq_khz * (uint64_t) delta_ns) / 1000000ULL;
 
     if (ticks == 0)

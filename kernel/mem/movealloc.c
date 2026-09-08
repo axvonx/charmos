@@ -34,7 +34,7 @@ void movealloc_exec_all(void) {
 }
 
 static void change_slab_backing_page(void *ptr) {
-    if (slab_size_to_index(ksize(ptr)) != -1)
+    if (kmalloc_ptr_in_slab_validate(ptr))
         panic("Moved allocations cannot come from slab");
 }
 

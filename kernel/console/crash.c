@@ -20,7 +20,11 @@
 #include <smp/percpu.h>
 #include <stdarg.h>
 #include <string.h>
+#include <sync/mutex.h>
+#include <sync/qspinlock.h>
 #include <sync/raw_spinlock.h>
+#include <sync/rwlock.h>
+#include <sync/spinlock.h>
 #include <thread/thread.h>
 #include <time/spin_sleep.h>
 #include <time/time.h>
@@ -52,7 +56,10 @@ bool crash_cpu_is_owner(uint64_t id) {
 
 void crash_nmi_handoff(void *p, struct irq_context *irqc) {
     (void) p;
-    struct crash_regs *this_regs_buf = PERCPU_PTR(crash_regs);
+    /* _NONE here for safety reasons (the validator could
+     * crash again depending on why we crashed),
+     * it's the crash context anyways */
+    struct crash_regs *this_regs_buf = PERCPU_PTR(TOPC_NONE, crash_regs);
     this_regs_buf->r8 = irqc->r8;
     this_regs_buf->r9 = irqc->r9;
     this_regs_buf->r10 = irqc->r10;
@@ -73,20 +80,20 @@ void crash_nmi_handoff(void *p, struct irq_context *irqc) {
     this_regs_buf->rflags = irqc->rflags;
     this_regs_buf->cr2 = read_cr2();
     this_regs_buf->cr3 = read_cr3();
-    atomic_store(PERCPU_PTR(crash_quiesced), 1);
+    atomic_store(PERCPU_PTR(TOPC_NONE, crash_quiesced), 1);
     while (1)
         hcf();
 }
 
 void crash_broadcast_nmi(void) {
-    panic_broadcast(smp_core_id());
+    panic_broadcast(smp_id(TOPC_NONE));
 }
 
 void panic_handler(struct crash_regs *regs) {
     disable_interrupts();
 
     if (PERCPU_READY(crash_regs)) {
-        PERCPU_READ(crash_regs) = *regs;
+        PERCPU_READ(TOPC_NONE, crash_regs) = *regs;
     } else {
         boot_crash_regs = *regs;
     }
@@ -429,7 +436,7 @@ static void crash_cpu_box(struct report_target *tgt, uint64_t id,
 
 static void crash_other_cpus(struct report_panes *panes) {
     struct report_target col0 = report_pane(panes, 0);
-    uint64_t self = smp_core_id();
+    uint64_t self = smp_id(TOPC_NONE);
     uint16_t inner = 0;
     uint32_t count = 0;
     uint32_t per_col;
@@ -575,12 +582,12 @@ static void crash_where_box(struct report_target *tgt, const char *file,
                             : "(null)";
     if (global.current_bootstage < BOOTSTAGE_EARLY_DEVICES)
         snprintf(ctx, (int) sizeof(ctx),
-                 "cpu %lu%stime unknown%sbootstage '%s'", smp_core_id(), sep,
-                 sep, bootstage_str[global.current_bootstage]);
+                 "cpu %lu%stime unknown%sbootstage '%s'", smp_id(TOPC_NONE),
+                 sep, sep, bootstage_str[global.current_bootstage]);
     else
         snprintf(ctx, (int) sizeof(ctx),
-                 "cpu %lu%s%lu ms%sbootstage '%s'\nthread '%s'", smp_core_id(),
-                 sep, time_get_ms(), sep,
+                 "cpu %lu%s%lu ms%sbootstage '%s'\nthread '%s'",
+                 smp_id(TOPC_NONE), sep, time_get_ms(), sep,
                  bootstage_str[global.current_bootstage], thread_name);
 
     w = report_strwidth(loc);
@@ -823,7 +830,7 @@ __noreturn void crash_full(const struct crash_context *ctx) {
 
     int64_t unowned = -1;
     atomic_compare_exchange_strong(&crash_owner, &unowned,
-                                   (int64_t) smp_core_id());
+                                   (int64_t) smp_id(TOPC_NONE));
     atomic_store(&global.panicked, true);
 
     struct crash_regs captured_regs;
@@ -834,7 +841,7 @@ __noreturn void crash_full(const struct crash_context *ctx) {
     }
 
     if (PERCPU_READY(crash_regs)) {
-        PERCPU_READ(crash_regs) = captured_regs;
+        PERCPU_READ(TOPC_NONE, crash_regs) = captured_regs;
     } else {
         boot_crash_regs = captured_regs;
     }
@@ -916,4 +923,226 @@ void crash_facilities_init(void) {
     for (struct crash_facility *f = __skernel_crash_facilities;
          f < __ekernel_crash_facilities; f++)
         f->prefix = (f - __skernel_crash_facilities) + 1;
+}
+
+void crash_perthread_init(struct thread *t) {
+    struct crash_perthread *pt = &t->crash_data;
+    INIT_LIST_HEAD(&pt->crash_hooks);
+    pt->in_hook = false;
+    INIT_LIST_HEAD(&pt->unwind.free_list);
+    INIT_LIST_HEAD(&pt->unwind.in_use);
+    for (int i = 0; i < CRASH_UNWIND_NODES; i++)
+        list_add_tail(&pt->unwind.nodes[i].list, &pt->unwind.free_list);
+}
+
+static struct crash_unwind_node *
+unwind_node_alloc(struct thread *t, enum crash_unwind_type type) {
+    struct list_head *n = list_pop_tail(&t->crash_data.unwind.free_list);
+    if (!n)
+        panic("ran out of nodes");
+
+    struct crash_unwind_node *node =
+        container_of(n, struct crash_unwind_node, list);
+    kassert(node->type == CRASH_UNWIND_NONE);
+    node->type = type;
+    return node;
+}
+
+static void unwind_node_free(struct thread *t, struct crash_unwind_node *n) {
+    n->type = CRASH_UNWIND_NONE;
+    n->data.raw = 0;
+    list_add_tail(&n->list, &t->crash_data.unwind.free_list);
+}
+
+/* Small optimization here: it doesn't matter if we go backwards or
+ * forwards, simply that we get to the node, but it's more likely
+ * to be found faster if we iterate in reverse */
+static void crash_unwind_node_add(struct crash_unwind_node_data *data,
+                                  enum crash_unwind_type type) {
+    struct thread *t = thread_get_current();
+    kassert(!t->crash_data.unwinding);
+    if (type == CRASH_UNWIND_RCU) {
+        struct crash_unwind_node *n;
+        list_for_each_entry_rev(n, &t->crash_data.unwind.in_use, list) {
+            if (n->type == type) {
+                n->data.rcu_lock_times++;
+                return;
+            }
+        }
+
+        n = unwind_node_alloc(t, type);
+        n->data.rcu_lock_times = 1;
+        list_add_tail(&n->list, &t->crash_data.unwind.in_use);
+        return;
+    }
+
+    struct crash_unwind_node *node = unwind_node_alloc(t, type);
+    node->data = *data;
+    list_add_tail(&node->list, &t->crash_data.unwind.in_use);
+}
+
+static void crash_unwind_node_remove(struct crash_unwind_node_data *data,
+                                     enum crash_unwind_type type) {
+    struct thread *t = thread_get_current();
+    kassert(!t->crash_data.unwinding);
+    bool found = false;
+
+    if (type == CRASH_UNWIND_RCU) {
+        struct crash_unwind_node *n;
+        list_for_each_entry_rev(n, &t->crash_data.unwind.in_use, list) {
+            if (n->type == type) {
+                if (n->data.rcu_lock_times == 1) {
+                    list_del(&n->list);
+                    unwind_node_free(t, n);
+                } else {
+                    n->data.rcu_lock_times--;
+                }
+                return;
+            }
+        }
+
+        goto out;
+    }
+
+    struct crash_unwind_node *iter = NULL;
+
+    list_for_each_entry_rev(iter, &t->crash_data.unwind.in_use, list) {
+        if (iter->data.raw == data->raw && iter->type == type) {
+            list_del(&iter->list);
+            unwind_node_free(t, iter);
+            found = true;
+            break;
+        }
+    }
+
+out:
+    kassert(found, "Likely double remove");
+}
+
+static void unwind_rcu(struct crash_unwind_node_data *d) {
+    for (uintptr_t i = 0; i < d->rcu_lock_times; i++)
+        rcu_read_unlock();
+}
+
+static void unwind_mutex(struct crash_unwind_node_data *d) {
+    mutex_unlock(d->ptr);
+}
+
+static void unwind_rwlock(struct crash_unwind_node_data *d) {
+    rw_unlock(d->ptr);
+}
+
+static void unwind_spinlock(struct crash_unwind_node_data *d) {
+    spin_unlock(d->ptr, d->arg);
+}
+
+static void unwind_qspinlock(struct crash_unwind_node_data *d) {
+    qspin_unlock(d->ptr, d->arg);
+}
+
+static void (*unwind_cbs[CRASH_UNWIND_MAX])(struct crash_unwind_node_data *) = {
+    [CRASH_UNWIND_RCU] = unwind_rcu,
+    [CRASH_UNWIND_MUTEX] = unwind_mutex,
+    [CRASH_UNWIND_RWLOCK] = unwind_rwlock,
+    [CRASH_UNWIND_SPINLOCK] = unwind_spinlock,
+    [CRASH_UNWIND_QSPINLOCK] = unwind_qspinlock,
+};
+
+static inline const char *
+crash_unwind_type_to_str(enum crash_unwind_type type) {
+    switch (type) {
+    case CRASH_UNWIND_RCU: return "RCU";
+    case CRASH_UNWIND_MUTEX: return "MUTEX";
+    case CRASH_UNWIND_RWLOCK: return "RWLOCK";
+    case CRASH_UNWIND_SPINLOCK: return "SPINLOCK";
+    case CRASH_UNWIND_QSPINLOCK: return "QSPINLOCK";
+    default: unreachable("Invalid %u", type);
+    }
+}
+
+/* The idea here: we first traverse backwards and unwind
+ * one by one, detaching as we go */
+void crash_unwind(void) {
+    struct thread *t = thread_get_current();
+    struct crash_perthread *pt = &t->crash_data;
+    pt->unwinding = true;
+
+    struct crash_unwind_perthread *upt = &pt->unwind;
+    struct crash_unwind_node *cun, *tmp;
+    list_for_each_entry_safe_rev(cun, tmp, &upt->in_use, list) {
+        kassert(cun->type != CRASH_UNWIND_NONE);
+        thread_warn("unwinding %s (%p)", crash_unwind_type_to_str(cun->type),
+                    cun->data.ptr);
+        unwind_cbs[cun->type](&cun->data);
+        list_del(&cun->list);
+        unwind_node_free(t, cun);
+    }
+
+    irql_lower(IRQL_PASSIVE_LEVEL);
+
+    pt->unwinding = false;
+}
+
+static void crash_unwind_enter(uintptr_t data, enum crash_unwind_type type,
+                               uintptr_t arg) {
+    if (global.current_bootstage >= BOOTSTAGE_LATE &&
+        !thread_get_current()->crash_data.unwinding) {
+        struct crash_unwind_node_data nd = {
+            .raw = data,
+            .arg = arg,
+        };
+
+        crash_unwind_node_add(&nd, type);
+    }
+}
+
+static void crash_unwind_exit(uintptr_t data, enum crash_unwind_type type) {
+    if (global.current_bootstage >= BOOTSTAGE_LATE &&
+        !thread_get_current()->crash_data.unwinding) {
+        struct crash_unwind_node_data nd = {
+            .raw = data,
+        };
+
+        crash_unwind_node_remove(&nd, type);
+    }
+}
+
+void crash_unwind_enter_rcu(void) {
+    crash_unwind_enter(0, CRASH_UNWIND_RCU, 0);
+}
+
+void crash_unwind_exit_rcu(void) {
+    crash_unwind_exit(0, CRASH_UNWIND_RCU);
+}
+
+void crash_unwind_enter_mutex(struct mutex *m) {
+    crash_unwind_enter((uintptr_t) m, CRASH_UNWIND_MUTEX, 0);
+}
+
+void crash_unwind_exit_mutex(struct mutex *m) {
+    crash_unwind_exit((uintptr_t) m, CRASH_UNWIND_MUTEX);
+}
+
+void crash_unwind_enter_rwlock(struct rwlock *r) {
+    crash_unwind_enter((uintptr_t) r, CRASH_UNWIND_RWLOCK, 0);
+}
+
+void crash_unwind_exit_rwlock(struct rwlock *r) {
+    crash_unwind_exit((uintptr_t) r, CRASH_UNWIND_RWLOCK);
+}
+
+void crash_unwind_enter_spinlock(struct spinlock *s, enum irql old) {
+    crash_unwind_enter((uintptr_t) s, CRASH_UNWIND_SPINLOCK, (uintptr_t) old);
+}
+
+void crash_unwind_exit_spinlock(struct spinlock *s) {
+    crash_unwind_exit((uintptr_t) s, CRASH_UNWIND_SPINLOCK);
+}
+
+void crash_unwind_enter_qspinlock(struct qspinlock *q, enum irql old) {
+    crash_unwind_enter((uintptr_t) q, CRASH_UNWIND_QSPINLOCK, (uintptr_t) old);
+}
+
+void crash_unwind_exit_qspinlock(struct qspinlock *q) {
+    crash_unwind_exit((uintptr_t) q, CRASH_UNWIND_QSPINLOCK);
 }

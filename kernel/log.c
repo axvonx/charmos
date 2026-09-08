@@ -26,7 +26,7 @@ LOG_SITE_DECLARE(global, .flags = LOG_SITE_DEFAULT,
                  .capacity = LOG_SITE_CAPACITY_DEFAULT,
                  .dump_opts = LOG_DUMP_CONSOLE, .enabled_mask = LOG_SITE_ALL);
 
-LOG_HANDLE_DECLARE(global, .flags = LOG_PRINT);
+LOG_HANDLE_DECLARE(global, .flags = LOG_HANDLE_PRINT);
 
 struct log_globals {
     bool initialized;
@@ -265,15 +265,9 @@ static void log_emit_ndjson_record(const struct log_site *site,
         return;
 
     char msg_buf[256];
-    if (rec->fmt) {
-        snprintf_from_log(msg_buf, sizeof(msg_buf), rec->fmt, rec->args,
-                          rec->nargs);
-    } else if (rec->handle && rec->handle->msg) {
-        strncpy(msg_buf, rec->handle->msg, sizeof(msg_buf) - 1);
-        msg_buf[sizeof(msg_buf) - 1] = '\0';
-    } else {
-        msg_buf[0] = '\0';
-    }
+    kassert(rec->fmt);
+    snprintf_from_log(msg_buf, sizeof(msg_buf), rec->fmt, rec->args,
+                      rec->nargs);
 
     ndjson_emit(log_message, .site = site->name ? site->name : "unknown",
                 .level = log_level_to_str(rec->level), .msg = msg_buf,
@@ -309,17 +303,14 @@ static void log_dump_record(const struct log_site *site,
         print("irql=%d ", rec->logged_at_irql);
 
     /* message */
-    if (opts.show_args && rec->fmt) {
-        k_printf_from_log(rec->fmt, rec->args, rec->nargs, print);
-    } else if (rec->handle && rec->handle->msg) {
-        print("%s", rec->handle->msg);
-    }
+    kassert(rec->fmt);
+    k_printf_from_log(rec->fmt, rec->args, rec->nargs, print);
 
     if (opts.show_caller) {
         print(" <+ at %s()", rec->caller_fn);
     }
 
-    if (!(rec->handle->flags & LOG_NO_NEWLINE))
+    if (!(rec->handle->flags & LOG_HANDLE_NO_NEWLINE))
         print("\n");
 }
 
@@ -472,27 +463,26 @@ void log_emit_internal(struct log_site *site, struct log_handle *handle,
             return log_dump_record(site, &rec, dopts, printf);
     }
 
-    if (!log_site_accepts(site) ||
-        (site->flags & LOG_SITE_NO_IRQ && irq_in_interrupt()))
+    if (site->flags & LOG_SITE_NO_IRQ && irq_in_interrupt())
         return;
 
     if (!log_site_enabled(site, level))
         return;
 
     rec.timestamp = time_get_ms();
-    rec.cpu = smp_core_id();
+    rec.cpu = smp_id_raw(); /* Merely a snapshot */
     rec.tid = thread_get_current()->id;
     rec.logged_at_irql = irql_get();
 
     if (irq_in_interrupt())
         rec.flags |= LOG_REC_FROM_IRQ;
 
-    if (handle->flags & LOG_ONCE) {
+    if (handle->flags & LOG_HANDLE_ONCE) {
         if (atomic_fetch_add(&handle->seen_internal, 1) != 0)
             return;
     }
 
-    if (handle->flags & LOG_RATELIMIT) {
+    if (handle->flags & LOG_HANDLE_RATELIMIT) {
         uint64_t now = rec.timestamp;
         uint64_t last = atomic_load(&handle->last_ts_internal);
 
@@ -505,7 +495,7 @@ void log_emit_internal(struct log_site *site, struct log_handle *handle,
     bool queued = log_ringbuf_try_enqueue(site, &site->rb, &rec);
 
     if (!queued) {
-        if (handle->flags & LOG_IMPORTANT) {
+        if (handle->flags & LOG_HANDLE_IMPORTANT) {
             if (site->flags & LOG_SITE_DROP_OLD) {
                 queued = log_ringbuf_force_enqueue(site, &site->rb, &rec);
             } else if (!irq_in_interrupt()) {
@@ -535,7 +525,7 @@ void log_emit_internal(struct log_site *site, struct log_handle *handle,
         log_emit_ndjson_record(site, &rec);
     }
 
-    if ((ll & LOG_PANIC) && level >= LOG_ERROR) {
+    if ((ll & LOG_HANDLE_PANIC) && level >= LOG_ERROR) {
         log_dump_all();
         debug_print_stack();
         panic("fatal log event");
@@ -551,7 +541,6 @@ void log_sites_init(void) {
     for (struct log_site *s = __skernel_log_sites; s < __ekernel_log_sites;
          s++) {
         INIT_LIST_HEAD(&s->list);
-        s->enabled = true;
         refcount_init(&s->refcount, 1);
         struct log_ringbuf *lrb = &s->rb;
         kassert(s->capacity);
@@ -633,7 +622,6 @@ struct log_site *log_site_create(struct log_site_options opts) {
     ret->dropped = 0;
     ret->flags = opts.flags;
     INIT_LIST_HEAD(&ret->list);
-    ret->enabled = true;
     for (size_t i = 0; i < opts.capacity; i++) {
         atomic_store_explicit(&slots[i].seq, i, memory_order_release);
     }

@@ -133,34 +133,38 @@ void irq_register(char *name, uint8_t vector, irq_handler_t handler, void *ctx,
 void irq_register_full(struct irq_desc *d);
 void irq_set_chip(uint8_t vector, struct irq_chip *chip, void *data);
 
+/* We DO NOT set _IRQ here because _NONE is used as
+ * this set of functions will set the flags _NONE checks */
 static inline uint32_t irq_mark_self_in_interrupt(bool new) {
-    uint32_t old = ctx_irq_count(smp_ctx());
+    uint32_t old = smp_ctx_irq_count(smp_ctx(TOPC_NONE));
     if (new)
-        ctx_add(CTX_IRQ_ONE, CTX_IRQ_MASK);
+        smp_ctx_add(TOPC_NONE, SMP_CTX_IRQ_ONE, SMP_CTX_IRQ_MASK);
     else
-        ctx_sub(CTX_IRQ_ONE, CTX_IRQ_MASK);
+        smp_ctx_sub(TOPC_NONE, SMP_CTX_IRQ_ONE, SMP_CTX_IRQ_MASK);
     return old;
 }
 
 static inline uint32_t irq_mark_self_in_nmi(bool new) {
-    uint32_t old = ctx_nmi_count(smp_ctx());
+    uint32_t old = smp_ctx_nmi_count(smp_ctx(TOPC_NONE));
     if (new)
-        ctx_add(CTX_NMI_ONE, CTX_NMI_MASK);
+        smp_ctx_add(TOPC_NONE, SMP_CTX_NMI_ONE, SMP_CTX_NMI_MASK);
     else
-        ctx_sub(CTX_NMI_ONE, CTX_NMI_MASK);
+        smp_ctx_sub(TOPC_NONE, SMP_CTX_NMI_ONE, SMP_CTX_NMI_MASK);
     return old;
 }
 
+/* These are called from the verification logic,
+ * they are simple reads */
 static inline bool irq_in_nmi(void) {
-    return (smp_ctx() & CTX_NMI_MASK) != 0;
+    return (smp_ctx(TOPC_NONE) & SMP_CTX_NMI_MASK) != 0;
 }
 
 static inline bool irq_in_interrupt(void) {
-    return (smp_ctx() & CTX_IRQ_MASK) != 0;
+    return (smp_ctx(TOPC_NONE) & SMP_CTX_IRQ_MASK) != 0;
 }
 
-static inline bool irq_in_thread_context(void) {
-    return (smp_ctx() & CTX_IN_INTERRUPT_MASK) == 0;
+static inline bool irq_not_in_interrupt(void) {
+    return (smp_ctx(TOPC_NONE) & SMP_CTX_IN_INTERRUPT_MASK) == 0;
 }
 
 static inline bool irq_vector_is_exception(uint8_t vector) {

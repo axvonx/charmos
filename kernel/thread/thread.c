@@ -246,7 +246,7 @@ static struct thread *thread_init(struct thread *thread,
     INIT_LIST_HEAD(&thread->reaper_list);
     rbt_init_node(&thread->rq_tree_node);
     rbt_init_node(&thread->wq_tree_node);
-
+    crash_perthread_init(thread);
     locked_list_add(&global.thread_list, &thread->thread_list);
 
     return thread;
@@ -305,6 +305,7 @@ struct thread *thread_create_internal(char *name, void (*entry_point)(void *),
     if (!new_thread->log_site)
         goto err;
 
+    new_thread->log_handle = LOG_HANDLE_DEFAULT;
     va_copy(args_copy, args);
     vsnprintf(new_thread->name, needed, name, args_copy);
     va_end(args_copy);

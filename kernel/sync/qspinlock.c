@@ -64,7 +64,7 @@ void qspin_lock_slowpath(struct qspinlock *lock, uint32_t val) {
         }
     }
 
-    cpu_id_t cpu = smp_core_id();
+    cpu_id_t cpu = smp_id(TOPC_IRQL);
 
     /* Fallback if not ready */
     if (unlikely(!PERCPU_READY(qnodes))) {

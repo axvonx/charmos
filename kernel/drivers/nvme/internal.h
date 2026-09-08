@@ -7,7 +7,10 @@
 #define NVME_CMD_TIMEOUT_MS 2000    // Normal command timeout
 #define NVME_ADMIN_TIMEOUT_MS 5000  // Admin commands
 #define NVME_RESET_TIMEOUT_MS 30000 // Controller reset or format NVM
-#define THIS_QID(nvme) (1 + (smp_core_id() % (nvme->queue_count)))
+
+/* _raw is fine here: the driver only uses per-cpu queues
+ * as an optimization, and we'll rewrite a lot of this anyways */
+#define THIS_QID(nvme) (1 + (smp_id_raw() % (nvme->queue_count)))
 
 LOG_SITE_EXTERN(nvme);
 LOG_HANDLE_EXTERN(nvme);

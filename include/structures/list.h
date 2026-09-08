@@ -146,17 +146,31 @@ static inline void list_splice_tail_init(struct list_head *list,
 #define list_for_each(pos, head)                                               \
     for (pos = (head)->next; pos != (head); pos = pos->next)
 
+#define list_for_each_rev(pos, head)                                           \
+    for (pos = (head)->prev; pos != (head); pos = pos->prev)
+
 #define list_for_each_safe(pos, n, head)                                       \
     for (pos = (head)->next, n = pos->next; pos != (head);                     \
          pos = n, n = pos->next)
+
+#define list_for_each_rev_safe(pos, n, head)                                   \
+    for (pos = (head)->prev, n = pos->prev; pos != (head);                     \
+         pos = n, n = pos->prev)
 
 #define list_for_each_entry(pos, head, member)                                 \
     for (pos = list_entry((head)->next, typeof(*pos), member);                 \
          &pos->member != (head);                                               \
          pos = list_entry(pos->member.next, typeof(*pos), member))
 
+#define list_for_each_entry_rev(pos, head, member)                             \
+    for (pos = list_entry((head)->prev, typeof(*pos), member);                 \
+         &pos->member != (head);                                               \
+         pos = list_entry(pos->member.prev, typeof(*pos), member))
+
 #define list_first_entry(ptr, type, member)                                    \
     list_entry((ptr)->next, type, member)
+
+#define list_last_entry(ptr, type, member) list_entry((ptr)->prev, type, member)
 
 #define list_for_each_entry_safe(pos, n, head, member)                         \
     for (pos = list_entry((head)->next, typeof(*pos), member),                 \
@@ -164,11 +178,23 @@ static inline void list_splice_tail_init(struct list_head *list,
          &pos->member != (head);                                               \
          pos = n, n = list_entry(n->member.next, typeof(*n), member))
 
+#define list_for_each_entry_safe_rev(pos, n, head, member)                     \
+    for (pos = list_entry((head)->prev, typeof(*pos), member),                 \
+        n = list_entry(pos->member.prev, typeof(*pos), member);                \
+         &pos->member != (head);                                               \
+         pos = n, n = list_entry(n->member.prev, typeof(*n), member))
+
 #define list_for_each_entry_safe_continue(pos, n, head, member)                \
     for (pos = list_entry(pos->member.next, typeof(*pos), member),             \
         n = list_entry(pos->member.next, typeof(*pos), member);                \
          &pos->member != (head);                                               \
          pos = n, n = list_entry(n->member.next, typeof(*n), member))
+
+#define list_for_each_entry_safe_continue_rev(pos, n, head, member)            \
+    for (pos = list_entry(pos->member.prev, typeof(*pos), member),             \
+        n = list_entry(pos->member.prev, typeof(*pos), member);                \
+         &pos->member != (head);                                               \
+         pos = n, n = list_entry(n->member.prev, typeof(*n), member))
 
 void list_sort(struct list_head *head,
                int (*cmp)(struct list_head *, struct list_head *));

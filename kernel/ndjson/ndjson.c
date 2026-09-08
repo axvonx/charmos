@@ -142,7 +142,7 @@ static void ndjson_put_context(void) {
 
     ndjson_put_key(NDJSON_KEY_CPU);
     if (ready)
-        ndjson_put_u64(smp_core_id());
+        ndjson_put_u64(smp_id_raw()); /* Just a snapshot */
     else
         ndjson_put("null");
 }

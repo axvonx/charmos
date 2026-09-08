@@ -14,6 +14,7 @@
 #include <string.h>
 #include <sync/spinlock.h>
 #include <thread/dpc.h>
+#include <thread/thread.h>
 #include <time/time.h>
 #include <time/tsc.h>
 
@@ -302,7 +303,7 @@ void smp_wake(struct limine_mp_response *mpr) {
     for (uint64_t i = 1; i < mpr->cpu_count; i++)
         mpr->cpus[i]->goto_address = smp_wakeup;
 
-    smp_core()->tsc_hz = tsc_calibrate();
+    smp_core(TOPC_NONE)->tsc_hz = tsc_calibrate();
     if (global.core_count == 1)
         return;
 
@@ -393,4 +394,14 @@ void smp_enable_all_ticks() {
 
 struct core *smp_bsp(void) {
     return global.cores[0];
+}
+
+void smp_caller_verify(enum topology_caller caller) {
+    struct topology_contract tct = {
+        .caller = caller,
+        .scope = TOPOLOGY_LEVEL_SMT,
+    };
+
+    bool valid = topology_contract_verify(tct);
+    kassert(valid, "Caller 0x%lx was not satisfied", caller);
 }

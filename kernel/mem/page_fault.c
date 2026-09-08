@@ -31,8 +31,13 @@ static struct spinlock pf_lock = SPINLOCK_INIT;
 enum irq_result page_fault_isr(void *context, uint8_t vector,
                                struct irq_context *rsp) {
     (void) context, (void) vector;
+    /* Synchronization here is actually OK: we can only receive one
+     * IRQ per CPU at any moment, and the caller passes the thread-local buffer
+     * to the exception_sync_cb below, this is just how the ISR
+     * gets access to said buffer without extra parameters */
     struct page_fault_scratch_buffer *pfsb =
-        (struct page_fault_scratch_buffer *) smp_core()->irq_stack_scratch_buf;
+        (struct page_fault_scratch_buffer *) smp_core(TOPC_IRQ)
+            ->irq_stack_scratch_buf;
 
     uint64_t error_code = rsp->error_code;
     uint64_t fault_addr;
@@ -207,8 +212,9 @@ static void dump_slab_exec_fault(struct thread *curr, struct irq_context *rsp) {
     printf("  rip=%p  rfl=%p\n", rsp->rip, rsp->rflags);
     printf("  cs=%p   ss=%p\n", rsp->cs, rsp->ss);
 
-    struct scheduler *sched = global.schedulers[smp_core_id()];
-    printf("\n--- Scheduler state (core %u) ---\n", smp_core_id());
+    /* Crash: raw smp_id is fine */
+    struct scheduler *sched = global.schedulers[smp_id_raw()];
+    printf("\n--- Scheduler state (core %u) ---\n", smp_id_raw());
     printf("  sched->current = %p\n", (uint64_t) sched->current);
     printf("  sched->drop_last_ref = %p\n", (uint64_t) sched->drop_last_ref);
     printf("  sched->other_locked = %p\n", (uint64_t) sched->other_locked);

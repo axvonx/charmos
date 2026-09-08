@@ -172,10 +172,12 @@ static void watchdog_buckets_inc_heartbeat(struct watchdog_buckets *buckets,
 static void watchdog_do_percpu_heartbeat(time_ms_t now) {
     kassert(PERCPU_READY(watchdog_percpu));
 
-    atomic_fetch_add_explicit(&PERCPU_PTR(watchdog_percpu)->heartbeat_seq, 1,
-                              memory_order_relaxed);
+    atomic_fetch_add_explicit(
+        &PERCPU_PTR(TOPC_IRQL, watchdog_percpu)->heartbeat_seq, 1,
+        memory_order_relaxed);
 
-    watchdog_buckets_inc_heartbeat(&PERCPU_READ(watchdog_percpu).buckets, now);
+    watchdog_buckets_inc_heartbeat(
+        &PERCPU_READ(TOPC_IRQL, watchdog_percpu).buckets, now);
 }
 
 /* Non blocking snapshot */
@@ -289,7 +291,7 @@ not_ready:
 static void watchdog_worker_timer_func(struct timer *t) {
     kassert(irq_in_interrupt());
 
-    struct watchdog_percpu *pcpu = PERCPU_PTR(watchdog_percpu);
+    struct watchdog_percpu *pcpu = PERCPU_PTR(TOPC_IRQ, watchdog_percpu);
     enum irql irql = spin_lock_irq_disable(&pcpu->callback_list.lock);
 
     struct watchdog_callback *cb;
@@ -675,7 +677,7 @@ static enum irq_result watchdog_master_nmi_handler(void *ctx, irq_t irq,
      * HACK: We simply use the call site ordering to guarantee list_add_tail
      * happens in the right order, but we will want to probably need to
      * make this more robust, reusable, and less reliant on call ordering */
-    if (smp_core_id() != 0)
+    if (smp_id(TOPC_IRQ) != 0)
         return IRQ_NONE; /* Not us */
 
     watchdog_master.tick++;
@@ -700,7 +702,7 @@ static enum irq_result watchdog_master_nmi_handler(void *ctx, irq_t irq,
 static enum irq_result watchdog_pet_nmi_handler(void *ctx, irq_t irq,
                                                 struct irq_context *regs) {
     (void) ctx, (void) irq, (void) regs;
-    struct watchdog_percpu *pcpu = PERCPU_PTR(watchdog_percpu);
+    struct watchdog_percpu *pcpu = PERCPU_PTR(TOPC_IRQ, watchdog_percpu);
 
     /* Must be set, if it doesn't, something happened */
     if (seqcount_read_raw(&pcpu->pets_seq) & 1) {
@@ -715,7 +717,7 @@ static enum irq_result watchdog_pet_nmi_handler(void *ctx, irq_t irq,
 static enum irq_result watchdog_test_handler(void *ctx, irq_t irq,
                                              struct irq_context *regs) {
     (void) ctx, (void) irq, (void) regs;
-    struct watchdog_percpu *pcpu = PERCPU_PTR(watchdog_percpu);
+    struct watchdog_percpu *pcpu = PERCPU_PTR(TOPC_IRQ, watchdog_percpu);
 
     if (seqcount_read_raw(&pcpu->response.seqcount) & 1) {
         pcpu->response.finished_ms = time_get_ms();
@@ -794,7 +796,7 @@ void watchdog_start(void) {
 
 void watchdog_pet(void) {
     if (PERCPU_READY(watchdog_percpu)) {
-        struct watchdog_percpu *this = PERCPU_PTR(watchdog_percpu);
+        struct watchdog_percpu *this = PERCPU_PTR(TOPC_NONE, watchdog_percpu);
         /* The caller must make sure we cannot be preempted */
         if (this->pets_enabled) {
             kassert(irql_get() >= IRQL_DISPATCH_LEVEL);
@@ -805,7 +807,7 @@ void watchdog_pet(void) {
 
 void watchdog_anti_pet(void) {
     if (PERCPU_READY(watchdog_percpu)) {
-        struct watchdog_percpu *this = PERCPU_PTR(watchdog_percpu);
+        struct watchdog_percpu *this = PERCPU_PTR(TOPC_NONE, watchdog_percpu);
         /* The caller must make sure we cannot be preempted */
         if (this->pets_enabled) {
             kassert(irql_get() >= IRQL_DISPATCH_LEVEL);

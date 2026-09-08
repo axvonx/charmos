@@ -9,7 +9,7 @@
 
 void scheduler_idle_main(void *nop) {
     (void) nop;
-    struct scheduler *sched = global.schedulers[smp_core_id()];
+    struct scheduler *sched = global.schedulers[smp_id_raw()];
 
     while (true) {
         disable_interrupts();

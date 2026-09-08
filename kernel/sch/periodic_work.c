@@ -113,11 +113,12 @@ void scheduler_periodic_work_execute(enum scheduler_periodic_work_type type) {
     if (global.current_bootstage < BOOTSTAGE_LATE)
         return;
 
-    kassert(scheduler_preemption_disabled());
     kassert(irql_get() == IRQL_DISPATCH_LEVEL);
+    kassert(scheduler_preemption_disabled(TOPC_IRQL));
     kassert(!scheduler_in_periodic_work());
 
-    struct scheduler_periodic_work_percpu *pcpu = &PERCPU_READ(periodic_percpu);
+    struct scheduler_periodic_work_percpu *pcpu =
+        PERCPU_PTR(TOPC_IRQL, periodic_percpu);
     pcpu->executing = true;
 
     bool time_based = type == PERIODIC_WORK_TIME_BASED;
@@ -166,5 +167,5 @@ void scheduler_periodic_work_execute(enum scheduler_periodic_work_type type) {
 }
 
 bool scheduler_in_periodic_work() {
-    return PERCPU_READ(periodic_percpu).executing;
+    return PERCPU_READ(TOPC_IRQL, periodic_percpu).executing;
 }

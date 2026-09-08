@@ -10,7 +10,7 @@
         irq_context_to_crash_regs(rsp, &pregs);                                \
         char msg[CRASH_MSG_MAX];                                               \
         snprintf(msg, sizeof(msg), "CPU %u fault: " message " at %p",          \
-                 (uint32_t) smp_core_id(), (void *) rsp->rip);                 \
+                 (uint32_t) smp_id_raw(), (void *) rsp->rip);                  \
         crash_full(&(struct crash_context) {                                   \
             .source = CRASH_SOURCE_CPU_EXCEPTION,                              \
             .formats = CRASH_FMT_DEFAULT,                                      \
@@ -28,7 +28,7 @@ enum irq_result gpf_handler(void *ctx, uint8_t vector,
     (void) ctx;
     (void) vector;
 
-    uint64_t core = smp_core_id();
+    uint64_t core = smp_id_raw();
     uint64_t ec = rsp->error_code;
 
     printf("\n=== General Protection Fault ===\n");
@@ -91,7 +91,7 @@ enum irq_result panic_nmi_isr(void *ctx, uint8_t vector,
                               struct irq_context *rsp) {
     (void) ctx, (void) vector, (void) rsp;
     if (atomic_load(&global.panicked)) {
-        if (crash_cpu_is_owner(smp_core_id()))
+        if (crash_cpu_is_owner(smp_id_raw()))
             return IRQ_HANDLED;
 
         crash_nmi_handoff(ctx, rsp);

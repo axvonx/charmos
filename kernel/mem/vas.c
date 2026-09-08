@@ -16,7 +16,7 @@ static size_t vas_cpu_id() {
     if (global.current_bootstage < BOOTSTAGE_MID_MP)
         return 0;
 
-    return smp_core_id();
+    return smp_id(TOPC_IRQL);
 }
 
 static size_t vas_range_get_data(struct rbt_node *n) {
@@ -241,7 +241,7 @@ static bool vas_pull_chunk(struct vas *vas, struct vas_local_tree *lt) {
     return true;
 }
 
-/* faster approach: maintain a sorted interval list per-CPU of chunk
+/* TODO: maintain a sorted interval list per-CPU of chunk
  * boundaries and binary-search it, but the simple version works first */
 static ssize_t vas_find_owner(struct vas *vas, vaddr_t addr) {
     size_t i;
@@ -287,6 +287,8 @@ static ssize_t vas_find_owner(struct vas *vas, vaddr_t addr) {
 }
 
 vaddr_t vas_alloc(struct vas *vas, size_t size, size_t align) {
+    enum irql outer = irql_raise(IRQL_DISPATCH_LEVEL);
+
     uint32_t cpu = vas_cpu_id();
     struct vas_local_tree *lt = &vas->local[cpu];
     vaddr_t result;
@@ -295,20 +297,26 @@ vaddr_t vas_alloc(struct vas *vas, size_t size, size_t align) {
     result = tree_alloc(lt, size, align);
     spin_unlock(&lt->lock, irql);
 
-    if (result)
+    if (result) {
+        irql_lower(outer);
         return result;
+    }
 
-    if (!vas_pull_chunk(vas, lt))
+    if (!vas_pull_chunk(vas, lt)) {
+        irql_lower(outer);
         return 0;
+    }
 
     irql = spin_lock(&lt->lock);
     result = tree_alloc(lt, size, align);
     spin_unlock(&lt->lock, irql);
 
+    irql_lower(outer);
     return result;
 }
 
 void vas_free(struct vas *vas, vaddr_t addr, size_t size) {
+    enum irql outer = irql_raise(IRQL_DISPATCH_LEVEL);
 
     ssize_t owner = vas_find_owner(vas, addr);
     struct vas_local_tree *lt;
@@ -322,6 +330,8 @@ void vas_free(struct vas *vas, vaddr_t addr, size_t size) {
     enum irql irql = spin_lock(&lt->lock);
     tree_free(lt, addr, size);
     spin_unlock(&lt->lock, irql);
+
+    irql_lower(outer);
 }
 
 /* True if addr lands inside a free gap held by this one tree. The tree is keyed

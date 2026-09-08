@@ -16,9 +16,46 @@ enum topology_level {
     TOPOLOGY_LEVEL_PACKAGE, /* Physical processor in a socket */
     TOPOLOGY_LEVEL_MACHINE, /* All processors in a machine */
     TOPOLOGY_LEVEL_MAX,     /* count */
-    TOPOLOGY_LEVEL_COUNT = TOPOLOGY_LEVEL_MAX
+
+    TOPOLOGY_LEVEL_DOMAIN, /* This exists solely because the topology_contract
+                            * has a domain granularity that does not
+                            * necessarily correspond to one of the others,
+                            * thus, it is outside of MAX and is its
+                            * own layer just for that API */
 };
 
+/* This enum is used to verify topology contracts to guarantee a caller
+ * cannot be migrated out of a given scope of logical processors.
+ *
+ * wrt. naming, we'll suffix all instances of caller contracts with a C.
+ * e.g. SMPC, NODEC, PACKAGEC(specific bits go here)
+ *
+ * TODO: we might need to come up with a naming document in docs/ because
+ * I've been doing this ad-hoc naming scheme stuff a few times
+ */
+enum topology_caller {
+    TOPC_NONE = 0,
+    TOPC_IRQL = 1 << 0,
+
+    /* NOTE: PINNED and IRQ are mutually exclusive */
+    TOPC_PINNED = 1 << 1,
+    TOPC_IRQ = 1 << 2,
+    TOPC_IFLAG = 1 << 3,
+
+    /* IRQ, IRQL and IFLAG: IRQ checks in_interrupt, IRQL that >= DISPATCH */
+    TOPC_ANY = TOPC_IRQL | TOPC_PINNED | TOPC_IRQ | TOPC_IFLAG,
+};
+
+/* Contracts essentially state "I will not migrate outside of this scope",
+ * with a set of named, verifiable reasons, so that "self topology" related
+ * functions can prove that they are in a safe state (specified), or
+ * in the edge case, have TOPOC_NONE contracts to uphold */
+struct topology_contract {
+    enum topology_level scope;
+    enum topology_caller caller;
+};
+
+/* TODO: enum this stuff */
 struct topology_cache_info {
     uint8_t level; /* 1, 2, 3 */
     uint8_t type;  /* Data, unified, instruction */
@@ -68,3 +105,4 @@ struct core *topology_find_idle_core(struct core *local_core,
 struct core **topology_get_smts_under_numa(struct topology_node *numa,
                                            size_t *count);
 const char *topology_level_name(enum topology_level l);
+bool topology_contract_verify(struct topology_contract c);

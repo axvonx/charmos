@@ -7,20 +7,29 @@
 #include <watchdog.h>
 
 enum irql irql_get(void) {
-    return smp_core()->current_irql;
+    /* We cannot change this away from NONE because
+     * the verification routine relies on this function */
+    return smp_read(TOPC_NONE, current_irql);
 }
 
-static enum irql irql_set(enum irql irql) {
-    return smp_core()->current_irql = irql;
+static void irql_set(enum irql irql) {
+    /* Internal function */
+    smp_write(TOPC_NONE, current_irql, irql);
 }
 
 static inline uint32_t scheduler_preemption_disable(void) {
     kassert(!are_interrupts_enabled());
-    return ctx_preempt_count(ctx_add(CTX_PREEMPT_ONE, CTX_PREEMPT_MASK));
+
+    /* We enforce that interrupts are disabled upon raise, no migration */
+    return smp_ctx_preempt_count(
+        smp_ctx_add(TOPC_NONE, SMP_CTX_PREEMPT_ONE, SMP_CTX_PREEMPT_MASK));
 }
 
 static inline uint32_t scheduler_preemption_enable(void) {
-    return ctx_preempt_count(ctx_sub(CTX_PREEMPT_ONE, CTX_PREEMPT_MASK));
+    /* Similar enforcement simply because this *is* the point where
+     * migrations can happen */
+    return smp_ctx_preempt_count(
+        smp_ctx_sub(TOPC_NONE, SMP_CTX_PREEMPT_ONE, SMP_CTX_PREEMPT_MASK));
 }
 
 enum irql irql_raise(enum irql new_level) {
@@ -70,7 +79,7 @@ static void irql_lower_internal(enum irql new_level, bool allow_resched) {
     if (new_level == old)
         return;
 
-    bool in_thread = irq_in_thread_context();
+    bool in_thread = irq_not_in_interrupt();
     struct thread *curr = thread_get_current();
 
     if (old >= IRQL_HIGH_LEVEL && new_level < IRQL_HIGH_LEVEL) {

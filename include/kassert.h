@@ -94,12 +94,11 @@
             _kassert_res;                                                      \
         }))
 
-#define kassert_unreachable(...)                                               \
+#define unreachable(...)                                                       \
     _kassert_fail(CRASH_CODE_GENERIC, "unreachable! ", ##__VA_ARGS__)
-#define kassert_unimplemented(...)                                             \
+#define unimplemented(...)                                                     \
     _kassert_fail(CRASH_CODE_GENERIC, "unimplemented! ", ##__VA_ARGS__)
-#define kassert_todo(...)                                                      \
-    _kassert_fail(CRASH_CODE_GENERIC, "TODO: ", ##__VA_ARGS__)
+#define todo(...) _kassert_fail(CRASH_CODE_GENERIC, "TODO: ", ##__VA_ARGS__)
 
 #ifdef DEBUG_ASSERT
 
@@ -109,19 +108,18 @@
 #define kassert_debug(...)                                                     \
     _kassert_dispatch(CRASH_CODE_GENERIC, _kassert, "DEBUG ", __VA_ARGS__)
 
-#define kassert_debug_unreachable(...)                                         \
+#define unreachable_debug(...)                                                 \
     _kassert_fail(CRASH_CODE_GENERIC, "DEBUG unreachable! ", ##__VA_ARGS__)
-#define kassert_debug_unimplemented(...)                                       \
+#define unimplemented_debug(...)                                               \
     _kassert_fail(CRASH_CODE_GENERIC, "DEBUG unimplemented! ", ##__VA_ARGS__)
-#define kassert_debug_todo(...)                                                \
+#define todo_debug(...)                                                        \
     _kassert_fail(CRASH_CODE_GENERIC, "DEBUG TODO: ", ##__VA_ARGS__)
 
 #else
 
 #define kassert_debug(...) _kassert_debug_off_dispatch(__VA_ARGS__)
-#define kassert_debug_unreachable(...) _kassert_debug_off_dispatch(__VA_ARGS__)
-#define kassert_debug_unimplemented(...)                                       \
-    _kassert_debug_off_dispatch(__VA_ARGS__)
-#define kassert_debug_todo(...) _kassert_debug_off_dispatch(__VA_ARGS__)
+#define unreachable_debug(...) _kassert_debug_off_dispatch(__VA_ARGS__)
+#define unimplemented_debug(...) _kassert_debug_off_dispatch(__VA_ARGS__)
+#define todo_debug(...) _kassert_debug_off_dispatch(__VA_ARGS__)
 
 #endif

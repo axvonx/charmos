@@ -133,6 +133,7 @@ void rcu_read_lock(void) {
         atomic_fetch_add_explicit(&t->rcu_nesting, 1, memory_order_seq_cst);
 
     kassert(old != UINT32_MAX, "RCU nesting overflow");
+    crash_unwind_enter_rcu();
 }
 
 /* Remove a reader off the leaf, and this can run on whatever CPU
@@ -182,6 +183,8 @@ void rcu_read_unlock(void) {
                                    *
                                    * Perhaps something can be done (?)
                                    */
+
+    crash_unwind_exit_rcu();
 }
 
 /* We might want to change next_is_idle to a thread pointer...
@@ -193,7 +196,7 @@ void rcu_note_context_switch(struct thread *outgoing, bool next_is_idle) {
 
     enum irql outer = irql_raise(IRQL_HIGH_LEVEL);
 
-    cpu_id_t cpu = smp_core_id();
+    cpu_id_t cpu = smp_id(TOPC_IRQL);
     struct rcu_node *leaf = rcu_leaf_for_cpu(cpu);
     uint64_t gp_seq_seen =
         atomic_load_explicit(&rcu.gp_seq, memory_order_acquire);
@@ -255,7 +258,7 @@ void rcu_note_irq_exit(void) {
         atomic_load_explicit(&rcu.gp_completed, memory_order_relaxed))
         return;
 
-    cpu_id_t cpu = smp_core_id();
+    cpu_id_t cpu = smp_id(TOPC_IRQ);
     if (atomic_load_explicit(&rcu.cpus[cpu].reported_seq,
                              memory_order_relaxed) == gp_seq_seen)
         return;
@@ -296,7 +299,7 @@ void rcu_defer(struct rcu_cb *cb, rcu_fn func, void *arg) {
         return;
     }
 
-    struct rcu_cpu *q = &rcu.cpus[smp_core_id()];
+    struct rcu_cpu *q = &rcu.cpus[smp_id(TOPC_IRQL)];
 
     enum irql irql = spin_lock_irq_disable(&q->lock);
     list_add_tail(&cb->list, &q->list);
@@ -349,8 +352,6 @@ static void rcu_run_batch(struct list_head *batch, uint64_t seq) {
 
 /* Bother everyone who's not quiesced, skip idlers */
 static void rcu_kick_pending(uint64_t seq) {
-    cpu_id_t self = smp_core_id();
-
     for (size_t l = 0; l < rcu.leaf_count; l++) {
         struct rcu_node *leaf = &rcu.leaves[l];
 
@@ -363,8 +364,7 @@ static void rcu_kick_pending(uint64_t seq) {
 
         cpu_id_t cpu;
         for_each_cpu(cpu, &pending) {
-            if (cpu != self)
-                ipi_send((uint32_t) cpu, IRQ_NOP);
+            ipi_send((uint32_t) cpu, IRQ_NOP);
         }
     }
 }
@@ -422,6 +422,7 @@ static void rcu_report_stall(uint64_t seq, time_ms_t elapsed) {
 }
 
 static uint64_t rcu_gp_start(struct list_head *batch) {
+    enum irql outer = irql_raise(IRQL_DISPATCH_LEVEL);
     rcu_detach_callbacks(batch);
     atomic_store_explicit(&rcu.gp_requests, 0, memory_order_relaxed);
 
@@ -463,7 +464,7 @@ static uint64_t rcu_gp_start(struct list_head *batch) {
     atomic_store_explicit(&rcu.gp_seq, seq, memory_order_release);
 
     /* Retire quiescent and poke everyone else */
-    cpu_id_t self = smp_core_id();
+    cpu_id_t self = smp_id(TOPC_IRQL);
 
     for (size_t l = 0; l < rcu.leaf_count; l++) {
         struct rcu_node *leaf = &rcu.leaves[l];
@@ -486,6 +487,7 @@ static uint64_t rcu_gp_start(struct list_head *batch) {
         for_each_cpu(cpu, &pending) ipi_send((uint32_t) cpu, IRQ_NOP);
     }
 
+    irql_lower(outer);
     return seq;
 }
 

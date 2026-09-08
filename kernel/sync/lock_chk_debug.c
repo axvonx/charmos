@@ -75,7 +75,7 @@ bool lock_debug_spin_push(void *instance, enum lock_chk_type type,
         return false;
 
     kassert(!are_interrupts_enabled());
-    struct lock_debug_cpu *cpu = PERCPU_PTR(lock_debug_cpu);
+    struct lock_debug_cpu *cpu = PERCPU_PTR(TOPC_IFLAG, lock_debug_cpu);
     if (cpu->depth == LOCK_CHK_MAX_SPIN_DEPTH) {
         struct lock_chk_failure fail = {
             .kind = LOCK_CHK_FAIL_CAPACITY,
@@ -110,7 +110,7 @@ void lock_debug_spin_validate_top(void *instance, enum lock_chk_type type,
         return;
 
     kassert(!are_interrupts_enabled());
-    struct lock_debug_cpu *cpu = PERCPU_PTR(lock_debug_cpu);
+    struct lock_debug_cpu *cpu = PERCPU_PTR(TOPC_IFLAG, lock_debug_cpu);
     if (cpu->depth == 0) {
         struct lock_chk_failure fail = {
             .kind = LOCK_CHK_FAIL_SPIN_ORDER,
@@ -143,7 +143,7 @@ void lock_debug_spin_pop(void *instance, enum lock_chk_type type) {
         return;
 
     kassert(!are_interrupts_enabled());
-    struct lock_debug_cpu *cpu = PERCPU_PTR(lock_debug_cpu);
+    struct lock_debug_cpu *cpu = PERCPU_PTR(TOPC_IFLAG, lock_debug_cpu);
     kassert(cpu->depth != 0);
     struct lock_debug_spin_entry *top = &cpu->stack[cpu->depth - 1];
     kassert(top->instance == instance);
