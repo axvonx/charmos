@@ -1,3 +1,4 @@
+#include <mem/alloc.h>
 #include <mem/alloc_or_die.h>
 #include <sch/sched.h>
 #include <thread/daemon.h>

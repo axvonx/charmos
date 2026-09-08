@@ -9,7 +9,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <sync/mutex.h>
-#include <thread/thread.h>
 #include <thread/workqueue.h>
 
 /*

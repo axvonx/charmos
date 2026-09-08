@@ -14,6 +14,7 @@
 #include <thread/workqueue.h>
 
 #include "internal.h"
+#include <thread/thread.h>
 
 typedef bool (*sync_fn)(struct block_device *, uint64_t, uint8_t *, uint16_t,
                         struct io_wait_token *iowt);

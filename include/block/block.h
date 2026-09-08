@@ -7,7 +7,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <sync/spinlock.h>
-#include <thread/thread.h>
 
 struct block_device;
 struct bio_request;

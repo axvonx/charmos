@@ -2,6 +2,7 @@
 #include <thread/thread.h>
 
 #include "internal.h"
+#include <mem/alloc.h>
 
 _Static_assert(WORKQUEUE_DEFAULT_MAX_IDLE_CHECK / 4 >
                    WORKQUEUE_DEFAULT_MIN_IDLE_CHECK,

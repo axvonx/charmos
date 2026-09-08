@@ -11,6 +11,7 @@
 #include <types/types.h>
 
 #include "internal.h"
+#include <mem/alloc.h>
 
 struct tsc_sync_mailbox {
     _Atomic uint32_t stage;

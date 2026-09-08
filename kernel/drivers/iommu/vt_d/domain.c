@@ -1,6 +1,7 @@
 #include <drivers/iommu/vt_d.h>
 #include <global.h>
 #include <math/div.h>
+#include <mem/alloc.h>
 
 static inline int bit_is_used(const uint8_t *bitmap, size_t bit_index) {
     return (bitmap[bit_index / 8] >> (bit_index % 8)) & 1u;

@@ -1,11 +1,11 @@
 /* @title: Physical memory manager */
 #pragma once
 #include <compiler.h>
-#include <limine.h>
 #include <mem/alloc.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <types/types.h>
+struct limine_memmap_request;
 
 extern struct limine_memmap_response *memmap;
 paddr_t pmm_alloc_page_internal(enum alloc_flags flags);

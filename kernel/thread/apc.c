@@ -5,6 +5,7 @@
 #include <thread/thread.h>
 
 #include "sch/internal.h"
+#include <mem/alloc.h>
 
 static inline bool safe_to_exec_apcs(void) {
     if (irql_get() != IRQL_PASSIVE_LEVEL || !irq_not_in_interrupt())

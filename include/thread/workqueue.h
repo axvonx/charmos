@@ -1,6 +1,5 @@
 /* @title: Workqueues */
 #pragma once
-#include <mem/alloc.h>
 #include <smp/topology.h>
 #include <stdatomic.h>
 #include <stdbool.h>

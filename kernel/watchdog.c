@@ -10,6 +10,7 @@
 #include <watchdog.h>
 
 #include "watchdog/internal.h"
+#include <mem/alloc.h>
 
 #define watchdog_master_log(lvl, fmt, ...)                                     \
     log(LOG_SITE(watchdog_master), LOG_HANDLE(watchdog_master), lvl, fmt,      \

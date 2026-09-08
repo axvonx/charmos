@@ -3,6 +3,7 @@
 #include <thread/thread.h>
 
 #include "internal.h"
+#include <mem/alloc.h>
 
 static enum wake_reason worker_wait(struct workqueue *wq, struct worker *w,
                                     enum irql irql, enum irql *out) {

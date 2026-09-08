@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <structures/sll.h>
 #include <thread/io_wait.h>
+#include <thread/thread.h>
 #include <time/spin_sleep.h>
 
 static void ide_start_next(struct ide_channel *chan, bool locked);

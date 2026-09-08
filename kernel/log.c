@@ -4,6 +4,7 @@
 #include <linker/symbol_table.h>
 #include <linker/symbols.h>
 #include <log.h>
+#include <mem/alloc.h>
 #include <mem/alloc_or_die.h>
 #include <mem/vmm.h>
 #include <ndjson.h>

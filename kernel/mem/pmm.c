@@ -1,4 +1,5 @@
 #include <console/printf.h>
+#include <limine.h>
 #include <math/align.h>
 #include <mem/alloc.h>
 #include <mem/bitmap.h>

@@ -1,5 +1,6 @@
 #include <acpi/lapic.h>
 #include <kassert.h>
+#include <mem/alloc.h>
 #include <sch/sched.h>
 #include <smp/core.h>
 #include <stdatomic.h>

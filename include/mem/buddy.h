@@ -1,10 +1,10 @@
 /* @title: Buddy allocator */
 #pragma once
-#include <mem/alloc.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <types/types.h>
+enum alloc_flags : uint32_t;
 
 #define BUDDY_MAX_ORDER 18
 

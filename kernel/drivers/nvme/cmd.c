@@ -19,6 +19,7 @@
 #include <time/spin_sleep.h>
 
 #include "internal.h"
+#include <thread/thread.h>
 
 static enum bio_request_status nvme_to_bio_status(uint16_t status_word) {
     uint16_t status = (status_word >> 1) & 0x7FFF;

@@ -5,7 +5,7 @@
 #pragma once
 #include <asm.h>
 #include <compiler.h>
-#include <mem/alloc.h>
+#include <log.h>
 #include <mem/page.h>
 #include <sch/climb.h>
 #include <sch/rt_sched_types.h>
