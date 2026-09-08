@@ -155,9 +155,14 @@ static struct lock_chk_edge *lock_chk_graph_find_edge_locked(
     return NULL;
 }
 
+static uint16_t lock_chk_mode_bit(enum lock_chk_mode mode) {
+    kassert(mode == LOCK_CHK_MODE_SHARED || mode == LOCK_CHK_MODE_EXCLUSIVE);
+    return mode == LOCK_CHK_MODE_EXCLUSIVE ? 1 : 0;
+}
+
 static uint16_t lock_chk_mode_state(const struct lock_chk_node *node,
                                     enum lock_chk_mode mode) {
-    return (uint16_t) (node->id * 2 + mode);
+    return (uint16_t) (node->id * 2 + lock_chk_mode_bit(mode));
 }
 
 static struct lock_chk_node *lock_chk_state_node(struct lock_chk_graph *graph,
@@ -166,7 +171,7 @@ static struct lock_chk_node *lock_chk_state_node(struct lock_chk_graph *graph,
 }
 
 static enum lock_chk_mode lock_chk_state_mode(uint16_t state) {
-    return (enum lock_chk_mode)(state % 2);
+    return (state % 2) != 0 ? LOCK_CHK_MODE_EXCLUSIVE : LOCK_CHK_MODE_SHARED;
 }
 
 static bool lock_chk_graph_path_locked(struct lock_chk_graph *graph,

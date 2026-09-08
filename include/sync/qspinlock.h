@@ -148,8 +148,9 @@ static inline bool qspinlock_order_checked(struct qspinlock *lock) {
 static inline void qspinlock_classify(struct qspinlock *lock,
                                       enum lock_debug_irq_usage usage,
                                       const struct lock_chk_site *site) {
-    lock_debug_spin_classify(&lock->irq_usage, usage, lock, LOCK_CHK_TYPE_QSPIN,
-                             site);
+    lock->chk.type = LOCK_CHK_TYPE_QSPIN;
+    lock->chk.instance = lock;
+    lock_debug_spin_classify(&lock->irq_usage, usage, &lock->chk, site);
 }
 
 static inline bool qspinlock_deep_checked(struct qspinlock *lock) {
@@ -160,16 +161,20 @@ static inline struct lock_chk_acquire_request qspinlock_chk_acquire_request(
     struct qspinlock *lock, const struct lock_chk_site *site,
     enum lock_chk_wait_kind wait_kind, uint8_t subclass, bool raw_operation,
     bool irq_safe) {
-    return lock_chk_acquire_request_make(
-        &lock->chk, lock, site, LOCK_CHK_TYPE_QSPIN, LOCK_CHK_MODE_EXCLUSIVE,
-        wait_kind, subclass, raw_operation, irq_safe);
+    lock->chk.instance = lock;
+    lock->chk.type = LOCK_CHK_TYPE_QSPIN;
+    return lock_chk_acquire_request_make(&lock->chk, site,
+                                         LOCK_CHK_MODE_EXCLUSIVE, wait_kind,
+                                         subclass, raw_operation, irq_safe);
 }
 
 static inline struct lock_chk_release_request
 qspinlock_chk_release_request(struct qspinlock *lock,
                               const struct lock_chk_site *site) {
-    return lock_chk_release_request_make(
-        &lock->chk, lock, site, LOCK_CHK_TYPE_QSPIN, LOCK_CHK_MODE_EXCLUSIVE);
+    lock->chk.instance = lock;
+    lock->chk.type = LOCK_CHK_TYPE_QSPIN;
+    return lock_chk_release_request_make(&lock->chk, site,
+                                         LOCK_CHK_MODE_EXCLUSIVE);
 }
 
 #else /* !defined(DEBUG_LOCK_CHK) */
@@ -380,8 +385,10 @@ static inline void qspin_unlock_internal(struct qspinlock *lock,
     disable_interrupts();
 
 #ifdef DEBUG_LOCK_CHK
+    lock->chk.instance = lock;
+    lock->chk.type = LOCK_CHK_TYPE_QSPIN;
     if (checked_shallow)
-        lock_debug_spin_validate_top(lock, LOCK_CHK_TYPE_QSPIN, old_irql, site);
+        lock_debug_spin_validate_top(&lock->chk, old_irql, site);
     if (checked_deep) {
         req = qspinlock_chk_release_request(lock, site);
         lock_chk_before_release(&token, &req);
@@ -394,7 +401,7 @@ static inline void qspin_unlock_internal(struct qspinlock *lock,
     if (checked_deep)
         lock_chk_released(&token);
     if (checked_shallow)
-        lock_debug_spin_pop(lock, LOCK_CHK_TYPE_QSPIN);
+        lock_debug_spin_pop(&lock->chk);
 #endif
 
     crash_unwind_exit_qspinlock(lock);
@@ -436,8 +443,11 @@ qspin_lock_subclass_internal(struct qspinlock *lock, uint8_t subclass,
     disable_interrupts();
 
 #ifdef DEBUG_LOCK_CHK
+    lock->chk.instance = lock;
+    lock->chk.type = LOCK_CHK_TYPE_QSPIN;
+
     if (checked_shallow)
-        lock_debug_spin_push(lock, LOCK_CHK_TYPE_QSPIN, irql, site);
+        lock_debug_spin_push(&lock->chk, irql, site);
 
     if (checked_deep)
         lock_chk_acquired(&token);
@@ -479,8 +489,10 @@ static inline enum irql __warn_unused_result qspin_lock_irq_disable_internal(
     qspin_lock_physical(lock);
 
 #ifdef DEBUG_LOCK_CHK
+    lock->chk.instance = lock;
+    lock->chk.type = LOCK_CHK_TYPE_QSPIN;
     if (checked_shallow)
-        lock_debug_spin_push(lock, LOCK_CHK_TYPE_QSPIN, irql, site);
+        lock_debug_spin_push(&lock->chk, irql, site);
 
     if (checked_deep)
         lock_chk_acquired(&token);
@@ -519,8 +531,10 @@ static inline bool __warn_unused_result qspin_trylock_internal(
         kassert(are_interrupts_enabled()); /* Should not go false */
         disable_interrupts();
 #ifdef DEBUG_LOCK_CHK
+        lock->chk.instance = lock;
+        lock->chk.type = LOCK_CHK_TYPE_QSPIN;
         if (checked_shallow)
-            lock_debug_spin_push(lock, LOCK_CHK_TYPE_QSPIN, *out, site);
+            lock_debug_spin_push(&lock->chk, *out, site);
 
         if (checked_deep)
             lock_chk_acquired(&token);
@@ -564,8 +578,10 @@ static inline bool __warn_unused_result qspin_trylock_irq_disable_internal(
     if (qspin_trylock_physical(lock)) {
 
 #ifdef DEBUG_LOCK_CHK
+        lock->chk.instance = lock;
+        lock->chk.type = LOCK_CHK_TYPE_QSPIN;
         if (checked_shallow)
-            lock_debug_spin_push(lock, LOCK_CHK_TYPE_QSPIN, *out, site);
+            lock_debug_spin_push(&lock->chk, *out, site);
 
         if (checked_deep)
             lock_chk_acquired(&token);
@@ -608,9 +624,11 @@ static inline void
 qspin_assert_held_internal(struct qspinlock *lock,
                            const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
+    lock->chk.instance = lock;
+    lock->chk.type = LOCK_CHK_TYPE_QSPIN;
     if (qspinlock_deep_checked(lock) &&
-        lock_chk_assert_held_deep(&lock->chk, lock, LOCK_CHK_TYPE_QSPIN,
-                                  LOCK_CHK_MODE_EXCLUSIVE, false, true, site))
+        lock_chk_assert_held_deep(&lock->chk, LOCK_CHK_MODE_IGNORED,
+                                  /*want_held=*/true, site))
         return;
 #else
     unused(site);
@@ -622,9 +640,11 @@ static inline void
 qspin_assert_not_held_internal(struct qspinlock *lock,
                                const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
+    lock->chk.instance = lock;
+    lock->chk.type = LOCK_CHK_TYPE_QSPIN;
     if (qspinlock_deep_checked(lock) &&
-        lock_chk_assert_held_deep(&lock->chk, lock, LOCK_CHK_TYPE_QSPIN,
-                                  LOCK_CHK_MODE_EXCLUSIVE, false, false, site))
+        lock_chk_assert_held_deep(&lock->chk, LOCK_CHK_MODE_IGNORED,
+                                  /*want_held=*/false, site))
         return;
 #else
     unused(site);

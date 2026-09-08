@@ -17,15 +17,16 @@
 #define _kassert_debug_off_dispatch(first, ...) ({ first; })
 
 #define _kassert_eval(prefix, x, msg_stmt)                                     \
-    __builtin_choose_expr(__builtin_types_compatible_p(__typeof__(x), void),   \
-                          ({ (x); }), ({                                       \
-                              __typeof__(x) _kassert_res = (x);                \
-                              if (unlikely(!(_kassert_res))) {                 \
-                                  msg_stmt;                                    \
-                                  __builtin_unreachable();                     \
-                              }                                                \
-                              _kassert_res;                                    \
-                          }))
+    __builtin_choose_expr(                                                     \
+        __builtin_types_compatible_p(__comptime_decay(x), void), ({ (x); }),   \
+        ({                                                                     \
+            __comptime_decay(x) _kassert_res = (x);                            \
+            if (unlikely(!(_kassert_res))) {                                   \
+                msg_stmt;                                                      \
+                __builtin_unreachable();                                       \
+            }                                                                  \
+            _kassert_res;                                                      \
+        }))
 /*
  * kassert(x)
  */
@@ -84,8 +85,9 @@
 
 #define kassert_with(x, payload, fmt, ...)                                     \
     __builtin_choose_expr(                                                     \
-        __builtin_types_compatible_p(__typeof__(x), void), ({ (x); }), ({      \
-            __typeof__(x) _kassert_res = (x);                                  \
+        __builtin_types_compatible_p(__comptime_decay(x), void), ({ (x); }),   \
+        ({                                                                     \
+            __comptime_decay(x) _kassert_res = (x);                            \
             if (unlikely(!(_kassert_res))) {                                   \
                 assert_impl_default(payload, __FILE__, __LINE__, __func__,     \
                                     _kassert_msg(x) ": " fmt, ##__VA_ARGS__);  \

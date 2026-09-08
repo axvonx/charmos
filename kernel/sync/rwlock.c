@@ -184,9 +184,11 @@ void rw_lock_internal(struct rwlock *lock, enum rwlock_acquire_type acq_type,
                            /*raw_operation=*/false);
     bool checked_deep = lock->chk.flags != LOCK_UNCHKD;
     if (checked_deep) {
-        req = lock_chk_acquire_request_make(
-            &lock->chk, lock, site, LOCK_CHK_TYPE_RWLOCK, chk_mode,
-            LOCK_CHK_WAIT_BLOCKING, subclass, false, false);
+        lock->chk.instance = lock;
+        lock->chk.type = LOCK_CHK_TYPE_RWLOCK;
+        req = lock_chk_acquire_request_make(&lock->chk, site, chk_mode,
+                                            LOCK_CHK_WAIT_BLOCKING, subclass,
+                                            false, false);
         lock_chk_before_acquire(&token, &req);
     }
 #endif
@@ -373,8 +375,9 @@ void rw_unlock_internal(struct rwlock *lock, const struct lock_chk_site *site) {
     struct lock_chk_release_token token;
     bool checked_deep = lock->chk.flags != LOCK_UNCHKD;
     if (checked_deep) {
-        req = lock_chk_release_request_make(&lock->chk, lock, site,
-                                            LOCK_CHK_TYPE_RWLOCK, chk_mode);
+        lock->chk.instance = lock;
+        lock->chk.type = LOCK_CHK_TYPE_RWLOCK;
+        req = lock_chk_release_request_make(&lock->chk, site, chk_mode);
         lock_chk_before_release(&token, &req);
     }
 #endif
@@ -473,12 +476,14 @@ void rwlock_assert_held_internal(struct rwlock *lock,
                                  enum rwlock_acquire_type type,
                                  const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
+    lock->chk.instance = lock;
+    lock->chk.type = LOCK_CHK_TYPE_RWLOCK;
     enum lock_chk_mode chk_mode = type == RWLOCK_ACQUIRE_READ
                                       ? LOCK_CHK_MODE_SHARED
                                       : LOCK_CHK_MODE_EXCLUSIVE;
     if (lock->chk.flags != LOCK_UNCHKD &&
-        lock_chk_assert_held_deep(&lock->chk, lock, LOCK_CHK_TYPE_RWLOCK,
-                                  chk_mode, true, true, site))
+        lock_chk_assert_held_deep(&lock->chk, chk_mode, /*want_held=*/true,
+                                  site))
         return;
 #else
     unused(site);
@@ -489,9 +494,11 @@ void rwlock_assert_held_internal(struct rwlock *lock,
 void rwlock_assert_not_held_internal(struct rwlock *lock,
                                      const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
+    lock->chk.instance = lock;
+    lock->chk.type = LOCK_CHK_TYPE_RWLOCK;
     if (lock->chk.flags != LOCK_UNCHKD &&
-        lock_chk_assert_held_deep(&lock->chk, lock, LOCK_CHK_TYPE_RWLOCK,
-                                  LOCK_CHK_MODE_SHARED, false, false, site))
+        lock_chk_assert_held_deep(&lock->chk, LOCK_CHK_MODE_IGNORED,
+                                  /*want_held=*/false, site))
         return;
 #else
     unused(site);

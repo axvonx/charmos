@@ -26,6 +26,7 @@ enum lock_chk_type : uint8_t {
 };
 
 enum lock_chk_mode : uint8_t {
+    LOCK_CHK_MODE_IGNORED,
     LOCK_CHK_MODE_SHARED,
     LOCK_CHK_MODE_EXCLUSIVE,
 };
@@ -108,15 +109,14 @@ struct lock_chk_class {
 
 void lock_debug_spin_classify(_Atomic uint8_t *usage,
                               enum lock_debug_irq_usage requested,
-                              void *instance, enum lock_chk_type type,
+                              struct lock_chk_lock *lock,
                               const struct lock_chk_site *site);
-bool lock_debug_spin_push(void *instance, enum lock_chk_type type,
-                          enum irql prev_irql,
+bool lock_debug_spin_push(struct lock_chk_lock *lock, enum irql prev_irql,
                           const struct lock_chk_site *site);
-void lock_debug_spin_validate_top(void *instance, enum lock_chk_type type,
+void lock_debug_spin_validate_top(struct lock_chk_lock *lock,
                                   enum irql prev_irql,
                                   const struct lock_chk_site *site);
-void lock_debug_spin_pop(void *instance, enum lock_chk_type type);
+void lock_debug_spin_pop(struct lock_chk_lock *lock);
 
 void lock_chk_note_lock_use(struct lock_chk_lock *lock, bool manages_irql,
                             bool raw_operation);

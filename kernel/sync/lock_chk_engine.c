@@ -316,18 +316,16 @@ void lock_chk_before_release(struct lock_chk_release_token *token,
         goto out;
     }
 
-    {
-        struct lock_chk_failure fail = {
-            .kind = LOCK_CHK_FAIL_RELEASE,
-            .site = request->site,
-            .class = request->map ? request->map->class : NULL,
-            .instance = request->instance,
-            .type = request->type,
-            .mode = request->mode,
-        };
-        lock_chk_fail(&fail, "Foreign or unbalanced lock release (instance %p)",
-                      request->instance);
-    }
+    struct lock_chk_failure fail = {
+        .kind = LOCK_CHK_FAIL_RELEASE,
+        .site = request->site,
+        .class = request->map ? request->map->class : NULL,
+        .instance = request->instance,
+        .type = request->type,
+        .mode = request->mode,
+    };
+    lock_chk_fail(&fail, "Foreign or unbalanced lock release (instance %p)",
+                  request->instance);
 
 out:
     lock_chk_leave(&guard);
@@ -363,10 +361,12 @@ void lock_chk_released(struct lock_chk_release_token *token) {
     lock_chk_leave(&guard);
 }
 
-bool lock_chk_assert_held_deep(struct lock_chk_lock *lock, void *instance,
-                               enum lock_chk_type type, enum lock_chk_mode mode,
-                               bool mode_specific, bool want_held,
+bool lock_chk_assert_held_deep(struct lock_chk_lock *lock,
+                               enum lock_chk_mode mode, bool want_held,
                                const struct lock_chk_site *site) {
+    bool mode_specific = mode != LOCK_CHK_MODE_IGNORED;
+    void *instance = lock->instance;
+    enum lock_chk_type type = lock->type;
     if (!lock_chk_deep_is_active())
         return false;
 

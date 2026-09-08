@@ -43,7 +43,7 @@ void lock_debug_activate(void) {
 
 void lock_debug_spin_classify(_Atomic uint8_t *usage,
                               enum lock_debug_irq_usage requested,
-                              void *instance, enum lock_chk_type type,
+                              struct lock_chk_lock *lock,
                               const struct lock_chk_site *site) {
     if (atomic_load_explicit(&lock_debug_state, memory_order_acquire) !=
         LOCK_CHK_ACTIVE)
@@ -59,16 +59,15 @@ void lock_debug_spin_classify(_Atomic uint8_t *usage,
         struct lock_chk_failure fail = {
             .kind = LOCK_CHK_FAIL_CONTEXT,
             .site = site,
-            .instance = instance,
-            .type = type,
+            .instance = lock->instance,
+            .type = lock->type,
         };
         lock_chk_fail(&fail, "%s %p changed IRQL usage",
-                      lock_chk_type_name(type), instance);
+                      lock_chk_type_name(lock->type), lock->instance);
     }
 }
 
-bool lock_debug_spin_push(void *instance, enum lock_chk_type type,
-                          enum irql prev_irql,
+bool lock_debug_spin_push(struct lock_chk_lock *lock, enum irql prev_irql,
                           const struct lock_chk_site *site) {
     if (atomic_load_explicit(&lock_debug_state, memory_order_acquire) !=
         LOCK_CHK_ACTIVE)
@@ -80,8 +79,8 @@ bool lock_debug_spin_push(void *instance, enum lock_chk_type type,
         struct lock_chk_failure fail = {
             .kind = LOCK_CHK_FAIL_CAPACITY,
             .site = site,
-            .instance = instance,
-            .type = type,
+            .instance = lock->instance,
+            .type = lock->type,
             .capacity_pool = "shallow spin stack",
             .capacity_used = LOCK_CHK_MAX_SPIN_DEPTH,
             .capacity_limit = LOCK_CHK_MAX_SPIN_DEPTH,
@@ -94,17 +93,19 @@ bool lock_debug_spin_push(void *instance, enum lock_chk_type type,
     }
 
     cpu->stack[cpu->depth++] = (struct lock_debug_spin_entry){
-        .instance = instance,
+        .instance = lock->instance,
         .acquire_site = site,
         .prev_irql = prev_irql,
-        .type = type,
+        .type = lock->type,
     };
     return true;
 }
 
-void lock_debug_spin_validate_top(void *instance, enum lock_chk_type type,
+void lock_debug_spin_validate_top(struct lock_chk_lock *lock,
                                   enum irql prev_irql,
                                   const struct lock_chk_site *site) {
+    void *instance = lock->instance;
+    enum lock_chk_type type = lock->type;
     if (atomic_load_explicit(&lock_debug_state, memory_order_acquire) !=
         LOCK_CHK_ACTIVE)
         return;
@@ -137,7 +138,7 @@ void lock_debug_spin_validate_top(void *instance, enum lock_chk_type type,
     }
 }
 
-void lock_debug_spin_pop(void *instance, enum lock_chk_type type) {
+void lock_debug_spin_pop(struct lock_chk_lock *lock) {
     if (atomic_load_explicit(&lock_debug_state, memory_order_acquire) !=
         LOCK_CHK_ACTIVE)
         return;
@@ -146,8 +147,8 @@ void lock_debug_spin_pop(void *instance, enum lock_chk_type type) {
     struct lock_debug_cpu *cpu = PERCPU_PTR(TOPC_IFLAG, lock_debug_cpu);
     kassert(cpu->depth != 0);
     struct lock_debug_spin_entry *top = &cpu->stack[cpu->depth - 1];
-    kassert(top->instance == instance);
-    kassert(top->type == type);
+    kassert(top->instance == lock->instance);
+    kassert(top->type == lock->type);
     cpu->depth--;
 }
 

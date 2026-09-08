@@ -22,9 +22,11 @@ mutex_simple_chk_before_lock(struct mutex_simple_chk_acquire_state *state,
                              struct mutex_simple *m, unsigned int subclass,
                              const struct lock_chk_site *site) {
     lock_chk_note_lock_use(&m->chk, false, false);
+    m->chk.instance = m;
+    m->chk.type = LOCK_CHK_TYPE_MUTEX_SIMPLE;
     state->request = lock_chk_acquire_request_make(
-        &m->chk, m, site, LOCK_CHK_TYPE_MUTEX_SIMPLE, LOCK_CHK_MODE_EXCLUSIVE,
-        LOCK_CHK_WAIT_BLOCKING, subclass, false, false);
+        &m->chk, site, LOCK_CHK_MODE_EXCLUSIVE, LOCK_CHK_WAIT_BLOCKING,
+        subclass, false, false);
     lock_chk_before_acquire(&state->token, &state->request);
 }
 
@@ -37,8 +39,10 @@ static void
 mutex_simple_chk_before_unlock(struct mutex_simple_chk_release_state *state,
                                struct mutex_simple *m,
                                const struct lock_chk_site *site) {
-    state->request = lock_chk_release_request_make(
-        &m->chk, m, site, LOCK_CHK_TYPE_MUTEX_SIMPLE, LOCK_CHK_MODE_EXCLUSIVE);
+    m->chk.instance = m;
+    m->chk.type = LOCK_CHK_TYPE_MUTEX_SIMPLE;
+    state->request =
+        lock_chk_release_request_make(&m->chk, site, LOCK_CHK_MODE_EXCLUSIVE);
     lock_chk_before_release(&state->token, &state->request);
 }
 
@@ -258,9 +262,11 @@ struct thread *mutex_simple_get_owner(struct mutex_simple *m) {
 void mutex_simple_assert_held_internal(struct mutex_simple *m,
                                        const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
+    m->chk.instance = m;
+    m->chk.type = LOCK_CHK_TYPE_MUTEX_SIMPLE;
     if (m->chk.flags != LOCK_UNCHKD && lock_chk_tracking_active() &&
-        lock_chk_assert_held_deep(&m->chk, m, LOCK_CHK_TYPE_MUTEX_SIMPLE,
-                                  LOCK_CHK_MODE_EXCLUSIVE, false, true, site))
+        lock_chk_assert_held_deep(&m->chk, LOCK_CHK_MODE_IGNORED,
+                                  /*want_held=*/true, site))
         return;
 #else
     unused(site);
@@ -272,9 +278,11 @@ void mutex_simple_assert_held_internal(struct mutex_simple *m,
 void mutex_simple_assert_not_held_internal(struct mutex_simple *m,
                                            const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
+    m->chk.instance = m;
+    m->chk.type = LOCK_CHK_TYPE_MUTEX_SIMPLE;
     if (m->chk.flags != LOCK_UNCHKD && lock_chk_tracking_active() &&
-        lock_chk_assert_held_deep(&m->chk, m, LOCK_CHK_TYPE_MUTEX_SIMPLE,
-                                  LOCK_CHK_MODE_EXCLUSIVE, false, false, site))
+        lock_chk_assert_held_deep(&m->chk, LOCK_CHK_MODE_IGNORED,
+                                  /*want_held=*/false, site))
         return;
 #else
     unused(site);

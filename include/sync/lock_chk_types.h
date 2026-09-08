@@ -100,9 +100,13 @@ struct lock_chk_release_token {
 
 struct lock_chk_lock {
     enum lock_chk_flags flags;
-    bool initialized;
     _Atomic bool used;
     struct lock_chk_map map;
+    void *instance;
+    enum lock_chk_type type : 4;
+    bool initialized : 1;
+    bool manages_irql : 1;
+    bool raw_operation : 1;
 };
 
 void lock_chk_before_acquire(struct lock_chk_acquire_token *token,
@@ -116,9 +120,8 @@ void lock_chk_released(struct lock_chk_release_token *token);
 /* LOCK_CHK_ASSERT_HELD/NOT_HELD and whatnot use this, which
  * returns true if the engine could evaluate the assertion,
  * and otherwise will return false, and panic if a violation is found */
-bool lock_chk_assert_held_deep(struct lock_chk_lock *lock, void *instance,
-                               enum lock_chk_type type, enum lock_chk_mode mode,
-                               bool mode_specific, bool want_held,
+bool lock_chk_assert_held_deep(struct lock_chk_lock *lock,
+                               enum lock_chk_mode mode, bool want_held,
                                const struct lock_chk_site *site);
 
 #define LOCK_CHK_MAP_VALUE_INIT(class_)                                        \
@@ -154,16 +157,15 @@ lock_chk_map_runtime_init(struct lock_chk_map *map,
 }
 
 static inline struct lock_chk_acquire_request lock_chk_acquire_request_make(
-    struct lock_chk_lock *lock, void *instance,
-    const struct lock_chk_site *site, enum lock_chk_type type,
+    struct lock_chk_lock *lock, const struct lock_chk_site *site,
     enum lock_chk_mode mode, enum lock_chk_wait_kind wait_kind,
     uint8_t subclass, bool raw_operation, bool irq_safe) {
     return (struct lock_chk_acquire_request) {
         .map = &lock->map,
-        .instance = instance,
+        .instance = lock->instance,
         .site = site,
         .flags = lock->flags,
-        .type = type,
+        .type = lock->type,
         .mode = mode,
         .wait_kind = wait_kind,
         .prev_irql = irql_get(),
@@ -177,16 +179,15 @@ static inline struct lock_chk_acquire_request lock_chk_acquire_request_make(
 }
 
 static inline struct lock_chk_release_request
-lock_chk_release_request_make(struct lock_chk_lock *lock, void *instance,
+lock_chk_release_request_make(struct lock_chk_lock *lock,
                               const struct lock_chk_site *site,
-                              enum lock_chk_type type,
                               enum lock_chk_mode mode) {
     return (struct lock_chk_release_request) {
         .map = &lock->map,
-        .instance = instance,
+        .instance = lock->instance,
         .site = site,
         .flags = lock->flags,
-        .type = type,
+        .type = lock->type,
         .mode = mode,
     };
 }

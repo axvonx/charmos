@@ -29,9 +29,13 @@ static void mutex_chk_before_lock(struct mutex_chk_acquire_state *state,
                                   const struct lock_chk_site *site) {
     lock_chk_note_lock_use(&mutex->chk, /*manages_irql=*/false,
                            /*raw_operation=*/false);
+    /* HACK: We should really set .instance at initialization, we just
+     * do it here because I don't want to do all of that work */
+    mutex->chk.instance = mutex;
+    mutex->chk.type = LOCK_CHK_TYPE_MUTEX;
     state->request = lock_chk_acquire_request_make(
-        &mutex->chk, mutex, site, LOCK_CHK_TYPE_MUTEX, LOCK_CHK_MODE_EXCLUSIVE,
-        LOCK_CHK_WAIT_BLOCKING, subclass, false, false);
+        &mutex->chk, site, LOCK_CHK_MODE_EXCLUSIVE, LOCK_CHK_WAIT_BLOCKING,
+        subclass, false, false);
     lock_chk_before_acquire(&state->token, &state->request);
 }
 
@@ -42,8 +46,10 @@ static void mutex_chk_locked(struct mutex_chk_acquire_state *state) {
 static void mutex_chk_before_unlock(struct mutex_chk_release_state *state,
                                     struct mutex *mutex,
                                     const struct lock_chk_site *site) {
-    state->request = lock_chk_release_request_make(
-        &mutex->chk, mutex, site, LOCK_CHK_TYPE_MUTEX, LOCK_CHK_MODE_EXCLUSIVE);
+    mutex->chk.instance = mutex;
+    mutex->chk.type = LOCK_CHK_TYPE_MUTEX;
+    state->request = lock_chk_release_request_make(&mutex->chk, site,
+                                                   LOCK_CHK_MODE_EXCLUSIVE);
     lock_chk_before_release(&state->token, &state->request);
 }
 
@@ -316,9 +322,11 @@ bool mutex_locked(struct mutex *mtx) {
 void mutex_assert_held_internal(struct mutex *mtx,
                                 const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
+    mtx->chk.instance = mtx;
+    mtx->chk.type = LOCK_CHK_TYPE_MUTEX;
     if (mtx->chk.flags != LOCK_UNCHKD && lock_chk_tracking_active() &&
-        lock_chk_assert_held_deep(&mtx->chk, mtx, LOCK_CHK_TYPE_MUTEX,
-                                  LOCK_CHK_MODE_EXCLUSIVE, false, true, site))
+        lock_chk_assert_held_deep(&mtx->chk, LOCK_CHK_MODE_IGNORED,
+                                  /*want_held=*/true, site))
         return;
 #else
     unused(site);
@@ -330,9 +338,11 @@ void mutex_assert_held_internal(struct mutex *mtx,
 void mutex_assert_not_held_internal(struct mutex *mtx,
                                     const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
+    mtx->chk.instance = mtx;
+    mtx->chk.type = LOCK_CHK_TYPE_MUTEX;
     if (mtx->chk.flags != LOCK_UNCHKD && lock_chk_tracking_active() &&
-        lock_chk_assert_held_deep(&mtx->chk, mtx, LOCK_CHK_TYPE_MUTEX,
-                                  LOCK_CHK_MODE_EXCLUSIVE, false, false, site))
+        lock_chk_assert_held_deep(&mtx->chk, LOCK_CHK_MODE_IGNORED,
+                                  /*want_held=*/false, site))
         return;
 #else
     unused(site);
