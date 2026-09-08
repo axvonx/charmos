@@ -15,6 +15,8 @@
 #include "sync/lock_chk_internal.h"
 #endif /* DEBUG_LOCK_CHK */
 
+TEST_GROUP_DECLARE(lock_chk);
+
 LOCK_CHK_CLASS_DECLARE_LOCAL(death_abba_class1);
 LOCK_CHK_CLASS_DECLARE_LOCAL(death_abba_class2);
 LOCK_CHK_CLASS_DECLARE_LOCAL(death_recurse_class);

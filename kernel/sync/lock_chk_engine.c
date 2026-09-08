@@ -363,7 +363,7 @@ void lock_chk_released(struct lock_chk_release_token *token) {
     lock_chk_leave(&guard);
 }
 
-bool lock_chk_assert_held_deep(struct lock_chk_map *map, void *instance,
+bool lock_chk_assert_held_deep(struct lock_chk_lock *lock, void *instance,
                                enum lock_chk_type type, enum lock_chk_mode mode,
                                bool mode_specific, bool want_held,
                                const struct lock_chk_site *site) {
@@ -398,7 +398,7 @@ bool lock_chk_assert_held_deep(struct lock_chk_map *map, void *instance,
             .kind = want_held ? LOCK_CHK_FAIL_NOT_HELD
                               : LOCK_CHK_FAIL_UNEXPECTED_HELD,
             .site = site,
-            .class = map ? map->class : NULL,
+            .class = lock ? lock->map.class : NULL,
             .instance = instance,
             .type = type,
             .mode = found_mode,

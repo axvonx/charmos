@@ -41,19 +41,18 @@ bool lock_chk_capacity_should_panic(void) {
     return lock_chk_panic_on_exhaustion;
 }
 
-void lock_chk_note_lock_use(bool initialized, enum lock_chk_flags flags,
-                            _Atomic bool *used, bool manages_irql,
+void lock_chk_note_lock_use(struct lock_chk_lock *lock, bool manages_irql,
                             bool raw_operation) {
     if (!lock_chk_tracking_active())
         return;
 
-    kassert(initialized);
-    kassert((flags & ~LOCK_CHKD_FULL) == 0);
+    kassert(lock->initialized);
+    kassert((lock->flags & ~LOCK_CHKD_FULL) == 0);
     if (manages_irql && !raw_operation)
-        kassert((flags & LOCK_CHKD_THREAD) == 0 ||
-                (flags & LOCK_CHKD_ORDER) != 0);
+        kassert((lock->flags & LOCK_CHKD_THREAD) == 0 ||
+                (lock->flags & LOCK_CHKD_ORDER) != 0);
 
-    atomic_store_explicit(used, true, memory_order_release);
+    atomic_store_explicit(&lock->used, true, memory_order_release);
 }
 
 #else /* !defined(DEBUG_LOCK_CHK) */

@@ -4,8 +4,6 @@
 
 #ifdef TEST_QSPINLOCK
 
-TEST_GROUP_DECLARE(lock_chk);
-
 LOCK_CHK_CLASS_DECLARE_LOCAL(lock_reinit_class);
 static MUTEX_SIMPLE_DEFINE(static_simple_mutex);
 
@@ -15,16 +13,16 @@ static bool lock_init_state_valid(struct spinlock *spin,
                                   struct qspinlock *qspin, struct mutex *mutex,
                                   struct mutex_simple *simple,
                                   struct rwlock *rw, struct seqlock *seq) {
-    return spin->chk_initialized && spin->chk_flags == LOCK_CHKD_FULL &&
-           spin->chk_map.class != NULL && qspin->chk_initialized &&
-           qspin->chk_flags == LOCK_CHKD_FULL && qspin->chk_map.class != NULL &&
-           mutex->chk_initialized && mutex->chk_flags == LOCK_CHKD_FULL &&
-           mutex->chk_map.class != NULL && simple->chk_initialized &&
-           simple->chk_flags == LOCK_CHKD_FULL &&
-           simple->chk_map.class != NULL && rw->chk_initialized &&
-           rw->chk_flags == LOCK_CHKD_FULL && rw->chk_map.class != NULL &&
-           seq->lock.chk_initialized && seq->lock.chk_flags == LOCK_CHKD_FULL &&
-           seq->lock.chk_map.class != NULL;
+    return spin->chk.initialized && spin->chk.flags == LOCK_CHKD_FULL &&
+           spin->chk.map.class != NULL && qspin->chk.initialized &&
+           qspin->chk.flags == LOCK_CHKD_FULL && qspin->chk.map.class != NULL &&
+           mutex->chk.initialized && mutex->chk.flags == LOCK_CHKD_FULL &&
+           mutex->chk.map.class != NULL && simple->chk.initialized &&
+           simple->chk.flags == LOCK_CHKD_FULL &&
+           simple->chk.map.class != NULL && rw->chk.initialized &&
+           rw->chk.flags == LOCK_CHKD_FULL && rw->chk.map.class != NULL &&
+           seq->lock.chk.initialized && seq->lock.chk.flags == LOCK_CHKD_FULL &&
+           seq->lock.chk.map.class != NULL;
 }
 
 static bool lock_reinit_state_valid(struct spinlock *spin,
@@ -34,14 +32,14 @@ static bool lock_reinit_state_valid(struct spinlock *spin,
                                     struct rwlock *rw) {
     const struct lock_chk_class *class = LOCK_CHK_CLASS(lock_reinit_class);
 
-    return spin->chk_flags == LOCK_CHKD_FULL && spin->chk_map.class == class &&
-           qspin->chk_flags == LOCK_CHKD_FULL &&
-           qspin->chk_map.class == class &&
-           mutex->chk_flags == LOCK_CHKD_FULL &&
-           mutex->chk_map.class == class &&
-           simple->chk_flags == LOCK_CHKD_FULL &&
-           simple->chk_map.class == class && rw->chk_flags == LOCK_CHKD_FULL &&
-           rw->chk_map.class == class;
+    return spin->chk.flags == LOCK_CHKD_FULL && spin->chk.map.class == class &&
+           qspin->chk.flags == LOCK_CHKD_FULL &&
+           qspin->chk.map.class == class &&
+           mutex->chk.flags == LOCK_CHKD_FULL &&
+           mutex->chk.map.class == class &&
+           simple->chk.flags == LOCK_CHKD_FULL &&
+           simple->chk.map.class == class && rw->chk.flags == LOCK_CHKD_FULL &&
+           rw->chk.map.class == class;
 }
 
 #else /* !defined(DEBUG_LOCK_CHK) */

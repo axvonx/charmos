@@ -16,11 +16,8 @@ struct spinlock {
     struct raw_spinlock raw;
 
 #ifdef DEBUG_LOCK_CHK
-    enum lock_chk_flags chk_flags;
-    bool chk_initialized;
-    _Atomic bool chk_used;
+    struct lock_chk_lock chk;
     _Atomic uint8_t irq_usage;
-    struct lock_chk_map chk_map;
 #endif /* DEBUG_LOCK_CHK */
 };
 
@@ -43,17 +40,14 @@ spinlock_init_chk_internal(struct spinlock *lock,
 
 #ifdef DEBUG_LOCK_CHK
 
-#define __SPINLOCK_POLICY_VALUE_INIT(flags_)                                   \
-    , .chk_flags = (flags_), .chk_initialized = true,                          \
-        .chk_used = ATOMIC_VAR_INIT(false)
 #define __SPINLOCK_SHALLOW_VALUE_INIT                                          \
     , .irq_usage = ATOMIC_VAR_INIT(LOCK_DEBUG_IRQ_NONE)
-#define __SPINLOCK_MAP_VALUE_INIT(class_)                                      \
-    , .chk_map = LOCK_CHK_MAP_VALUE_INIT(class_)
+#define __SPINLOCK_LOCK_CHK_VALUE_INIT(class_, flags_)                         \
+    , .chk = LOCK_CHK_LOCK_VALUE_INIT((class_), (flags_))
 #define SPINLOCK_INIT_CHK(class_, flags_)                                      \
     ((struct spinlock) {                                                       \
-        .raw = RAW_SPINLOCK_INIT __SPINLOCK_POLICY_VALUE_INIT(flags_)          \
-            __SPINLOCK_SHALLOW_VALUE_INIT __SPINLOCK_MAP_VALUE_INIT(class_)})
+        .raw = RAW_SPINLOCK_INIT __SPINLOCK_LOCK_CHK_VALUE_INIT(               \
+            (class_), (flags_)) __SPINLOCK_SHALLOW_VALUE_INIT})
 
 #define spinlock_init_chk(lock_, class_, flags_)                               \
     spinlock_init_chk_internal((lock_), (class_), (flags_))
@@ -70,9 +64,9 @@ spinlock_init_chk_internal(struct spinlock *lock,
 static inline void spinlock_policy_init_internal(struct spinlock *lock,
                                                  enum lock_chk_flags flags) {
     kassert((flags & ~LOCK_CHKD_FULL) == 0);
-    lock->chk_flags = flags;
-    lock->chk_initialized = true;
-    atomic_store_explicit(&lock->chk_used, false, memory_order_relaxed);
+    lock->chk.flags = flags;
+    lock->chk.initialized = true;
+    atomic_store_explicit(&lock->chk.used, false, memory_order_relaxed);
 }
 static inline void spinlock_shallow_init_internal(struct spinlock *lock) {
     atomic_store_explicit(&lock->irq_usage, LOCK_DEBUG_IRQ_NONE,
@@ -83,18 +77,17 @@ spinlock_map_init_internal(struct spinlock *lock,
                            const struct lock_chk_class *class,
                            enum lock_chk_flags flags) {
     kassert(flags == LOCK_UNCHKD || class != NULL);
-    lock_chk_map_runtime_init(&lock->chk_map, class);
+    lock_chk_map_runtime_init(&lock->chk.map, class);
 }
 
 static inline void spinlock_note_use(struct spinlock *lock,
                                      bool raw_operation) {
-    lock_chk_note_lock_use(lock->chk_initialized, lock->chk_flags,
-                           &lock->chk_used, true, raw_operation);
+    lock_chk_note_lock_use(&lock->chk, true, raw_operation);
 }
 
 static inline bool spinlock_order_checked(struct spinlock *lock) {
     return lock_chk_tracking_active() &&
-           (lock->chk_flags & LOCK_CHKD_ORDER) != 0;
+           (lock->chk.flags & LOCK_CHKD_ORDER) != 0;
 }
 
 static inline void spinlock_classify(struct spinlock *lock,
@@ -105,31 +98,29 @@ static inline void spinlock_classify(struct spinlock *lock,
 }
 
 static inline bool spinlock_deep_checked(struct spinlock *lock) {
-    return lock_chk_tracking_active() && lock->chk_flags != LOCK_UNCHKD;
+    return lock_chk_tracking_active() && lock->chk.flags != LOCK_UNCHKD;
 }
 
 static inline struct lock_chk_acquire_request spinlock_chk_acquire_request(
     struct spinlock *lock, const struct lock_chk_site *site,
-    enum lock_chk_wait_kind wait_kind, unsigned int subclass,
-    bool raw_operation, bool irq_safe) {
+    enum lock_chk_wait_kind wait_kind, uint8_t subclass, bool raw_operation,
+    bool irq_safe) {
     return lock_chk_acquire_request_make(
-        &lock->chk_map, lock, site, lock->chk_flags, LOCK_CHK_TYPE_SPIN,
-        LOCK_CHK_MODE_EXCLUSIVE, wait_kind, subclass, raw_operation, irq_safe);
+        &lock->chk, lock, site, LOCK_CHK_TYPE_SPIN, LOCK_CHK_MODE_EXCLUSIVE,
+        wait_kind, subclass, raw_operation, irq_safe);
 }
 
 static inline struct lock_chk_release_request
 spinlock_chk_release_request(struct spinlock *lock,
                              const struct lock_chk_site *site) {
-    return lock_chk_release_request_make(&lock->chk_map, lock, site,
-                                         lock->chk_flags, LOCK_CHK_TYPE_SPIN,
-                                         LOCK_CHK_MODE_EXCLUSIVE);
+    return lock_chk_release_request_make(
+        &lock->chk, lock, site, LOCK_CHK_TYPE_SPIN, LOCK_CHK_MODE_EXCLUSIVE);
 }
 
 #else /* !defined(DEBUG_LOCK_CHK) */
 
-#define __SPINLOCK_POLICY_VALUE_INIT(flags_)
 #define __SPINLOCK_SHALLOW_VALUE_INIT
-#define __SPINLOCK_MAP_VALUE_INIT(class_)
+#define __SPINLOCK_LOCK_CHK_VALUE_INIT(class_, flags_)
 #define SPINLOCK_INIT_CHK(class_, flags_)                                      \
     ((struct spinlock) {.raw = RAW_SPINLOCK_INIT})
 
@@ -318,9 +309,8 @@ static inline void spin_unlock_internal(struct spinlock *lock, enum irql old,
     irql_lower(old);
 }
 
-static inline enum irql __warn_unused_result
-spin_lock_subclass_internal(struct spinlock *lock, unsigned int subclass,
-                            const struct lock_chk_site *site) {
+static inline enum irql __warn_unused_result spin_lock_subclass_internal(
+    struct spinlock *lock, uint8_t subclass, const struct lock_chk_site *site) {
     kassert(subclass < LOCK_CHK_MAX_SUBCLASSES);
     if (bootstage_get() >= BOOTSTAGE_MID_MP &&
         (irq_in_interrupt() || irq_in_nmi()))
@@ -520,11 +510,11 @@ static inline void spinlock_set_chk_flags(struct spinlock *lock,
                                           enum lock_chk_flags flags) {
 
 #ifdef DEBUG_LOCK_CHK
-    kassert(lock->chk_initialized);
+    kassert(lock->chk.initialized);
     kassert(!spinlock_locked(lock));
-    kassert(!atomic_load_explicit(&lock->chk_used, memory_order_relaxed));
+    kassert(!atomic_load_explicit(&lock->chk.used, memory_order_relaxed));
     kassert((flags & ~LOCK_CHKD_FULL) == 0);
-    lock->chk_flags = flags;
+    lock->chk.flags = flags;
 #endif
 }
 
@@ -533,7 +523,7 @@ static inline void spinlock_reinit_chk(struct spinlock *lock,
                                        enum lock_chk_flags flags) {
 
 #ifdef DEBUG_LOCK_CHK
-    kassert(lock->chk_initialized);
+    kassert(lock->chk.initialized);
     kassert(!spinlock_locked(lock));
 #endif
 
@@ -545,7 +535,7 @@ spinlock_assert_held_internal(struct spinlock *lock,
                               const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
     if (spinlock_deep_checked(lock) &&
-        lock_chk_assert_held_deep(&lock->chk_map, lock, LOCK_CHK_TYPE_SPIN,
+        lock_chk_assert_held_deep(&lock->chk, lock, LOCK_CHK_TYPE_SPIN,
                                   LOCK_CHK_MODE_EXCLUSIVE, false, true, site))
         return;
 #else
@@ -559,7 +549,7 @@ spinlock_assert_not_held_internal(struct spinlock *lock,
                                   const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
     if (spinlock_deep_checked(lock) &&
-        lock_chk_assert_held_deep(&lock->chk_map, lock, LOCK_CHK_TYPE_SPIN,
+        lock_chk_assert_held_deep(&lock->chk, lock, LOCK_CHK_TYPE_SPIN,
                                   LOCK_CHK_MODE_EXCLUSIVE, false, false, site))
         return;
 #else

@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 struct lock_chk_class;
+struct lock_chk_lock;
 
 enum lock_chk_flags : uint8_t {
     LOCK_UNCHKD = 0,
@@ -117,8 +118,7 @@ void lock_debug_spin_validate_top(void *instance, enum lock_chk_type type,
                                   const struct lock_chk_site *site);
 void lock_debug_spin_pop(void *instance, enum lock_chk_type type);
 
-void lock_chk_note_lock_use(bool initialized, enum lock_chk_flags flags,
-                            _Atomic bool *used, bool manages_irql,
+void lock_chk_note_lock_use(struct lock_chk_lock *lock, bool manages_irql,
                             bool raw_operation);
 
 void lock_chk_assert_schedulable(const struct lock_chk_site *site);
@@ -152,11 +152,10 @@ static inline void lock_debug_spin_pop(void *instance,
     unused(instance, type);
 }
 
-static inline void lock_chk_note_lock_use(bool initialized,
-                                          enum lock_chk_flags flags,
-                                          _Atomic bool *used, bool manages_irql,
+static inline void lock_chk_note_lock_use(struct lock_chk_lock *lock,
+                                          bool manages_irql,
                                           bool raw_operation) {
-    unused(initialized, flags, used, manages_irql, raw_operation);
+    unused(lock, manages_irql, raw_operation);
 }
 
 static inline void

@@ -21,12 +21,10 @@ static void
 mutex_simple_chk_before_lock(struct mutex_simple_chk_acquire_state *state,
                              struct mutex_simple *m, unsigned int subclass,
                              const struct lock_chk_site *site) {
-    lock_chk_note_lock_use(m->chk_initialized, m->chk_flags, &m->chk_used,
-                           false, false);
+    lock_chk_note_lock_use(&m->chk, false, false);
     state->request = lock_chk_acquire_request_make(
-        &m->chk_map, m, site, m->chk_flags, LOCK_CHK_TYPE_MUTEX_SIMPLE,
-        LOCK_CHK_MODE_EXCLUSIVE, LOCK_CHK_WAIT_BLOCKING, subclass, false,
-        false);
+        &m->chk, m, site, LOCK_CHK_TYPE_MUTEX_SIMPLE, LOCK_CHK_MODE_EXCLUSIVE,
+        LOCK_CHK_WAIT_BLOCKING, subclass, false, false);
     lock_chk_before_acquire(&state->token, &state->request);
 }
 
@@ -40,8 +38,7 @@ mutex_simple_chk_before_unlock(struct mutex_simple_chk_release_state *state,
                                struct mutex_simple *m,
                                const struct lock_chk_site *site) {
     state->request = lock_chk_release_request_make(
-        &m->chk_map, m, site, m->chk_flags, LOCK_CHK_TYPE_MUTEX_SIMPLE,
-        LOCK_CHK_MODE_EXCLUSIVE);
+        &m->chk, m, site, LOCK_CHK_TYPE_MUTEX_SIMPLE, LOCK_CHK_MODE_EXCLUSIVE);
     lock_chk_before_release(&state->token, &state->request);
 }
 
@@ -55,28 +52,28 @@ static void mutex_simple_chk_state_init(struct mutex_simple *m,
                                         enum lock_chk_flags flags) {
     kassert((flags & ~LOCK_CHKD_FULL) == 0);
     kassert(flags == LOCK_UNCHKD || class != NULL);
-    m->chk_flags = flags;
-    m->chk_initialized = true;
-    atomic_store_explicit(&m->chk_used, false, memory_order_relaxed);
-    lock_chk_map_runtime_init(&m->chk_map, class);
+    m->chk.flags = flags;
+    m->chk.initialized = true;
+    atomic_store_explicit(&m->chk.used, false, memory_order_relaxed);
+    lock_chk_map_runtime_init(&m->chk.map, class);
 }
 
 void mutex_simple_set_chk_flags(struct mutex_simple *m,
                                 enum lock_chk_flags flags) {
-    kassert(m->chk_initialized);
+    kassert(m->chk.initialized);
     kassert(m->owner == NULL);
     kassert(list_empty(&m->waiters.list));
     kassert(!spinlock_locked(&m->waiters.lock));
     kassert(!spinlock_locked(&m->lock));
-    kassert(!atomic_load_explicit(&m->chk_used, memory_order_relaxed));
+    kassert(!atomic_load_explicit(&m->chk.used, memory_order_relaxed));
     kassert((flags & ~LOCK_CHKD_FULL) == 0);
-    m->chk_flags = flags;
+    m->chk.flags = flags;
 }
 
 void mutex_simple_reinit_chk(struct mutex_simple *m,
                              const struct lock_chk_class *class,
                              enum lock_chk_flags flags) {
-    kassert(m->chk_initialized);
+    kassert(m->chk.initialized);
     kassert(m->owner == NULL);
     kassert(list_empty(&m->waiters.list));
     kassert(!spinlock_locked(&m->waiters.lock));
@@ -189,7 +186,7 @@ void mutex_simple_init_chk_internal(struct mutex_simple *m,
 }
 
 void mutex_simple_lock_subclass_internal(struct mutex_simple *m,
-                                         unsigned int subclass,
+                                         uint8_t subclass,
                                          const struct lock_chk_site *site) {
     mutex_simple_sanity_check();
 
@@ -261,8 +258,8 @@ struct thread *mutex_simple_get_owner(struct mutex_simple *m) {
 void mutex_simple_assert_held_internal(struct mutex_simple *m,
                                        const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
-    if (m->chk_flags != LOCK_UNCHKD && lock_chk_tracking_active() &&
-        lock_chk_assert_held_deep(&m->chk_map, m, LOCK_CHK_TYPE_MUTEX_SIMPLE,
+    if (m->chk.flags != LOCK_UNCHKD && lock_chk_tracking_active() &&
+        lock_chk_assert_held_deep(&m->chk, m, LOCK_CHK_TYPE_MUTEX_SIMPLE,
                                   LOCK_CHK_MODE_EXCLUSIVE, false, true, site))
         return;
 #else
@@ -275,8 +272,8 @@ void mutex_simple_assert_held_internal(struct mutex_simple *m,
 void mutex_simple_assert_not_held_internal(struct mutex_simple *m,
                                            const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
-    if (m->chk_flags != LOCK_UNCHKD && lock_chk_tracking_active() &&
-        lock_chk_assert_held_deep(&m->chk_map, m, LOCK_CHK_TYPE_MUTEX_SIMPLE,
+    if (m->chk.flags != LOCK_UNCHKD && lock_chk_tracking_active() &&
+        lock_chk_assert_held_deep(&m->chk, m, LOCK_CHK_TYPE_MUTEX_SIMPLE,
                                   LOCK_CHK_MODE_EXCLUSIVE, false, false, site))
         return;
 #else

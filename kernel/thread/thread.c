@@ -1,3 +1,4 @@
+#include <bootstage.h>
 #include <log.h>
 #include <mem/address_range.h>
 #include <mem/alloc.h>
@@ -125,7 +126,10 @@ void thread_entry_wrapper(void) {
 
     scheduler_switch_in();
 
-    kassert(irql_get() < IRQL_HIGH_LEVEL);
+    kassert(bootstage_get() < BOOTSTAGE_LATE ||
+                irql_get() == IRQL_DISPATCH_LEVEL,
+            "entered thread at %s, want %s", irql_to_str(irql_get()),
+            irql_to_str(IRQL_DISPATCH_LEVEL));
 
     scheduler_mark_self_in_resched(false);
 
@@ -613,4 +617,17 @@ void thread_unlock_thread_and_rq(struct scheduler *thread_rq,
         spin_unlock(&second->lock, irq_second);
 
     spin_unlock(&first->lock, irq_first);
+}
+
+/* This is surprisngly tricky to implement */
+bool thread_in_context(void) {
+    if (global.current_bootstage < BOOTSTAGE_LATE)
+        return false;
+
+    if (irq_in_interrupt() || irq_in_nmi())
+        return false;
+
+    struct thread *self = thread_get_current();
+
+    return true;
 }

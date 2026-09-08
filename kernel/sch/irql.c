@@ -101,15 +101,14 @@ static void irql_lower_internal(enum irql new_level, bool allow_resched) {
     /* Step down first so current_irql matches before preemption re enables */
     irql_set(new_level);
 
-    bool preempt_re_enabled = false;
     if (old >= IRQL_DISPATCH_LEVEL && new_level < IRQL_DISPATCH_LEVEL)
-        preempt_re_enabled = (scheduler_preemption_enable() == 0);
+        scheduler_preemption_enable();
 
     if (in_thread && new_level == IRQL_PASSIVE_LEVEL) {
         if (old >= IRQL_APC_LEVEL)
             apc_check_and_deliver(curr);
 
-        if (allow_resched && preempt_re_enabled)
+        if (allow_resched && !scheduler_preemption_disabled(TOPC_NONE))
             scheduler_resched_if_needed();
     }
 }

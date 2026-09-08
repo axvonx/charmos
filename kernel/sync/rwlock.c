@@ -23,6 +23,9 @@ static void rwlock_panic(char *msg, struct rwlock *offending_lock) {
             memory_order_acquire, memory_order_relaxed))
         panic_rwlock = *offending_lock;
 
+    if (offending_lock)
+        panic_rwlock = *offending_lock;
+
     uintptr_t v =
         atomic_load_explicit(&offending_lock->lock_word, memory_order_relaxed);
     panic("%s, lock = %p, contents = %p, thread = %p", msg, offending_lock, v,
@@ -102,10 +105,10 @@ static void rwlock_chk_state_init(struct rwlock *lock,
                                   enum lock_chk_flags flags) {
     kassert((flags & ~LOCK_CHKD_FULL) == 0);
     kassert(flags == LOCK_UNCHKD || class != NULL);
-    lock->chk_flags = flags;
-    lock->chk_initialized = true;
-    atomic_store_explicit(&lock->chk_used, false, memory_order_relaxed);
-    lock_chk_map_runtime_init(&lock->chk_map, class);
+    lock->chk.flags = flags;
+    lock->chk.initialized = true;
+    atomic_store_explicit(&lock->chk.used, false, memory_order_relaxed);
+    lock_chk_map_runtime_init(&lock->chk.map, class);
 }
 
 static bool rwlock_idle_for_reconfiguration(struct rwlock *lock) {
@@ -116,17 +119,17 @@ static bool rwlock_idle_for_reconfiguration(struct rwlock *lock) {
 }
 
 void rwlock_set_chk_flags(struct rwlock *lock, enum lock_chk_flags flags) {
-    kassert(lock->chk_initialized);
+    kassert(lock->chk.initialized);
     kassert(rwlock_idle_for_reconfiguration(lock));
-    kassert(!atomic_load_explicit(&lock->chk_used, memory_order_relaxed));
+    kassert(!atomic_load_explicit(&lock->chk.used, memory_order_relaxed));
     kassert((flags & ~LOCK_CHKD_FULL) == 0);
-    lock->chk_flags = flags;
+    lock->chk.flags = flags;
 }
 
 void rwlock_reinit_chk(struct rwlock *lock, enum thread_prio_class ceiling,
                        const struct lock_chk_class *class,
                        enum lock_chk_flags flags) {
-    kassert(lock->chk_initialized);
+    kassert(lock->chk.initialized);
     kassert(rwlock_idle_for_reconfiguration(lock));
     rwlock_init_chk_internal(lock, ceiling, class, flags);
 }
@@ -163,7 +166,7 @@ void rwlock_init_chk_internal(struct rwlock *lock,
 }
 
 void rw_lock_internal(struct rwlock *lock, enum rwlock_acquire_type acq_type,
-                      unsigned int subclass, const struct lock_chk_site *site) {
+                      uint8_t subclass, const struct lock_chk_site *site) {
     kassert(subclass < LOCK_CHK_MAX_SUBCLASSES);
     kassert(acq_type == RWLOCK_ACQUIRE_READ ||
             acq_type == RWLOCK_ACQUIRE_WRITE);
@@ -177,20 +180,19 @@ void rw_lock_internal(struct rwlock *lock, enum rwlock_acquire_type acq_type,
                                       : LOCK_CHK_MODE_EXCLUSIVE;
     struct lock_chk_acquire_request req;
     struct lock_chk_acquire_token token;
-    lock_chk_note_lock_use(lock->chk_initialized, lock->chk_flags,
-                           &lock->chk_used, /*manages_irql=*/false,
+    lock_chk_note_lock_use(&lock->chk, /*manages_irql=*/false,
                            /*raw_operation=*/false);
-    bool checked_deep = lock->chk_flags != LOCK_UNCHKD;
+    bool checked_deep = lock->chk.flags != LOCK_UNCHKD;
     if (checked_deep) {
         req = lock_chk_acquire_request_make(
-            &lock->chk_map, lock, site, lock->chk_flags, LOCK_CHK_TYPE_RWLOCK,
-            chk_mode, LOCK_CHK_WAIT_BLOCKING, subclass, false, false);
+            &lock->chk, lock, site, LOCK_CHK_TYPE_RWLOCK, chk_mode,
+            LOCK_CHK_WAIT_BLOCKING, subclass, false, false);
         lock_chk_before_acquire(&token, &req);
     }
 #endif
 
     uintptr_t lword = RWLOCK_READ_LOCK_WORD(lock);
-    kassert(RWLOCK_GET_PRIO_CEIL(lword) &&
+    kassert(RWLOCK_GET_PRIO_CEIL(lword) != 0 &&
             "rwlock prio ceiling cannot be 0 (background)");
 
     struct thread *curr = thread_get_current();
@@ -369,10 +371,9 @@ void rw_unlock_internal(struct rwlock *lock, const struct lock_chk_site *site) {
         is_writer ? LOCK_CHK_MODE_EXCLUSIVE : LOCK_CHK_MODE_SHARED;
     struct lock_chk_release_request req;
     struct lock_chk_release_token token;
-    bool checked_deep = lock->chk_flags != LOCK_UNCHKD;
+    bool checked_deep = lock->chk.flags != LOCK_UNCHKD;
     if (checked_deep) {
-        req = lock_chk_release_request_make(&lock->chk_map, lock, site,
-                                            lock->chk_flags,
+        req = lock_chk_release_request_make(&lock->chk, lock, site,
                                             LOCK_CHK_TYPE_RWLOCK, chk_mode);
         lock_chk_before_release(&token, &req);
     }
@@ -475,8 +476,8 @@ void rwlock_assert_held_internal(struct rwlock *lock,
     enum lock_chk_mode chk_mode = type == RWLOCK_ACQUIRE_READ
                                       ? LOCK_CHK_MODE_SHARED
                                       : LOCK_CHK_MODE_EXCLUSIVE;
-    if (lock->chk_flags != LOCK_UNCHKD &&
-        lock_chk_assert_held_deep(&lock->chk_map, lock, LOCK_CHK_TYPE_RWLOCK,
+    if (lock->chk.flags != LOCK_UNCHKD &&
+        lock_chk_assert_held_deep(&lock->chk, lock, LOCK_CHK_TYPE_RWLOCK,
                                   chk_mode, true, true, site))
         return;
 #else
@@ -488,8 +489,8 @@ void rwlock_assert_held_internal(struct rwlock *lock,
 void rwlock_assert_not_held_internal(struct rwlock *lock,
                                      const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
-    if (lock->chk_flags != LOCK_UNCHKD &&
-        lock_chk_assert_held_deep(&lock->chk_map, lock, LOCK_CHK_TYPE_RWLOCK,
+    if (lock->chk.flags != LOCK_UNCHKD &&
+        lock_chk_assert_held_deep(&lock->chk, lock, LOCK_CHK_TYPE_RWLOCK,
                                   LOCK_CHK_MODE_SHARED, false, false, site))
         return;
 #else

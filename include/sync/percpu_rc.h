@@ -28,6 +28,7 @@ enum percpu_rc_flags {
 #define PERCPU_RC_DEAD (1UL << 0)
 #define PERCPU_RC_ATOMIC (1UL << 1)
 #define PERCPU_RC_PTR_MASK (~(PERCPU_RC_DEAD | PERCPU_RC_ATOMIC))
+#define PERCPU_RC_PTR(m) (int64_t *) (m & PERCPU_RC_PTR_MASK)
 
 struct percpu_rc {
     _Atomic int64_t count;
@@ -49,13 +50,27 @@ static inline bool percpu_rc_is_percpu(uintptr_t pcpu) {
     return (pcpu & (PERCPU_RC_DEAD | PERCPU_RC_ATOMIC)) == 0;
 }
 
+/* Notes on why TOPOC_NONE is fine here:
+ *
+ * percpu_rc is designed with the premise of "getting migrated, dec'ing the
+ * wrong counter, and all that other business will cause no problem".
+ *
+ * the eventual kill will deal with all the +'s and -'s,
+ * meaning that if you end up with
+ *
+ * CPU0: rc == 9
+ * CPU1: rc == -9
+ *
+ * the eventual cleanup goes "9 - 9 = 0" and handles it perfectly ok
+ *
+ */
 static inline void percpu_rc_get(struct percpu_rc *ref) {
     rcu_read_lock();
     uintptr_t pcpu =
         atomic_load_explicit(&ref->percpu_count_ptr, memory_order_relaxed);
 
     if (likely(percpu_rc_is_percpu(pcpu))) {
-        int64_t *counters = (int64_t *) (pcpu & PERCPU_RC_PTR_MASK);
+        int64_t *counters = PERCPU_RC_PTR(pcpu);
         counters[smp_id(TOPC_NONE)]++;
     } else {
         atomic_fetch_add_explicit(&ref->count, 1, memory_order_relaxed);
@@ -69,7 +84,7 @@ static inline void percpu_rc_put(struct percpu_rc *ref) {
         atomic_load_explicit(&ref->percpu_count_ptr, memory_order_relaxed);
 
     if (likely(percpu_rc_is_percpu(pcpu))) {
-        int64_t *counters = (int64_t *) (pcpu & PERCPU_RC_PTR_MASK);
+        int64_t *counters = PERCPU_RC_PTR(pcpu);
         counters[smp_id(TOPC_NONE)]--;
         rcu_read_unlock();
     } else {
@@ -88,7 +103,7 @@ static inline bool percpu_rc_tryget(struct percpu_rc *ref) {
         atomic_load_explicit(&ref->percpu_count_ptr, memory_order_relaxed);
 
     if (likely(percpu_rc_is_percpu(pcpu))) {
-        int64_t *counters = (int64_t *) (pcpu & PERCPU_RC_PTR_MASK);
+        int64_t *counters = PERCPU_RC_PTR(pcpu);
         counters[smp_id(TOPC_NONE)]++;
         rcu_read_unlock();
         return true;
@@ -110,7 +125,7 @@ static inline bool percpu_rc_tryget_live(struct percpu_rc *ref) {
         atomic_load_explicit(&ref->percpu_count_ptr, memory_order_relaxed);
 
     if (likely(percpu_rc_is_percpu(pcpu))) {
-        int64_t *counters = (int64_t *) (pcpu & PERCPU_RC_PTR_MASK);
+        int64_t *counters = PERCPU_RC_PTR(pcpu);
         counters[smp_id(TOPC_NONE)]++;
         rcu_read_unlock();
         return true;

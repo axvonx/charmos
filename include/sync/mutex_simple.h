@@ -11,10 +11,7 @@ struct mutex_simple {
     struct spinlock lock;
 
 #ifdef DEBUG_LOCK_CHK
-    enum lock_chk_flags chk_flags;
-    bool chk_initialized;
-    _Atomic bool chk_used;
-    struct lock_chk_map chk_map;
+    struct lock_chk_lock chk;
 #endif /* DEBUG_LOCK_CHK */
 };
 
@@ -31,7 +28,7 @@ void mutex_simple_lock_internal(struct mutex_simple *m,
 void mutex_simple_unlock_internal(struct mutex_simple *m,
                                   const struct lock_chk_site *site);
 void mutex_simple_lock_subclass_internal(struct mutex_simple *m,
-                                         unsigned int subclass,
+                                         uint8_t subclass,
                                          const struct lock_chk_site *site);
 bool mutex_simple_locked(struct mutex_simple *m);
 struct thread *mutex_simple_get_owner(struct mutex_simple *m);
@@ -51,10 +48,7 @@ void mutex_simple_assert_not_held_internal(struct mutex_simple *m,
                 .lock = SPINLOCK_INIT_CHK(NULL, LOCK_UNCHKD),                  \
             },                                                                 \
         .lock = SPINLOCK_INIT_CHK(NULL, LOCK_UNCHKD),                          \
-        .chk_flags = (flags_),                                                 \
-        .chk_initialized = true,                                               \
-        .chk_used = ATOMIC_VAR_INIT(false),                                    \
-        .chk_map = LOCK_CHK_MAP_VALUE_INIT(class_),                            \
+        .chk = LOCK_CHK_LOCK_VALUE_INIT((class_), (flags_)),                   \
     })
 
 #define mutex_simple_init_chk(mtx_, class_, flags_)                            \

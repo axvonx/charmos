@@ -1,3 +1,4 @@
+#include <bootstage_condition.h>
 #include <mem/vmm.h>
 #include <sch/periodic_work.h>
 #include <sch/sched.h>
@@ -275,7 +276,24 @@ static void change_tick(struct scheduler *sched, struct thread *next) {
     }
 }
 
+/* Below DISPATCH the IRQL is effectively thread state, and the level
+ * a thread was at uses the kernel stack (irql local variable) across
+ * the switch boundary, being restored on whatever CPU it resumes on */
+static inline void assert_switch_ctx(const char *where) {
+    BOOTSTAGE_IF_LT(BOOTSTAGE_LATE) {
+        return;
+    }
+
+    kassert(irql_get() >= IRQL_DISPATCH_LEVEL, "%s at %s, want >= %s", where,
+            irql_to_str(irql_get()), irql_to_str(IRQL_DISPATCH_LEVEL));
+    kassert(scheduler_preemption_disabled(TOPC_NONE),
+            "%s with preemption enabled", where);
+    kassert(!are_interrupts_enabled(), "%s with interrupts enabled", where);
+}
+
 static inline void context_switch(struct thread *curr, struct thread *next) {
+    assert_switch_ctx("switching out");
+
     if (curr)
         thread_or_flags(curr, THREAD_FLAG_YIELDED);
 
@@ -302,6 +320,8 @@ static inline void context_switch(struct thread *curr, struct thread *next) {
         load_context(&next->regs);
     } else {
         switch_context(&curr->regs, &next->regs);
+
+        assert_switch_ctx("resuming");
     }
 }
 
@@ -402,9 +422,20 @@ static void scheduler_yield_loop(void) {
 
         scheduler_switch_in();
 
+        kassert(irql == IRQL_NONE || irql_get() == IRQL_DISPATCH_LEVEL,
+                "resumed at %s, want %s", irql_to_str(irql_get()),
+                irql_to_str(IRQL_DISPATCH_LEVEL));
+
         scheduler_mark_self_in_resched(false);
 
         irql_lower_no_resched(irql);
+
+        /* we store irql on the stack here, i.e. T1 entering the routine
+         * will "pop out" on the switch_in path on T2, and irql will
+         * be T2's entry value, which should match the current state */
+        kassert(irql == IRQL_NONE || irql_get() == irql,
+                "resumed at %s, entered at %s", irql_to_str(irql_get()),
+                irql_to_str(irql));
     } while (scheduler_mark_self_needs_resched(false));
 }
 

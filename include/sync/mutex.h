@@ -23,10 +23,7 @@ struct mutex {
     _Atomic(uintptr_t) lock_word;
 
 #ifdef DEBUG_LOCK_CHK
-    enum lock_chk_flags chk_flags;
-    bool chk_initialized;
-    _Atomic bool chk_used;
-    struct lock_chk_map chk_map;
+    struct lock_chk_lock chk;
 #endif /* DEBUG_LOCK_CHK */
 };
 
@@ -39,7 +36,7 @@ void mutex_reinit_chk(struct mutex *mtx, const struct lock_chk_class *class,
 void mutex_unlock_internal(struct mutex *mutex,
                            const struct lock_chk_site *site);
 void mutex_lock_internal(struct mutex *mutex, const struct lock_chk_site *site);
-void mutex_lock_subclass_internal(struct mutex *mutex, unsigned int subclass,
+void mutex_lock_subclass_internal(struct mutex *mutex, uint8_t subclass,
                                   const struct lock_chk_site *site);
 bool mutex_locked(struct mutex *mtx);
 struct thread *mutex_get_owner(struct mutex *mtx);
@@ -53,10 +50,7 @@ void mutex_assert_not_held_internal(struct mutex *mtx,
 #define MUTEX_INIT_CHK(class_, flags_)                                         \
     ((struct mutex) {                                                          \
         .lock_word = ATOMIC_VAR_INIT(0),                                       \
-        .chk_flags = (flags_),                                                 \
-        .chk_initialized = true,                                               \
-        .chk_used = ATOMIC_VAR_INIT(false),                                    \
-        .chk_map = LOCK_CHK_MAP_VALUE_INIT(class_),                            \
+        .chk = LOCK_CHK_LOCK_VALUE_INIT((class_), (flags_)),                   \
     })
 
 #define mutex_init_chk(mtx_, class_, flags_)                                   \

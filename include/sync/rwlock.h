@@ -32,10 +32,7 @@ struct rwlock {
     _Atomic(uintptr_t) lock_word;
 
 #ifdef DEBUG_LOCK_CHK
-    enum lock_chk_flags chk_flags;
-    bool chk_initialized;
-    _Atomic bool chk_used;
-    struct lock_chk_map chk_map;
+    struct lock_chk_lock chk;
 #endif /* DEBUG_LOCK_CHK */
 };
 
@@ -45,7 +42,7 @@ enum rwlock_acquire_type {
 };
 
 void rw_lock_internal(struct rwlock *lock, enum rwlock_acquire_type type,
-                      unsigned int subclass, const struct lock_chk_site *site);
+                      uint8_t subclass, const struct lock_chk_site *site);
 void rw_unlock_internal(struct rwlock *lock, const struct lock_chk_site *site);
 void rwlock_init_chk_internal(struct rwlock *lock,
                               enum thread_prio_class ceiling,
@@ -77,10 +74,7 @@ void rwlock_assert_not_held_internal(struct rwlock *lock,
 #define RWLOCK_INIT_CHK(ceil_, class_, flags_)                                 \
     ((struct rwlock) {                                                         \
         .lock_word = ATOMIC_VAR_INIT((ceil_) << RWLOCK_PRIO_CEIL_SHIFT),       \
-        .chk_flags = (flags_),                                                 \
-        .chk_initialized = true,                                               \
-        .chk_used = ATOMIC_VAR_INIT(false),                                    \
-        .chk_map = LOCK_CHK_MAP_VALUE_INIT(class_),                            \
+        .chk = LOCK_CHK_LOCK_VALUE_INIT((class_), (flags_)),                   \
     })
 
 #define rwlock_init_chk(lock_, ceil_, class_, flags_)                          \

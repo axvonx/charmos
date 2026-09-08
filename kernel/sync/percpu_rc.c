@@ -11,7 +11,7 @@ static void percpu_rc_switch_to_atomic_rcu(struct rcu_cb *cb, void *arg) {
     uintptr_t pcpu =
         atomic_load_explicit(&rc->percpu_count_ptr, memory_order_relaxed);
 
-    int64_t *counters = (int64_t *) (pcpu & PERCPU_RC_PTR_MASK);
+    int64_t *counters = PERCPU_RC_PTR(pcpu);
     int64_t sum = 0;
 
     if (counters) {
@@ -69,7 +69,7 @@ int percpu_rc_init(struct percpu_rc *rc, percpu_rc_release_fn release,
 void percpu_rc_destroy(struct percpu_rc *ref) {
     uintptr_t pcpu =
         atomic_load_explicit(&ref->percpu_count_ptr, memory_order_relaxed);
-    int64_t *counters = (int64_t *) (pcpu & PERCPU_RC_PTR_MASK);
+    int64_t *counters = PERCPU_RC_PTR(pcpu);
 
     if (counters) {
         kfree(counters);
@@ -99,7 +99,7 @@ void percpu_rc_reinit(struct percpu_rc *rc) {
 
     uintptr_t pcpu =
         atomic_load_explicit(&rc->percpu_count_ptr, memory_order_relaxed);
-    int64_t *counters = (int64_t *) (pcpu & PERCPU_RC_PTR_MASK);
+    int64_t *counters = PERCPU_RC_PTR(pcpu);
     kassert(counters, "percpu_rc counters missing during reinit");
 
     atomic_store_explicit(&rc->count, 1 + PERCPU_COUNT_BIAS,
@@ -118,7 +118,7 @@ int64_t percpu_rc_read(struct percpu_rc *rc) {
 
     if (percpu_rc_is_percpu(pcpu)) {
         int64_t sum = 0;
-        int64_t *counters = (int64_t *) (pcpu & PERCPU_RC_PTR_MASK);
+        int64_t *counters = PERCPU_RC_PTR(pcpu);
         if (counters) {
             for (size_t i = 0; i < global.core_count; i++)
                 sum += counters[i];
