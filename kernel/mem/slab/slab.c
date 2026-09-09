@@ -805,6 +805,8 @@ void *kmalloc_pages_raw(struct slab_domain *parent, stack_handle_t handle,
         vptr = page_alloc_demand(pages, flags, behavior);
     } else {
         vptr = page_alloc(pages, flags, behavior);
+        if (vptr && (flags & ALLOC_FLAG_ZERO_ON_ALLOC))
+            memset(vptr, 0, total_size);
     }
 
     if (!vptr)

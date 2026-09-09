@@ -16,6 +16,7 @@
 #include <mem/rmap.h>
 #include <mem/slab.h>
 #include <mem/tlb.h>
+#include <mem/vas.h>
 #include <mem/vma_range.h>
 #include <mem/vmm.h>
 #include <sch/sched.h>
@@ -34,3 +35,4 @@ TEST_GROUP_DEFINE(mm);
 TEST_GROUP_DEFINE(rmap);
 TEST_GROUP_DEFINE(page_table);
 TEST_GROUP_DEFINE(elcm);
+TEST_GROUP_DEFINE(vas);

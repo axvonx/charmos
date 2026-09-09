@@ -142,6 +142,8 @@ void thread_entry_wrapper(void) {
 void *thread_allocate_stack(size_t pages) {
     size_t needed = (pages + 1) * PAGE_SIZE;
     vaddr_t virt_base = vas_alloc(stacks_space, needed, PAGE_SIZE);
+    if (!virt_base)
+        return NULL;
 
     /* Leave the first page unmapped, protector page */
     virt_base += PAGE_SIZE;
@@ -164,7 +166,7 @@ void thread_free_stack(struct thread *thread) {
         vmm_unmap_page(virt);
         pmm_free_page(phys);
     }
-    vas_free(stacks_space, stack_real_virt, thread->stack_size);
+    vas_free(stacks_space, stack_real_virt, (pages + 1) * PAGE_SIZE);
 }
 
 static void thread_init_event_reasons(
