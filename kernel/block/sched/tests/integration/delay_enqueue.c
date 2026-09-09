@@ -1,6 +1,5 @@
 #include "block/sched/tests/test_internal.h"
 
-#ifdef TEST_BIO_SCHED
 #define EXT2_INIT                                                              \
     if (global.root_node->fs_type != FS_EXT2) {                                \
         test_info("the mounted root is not ext2");                             \
@@ -127,4 +126,3 @@ TEST_DECLARE_INTEGRATION(bio_sched, delay_enqueue,
 
     return TEST_SUCCESS;
 }
-#endif

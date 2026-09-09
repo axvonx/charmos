@@ -1,6 +1,5 @@
 #include "math/tests/test_internal.h"
 
-#ifdef TEST_BIT_OPS
 TEST_GROUP_DECLARE(bit_ops, .intensity_desc = {
                                 .curve = SCALE_PIECEWISE_LOG,
                                 .unit = "iters",
@@ -128,5 +127,3 @@ TEST_DECLARE_UNIT(bit_ops, popcount_standard) {
 
     return TEST_SUCCESS;
 }
-
-#endif

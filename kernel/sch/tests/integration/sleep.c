@@ -1,6 +1,5 @@
 #include "sch/tests/test_internal.h"
 
-#ifdef TEST_SCHED
 TEST_GROUP_DECLARE(sched, .intensity_desc = {
                               .curve = SCALE_PIECEWISE_LOG,
                               .unit = "iters",
@@ -252,4 +251,3 @@ TEST_DECLARE_INTEGRATION(sched, wait_arbitrary_any_src) {
 
     return TEST_SUCCESS;
 }
-#endif

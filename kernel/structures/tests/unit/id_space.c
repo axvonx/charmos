@@ -1,6 +1,5 @@
 #include "structures/tests/test_internal.h"
 
-#ifdef TEST_ID_SPACE
 TEST_GROUP_DECLARE(id_space);
 
 TEST_DECLARE_UNIT(id_space, alloc_and_free_coalesce) {
@@ -42,4 +41,3 @@ TEST_DECLARE_UNIT(id_space, alloc_and_free_coalesce) {
     id_space_destroy(is);
     return TEST_SUCCESS;
 }
-#endif

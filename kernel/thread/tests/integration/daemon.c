@@ -1,6 +1,5 @@
 #include "thread/tests/test_internal.h"
 
-#ifdef TEST_SCHED
 TEST_GROUP_DECLARE(daemon, .intensity_desc = {
                                .curve = SCALE_PIECEWISE_LOG,
                                .unit = "iters",
@@ -41,4 +40,3 @@ TEST_DECLARE_INTEGRATION(daemon, timesharing_worker) {
     daemon_destroy(daemon);
     return TEST_SUCCESS;
 }
-#endif

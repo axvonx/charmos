@@ -1,6 +1,5 @@
 #include "sync/tests/test_internal.h"
 
-#ifdef TEST_RCU
 TEST_GROUP_DECLARE(rcu, .intensity_desc = {
                             .curve = SCALE_PIECEWISE_LOG,
                             .unit = "ms",
@@ -298,4 +297,3 @@ TEST_DECLARE_INTEGRATION(rcu, stress, TEST_INTENSITY(200, 2000, 10000)) {
 
     return TEST_SUCCESS;
 }
-#endif

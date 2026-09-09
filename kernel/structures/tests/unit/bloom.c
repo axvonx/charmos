@@ -1,6 +1,5 @@
 #include "structures/tests/test_internal.h"
 
-#ifdef TEST_BLOOM
 TEST_GROUP_DECLARE(bloom, .intensity_desc = {
                               .curve = SCALE_PIECEWISE_LOG,
                               .unit = "iters",
@@ -62,4 +61,3 @@ TEST_DECLARE_UNIT(bloom, counter_saturation, TEST_INTENSITY(16, 20, 64)) {
     cbf_destroy(cbf);
     return TEST_SUCCESS;
 }
-#endif

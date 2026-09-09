@@ -1,7 +1,5 @@
 #include "sync/tests/test_internal.h"
 
-#ifdef TEST_MUTEX
-
 #define MUTEX_REPORT_PROBLEMS()                                                \
     test_info("Mutex tests are encountering problems and will be skipped");    \
     return TEST_SKIP(TEST_SKIP_NONE);
@@ -322,4 +320,3 @@ TEST_DECLARE_INTEGRATION(mutex, pi_revert) {
 
     return TEST_SUCCESS;
 }
-#endif

@@ -1,6 +1,5 @@
 #include "sync/tests/test_internal.h"
 
-#ifdef TEST_QSPINLOCK
 TEST_GROUP_DECLARE(qspinlock);
 
 TEST_DECLARE_UNIT(qspinlock, tail_encoding) {
@@ -92,4 +91,3 @@ TEST_DECLARE_INTEGRATION(qspinlock, contended_handoff) {
 
     return TEST_SUCCESS;
 }
-#endif

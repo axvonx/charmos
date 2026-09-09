@@ -1,6 +1,5 @@
 #include "drivers/ahci/tests/test_internal.h"
 
-#ifdef TEST_AHCI_UNIT
 TEST_GROUP_DECLARE(ahci_unit);
 
 TEST_DECLARE_UNIT(ahci_unit, fis_h2d_lba48_pack) {
@@ -30,4 +29,3 @@ TEST_DECLARE_UNIT(ahci_unit, fis_h2d_lba48_pack) {
 
     return TEST_SUCCESS;
 }
-#endif

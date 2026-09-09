@@ -1,7 +1,5 @@
 #include "sync/tests/test_internal.h"
 
-#ifdef TEST_RWLOCK
-
 static struct rwlock rw_two_writers = RWLOCK_INIT(THREAD_PRIO_CLASS_TIMESHARE);
 static atomic_bool rw_two_done = false;
 
@@ -250,5 +248,3 @@ TEST_DECLARE_INTEGRATION(rwlock, mutual_exclusion, TEST_INTENSITY(4, 16, 64)) {
 
     return TEST_SUCCESS;
 }
-
-#endif

@@ -1,6 +1,5 @@
 #include "thread/tests/test_internal.h"
 
-#ifdef TEST_APC
 TEST_GROUP_DECLARE(apc, .intensity_desc = {
                             .curve = SCALE_PIECEWISE_LOG,
                             .unit = "iters",
@@ -343,4 +342,3 @@ TEST_DECLARE_INTEGRATION(apc, event_masking_and_signal) {
 
     return TEST_SUCCESS;
 }
-#endif

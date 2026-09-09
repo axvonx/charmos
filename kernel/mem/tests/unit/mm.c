@@ -1,6 +1,5 @@
 #include "mem/tests/test_internal.h"
 
-#ifdef TEST_MM
 TEST_GROUP_DECLARE(mm, .intensity_desc = {
                            .curve = SCALE_PIECEWISE_LOG,
                            .unit = "queries",
@@ -242,4 +241,3 @@ TEST_DECLARE_UNIT(mm, vma_range_split) {
 
     return TEST_SUCCESS;
 }
-#endif

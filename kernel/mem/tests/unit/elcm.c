@@ -1,6 +1,5 @@
 #include "mem/tests/test_internal.h"
 
-#ifdef TEST_ELCM
 TEST_GROUP_DECLARE(elcm);
 
 TEST_DECLARE_UNIT(elcm, slab_geometry_and_bounds) {
@@ -32,4 +31,3 @@ TEST_DECLARE_UNIT(elcm, slab_geometry_and_bounds) {
 
     return TEST_SUCCESS;
 }
-#endif

@@ -1,6 +1,5 @@
 #include "structures/tests/test_internal.h"
 
-#ifdef TEST_SPLAY
 TEST_GROUP_DECLARE(splay);
 
 struct test_splay_node {
@@ -112,4 +111,3 @@ TEST_DECLARE_UNIT(splay, basic_operations) {
 
     return TEST_SUCCESS;
 }
-#endif

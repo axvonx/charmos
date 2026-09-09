@@ -1,6 +1,5 @@
 #include "fs/ext2/tests/test_internal.h"
 
-#ifdef TEST_EXT2
 TEST_GROUP_DECLARE(ext2, .intensity_desc = {
                              .curve = SCALE_PIECEWISE_LOG,
                              .unit = "ops",
@@ -152,4 +151,3 @@ TEST_DECLARE_INTEGRATION(ext2, mkdir_rmdir, TEST_INTENSITY(1, 1, 16)) {
     flush();
     return TEST_SUCCESS;
 }
-#endif

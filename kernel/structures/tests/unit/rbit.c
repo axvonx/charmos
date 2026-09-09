@@ -1,6 +1,5 @@
 #include "structures/tests/test_internal.h"
 
-#ifdef TEST_RBIT
 TEST_GROUP_DECLARE(rbit, .intensity_desc = {
                              .curve = SCALE_PIECEWISE_LOG,
                              .unit = "ops",
@@ -172,4 +171,3 @@ TEST_DECLARE_UNIT(rbit, augment_hook, TEST_INTENSITY(200, 4000, 20000)) {
     kfree(live);
     return TEST_SUCCESS;
 }
-#endif

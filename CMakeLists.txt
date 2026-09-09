@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.19)
 project(charmOS C ASM_NASM)
 
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -17,6 +17,7 @@ endif ()
 message(STATUS "charmOS build type: ${CMAKE_BUILD_TYPE}")
 
 include(features) # compile-time feature toggles
+include(tests) # test flags
 include(flags) # compiler / linker / codegen
 
 add_subdirectory(kernel)
@@ -53,7 +54,7 @@ message(STATUS "charmOS configuration:")
 message(STATUS "  Build type   : ${CMAKE_BUILD_TYPE}")
 message(STATUS "  Arch         : ${ARCH}")
 message(STATUS "  Stack usage  : ${KERNEL_STACK_USAGE}")
-message(STATUS "  Tests        : ${TEST_ENABLED} (TEST_ALL=${TEST_ALL})")
+test_report_configuration()
 message(STATUS "  Profiling    : ${PROFILING_ENABLED} (PROFILING_ALL=${PROFILING_ALL})")
 message(STATUS "  QEMU KVM     : ${QEMU_KVM}")
 message(STATUS "  QEMU IOMMU   : ${QEMU_IOMMU}")

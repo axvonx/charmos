@@ -1,6 +1,5 @@
 #include "sync/tests/test_internal.h"
 
-#ifdef TEST_RWLOCK
 TEST_GROUP_DECLARE(rwlock, .intensity_desc = {
                                .curve = SCALE_PIECEWISE_LOG,
                                .unit = "threads",
@@ -29,4 +28,3 @@ TEST_DECLARE_SMOKE(rwlock, basic_write) {
 
     return TEST_SUCCESS;
 }
-#endif

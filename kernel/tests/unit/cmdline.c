@@ -2,7 +2,6 @@
 #include "tests/test_internal.h"
 #include <cmdline.h>
 
-#ifdef TEST_CMDLINE
 TEST_GROUP_DECLARE(cmdline);
 
 struct shared_schema_probe {
@@ -257,4 +256,3 @@ TEST_DECLARE_UNIT(cmdline, list_parsing) {
 
     return TEST_SUCCESS;
 }
-#endif

@@ -1,6 +1,5 @@
 #include "drivers/tests/test_internal.h"
 
-#ifdef TEST_VTD_UNIT
 TEST_GROUP_DECLARE(vtd_unit, .intensity_desc = {
                                  .curve = SCALE_PIECEWISE_LOG,
                                  .unit = "iov_addrs",
@@ -33,4 +32,3 @@ TEST_DECLARE_UNIT(vtd_unit, sl_iova_tiling, TEST_INTENSITY(1, 16, 4096)) {
 
     return TEST_SUCCESS;
 }
-#endif

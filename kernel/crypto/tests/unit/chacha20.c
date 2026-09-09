@@ -1,6 +1,5 @@
 #include "crypto/tests/test_internal.h"
 
-#ifdef TEST_CHACHA20
 TEST_GROUP_DECLARE(chacha20, .intensity_desc = {
                                  .curve = SCALE_PIECEWISE_LOG,
                                  .unit = "bytes",
@@ -85,4 +84,3 @@ TEST_DECLARE_UNIT(chacha20, block_seams, TEST_INTENSITY(128, 512, 65536)) {
     kfree(roundtrip);
     return TEST_SUCCESS;
 }
-#endif

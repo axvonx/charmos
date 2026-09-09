@@ -1,6 +1,5 @@
 #include "structures/tests/test_internal.h"
 
-#ifdef TEST_MINHEAP
 TEST_GROUP_DECLARE(minheap, .intensity_desc = {
                                 .curve = SCALE_PIECEWISE_LOG,
                                 .unit = "nodes",
@@ -44,4 +43,3 @@ TEST_DECLARE_UNIT(minheap, basic_ops, TEST_INTENSITY(10, 50, 1024)) {
     kfree(nodes);
     return TEST_SUCCESS;
 }
-#endif

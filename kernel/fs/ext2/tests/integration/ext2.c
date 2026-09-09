@@ -1,7 +1,5 @@
 #include "fs/ext2/tests/test_internal.h"
 
-#ifdef TEST_EXT2
-
 #define EXT2_INIT                                                              \
     if (global.root_node->fs_type != FS_EXT2) {                                \
         test_info("the mounted root is not ext2");                             \
@@ -86,4 +84,3 @@ TEST_DECLARE_INTEGRATION(ext2, file_lifecycle, TEST_INTENSITY(1, 4, 64)) {
 
     return TEST_SUCCESS;
 }
-#endif

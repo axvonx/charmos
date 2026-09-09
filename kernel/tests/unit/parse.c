@@ -1,7 +1,6 @@
 #include "tests/test_internal.h"
 #include <parse.h>
 
-#ifdef TEST_PARSE
 TEST_GROUP_DECLARE(parse);
 
 TEST_DECLARE_UNIT(parse, data_size_units) {
@@ -233,4 +232,3 @@ TEST_DECLARE_UNIT(parse, list_and_escaping) {
 
     return TEST_SUCCESS;
 }
-#endif

@@ -4,8 +4,6 @@
 #include <sync/condvar.h>
 #include <sync/semaphore.h>
 
-#ifdef TEST_QSPINLOCK
-
 TEST_GROUP_DECLARE(condvar);
 TEST_GROUP_DECLARE(semaphore);
 TEST_GROUP_DECLARE(completion);
@@ -139,5 +137,3 @@ TEST_DECLARE_UNIT(completion, timedwait) {
 
     return TEST_SUCCESS;
 }
-
-#endif /* TEST_QSPINLOCK */

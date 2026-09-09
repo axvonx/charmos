@@ -1,6 +1,5 @@
 #include "fs/ext2/tests/test_internal.h"
 
-#ifdef TEST_EXT2
 TEST_GROUP_DECLARE(ext2_mode);
 
 /* ext2 file type is a 4 bit enumerated field in the top nibble of mode */
@@ -131,5 +130,3 @@ TEST_DECLARE_UNIT(ext2_mode, flags_roundtrip) {
 
     return TEST_SUCCESS;
 }
-
-#endif

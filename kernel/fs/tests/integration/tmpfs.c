@@ -1,6 +1,5 @@
 #include "fs/tests/test_internal.h"
 
-#ifdef TEST_TMPFS
 TEST_GROUP_DECLARE(tmpfs, .intensity_desc = {
                               .curve = SCALE_PIECEWISE_LOG,
                               .unit = "ops",
@@ -141,4 +140,3 @@ TEST_DECLARE_INTEGRATION(tmpfs, attributes_and_symlinks) {
     kfree(buf);
     return TEST_SUCCESS;
 }
-#endif

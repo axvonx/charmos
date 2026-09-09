@@ -1,6 +1,5 @@
 #include "time/tests/test_internal.h"
 
-#ifdef TEST_DATE_TIME
 TEST_GROUP_DECLARE(date_time, .intensity_desc = {
                                   .curve = SCALE_PIECEWISE_LOG,
                                   .unit = "years",
@@ -173,5 +172,3 @@ TEST_DECLARE_UNIT(date_time, weekday_progression) {
 
     return TEST_SUCCESS;
 }
-
-#endif

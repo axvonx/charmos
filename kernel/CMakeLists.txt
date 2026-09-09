@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.19)
 project(charmOS-kernel C ASM_NASM ASM-ATT)
 
 set(CARGO_TARGET x86_64-unknown-none)
@@ -6,10 +6,19 @@ set(CMAKE_C_STANDARD 11)
 
 file(GLOB_RECURSE C_SOURCES CONFIGURE_DEPENDS *.c)
 
+# Disabled test directories are dropped from the source list, and TEST_DIRS_DISABLED comes from cmake/tests.cmake
 foreach (FILE_PATH ${C_SOURCES})
     if (FILE_PATH MATCHES "syms/")
         list(REMOVE_ITEM C_SOURCES ${FILE_PATH})
+        continue()
     endif ()
+    foreach (TEST_DIR ${TEST_DIRS_DISABLED})
+        string(FIND "${FILE_PATH}" "${TEST_DIR}/" _test_dir_pos)
+        if (_test_dir_pos EQUAL 0)
+            list(REMOVE_ITEM C_SOURCES ${FILE_PATH})
+            break()
+        endif ()
+    endforeach ()
 endforeach ()
 
 file(GLOB_RECURSE ASM_SOURCES CONFIGURE_DEPENDS *.S)
@@ -113,7 +122,7 @@ target_include_directories(kernel PRIVATE ${UACPI_INCLUDES})
 add_custom_command(
     TARGET kernel
     POST_BUILD
-    COMMAND ${CMAKE_SOURCE_DIR}/scripts/stamp_syms.sh ${KERNEL_NM} ${KERNEL_OBJCOPY} ${KERNEL_OBJDUMP}
-            ${KERNEL_SYMS_RESERVE} $<TARGET_FILE:kernel>
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/stamp_syms.py ${KERNEL_NM} ${KERNEL_OBJCOPY}
+            ${KERNEL_OBJDUMP} ${KERNEL_SYMS_RESERVE} $<TARGET_FILE:kernel>
     COMMENT "Stamping symbol and line tables into .kernel_syms"
     VERBATIM)

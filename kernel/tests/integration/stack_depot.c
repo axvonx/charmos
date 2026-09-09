@@ -1,6 +1,5 @@
 #include "tests/test_internal.h"
 
-#ifdef TEST_STACK_DEPOT
 static __noinline void sd_save_n(stack_handle_t *out, size_t n) {
     for (size_t i = 0; i < n; i++)
         out[i] = stack_depot_save_current();
@@ -566,4 +565,3 @@ TEST_DECLARE_INTEGRATION(stack_depot, mt_save_current) {
 
     return TEST_SUCCESS;
 }
-#endif

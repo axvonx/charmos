@@ -1,6 +1,5 @@
 #include "math/tests/test_internal.h"
 
-#ifdef TEST_HASH
 TEST_GROUP_DECLARE(hash, .intensity_desc = {
                              .curve = SCALE_PIECEWISE_LOG,
                              .unit = "seeds",
@@ -203,5 +202,3 @@ TEST_DECLARE_UNIT(hash, elf_stays_31_bit) {
 
     return TEST_SUCCESS;
 }
-
-#endif

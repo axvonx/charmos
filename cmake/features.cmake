@@ -34,69 +34,10 @@ set(DEBUG_FLAGS
 
 set(PROFILING_FLAGS PROFILING_SCHED PROFILING_VFS)
 
-set(TEST_FLAGS
-    TEST_SCHED
-    TEST_TMPFS
-    TEST_EXT2
-    TEST_MEM
-    TEST_MINHEAP
-    TEST_RCU
-    TEST_RWLOCK
-    TEST_MUTEX
-    TEST_TIMER_DEFER
-    TEST_FS
-    TEST_APC
-    TEST_BIO
-    TEST_BIO_SCHED
-    TEST_LOG
-    TEST_MISC
-    TEST_RBIT
-    TEST_MM
-    TEST_FOLIO
-    TEST_RMAP
-    TEST_STACK_DEPOT
-    TEST_FIXED
-    TEST_HASH
-    TEST_BIT_OPS
-    TEST_UI128
-    TEST_BITMAP
-    TEST_DATE_TIME
-    TEST_PAGE_TABLE
-    TEST_SCHED_MATH
-    TEST_RADIX
-    TEST_AVL
-    TEST_BLOOM
-    TEST_SPLAY
-    TEST_TREAP
-    TEST_SORT
-    TEST_MPMC_QUEUE
-    TEST_SPSC_FIFO
-    TEST_ID_SPACE
-    TEST_CPU_MASK
-    TEST_CHACHA20
-    TEST_PRNG
-    TEST_PARSE
-    TEST_CMDLINE
-    TEST_WATCHDOG
-    TEST_STRING
-    TEST_ELCM
-    TEST_CLIMB
-    TEST_TURNSTILE
-    TEST_QSPINLOCK
-    TEST_WORKQUEUE_UNIT
-    TEST_IOAPIC
-    TEST_NVME_UNIT
-    TEST_AHCI_UNIT
-    TEST_VTD_UNIT)
-
 set(TEST_NIGHTMARE_FLAGS
     TEST_NIGHTMARE_LOCKS
     TEST_NIGHTMARE_WAKE
     TEST_NIGHTMARE_SMOKE)
-
-set(INJECT_FLAGS INJECT_RCU INJECT_SCHED INJECT_ALLOC INJECT_LOCK)
-
-set(TEST_INJECT_MAP TEST_RCU:INJECT_RCU TEST_SCHED:INJECT_SCHED TEST_MEM:INJECT_ALLOC TEST_MUTEX:INJECT_LOCK)
 
 # driver:implied -- soft, overridable by setting the implied flag to OFF
 set(DEBUG_FLAG_MAP DEBUG_ASAN:DEBUG_SLAB_DEEP)
@@ -200,16 +141,12 @@ endfunction ()
 declare_tristate_flags("${TRISTATE_FLAGS}")
 
 declare_flag_group(PROFILING PROFILING_ALL OFF "${PROFILING_FLAGS}")
-declare_flag_group(TEST TEST_ALL ON "${TEST_FLAGS}")
 declare_flag_group(TEST_NIGHTMARE TEST_NIGHTMARE_ALL ON "${TEST_NIGHTMARE_FLAGS}")
 declare_flag_group(DEBUG DEBUG_ALL OFF "${DEBUG_FLAGS}")
-declare_flag_group(INJECT INJECT_ALL OFF "${INJECT_FLAGS}")
 
 _apply_enable_all(PROFILING_ALL "${PROFILING_FLAGS}")
-_apply_enable_all(TEST_ALL "${TEST_FLAGS}")
 _apply_enable_all(TEST_NIGHTMARE_ALL "${TEST_NIGHTMARE_FLAGS}")
 _apply_enable_all(DEBUG_ALL "${DEBUG_FLAGS}")
-_apply_enable_all(INJECT_ALL "${INJECT_FLAGS}")
 
 foreach (pair ${DEBUG_FLAG_MAP})
     string(REPLACE ":" ";" _kv "${pair}")
@@ -237,23 +174,6 @@ foreach (flag ${DEBUG_FLAGS})
     endif ()
 endforeach ()
 
-foreach (pair ${TEST_INJECT_MAP})
-    string(REPLACE ":" ";" _kv "${pair}")
-    list(GET _kv 0 _test)
-    list(GET _kv 1 _inject)
-    if (${_inject})
-        set(${_test} ON)
-    endif ()
-endforeach ()
-
 emit_flag_group(PROFILING PROFILING_ALL "${PROFILING_FLAGS}")
-emit_flag_group(TEST TEST_ALL "${TEST_FLAGS}")
 emit_flag_group(TEST_NIGHTMARE TEST_NIGHTMARE_ALL "${TEST_NIGHTMARE_FLAGS}")
 emit_flag_group(DEBUG DEBUG_ALL "${DEBUG_FLAGS}")
-emit_flag_group(INJECT INJECT_ALL "${INJECT_FLAGS}")
-
-foreach (iflag ${INJECT_FLAGS})
-    if (NOT ";${TEST_INJECT_MAP};" MATCHES ":${iflag}(;|$)")
-        message(WARNING "${iflag} has no TEST_INJECT_MAP entry; won't pull in a test harness")
-    endif ()
-endforeach ()

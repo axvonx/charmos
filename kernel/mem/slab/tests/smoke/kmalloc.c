@@ -1,6 +1,5 @@
 #include "mem/slab/tests/test_internal.h"
 
-#ifdef TEST_MEM
 TEST_GROUP_DECLARE(slab, .intensity_desc = {
                              .curve = SCALE_PIECEWISE_LOG,
                              .unit = "iters",
@@ -60,4 +59,3 @@ TEST_DECLARE_SMOKE(slab, pattern_integrity) {
     test_info(a_msg);
     return TEST_SUCCESS;
 }
-#endif

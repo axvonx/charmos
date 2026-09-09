@@ -2,8 +2,6 @@
 #include <acpi/lapic.h>
 #include <irq/irq.h>
 
-#ifdef TEST_MEM
-
 #define KFREE_IRQ_TEST_SPIN_MASK 0x3f
 static void **kfree_irq_allocs = NULL;
 static size_t kfree_irq_total_allocs = 0;
@@ -78,4 +76,3 @@ TEST_DECLARE_INTEGRATION(slab, kfree_defer_irq,
 
     return TEST_SUCCESS;
 }
-#endif

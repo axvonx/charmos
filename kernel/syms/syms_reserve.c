@@ -1,6 +1,6 @@
 /* Space for the symbol table
  *
- * scripts/syms.awk fills this in after the kernel is linked
+ * scripts/stamp_syms.py fills this in after the kernel is linked
  *
  * Leading bytes are a placeholder because an image no one
  * stamped then reports no symbols instead of reading a header full of zeroes

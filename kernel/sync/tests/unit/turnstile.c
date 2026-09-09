@@ -1,6 +1,5 @@
 #include "sync/tests/test_internal.h"
 
-#ifdef TEST_TURNSTILE
 TEST_GROUP_DECLARE(turnstile);
 
 TEST_DECLARE_UNIT(turnstile, hash_and_init) {
@@ -21,4 +20,3 @@ TEST_DECLARE_UNIT(turnstile, hash_and_init) {
 
     return TEST_SUCCESS;
 }
-#endif

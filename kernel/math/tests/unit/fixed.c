@@ -1,6 +1,5 @@
 #include "math/tests/test_internal.h"
 
-#ifdef TEST_FIXED
 TEST_GROUP_DECLARE(fixed, .intensity_desc = {
                               .curve = SCALE_PIECEWISE_LOG,
                               .unit = "iters",
@@ -223,5 +222,3 @@ TEST_DECLARE_UNIT(fixed, clamp_standard) {
 
     return TEST_SUCCESS;
 }
-
-#endif

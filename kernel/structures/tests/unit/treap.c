@@ -1,6 +1,5 @@
 #include "structures/tests/test_internal.h"
 
-#ifdef TEST_TREAP
 TEST_GROUP_DECLARE(treap);
 
 struct test_treap_node {
@@ -110,4 +109,3 @@ TEST_DECLARE_UNIT(treap, basic_operations) {
 
     return TEST_SUCCESS;
 }
-#endif

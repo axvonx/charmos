@@ -1,6 +1,5 @@
 #include "tests/test_internal.h"
 
-#ifdef TEST_STACK_DEPOT
 TEST_GROUP_DECLARE(stack_depot, .intensity_desc = {
                                     .curve = SCALE_PIECEWISE_LOG,
                                     .unit = "records",
@@ -240,4 +239,3 @@ TEST_DECLARE_UNIT(stack_depot, save_current_dedup) {
     stack_depot_put(h[0]);
     return TEST_SUCCESS;
 }
-#endif

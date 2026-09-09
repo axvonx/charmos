@@ -2,8 +2,6 @@
 
 #include <sync/seqlock.h>
 
-#ifdef TEST_QSPINLOCK
-
 LOCK_CHK_CLASS_DECLARE_LOCAL(lock_reinit_class);
 static MUTEX_SIMPLE_DEFINE(static_simple_mutex);
 
@@ -113,5 +111,3 @@ TEST_DECLARE_UNIT(lock_chk, policy_mutation_and_reinit) {
     TEST_ASSERT(lock_reinit_state_valid(&spin, &qspin, &mutex, &simple, &rw));
     return TEST_SUCCESS;
 }
-
-#endif /* TEST_QSPINLOCK */

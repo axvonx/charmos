@@ -1,6 +1,5 @@
 #include "thread/workqueue/tests/test_internal.h"
 
-#ifdef TEST_TIMER_DEFER
 TEST_GROUP_DECLARE(defer, .intensity_desc = {
                               .curve = SCALE_PIECEWISE_LOG,
                               .unit = "iters",
@@ -37,4 +36,3 @@ TEST_DECLARE_UNIT(defer, delayed_work_schedule) {
     TEST_ASSERT(defer_worked);
     return TEST_SUCCESS;
 }
-#endif

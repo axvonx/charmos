@@ -1,6 +1,5 @@
 #include "drivers/nvme/tests/test_internal.h"
 
-#ifdef TEST_NVME_UNIT
 TEST_GROUP_DECLARE(nvme_unit);
 
 TEST_DECLARE_UNIT(nvme_unit, status_code_decode) {
@@ -22,4 +21,3 @@ TEST_DECLARE_UNIT(nvme_unit, status_code_decode) {
 
     return TEST_SUCCESS;
 }
-#endif

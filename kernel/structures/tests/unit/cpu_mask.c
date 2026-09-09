@@ -1,6 +1,5 @@
 #include "structures/tests/test_internal.h"
 
-#ifdef TEST_CPU_MASK
 TEST_GROUP_DECLARE(cpu_mask);
 
 TEST_DECLARE_UNIT(cpu_mask, basic_and_range_operations) {
@@ -124,4 +123,3 @@ TEST_DECLARE_UNIT(cpu_mask, binary_bitwise_operations) {
 
     return TEST_SUCCESS;
 }
-#endif

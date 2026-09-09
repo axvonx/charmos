@@ -1,6 +1,5 @@
 #include "block/sched/tests/test_internal.h"
 
-#ifdef TEST_BIO_SCHED
 TEST_GROUP_DECLARE(bio_sched, .intensity_desc = {
                                   .curve = SCALE_PIECEWISE_LOG,
                                   .unit = "requests",
@@ -58,4 +57,3 @@ TEST_DECLARE_INTEGRATION(bio_sched, coalesce, TEST_INTENSITY(1, 2, 16)) {
 
     return TEST_SUCCESS;
 }
-#endif

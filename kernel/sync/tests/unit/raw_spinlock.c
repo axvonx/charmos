@@ -3,7 +3,6 @@
 #include <asm.h>
 #include <sync/raw_spinlock.h>
 
-#ifdef TEST_QSPINLOCK
 TEST_GROUP_DECLARE(raw_spinlock);
 
 TEST_DECLARE_UNIT(raw_spinlock, physical_operations) {
@@ -45,4 +44,3 @@ TEST_DECLARE_UNIT(raw_spinlock, irq_restore) {
     TEST_ASSERT(remained_disabled);
     return TEST_SUCCESS;
 }
-#endif

@@ -1,6 +1,5 @@
 #include "acpi/tests/test_internal.h"
 
-#ifdef TEST_IOAPIC
 TEST_GROUP_DECLARE(ioapic);
 static_assert(sizeof(union ioapic_redirection_entry) == 8);
 
@@ -38,4 +37,3 @@ TEST_DECLARE_UNIT(ioapic, redirection_entry_layout) {
 
     return TEST_SUCCESS;
 }
-#endif

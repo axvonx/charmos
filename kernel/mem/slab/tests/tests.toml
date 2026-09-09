@@ -1,0 +1,3 @@
+name        = "slab"
+description = "slab allocator tests"
+default     = false

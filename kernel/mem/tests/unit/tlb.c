@@ -1,7 +1,5 @@
 #include "mem/tests/test_internal.h"
 
-#ifdef TEST_MEM
-
 TEST_DECLARE_UNIT(mem, tlb_shootdown_single_cpu) {
     ABORT_IF_RAM_LOW();
 
@@ -24,4 +22,3 @@ TEST_DECLARE_UNIT(mem, tlb_shootdown_single_cpu) {
 
     return TEST_SUCCESS;
 }
-#endif

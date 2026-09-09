@@ -1,6 +1,5 @@
 #include "structures/tests/test_internal.h"
 
-#ifdef TEST_AVL
 TEST_GROUP_DECLARE(avl);
 
 struct test_avl_node {
@@ -103,4 +102,3 @@ TEST_DECLARE_UNIT(avl, rotations_and_balance) {
 
     return TEST_SUCCESS;
 }
-#endif

@@ -1,6 +1,5 @@
 #include "types/tests/test_internal.h"
 
-#ifdef TEST_UI128
 TEST_GROUP_DECLARE(ui128, .intensity_desc = {
                               .curve = SCALE_PIECEWISE_LOG,
                               .unit = "iters",
@@ -280,5 +279,3 @@ TEST_DECLARE_UNIT(ui128, limits) {
 
     return TEST_SUCCESS;
 }
-
-#endif

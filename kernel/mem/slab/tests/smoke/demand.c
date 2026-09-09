@@ -1,7 +1,5 @@
 #include "mem/slab/tests/test_internal.h"
 
-#ifdef TEST_MM
-
 TEST_DECLARE_SMOKE(slab, demand_growth) {
     size_t count = 500;
     void *ptrs[count];
@@ -17,4 +15,3 @@ TEST_DECLARE_SMOKE(slab, demand_growth) {
 
     return TEST_SUCCESS;
 }
-#endif

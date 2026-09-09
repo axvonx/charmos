@@ -25,6 +25,7 @@ For things not specified here, such as multi-line comments, simply use the same 
 Header code should be organized in a similar structure to this.
 The exact ordering doesn't matter as much (e.g. structs can come before unions),
 but the general structure of things should try and adhere to this.
+
 ```c
 /* @title: Title */
 #pragma once
@@ -87,15 +88,14 @@ function(
      /* arg2 = */ arg2,
      /* arg3 = */ arg3);
 ```
-    
+
 ### Group by context, sort by behavior
 
-Code should remain in the same directory/group as other code that is operating in related contexts. 
+Code should remain in the same directory/group as other code that is operating in related contexts.
 Even if there are different implementations in a group (e.g. FAT and ext2), they should all reside under a parent directory, in this case `kernel/fs`.
 
-Independent files should be based on the behavior of functions in the file. 
+Independent files should be based on the behavior of functions in the file.
 e.g., under `kernel/fs/ext2`, the code for reading/writing blocks and inodes are in the same `ext2_io.c` file, whereas the file creation, file deletion, and lookup functions all have their own files.
-
 
 ```bash
 include/
@@ -108,7 +108,7 @@ kernel/
     │   ├── create.c   # file creation    - behavior
 ```
 
-Headers should correspond to groups, not behaviors. 
+Headers should correspond to groups, not behaviors.
 
 ### Name headers by group, name sources with optional prefixes
 
@@ -121,7 +121,7 @@ Headers should use the `#pragma once` guard, as this is widely supported and eas
 
 ### Prefix functions by group
 
-For symbols used in macros, prefer the `__` prefix to avoid clashes, and for symbols provided externally, such as from the linker, prefer the `__` prefix as well. 
+For symbols used in macros, prefer the `__` prefix to avoid clashes, and for symbols provided externally, such as from the linker, prefer the `__` prefix as well.
 
 Larger, more specific names are acceptable in cases where they provide information and reduce collisions, such as with `ps2_kb_` and `usb_kb_`, as opposed to just `kb_`.
 
@@ -182,11 +182,7 @@ The build script should be complete and simple. It is wasteful to spend time on 
 
 ## Testing
 
-It is highly preferred to write tests in `#ifdef TESTS` blocks that will only compile if the tests are enabled at compilation. Specific notes on tests, (e.g. flags to pass to QEMU, external disks that should be formatted in a specific way) should be commented around the test portions.
-
-Tests should seek to check edge cases more than general scenarios, as these will more often than not be the source of bugs and errors.
-
-Refer to `include/tests.h` to see how tests are done, and check `kernel/tests` to see examples of tests
+### TODO: Write this out
 
 ## Contributing
 

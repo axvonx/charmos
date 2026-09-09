@@ -1,6 +1,5 @@
 #include "sch/tests/test_internal.h"
 
-#ifdef TEST_CLIMB
 TEST_GROUP_DECLARE(climb, .intensity_desc = {
                               .curve = SCALE_PIECEWISE_LOG,
                               .unit = "steps",
@@ -29,4 +28,3 @@ TEST_DECLARE_UNIT(climb, pressure_cubic_curve, TEST_INTENSITY(20, 100, 1000)) {
 
     return TEST_SUCCESS;
 }
-#endif

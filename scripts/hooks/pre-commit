@@ -78,7 +78,7 @@ if [ -n "$STAGED_PY_FILES" ] && command -v ruff >/dev/null 2>&1; then
         ask
         case "$REPLY" in
         "" | y | Y | yes | Yes | YES)
-            ruff format "$PY_UNFORMATTED"
+            ruff format $PY_UNFORMATTED
             printf '%s\n' "$PY_UNFORMATTED" | xargs git add
             echo -e "\033[32mAll Python files formatted and re-staged.\033[0m"
             ;;
@@ -88,9 +88,9 @@ if [ -n "$STAGED_PY_FILES" ] && command -v ruff >/dev/null 2>&1; then
         esac
     fi
 
-    if ! ruff check "$STAGED_PY_FILES" >/dev/null 2>&1; then
+    if ! ruff check $STAGED_PY_FILES >/dev/null 2>&1; then
         echo -e "\033[31mOops, Python lint issues found by ruff:\033[0m"
-        ruff check "$STAGED_PY_FILES"
+        ruff check $STAGED_PY_FILES
 
         have_tty || exit 1
 
@@ -98,9 +98,9 @@ if [ -n "$STAGED_PY_FILES" ] && command -v ruff >/dev/null 2>&1; then
         ask
         case "$REPLY" in
         "" | y | Y | yes | Yes | YES)
-            ruff check --fix "$STAGED_PY_FILES"
+            ruff check --fix $STAGED_PY_FILES
             printf '%s\n' "$STAGED_PY_FILES" | xargs git add
-            if ! ruff check "$STAGED_PY_FILES"; then
+            if ! ruff check $STAGED_PY_FILES; then
                 echo -e "\033[31mRemaining lint errors must be resolved before committing.\033[0m"
                 exit 1
             fi

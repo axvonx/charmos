@@ -1,6 +1,5 @@
 #include "block/tests/test_internal.h"
 
-#ifdef TEST_BIO
 TEST_GROUP_DECLARE(bio, .intensity_desc = {
                             .curve = SCALE_PIECEWISE_LINEAR,
                             .unit = "ios",
@@ -60,4 +59,3 @@ TEST_DECLARE_INTEGRATION(bio, async_submit, TEST_INTENSITY(1, 1, 16)) {
     TEST_ASSERT_TRUE(done);
     return TEST_SUCCESS;
 }
-#endif

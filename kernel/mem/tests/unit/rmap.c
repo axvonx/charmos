@@ -1,6 +1,5 @@
 #include "mem/tests/test_internal.h"
 
-#ifdef TEST_RMAP
 TEST_GROUP_DECLARE(rmap, .intensity_desc = {
                              .curve = SCALE_PIECEWISE_LOG,
                              .unit = "queries",
@@ -161,4 +160,3 @@ TEST_DECLARE_UNIT(rmap, itree_differential, TEST_INTENSITY(200, 2000, 10000)) {
     kfree(r);
     return TEST_SUCCESS;
 }
-#endif

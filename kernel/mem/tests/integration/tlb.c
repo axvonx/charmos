@@ -1,7 +1,5 @@
 #include "mem/tests/test_internal.h"
 
-#ifdef TEST_MEM
-
 #define TLB_MAX_TEST_THREADS 64
 
 static volatile uint64_t tlb_seen[TLB_MAX_TEST_THREADS];
@@ -163,4 +161,3 @@ TEST_DECLARE_INTEGRATION(mem, tlb_shootdown_contention,
     test_info("concurrent shootdown stress completed");
     return TEST_SUCCESS;
 }
-#endif

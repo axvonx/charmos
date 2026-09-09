@@ -184,8 +184,8 @@ check_required_tools() {
         check_tool ninja "install ninja (apt/dnf/brew install ninja) or use --make"        || failed=1
     fi
     check_tool nasm     "install via your package manager (apt/dnf/brew install nasm)"    || failed=1
+    check_tool python3  "python3 >= 3.11" || failed=1
     check_tool nm       "binutils package"                                                || failed=1
-    check_tool awk      "install gawk or mawk"                                            || failed=1
     if ! command -v x86_64-elf-objcopy >/dev/null 2>&1; then
         check_tool objcopy "binutils package, or x86_64-elf-objcopy for a cross build"    || failed=1
     fi

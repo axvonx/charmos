@@ -1,7 +1,5 @@
 #include "mem/slab/tests/test_internal.h"
 
-#ifdef TEST_MEM
-
 #define ASSERT_ALIGNED(ptr, alignment)                                         \
     TEST_ASSERT_EQ(((uintptr_t) (ptr) & ((alignment) - 1)), 0)
 
@@ -23,4 +21,3 @@ KMALLOC_ALIGNMENT_TEST(32, 32)
 KMALLOC_ALIGNMENT_TEST(64, 64)
 KMALLOC_ALIGNMENT_TEST(128, 128)
 KMALLOC_ALIGNMENT_TEST(256, 256)
-#endif

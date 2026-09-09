@@ -1,6 +1,5 @@
 #include "structures/tests/test_internal.h"
 
-#ifdef TEST_BITMAP
 TEST_GROUP_DECLARE(bitmap, .intensity_desc = {
                                .curve = SCALE_PIECEWISE_LOG,
                                .unit = "bits",
@@ -281,5 +280,3 @@ TEST_DECLARE_UNIT(bitmap, word_index_math) {
 
     return TEST_SUCCESS;
 }
-
-#endif

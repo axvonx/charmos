@@ -3,7 +3,6 @@
 #include <string.h>
 #include <test/test.h>
 
-#ifdef TEST_WATCHDOG
 TEST_GROUP_DECLARE(watchdog);
 
 static void watchdog_populate_full_window(struct watchdog_buckets *buckets) {
@@ -59,4 +58,3 @@ TEST_DECLARE_UNIT(watchdog, ewma_fixed_point_sample) {
     TEST_ASSERT_LT_S(updated, FX_ONE);
     return TEST_SUCCESS;
 }
-#endif

@@ -1,6 +1,5 @@
 #include "crypto/tests/test_internal.h"
 
-#ifdef TEST_PRNG
 TEST_GROUP_DECLARE(prng, .intensity_desc = {
                              .curve = SCALE_PIECEWISE_LOG,
                              .unit = "samples",
@@ -52,4 +51,3 @@ TEST_DECLARE_UNIT(prng, splitmix64_determinism,
     kfree(seq1);
     return TEST_SUCCESS;
 }
-#endif

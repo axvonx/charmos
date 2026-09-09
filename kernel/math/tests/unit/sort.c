@@ -1,6 +1,5 @@
 #include "math/tests/test_internal.h"
 
-#ifdef TEST_SORT
 TEST_GROUP_DECLARE(sort);
 
 static int cmp_int(const void *a, const void *b) {
@@ -37,4 +36,3 @@ TEST_DECLARE_UNIT(sort, heapsort_and_bsearch) {
 
     return TEST_SUCCESS;
 }
-#endif

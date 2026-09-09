@@ -1,0 +1,3 @@
+name        = "core"
+description = "core kernel tests (string, parse, cmdline, log, watchdog)"
+default     = false

@@ -1,6 +1,5 @@
 #include "mem/tests/test_internal.h"
 
-#ifdef TEST_FOLIO
 TEST_GROUP_DECLARE(folio, .intensity_desc = {
                               .curve = SCALE_PIECEWISE_LOG,
                               .unit = "iters",
@@ -92,4 +91,3 @@ TEST_DECLARE_UNIT(folio, anon_tag_mapcount) {
 
     return TEST_SUCCESS;
 }
-#endif

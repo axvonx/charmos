@@ -1,6 +1,5 @@
 #include "structures/tests/test_internal.h"
 
-#ifdef TEST_MPMC_QUEUE
 TEST_GROUP_DECLARE(mpmc_queue);
 
 TEST_DECLARE_UNIT(mpmc_queue, basic_enqueue_dequeue) {
@@ -41,4 +40,3 @@ TEST_DECLARE_UNIT(mpmc_queue, basic_enqueue_dequeue) {
     mpmc_queue_destroy(&q);
     return TEST_SUCCESS;
 }
-#endif

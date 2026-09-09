@@ -1,7 +1,5 @@
 #include "sync/tests/test_internal.h"
 
-#if defined(TEST_SYNC_NIGHTMARE) || defined(TEST_MUTEX)
-
 struct chaos_state {
     struct thread *t;
     atomic_bool alive;
@@ -209,5 +207,3 @@ TEST_DECLARE_INTEGRATION(mutex, interruptible_apc_fuzz,
 
     return TEST_SUCCESS;
 }
-
-#endif /* defined(TEST_SYNC_NIGHTMARE) || defined(TEST_MUTEX) */

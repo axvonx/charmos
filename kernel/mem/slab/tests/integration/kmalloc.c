@@ -1,7 +1,5 @@
 #include "mem/slab/tests/test_internal.h"
 
-#ifdef TEST_MEM
-
 #define MT_ALLOC_TIMES 1024
 
 static atomic_int kmalloc_done = 0;
@@ -196,4 +194,3 @@ TEST_DECLARE_INTEGRATION(slab, concurrency_stress,
     test_info("aggressive concurrency stress test completed");
     return TEST_SUCCESS;
 }
-#endif

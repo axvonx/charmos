@@ -1,6 +1,5 @@
 #include "structures/tests/test_internal.h"
 
-#ifdef TEST_RADIX
 TEST_GROUP_DECLARE(radix);
 
 struct test_item {
@@ -77,4 +76,3 @@ TEST_DECLARE_UNIT(radix, multilevel_sparse) {
 
     return TEST_SUCCESS;
 }
-#endif

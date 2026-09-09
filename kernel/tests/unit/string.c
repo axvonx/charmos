@@ -1,6 +1,5 @@
 #include "tests/test_internal.h"
 
-#ifdef TEST_STRING
 TEST_GROUP_DECLARE(string);
 
 TEST_DECLARE_UNIT(string, strstr_patterns) {
@@ -30,4 +29,3 @@ TEST_DECLARE_UNIT(string, strstr_patterns) {
 
     return TEST_SUCCESS;
 }
-#endif

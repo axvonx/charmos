@@ -1,7 +1,5 @@
 #include "sch/tests/test_internal.h"
 
-#ifdef TEST_SCHED
-
 #define SCHED_PUSH_TEST_THREADS_MAX 1024
 
 static atomic_uint left = 0;
@@ -52,4 +50,3 @@ TEST_DECLARE_INTEGRATION(sched, push_target, TEST_INTENSITY(32, 256, 1024)) {
     kfree(pushed);
     return TEST_SUCCESS;
 }
-#endif

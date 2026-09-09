@@ -1,6 +1,5 @@
 #include "sync/tests/test_internal.h"
 
-#ifdef TEST_MUTEX
 TEST_GROUP_DECLARE(mutex, .intensity_desc = {
                               .curve = SCALE_PIECEWISE_LOG,
                               .unit = "threads",
@@ -18,4 +17,3 @@ TEST_DECLARE_SMOKE(mutex, basic) {
     mutex_unlock(&basic_test_mtx);
     return TEST_SUCCESS;
 }
-#endif

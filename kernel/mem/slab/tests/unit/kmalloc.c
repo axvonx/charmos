@@ -1,7 +1,5 @@
 #include "mem/slab/tests/test_internal.h"
 
-#ifdef TEST_MEM
-
 TEST_DECLARE_UNIT(slab, random_free_stress, TEST_INTENSITY(256, 2048, 32768)) {
     ABORT_IF_RAM_LOW();
 
@@ -81,4 +79,3 @@ TEST_DECLARE_UNIT(slab, atomic_behavior_flags) {
 TEST_DECLARE(slab, map_new) {
     return TEST_SUCCESS;
 }
-#endif

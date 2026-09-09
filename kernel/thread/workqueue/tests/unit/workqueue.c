@@ -1,6 +1,5 @@
 #include "thread/workqueue/tests/test_internal.h"
 
-#ifdef TEST_SCHED
 TEST_GROUP_DECLARE(workqueue, .intensity_desc = {
                                   .curve = SCALE_PIECEWISE_LOG,
                                   .unit = "items",
@@ -132,4 +131,3 @@ TEST_DECLARE_UNIT(workqueue, concurrent_enqueue_scaling,
     workqueue_destroy(wq);
     return TEST_SUCCESS;
 }
-#endif

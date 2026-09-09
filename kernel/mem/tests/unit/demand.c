@@ -1,7 +1,5 @@
 #include "mem/tests/test_internal.h"
 
-#ifdef TEST_MM
-
 #define DP_PAGES 16
 #define DP_STRIDE (PAGE_SIZE / sizeof(uint64_t))
 #define DP_MAX_BUFS 8
@@ -97,4 +95,3 @@ TEST_DECLARE_UNIT(mem, demand_single_buf_up, TEST_INTENSITY(2, 8, 32)) {
     dp_free_bufs(bufs, nbuf, pages);
     return TEST_SUCCESS;
 }
-#endif

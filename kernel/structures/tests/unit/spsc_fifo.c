@@ -1,6 +1,5 @@
 #include "structures/tests/test_internal.h"
 
-#ifdef TEST_SPSC_FIFO
 TEST_GROUP_DECLARE(spsc_fifo);
 
 TEST_DECLARE_UNIT(spsc_fifo, byte_stream_and_wraparound) {
@@ -70,4 +69,3 @@ TEST_DECLARE_UNIT(spsc_fifo, ptr_helpers) {
     spsc_fifo_destroy(&fifo);
     return TEST_SUCCESS;
 }
-#endif

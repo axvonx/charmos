@@ -1,6 +1,5 @@
 #include "mem/tests/test_internal.h"
 
-#ifdef TEST_PAGE_TABLE
 TEST_GROUP_DECLARE(page_table);
 
 /* Tagged PTEs:
@@ -124,5 +123,3 @@ TEST_DECLARE_UNIT(page_table, is_shared_requires_present) {
 
     return TEST_SUCCESS;
 }
-
-#endif

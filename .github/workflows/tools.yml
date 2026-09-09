@@ -111,6 +111,5 @@ jobs:
           shellcheck --severity=warning \
             scripts/build.sh \
             scripts/run_qemu.sh \
-            scripts/stamp_syms.sh \
             scripts/symbolize.sh \
             scripts/generate_log.sh
