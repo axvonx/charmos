@@ -1,24 +1,24 @@
 # Huge Idea: Locking Philosophy
 
-## Credits:
+## Credits
 
-Written 11/20/2025, updated 1/24/2026 
+Written 11/20/2025, updated 1/24/2026
 
-## Audience:
+## Audience
 
 Everyone
 
 > Locking is integral to the design of this operating system, and is arguably one of,
 > if not the most important subsystems, thus, it is intended for everyone to read.
 
-## Overview:
+## Overview
 
 Locking is the component of multitasking operating systems and programs that faciliates protection of shared resources.
 This OS allows preemption and is SMP (multicore) compatible, which introduces a few more locking problems.
 
-## Background:
+## Background
 
-### History:
+### History
 
 Throughout the history of operating systems, the concept of "virtualizing" physical resources has been front and
 center in the design of various OS components. For example, memory management units virtualize memory to
@@ -32,7 +32,7 @@ running multiple threads at the same time on one CPU by rapidly starting, stoppi
 This is known as "context switching", which is one component of the much larger concept of "scheduling",
 which will be discussed in more detail elsewhere.
 
-### "The Problem":
+### "The Problem"
 
 However, "with great power comes great responsiblity"[^1], and multitasking operating systems and multithreaded programs
 come with much responsiblity.
@@ -74,7 +74,7 @@ thread_spawn(t2_entry);
 
 These scenarios in which timing-dependent events can impact the overall behavior of a program are known as "race conditions".
 
-### "The Solution":
+### "The Solution"
 
 One way to resolve this particular kind of race condition is with a lock.
 
@@ -83,7 +83,7 @@ reordering – we'll talk about what those words mean later) with a simple lock,
 
 > For simplicity's sake, we will define a function `set_if_false` that checks a boolean variable, and
 > if it is `false`, sets it to `true`, returning `true` if it is successful in this operation, or `false` if not.
-
+>
 > We will also say that the `set_if_false` function happens all at once,
 > or atomically, meaning that in the function there exists no window of time in between the
 > lock value being read, checked, and set where the lock can change state.
@@ -171,11 +171,11 @@ modified by another, and incorrectly operated upon based on an old, now invalid 
 
 You can also use IRQLs[^2] to disable preemption during such code segments to protect the structure.
 
-Locks also cannot be recursively acquired. Some may argue that recursive mutexes are a nicety and make life 
-easier, and while that may hold true in certain cases, such as when you're working on a legacy codebase that 
+Locks also cannot be recursively acquired. Some may argue that recursive mutexes are a nicety and make life
+easier, and while that may hold true in certain cases, such as when you're working on a legacy codebase that
 uses recursive mutexes and management wants the next release shipped by tomorrow, in our case, it is less than ideal.
 
-This is primarily because recursive mutexes increase debugging complexity, and also becomes difficult to maintain. 
+This is primarily because recursive mutexes increase debugging complexity, and also becomes difficult to maintain.
 
 ### Memory Usage
 
@@ -211,7 +211,6 @@ priority inheritance, and even reader-writer locks (which would have 2 queues, o
 A turnstile is effectively a structure that tracks metadata regarding a lock, including waiter threads,
 priority information, and other data.
 
+[^1]: [With great power comes great responsibility](https://en.wikipedia.org/wiki/With_great_power_comes_great_responsibility)
 
-
-[^1]: https://en.wikipedia.org/wiki/With_great_power_comes_great_responsibility
-[^2]: https://en.wikipedia.org/wiki/IRQL_(Windows)
+[^2]: [IRQL](https://en.wikipedia.org/wiki/IRQL_(Windows))

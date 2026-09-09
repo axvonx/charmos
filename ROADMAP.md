@@ -30,7 +30,7 @@ to getting there, and what is a side quest/QOL.
 
 Lanes are composed of items, and the syntax convention here is
 
-```
+```bash
 N.2
 ```
 
@@ -41,9 +41,9 @@ Lanes themselves can also have numbers in the LHS, such as `SCH1`,
 
 Anyways, enough talk...
 
-# Roadmap
+## Roadmap
 
-## `NIGHTMARE1` - Wiring up nightmare tests in CI (NEAR **📝** MAIN)
+### `NIGHTMARE1` - Wiring up nightmare tests in CI (NEAR **📝** MAIN)
 
 The title. Just need to finalize a few more things and get it up.
 
@@ -51,16 +51,16 @@ The title. Just need to finalize a few more things and get it up.
 - [ ] 2. Bring up GUI frontend
 - [ ] 3. Introduce real test consumers
 
-## `SYNC1` - Wiring up qspinlock as the default spinlock, implementing more scalable synchronization primitives (in line with RCU) (NEAR **🛑** MAIN)
+### `SYNC1` - Wiring up qspinlock as the default spinlock, implementing more scalable synchronization primitives (in line with RCU) (NEAR **🛑** MAIN)
 
 The title. We have qspinlock but default spinlock doesn't route through it, would be nice to do that, and
 also RCU falls right in line with this, along with maybe exploring some other stuff
 
-## `FS1` - Wiring up the folio and other mm features for filesystem overhaul beginnings (NEAR **🛑** MAIN)
+### `FS1` - Wiring up the folio and other mm features for filesystem overhaul beginnings (NEAR **🛑** MAIN)
 
 Not too sure on the specifics just yet, we'll need to plan it out
 
-> Start condition: Better synchronization primitives, percpu refcounting usage, maybe CNA/lock cohorting, etc. 
+> Start condition: Better synchronization primitives, percpu refcounting usage, maybe CNA/lock cohorting, etc.
 
 ## `MEM1` - Improving some allocators (NEAR **📝** SIDE)
 
@@ -149,6 +149,6 @@ It might happen
 
 > Start condition: unsettled
 
-# Completed Items
+## Completed Items
 
 :cricket: :cricket: :cricket:

@@ -17,7 +17,7 @@ These are general uniformities and code organization standards that the codebase
 For things not specified here, such as multi-line comments, simply use the same style as the rest of the file is using.
 
 > A "behavior" is a set of functions that all collectively accomplish a singular, specific task
-
+>
 > A "group" refers to a collection of behaviors under a related context
 
 ## Header format
