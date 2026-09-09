@@ -137,6 +137,8 @@ _EXPECTED_ARTIFACTS = {
     "build_log": f"{ARTIFACT_DIR}/build.log",
 }
 
+EXECUTABLE_ARTIFACTS = ("limine",)
+
 
 def _instant(now: datetime) -> str:
     return now.astimezone(UTC).isoformat().replace("+00:00", "Z")
@@ -520,6 +522,13 @@ def verify_bundle(
     return VerifiedBundle(root, document)
 
 
+def restore_executable_bits(bundle: VerifiedBundle) -> None:
+    """Give back the exec bits that transporting the bundle dropped."""
+    for name in EXECUTABLE_ARTIFACTS:
+        path = bundle.root / ARTIFACT_DIR / _DESTINATIONS[name]
+        path.chmod(path.stat().st_mode | 0o111)
+
+
 def repack(
     bundle: VerifiedBundle,
     *,
@@ -529,6 +538,7 @@ def repack(
 ) -> RepackMeasurement:
     root = (repo_root or default_repo_root()).resolve()
     verify_bundle(bundle.root, expected_sha256=bundle.sha256)
+    restore_executable_bits(bundle)
     out_dir = out_dir.resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
     iso_path = out_dir / "charmos-x86_64.iso"

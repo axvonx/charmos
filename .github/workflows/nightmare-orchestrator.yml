@@ -3,13 +3,14 @@ run-name: ${{ inputs.queued_run_id && format('Nightmare · {0} · claim-{1}', in
 
 on:
   schedule:
-    - cron: '0 6 * * *'
+    - cron: "0 6 * * 1,3,5"
+    - cron: "0 6 * * 2,4,6"
   workflow_dispatch:
     inputs:
       batch_id:
         description: Stable caller-generated identity for one atomic batch
         required: false
-        default: ''
+        default: ""
       suite:
         description: Committed suite for scheduled/compatibility mode
         required: false
@@ -17,15 +18,15 @@ on:
       batch_toml:
         description: Inline TOML batch definition for direct ad-hoc execution; blank uses suite
         required: false
-        default: ''
+        default: ""
       source_sha:
         description: Exact repository commit; blank uses the triggering commit
         required: false
-        default: ''
+        default: ""
       queued_run_id:
         description: Internal source run for one deferred accepted plan
         required: false
-        default: ''
+        default: ""
 
 permissions:
   actions: read
@@ -40,7 +41,7 @@ env:
   PYTHONPATH: scripts
   RUNNER_IMAGE: ghcr.io/axvonx/charmos-x86-env@sha256:2f77dec0b8a479bdfb8f9237ceb0c10320e418c5725592033cd9451e63fced87
   SOURCE_SHA: ${{ inputs.source_sha || github.sha }}
-  SUITE_ID: ${{ inputs.suite || 'overnight_locks' }}
+  SUITE_ID: ${{ inputs.suite || (github.event.schedule == '0 6 * * 2,4,6' && 'overnight_wake') || 'overnight_locks' }}
   BATCH_ID: ${{ inputs.batch_id || format('run-{0}', github.run_id) }}
 
 jobs:
@@ -56,7 +57,7 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Download one claimed accepted plan
+      - name: Download plan
         if: inputs.queued_run_id != ''
         uses: actions/download-artifact@v4
         with:
@@ -65,7 +66,7 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.queued_run_id }}
 
-      - name: Restore one claimed accepted plan
+      - name: Restore plan
         if: inputs.queued_run_id != ''
         run: |
           cp queued-plan/command.json command.json
@@ -110,7 +111,7 @@ jobs:
           test "$(jq -r '.kind' plan.json)" = accepted
           test "$plan_rc" -eq 0
 
-      - name: Classify immediate or deferred execution
+      - name: Classify execution
         id: timing
         run: |
           deferred=false
@@ -122,7 +123,7 @@ jobs:
           fi
           echo "deferred=$deferred" >> "$GITHUB_OUTPUT"
 
-      - name: Export the bounded accepted plan
+      - name: Export the plan
         id: result
         run: |
           kind=$(jq -r '.kind' plan.json)
@@ -146,7 +147,7 @@ jobs:
             exit 1
           fi
 
-      - name: Persist deferred accepted plan for the periodic waker
+      - name: Persist deferred accepted plan
         if: steps.timing.outputs.deferred == 'true'
         uses: actions/upload-artifact@v4
         with:
@@ -232,7 +233,7 @@ jobs:
           pattern: nightmare-build-*
           path: builds
 
-      - name: Materialize only from accepted receipts
+      - name: Materialize from accepted receipts
         run: |
           receipts=(builds/*/receipt.json)
           python3 -m charm nightmare materialize \
@@ -280,7 +281,7 @@ jobs:
           name: ${{ matrix.bundle_artifact }}
           path: build-download
 
-      - name: Execute one immutable manifest
+      - name: Execute manifest
         run: |
           python3 -m charm nightmare run-manifest \
             "plan-bundle/manifests/${{ matrix.manifest_id }}.json" \
@@ -288,7 +289,7 @@ jobs:
             --build-dir unused-build-dir \
             --out-dir runner-result
 
-      - name: Retain result even when infrastructure failed
+      - name: Retain result
         if: always()
         uses: actions/upload-artifact@v4
         with:

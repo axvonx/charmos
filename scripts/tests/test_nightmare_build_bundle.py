@@ -1,9 +1,12 @@
+import os
+import zipfile
+from dataclasses import replace
 from pathlib import Path
 from subprocess import CompletedProcess
 
 import pytest
 
-from charm.nightmare import build_bundle
+from charm.nightmare import build_bundle, contracts
 
 
 def request(commit: str) -> build_bundle.BuildRequest:
@@ -68,3 +71,86 @@ def test_compile_request_reports_limine_build_failure(
         build_bundle.compile_request(
             request(commit), build_dir=tmp_path / "build", repo_root=tmp_path
         )
+
+
+def verifiable_request(commit: str) -> build_bundle.BuildRequest:
+    base = request(commit)
+    return replace(
+        base,
+        request_sha256=contracts.sha256_json(
+            {
+                "source": {
+                    "repository": base.source_repository,
+                    "commit": base.source_commit,
+                },
+                "runner_image": base.runner_image,
+                "configuration": base.configuration,
+            }
+        ),
+    )
+
+
+def prebuilt_bundle(tmp_path: Path) -> build_bundle.VerifiedBundle:
+    root = tmp_path / "repo"
+    build_dir = tmp_path / "build"
+    for name, (location, relative) in build_bundle._SOURCES.items():
+        source = (build_dir if location == "build" else root) / relative
+        source.parent.mkdir(parents=True, exist_ok=True)
+        source.write_text(f"{name}\n", encoding="utf-8")
+    (root / "limine" / "limine").chmod(0o755)
+
+    return build_bundle.create_bundle(
+        verifiable_request("c" * 40),
+        build_dir=build_dir,
+        out_dir=tmp_path / "bundle",
+        repo_root=root,
+        compile_kernel=False,
+    )
+
+
+def transport(
+    bundle: build_bundle.VerifiedBundle, destination: Path
+) -> build_bundle.VerifiedBundle:
+    archive = destination.with_suffix(".zip")
+    with zipfile.ZipFile(archive, "w") as packed:
+        for path in sorted(bundle.root.rglob("*")):
+            if path.is_file():
+                packed.write(path, path.relative_to(bundle.root))
+    with zipfile.ZipFile(archive) as packed:
+        packed.extractall(destination)
+    return build_bundle.verify_bundle(destination)
+
+
+def test_artifact_zip_round_trip_drops_the_installer_exec_bit(tmp_path: Path) -> None:
+    built = prebuilt_bundle(tmp_path)
+    assert os.access(built.root / build_bundle.ARTIFACT_DIR / "limine", os.X_OK)
+
+    received = transport(built, tmp_path / "download")
+
+    assert not os.access(received.root / build_bundle.ARTIFACT_DIR / "limine", os.X_OK)
+
+
+def test_repack_restores_the_installer_exec_bit_before_use(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    received = transport(prebuilt_bundle(tmp_path), tmp_path / "download")
+    installer = received.root / build_bundle.ARTIFACT_DIR / "limine"
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    executable_when_called: list[bool] = []
+
+    def run(command: list[str], **_kwargs: object) -> CompletedProcess[str]:
+        executable_when_called.append(os.access(installer, os.X_OK))
+        (out_dir.resolve() / "charmos-x86_64.iso").write_text("iso", encoding="utf-8")
+        return CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(build_bundle.subprocess, "run", run)
+    cmdline = tmp_path / "cmdline"
+    cmdline.write_text("nightmare=harness_smoke\n", encoding="utf-8")
+
+    measurement = build_bundle.repack(
+        received, cmdline=cmdline, out_dir=out_dir, repo_root=tmp_path
+    )
+
+    assert executable_when_called == [True]
+    assert measurement.iso_path == out_dir.resolve() / "charmos-x86_64.iso"

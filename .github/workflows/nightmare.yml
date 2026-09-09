@@ -1,7 +1,5 @@
-name: Nightmare
+name: Nightmare flag matrix
 
-# P8 fallback evidence. This static matrix is frozen while the manifest-driven
-# workflow is built beside it. Add new scenarios to suite TOML, not here.
 
 on:
   schedule:
@@ -9,10 +7,6 @@ on:
     - cron: "0 3 * * *"
   workflow_dispatch:
     inputs:
-      duration_minutes:
-        description: "Wall clock budget per scenario"
-        required: false
-        default: "60"
       compiler:
         description: "gcc or clang"
         required: false
@@ -28,13 +22,13 @@ concurrency:
 
 env:
   PYTHONPATH: scripts
-  DURATION_MINUTES: ${{ github.event.inputs.duration_minutes || '60' }}
   COMPILER: ${{ github.event.inputs.compiler || 'clang' }}
 
 jobs:
-  torture:
+  flags:
     name: ${{ matrix.scenario.name }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 12
@@ -99,7 +93,7 @@ jobs:
             -- ${{ matrix.scenario.flags }} \
                -DQEMU_SMP_TOPO="${{ matrix.scenario.smp }}"
 
-      - name: Torture
+      - name: Boot and run the harness
         env:
           TERM: dumb
         run: |
@@ -108,10 +102,10 @@ jobs:
           # from timeout/QEMU requires errexit off
           set +e
           mkdir -p results
-          budget=$(( DURATION_MINUTES * 60 ))
           start=$(date +%s)
 
-          timeout --foreground -k 30 "$budget" \
+          # Booting and running the harness takes about a minute
+          timeout --foreground -k 30 600 \
               cmake --build build --target tests
           rc=$?
           pkill -f qemu-system-x86_64 2>/dev/null || true
@@ -149,7 +143,7 @@ jobs:
 
   report:
     name: Report
-    needs: torture
+    needs: flags
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -164,10 +158,14 @@ jobs:
 
       - name: Parse and aggregate
         run: |
+          # --fail-on-error is what makes this workflow able to report a
+          # failure at all: without it every shard could fail and the run would
+          # still be green, because the boot step swallows its own exit code so
+          # that a failing shard still uploads its logs
           python3 -m charm ci ingest artifacts \
             --summary "$GITHUB_STEP_SUMMARY" \
             --json report.json \
-            --repro-template './scripts/build.sh -t RelWithDebInfo --compiler clang tests -- -DTEST_NIGHTMARE_ALL=OFF -D{scenario}=ON'
+            --fail-on-error
 
       - name: Upload report
         if: always()
