@@ -1,8 +1,10 @@
 # charmos - Compact, Hobbyist And Recreational Monolithic Operating System
 
+<!-- markdownlint-disable MD033 -->
 <p align="center">
-<img src="https://github.com/axvonx/charmos/blob/main/charmos.png" width="500">
+  <img src="https://github.com" width="500" alt="charmos logo">
 </p>
+<!-- markdownlint-enable MD033 -->
 
 ## Build
 

@@ -4,11 +4,9 @@ Similar to the **style guide**, this is a documentation *guide*, not a set of do
 instances where documentation may deviate from this guide, and that is expected and allowed, but try to follow these
 guidelines with most things.
 
-
 [I've already read this](#how-should-i-write-ideas)
 
-
-# File titling and other naming
+## File titling and other naming
 
 To title a file such that it shows up with a name other than its file name in documentation, simply write
 
@@ -21,7 +19,7 @@ anywhere in the file.
 To give directories a name other than the directory name itself in documentation, simply create a file called
 `dir_doc_name` (no file extension) in the directory, and write the chosen name inside of it.
 
-# What is the format?
+## What is the format?
 
 Documentation for this codebase should be written in a unified format. This format will be referred to as the "**Idea Structure**".
 
@@ -60,7 +58,7 @@ To adhere to the style guide, all file names for **Huge Ideas** in the `./docs/`
 
 **Big Ideas** and **Small Ideas** should always be in code comments. **Small Ideas** should be "spatially near" the code that they are related to.
 
-### **Big Ideas** and **Small Ideas** MUST go in `./include/` if they are intended to be visible from the documentation website.
+### **Big Ideas** and **Small Ideas** MUST go in `./include/` if they are intended to be visible from the documentation website
 
 > **Ideas** in `./kernel/` will only be visible to those viewing the source code.
 
@@ -80,6 +78,7 @@ In general, each Idea MUST include the following **Sections**.
 - Overview/problem: one or two sentences that describe in simple language what the **Idea** is about
 
 **Ideas** MAY include these **Sections**, optionally:
+
 - Credits: who wrote this **Idea**?
 - Status: status of the **Idea**. if there is no status, the **Idea** is assumed to be stable.
 - Alerts: important information about the **Idea** (e.g. why is this unstable?)
@@ -135,8 +134,8 @@ The table below describes all statuses and whether or not they have bugs, their 
 **Ideas** must transition from one status to another, and potential successors and predecessors to a given status (what
 it can transition into and what it transitioned from) are also listed in this table.
 
-| Name |  Maintained | Bugs | Age | Persistent | Predecessors | Successors |
-| :--- |:----------- | :--- | :-- | :--------- | :----------- | :--------- |
+| Name | Maintained | Bugs | Age | Persistent | Predecessors | Successors |
+| :--- | :----------- | :--- | :-- | :--------- | :----------- | :--------- |
 | **EXPERIMENTAL** (*EX*) | Yes | Maybe | New | TBD | None | S, US, D |
 | **STABLE** (*S*) | Yes | Non-fatal | Recent-Old | Yes | EX, US | US, L |
 | **UNSTABLE** (*US*) | Yes | Yes, fatal | Recent-Old | Yes | S | S, D |
@@ -182,10 +181,10 @@ interactions between them, but only when necessary to show connections between p
 
 ### **Ideas** should be written in standard markdown in code comments
 
-**Ideas** should be written in an active voice, without unnecessary jargon. 
+**Ideas** should be written in an active voice, without unnecessary jargon.
 
-Referring to the reader with "you", or the author/speaker as "I" is permissible for **Ideas**, 
-particularly **Big** and **Small** ones that are more "inward facing" (less about theory, more about implementation). 
+Referring to the reader with "you", or the author/speaker as "I" is permissible for **Ideas**,
+particularly **Big** and **Small** ones that are more "inward facing" (less about theory, more about implementation).
 However, try to keep the **Idea** more like a piece of documentation and less like a text message.
 
 Unicode diagrams can be embedded in **Ideas** if needed.
@@ -208,7 +207,6 @@ while condition is not true
     do things
     check stuff
 ```
-
 
 ### Section 1: "**The Huge Idea**"
 
@@ -395,7 +393,6 @@ The layout for a **Small Idea** is as follows:
  */
 ```
 
-
 ## Are there any examples of **Ideas**?
 
 Below are mock examples of **Ideas**. The text in **Sections** are meant to give an overview of how the Sections should be written.
@@ -541,15 +538,16 @@ In text, make references such as
 ```
 
 Then, provide a source.
+
 ```c
 /*
  * [^1]: "Name"  `./optional/relative/path/to/idea/from/project/root`
  */
 ```
 
-# How do I update things?
+## How do I update things?
 
-## How often and how should I update **Ideas**?
+### How often and how should I update **Ideas**?
 
 Typically, the smaller the **Idea**, the more frequently it should be updated. **Small Ideas** should be be updated
 whenever the functionality of the function or a set of functions it encompasses changes. **Big Ideas** should be changed
@@ -574,11 +572,11 @@ For example:
  */
 ```
 
-## How do I deprecate **Ideas**?
+### How do I deprecate **Ideas**?
 
 Because **Ideas** each contain a status, the status should be updated to depcrecate **Ideas**. When an **Idea** becomes
 DEPRECATED, its code will still be present, but will issue a warning whenever it is executed. Once all code no longer
-has a piece of DEPRECATED code, it will be removed. 
+has a piece of DEPRECATED code, it will be removed.
 
 If an **Idea** should still be supported (e.g., things like Linux's semaphores), then mark the **Idea** as LEGACY, but
 include a note that an **Idea** has better alternatives in newer code.
