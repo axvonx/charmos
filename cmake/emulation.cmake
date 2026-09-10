@@ -28,7 +28,9 @@ set_property(
 
 set(MACHINE_ARGS_DIR "${CMAKE_BINARY_DIR}/machine")
 set(NDJSON_LOG "${CMAKE_BINARY_DIR}/ndjson.log")
-set(QMP_SOCKET "${CMAKE_BINARY_DIR}/qmp.sock")
+string(SHA256 _qmp_hash "${CMAKE_BINARY_DIR}")
+string(SUBSTRING "${_qmp_hash}" 0 12 _qmp_hash)
+set(QMP_SOCKET "/tmp/charmos-qmp-${_qmp_hash}.sock")
 
 set(MACHINE_RENDER_ARGS "")
 if (MACHINE_KVM)
@@ -129,7 +131,16 @@ register_run_target(tests tests 1)
 register_run_target(debug debug 0)
 register_run_target(tests-debug tests-debug 0)
 
+execute_process(
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}/scripts ${Python3_EXECUTABLE} -m charm machine
+            resolve --profile ${MACHINE_PROFILE}
+    OUTPUT_VARIABLE MACHINE_TYPE_RESOLVED
+    OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+
 function (machine_report_configuration)
     message(STATUS "  Machine      : ${MACHINE_PROFILE} (${MACHINE_ARGS_DIR}/<mode>.args)")
+    if (MACHINE_TYPE_RESOLVED)
+        message(STATUS "  Machine type : ${MACHINE_TYPE_RESOLVED}")
+    endif ()
     message(STATUS "  QMP socket   : ${QMP_SOCKET}")
 endfunction ()

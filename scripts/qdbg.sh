@@ -39,13 +39,14 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if [[ -z "$SOCK" ]]; then
-    if [[ -n "$BUILD_DIR" ]]; then
-        SOCK="$BUILD_DIR/qmp.sock"
-    else
-        SOCK="/tmp/qmp.sock"
-    fi
+if [[ -z "$SOCK" && -n "$BUILD_DIR" ]]; then
+    for _args in "$BUILD_DIR"/machine/*.args; do
+        [[ -r "$_args" ]] || continue
+        SOCK="$(sed -n 's/^unix:\(.*\),server,nowait$/\1/p' "$_args" | head -1)"
+        [[ -n "$SOCK" ]] && break
+    done
 fi
+[[ -n "$SOCK" ]] || SOCK="/tmp/qmp.sock"
 
 # Verify the ELF matches
 if [[ -z "$KERNEL" ]]; then

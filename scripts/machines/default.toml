@@ -3,7 +3,7 @@ arch = "x86_64"
 [machine]
 # TODO: Versioning and testing
 type     = "q35"
-min_qemu = "9.2"
+min_qemu = "8.2"
 
 nodefaults = true
 

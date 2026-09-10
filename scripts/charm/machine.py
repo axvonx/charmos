@@ -115,6 +115,19 @@ def installed_qemu_version(machine: Machine) -> str:
     return found.group(1)
 
 
+def resolve_machine_type(machine: Machine) -> str:
+    binary = shutil.which(machine.qemu)
+    if binary is None:
+        return machine.type
+    output = subprocess.run(
+        [binary, "-M", "help"], capture_output=True, text=True, check=False
+    ).stdout
+    found = re.search(
+        rf"^{re.escape(machine.type)}\s+.*\(alias of (\S+)\)", output, re.MULTILINE
+    )
+    return found.group(1) if found else machine.type
+
+
 def _version_tuple(text: str) -> tuple[int, ...]:
     return tuple(int(part) for part in text.split("."))
 

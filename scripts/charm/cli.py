@@ -227,6 +227,18 @@ def cmd_machine_list(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_machine_resolve(args: argparse.Namespace) -> int:
+    from . import machine as MC
+
+    try:
+        m = MC.load(args.profile)
+    except MC.MachineError as error:
+        print(f"charm machine: {error}", file=sys.stderr)
+        return 1
+    print(MC.resolve_machine_type(m))
+    return 0
+
+
 def cmd_machine_render(args: argparse.Namespace) -> int:
     from . import machine as MC
 
@@ -938,6 +950,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     ml = mcsub.add_parser("list", help="every profile and the modes it defines")
     ml.set_defaults(fn=cmd_machine_list)
+
+    mv = mcsub.add_parser(
+        "resolve", help="what the profile's machine type means on this host"
+    )
+    mv.add_argument("--profile", default="default")
+    mv.set_defaults(fn=cmd_machine_resolve)
 
     mr = mcsub.add_parser("render", help="one profile and mode -> a QEMU argv")
     mr.add_argument("--profile", default="default")
