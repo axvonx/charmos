@@ -534,7 +534,15 @@ static inline uint32_t scheduler_yield_nesting_max(struct thread *t) {
 }
 
 static inline void scheduler_yield_nesting_exit(struct thread *t) {
-    if (t && t->yield_nesting)
+    if (!t)
+        return;
+
+#ifdef DEBUG_SCHED_NESTING
+    kassert(t->yield_nesting > 0,
+            "scheduler_yield nesting underflow on thread '%s'", t->name);
+#endif
+
+    if (t->yield_nesting)
         t->yield_nesting--;
 }
 

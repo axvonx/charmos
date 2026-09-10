@@ -1,4 +1,3 @@
-/* kernel/sync/tests/integration/chaos.c, ported to a nm test */
 #include <math/range.h>
 #include <mem/alloc.h>
 #include <nightmare/nightmare.h>
@@ -57,6 +56,8 @@ struct wake_storm_sleeper {
     /* For noticing sleepers that got stuck from the probe */
     uint64_t sampled_observed;
     time_ms_t last_change_ms;
+
+    uint32_t sampled_nesting_max;
 };
 
 struct wake_storm_failure {
@@ -65,6 +66,9 @@ struct wake_storm_failure {
     size_t sleeper;
     uint64_t observed_a;
     uint64_t observed_b;
+
+    const char *file;
+    uint32_t line;
 };
 
 struct wake_storm_state {
@@ -106,9 +110,14 @@ static const char *wake_lane_name(enum wake_storm_lane lane) {
     return "unknown";
 }
 
-static bool wake_record_failure(struct wake_storm_state *state,
-                                enum wake_storm_lane lane, size_t sleeper,
-                                uint64_t observed_a, uint64_t observed_b) {
+#define wake_record_failure(state_, lane_, sleeper_, a_, b_)                   \
+    wake_record_failure_at((state_), (lane_), (sleeper_), (a_), (b_),          \
+                           __RELFILE__, __LINE__)
+
+static bool wake_record_failure_at(struct wake_storm_state *state,
+                                   enum wake_storm_lane lane, size_t sleeper,
+                                   uint64_t observed_a, uint64_t observed_b,
+                                   const char *file, uint32_t line) {
     enum wake_storm_failure_phase expected = WAKE_FAILURE_EMPTY;
     if (!atomic_compare_exchange_strong_explicit(
             &state->failure.phase, &expected, WAKE_FAILURE_WRITING,
@@ -119,6 +128,8 @@ static bool wake_record_failure(struct wake_storm_state *state,
     state->failure.sleeper = sleeper;
     state->failure.observed_a = observed_a;
     state->failure.observed_b = observed_b;
+    state->failure.file = file;
+    state->failure.line = line;
     atomic_store_explicit(&state->failure.phase, WAKE_FAILURE_READY,
                           memory_order_release);
     return true;
@@ -131,13 +142,17 @@ static void wake_report_failure(struct wake_storm_state *state) {
             memory_order_acq_rel, memory_order_acquire))
         return;
 
-    NIGHTMARE_FINDING_TIER("wake_invariant", NIGHTMARE_TIER_CONFIDENT,
-                           (uint64_t) state->failure.lane,
-                           "lane=%s sleeper=%lu observed_a=%lu observed_b=%lu",
-                           wake_lane_name(state->failure.lane),
-                           (unsigned long) state->failure.sleeper,
-                           (unsigned long) state->failure.observed_a,
-                           (unsigned long) state->failure.observed_b);
+    nightmare_finding_at(
+        &(const struct nightmare_finding_site){.kind = "wake_invariant",
+                                               .tier = NIGHTMARE_TIER_CONFIDENT,
+                                               .file = state->failure.file,
+                                               .line = state->failure.line},
+        (uint64_t) state->failure.lane,
+        "lane=%s sleeper=%lu observed_a=%lu observed_b=%lu",
+        wake_lane_name(state->failure.lane),
+        (unsigned long) state->failure.sleeper,
+        (unsigned long) state->failure.observed_a,
+        (unsigned long) state->failure.observed_b);
     nightmare_stop_after_finding();
 }
 
@@ -196,10 +211,9 @@ static void wake_storm_sleeper_main(struct nightmare_ctx *ctx,
 
         /* Re check after we arm */
         if (nightmare_must_stop() || nightmare_must_park()) {
-            /* Counted */
-            if (thread_wake(t, THREAD_WAKE_REASON_SLEEP_MANUAL,
-                            THREAD_PRIO_CLASS_TIMESHARE, t))
-                atomic_fetch_add_explicit(&me->issued, 1, memory_order_release);
+            atomic_fetch_add_explicit(&me->issued, 1, memory_order_release);
+            thread_wake(t, THREAD_WAKE_REASON_SLEEP_MANUAL,
+                        THREAD_PRIO_CLASS_TIMESHARE, t);
         }
 
         thread_yield_until_wake_match();
@@ -223,11 +237,11 @@ static void wake_storm_release_all(struct wake_storm_state *state,
             atomic_load_explicit(&state->sleepers[i].th, memory_order_acquire);
         if (!t || !thread_get(t))
             continue;
-        if (thread_wake(t, THREAD_WAKE_REASON_SLEEP_MANUAL,
-                        THREAD_PRIO_CLASS_TIMESHARE, t) &&
-            count_issued)
+        if (count_issued)
             atomic_fetch_add_explicit(&state->sleepers[i].issued, 1,
                                       memory_order_release);
+        thread_wake(t, THREAD_WAKE_REASON_SLEEP_MANUAL,
+                    THREAD_PRIO_CLASS_TIMESHARE, t);
         thread_put(t);
     }
 }
@@ -271,10 +285,13 @@ static void wake_storm_waker_main(struct nightmare_ctx *ctx,
 
         if (drop) {
             atomic_fetch_add_explicit(&target->issued, 1, memory_order_release);
-        } else if (thread_wake(t, THREAD_WAKE_REASON_SLEEP_MANUAL,
-                               THREAD_PRIO_CLASS_TIMESHARE, t) &&
-                   !uncounted) {
+        } else if (uncounted) {
+            thread_wake(t, THREAD_WAKE_REASON_SLEEP_MANUAL,
+                        THREAD_PRIO_CLASS_TIMESHARE, t);
+        } else {
             atomic_fetch_add_explicit(&target->issued, 1, memory_order_release);
+            thread_wake(t, THREAD_WAKE_REASON_SLEEP_MANUAL,
+                        THREAD_PRIO_CLASS_TIMESHARE, t);
         }
 
         thread_put(t);
@@ -368,11 +385,14 @@ wake_storm_quiesce_check(struct nightmare_ctx *ctx) {
         if (!t)
             continue;
 
-        /* `observed` can lag `issued`, never inverted */
-        uint64_t issued =
-            atomic_load_explicit(&sleeper->issued, memory_order_acquire);
+        /* `observed` can lag `issued`, never inverted
+         *
+         * Reading `observed` first prevents an inversion
+         */
         uint64_t observed =
             atomic_load_explicit(&sleeper->observed, memory_order_acquire);
+        uint64_t issued =
+            atomic_load_explicit(&sleeper->issued, memory_order_acquire);
         total_observed += observed;
         if (observed > issued) {
             wake_record_failure(state, WAKE_LANE_ACCOUNTING, i, issued,
@@ -383,7 +403,13 @@ wake_storm_quiesce_check(struct nightmare_ctx *ctx) {
         uint32_t nesting = scheduler_yield_nesting_max(t);
         if (nesting > deepest)
             deepest = nesting;
-        if (nesting > SCHED_MAX_YIELD_NESTING) {
+
+        if (nesting < sleeper->sampled_nesting_max)
+            sleeper->sampled_nesting_max = nesting;
+
+        if (nesting > SCHED_MAX_YIELD_NESTING &&
+            nesting > sleeper->sampled_nesting_max) {
+            sleeper->sampled_nesting_max = nesting;
             wake_record_failure(state, WAKE_LANE_NESTING, i, nesting,
                                 SCHED_MAX_YIELD_NESTING);
             break;
@@ -403,10 +429,7 @@ wake_storm_quiesce_check(struct nightmare_ctx *ctx) {
 static struct nightmare_verdict wake_storm_finish(struct nightmare_ctx *ctx) {
     struct wake_storm_state *state = wake_state(ctx);
 
-    /* Invariants that never had a chance to fail have not passed... if the
-     * run did thngs and no thread yielded, the wakermark did nothing,
-     * which is a harness issue
-     *
+    /* Invariants that never had a chance to fail have not passed...
      * thread_prepare_to_sleep() will exit if a wake already matched,
      * and thread_yield_until_wake_match() returns without yielding at all
      * afterwards, so we never measure a yield, thus, we use aggregates here

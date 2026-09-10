@@ -449,11 +449,22 @@ void scheduler_yield(void) {
     kassert(entry_depth == 0, "yielding on cpu %zu with preempt depth %u",
             (size_t) entry_cpu, entry_depth);
 
-    scheduler_yield_nesting_enter(thread_get_current());
+    struct thread *self = thread_get_current();
+
+    /* Kernel APCs get deferred, since apc_check_and_deliver() raises
+     * to APC and lowers to PASSIVE, it can cause a reschedule over and over,
+     * but we leave the other APCs alone */
+    if (self)
+        apc_disable_kernel();
+
+    scheduler_yield_nesting_enter(self);
 
     scheduler_lock_chk_assert();
     scheduler_yield_loop();
 
     /* It did the matching enter already, so we exit here */
-    scheduler_yield_nesting_exit(thread_get_current());
+    scheduler_yield_nesting_exit(self);
+
+    if (self)
+        apc_enable_kernel();
 }
