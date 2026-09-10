@@ -91,7 +91,7 @@ jobs:
           ./scripts/build.sh -t RelWithDebInfo \
             --compiler "${{ steps.cfg.outputs.compiler }}" \
             -- ${{ matrix.scenario.flags }} \
-               -DQEMU_SMP_TOPO="${{ matrix.scenario.smp }}"
+               -DMACHINE_SMP="${{ matrix.scenario.smp }}"
 
       - name: Boot and run the harness
         env:

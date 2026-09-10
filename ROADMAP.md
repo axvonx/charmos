@@ -43,14 +43,6 @@ Anyways, enough talk...
 
 # Roadmap
 
-## `NIGHTMARE1` - Wiring up nightmare tests in CI (NEAR **📝** MAIN)
-
-The title. Just need to finalize a few more things and get it up.
-
-- [ ] 1. Test things
-- [ ] 2. Bring up GUI frontend
-- [ ] 3. Introduce real test consumers
-
 ## `SYNC1` - Wiring up qspinlock as the default spinlock, implementing more scalable synchronization primitives (in line with RCU) (NEAR **🛑** MAIN)
 
 The title. We have qspinlock but default spinlock doesn't route through it, would be nice to do that, and
@@ -151,4 +143,11 @@ It might happen
 
 # Completed Items
 
-:cricket: :cricket: :cricket:
+## `NIGHTMARE1` - Wiring up nightmare tests in CI (NEAR **🛠️** MAIN)
+
+The title. Just need to finalize a few more things and get it up.
+
+- [x] 1. Test things
+- [x] 2. Bring up GUI frontend
+- [x] 3. Introduce real test consumers
+

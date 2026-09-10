@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
 # Attach gdb to running QEMU guest and dump backtraces
 #
-# QEMU gets started with `-qmp unix:/tmp/qmp.sock`, so
-# we just hook into that here
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-SOCK="${QMP_SOCK:-/tmp/qmp.sock}"
+SOCK="${QMP_SOCK:-}"
 PORT="${GDB_PORT:-1234}"
 KERNEL="${KERNEL_ELF:-}"
 GDB="${GDB:-gdb}"
@@ -40,6 +38,14 @@ while [[ $# -gt 0 ]]; do
         *)              echo "unknown argument: $1" >&2; usage 1 ;;
     esac
 done
+
+if [[ -z "$SOCK" ]]; then
+    if [[ -n "$BUILD_DIR" ]]; then
+        SOCK="$BUILD_DIR/qmp.sock"
+    else
+        SOCK="/tmp/qmp.sock"
+    fi
+fi
 
 # Verify the ELF matches
 if [[ -z "$KERNEL" ]]; then

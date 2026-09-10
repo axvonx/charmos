@@ -555,9 +555,6 @@ class QemuBootRunner:
             "tests",
             "--",
             *codec.build_args(manifest.suite),
-            "-DQEMU_NUMA=OFF"
-            if manifest.suite.build.smp.total < 4
-            else "-DQEMU_NUMA=ON",
         ]
 
         timeout_s = max(5.0, timeout_ms / 1000.0)

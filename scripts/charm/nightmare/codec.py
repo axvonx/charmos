@@ -115,7 +115,7 @@ def render_gate(
 ) -> str:
     """command line for the gate boot
 
-    Must never be empty: `gen_limine_conf.cmake` rejects a blank CMDLINE file
+    Must never be empty: `gen_limine_conf.py` rejects a blank CMDLINE file
     """
     gate = gate_task(task)
     seed = base_seed if gate.nightmare.wants_seed else None
@@ -123,7 +123,7 @@ def render_gate(
 
 
 def write(path: Path, cmdline: str) -> Path:
-    """the artifact gen_limine_conf.cmake reads via CMDLINE=<path>"""
+    """the artifact gen_limine_conf.py reads via CMDLINE=<path>"""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(cmdline + "\n", encoding="utf-8")
     return path
@@ -133,8 +133,8 @@ def build_args(suite: Suite) -> list[str]:
     """The cmake -D flags"""
     b: Build = suite.build
     args = [f"-D{d}" for d in b.cmake_definitions]
-    args.append(f"-DQEMU_SMP_TOPO={b.smp.topo()}")
-    args.append(f"-DQEMU_MEM_SIZE={_mem_size(b.memory_mib)}")
+    args.append(f"-DMACHINE_SMP={b.smp.topo()}")
+    args.append(f"-DMACHINE_MEMORY={_mem_size(b.memory_mib)}")
     return args
 
 

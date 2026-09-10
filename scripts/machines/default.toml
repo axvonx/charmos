@@ -1,0 +1,101 @@
+arch = "x86_64"
+
+[machine]
+# TODO: Versioning and testing
+type     = "q35"
+min_qemu = "9.2"
+
+nodefaults = true
+
+memory = "8G"
+smp    = { sockets = 2, cores = 2, threads = 2 }
+
+[numa]
+nodes = 4
+distances = [
+    [0, 1, 15],
+    [0, 2, 20],
+    [0, 3, 30],
+    [1, 2, 25],
+    [1, 3, 35],
+    [2, 3, 15],
+]
+
+[devices.usb]
+enabled  = true
+device   = "qemu-xhci"
+keyboard = true
+mouse    = true
+
+[devices.vga]
+enabled = true
+device  = "VGA"
+
+[devices.iommu]
+enabled  = true
+device   = "intel-iommu"
+intremap = true
+
+[devices.nvme]
+enabled = true
+serial  = "boom"
+
+[devices.nic]
+# q35 would attach an e1000e implicitly and nodefaults already removed it
+enabled = false
+
+[acpi]
+enabled = false
+dir     = "acpi"
+
+[trace]
+enabled = false # TODO: Config for this
+events  = ["*xhci*"]
+
+# Modes
+#
+# Field names map one-to-one onto QEMU flags
+# serial0 is the console, serial1 is for ndjson
+
+[modes.run]
+display         = "window"      # -nodefaults removed VGA, so this re-adds it
+console         = "stdio"
+machine_channel = true
+no_shutdown     = true
+no_reboot       = true
+
+[modes.headless]
+display         = "nographic"
+console         = "mon:stdio"
+machine_channel = true
+no_shutdown     = true
+no_reboot       = true
+
+[modes.tests]
+display         = "nographic"
+console         = "mon:stdio"
+machine_channel = true
+no_reboot       = true
+debug_exit      = true
+
+[modes.debug]
+display         = "window"
+console         = "stdio"
+machine_channel = true
+gdb             = "wait"        # -s -S
+no_shutdown     = true
+no_reboot       = true
+
+[modes."tests-debug"]
+display         = "nographic"
+console         = "mon:stdio"
+machine_channel = true
+gdb             = "listen"      # -s
+no_shutdown     = true
+no_reboot       = true
+
+[modes.nightmare]
+display         = "none"        # -display none
+console         = "stdio"
+machine_channel = true
+debug_exit      = true

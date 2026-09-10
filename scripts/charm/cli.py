@@ -216,6 +216,57 @@ def cmd_workflow_policy(_args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_machine_list(args: argparse.Namespace) -> int:
+    from . import machine as MC
+
+    directory = MC.machines_dir()
+    for path in sorted(directory.glob("*.toml")):
+        m = MC.load(path.stem, directory=directory)
+        modes = ", ".join(sorted(m.modes))
+        print(f"{m.name:<12} {m.arch:<8} {m.type:<14} qemu>={m.min_qemu}  [{modes}]")
+    return 0
+
+
+def cmd_machine_render(args: argparse.Namespace) -> int:
+    from . import machine as MC
+
+    try:
+        m = MC.load(args.profile)
+        if args.check_version:
+            MC.check_qemu_version(m)
+        smp = None
+        if args.smp:
+            fields = dict(
+                part.split("=", 1) for part in args.smp.replace(" ", "").split(",")
+            )
+            smp = MC.Smp(**{k: int(v) for k, v in fields.items()})
+        argv = MC.render(
+            m,
+            args.mode,
+            iso=args.iso,
+            disk=args.disk,
+            qmp_socket=args.qmp_socket,
+            machine_log=args.machine_log,
+            trace_log=args.trace_log,
+            acpi_dir=args.acpi_dir,
+            memory_mib=MC.parse_memory(args.memory) if args.memory else None,
+            smp=smp,
+            kvm=args.kvm,
+            gdb="wait" if args.gdb_wait else None,
+        )
+    except MC.MachineError as error:
+        print(f"charm machine: {error}", file=sys.stderr)
+        return 1
+
+    text = "\n".join(argv) + "\n"
+    if args.out:
+        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.out).write_text(text, encoding="utf-8")
+    else:
+        sys.stdout.write(text)
+    return 0
+
+
 def cmd_repeat(args: argparse.Namespace) -> int:
     from . import local as L
 
@@ -881,6 +932,31 @@ def build_parser() -> argparse.ArgumentParser:
         help="enforce read-only Git and immutable images in execution workflows",
     )
     wp.set_defaults(fn=cmd_workflow_policy)
+
+    mc = groups.add_parser("machine", help="the guest QEMU boots")
+    mcsub = mc.add_subparsers(dest="command", required=True)
+
+    ml = mcsub.add_parser("list", help="every profile and the modes it defines")
+    ml.set_defaults(fn=cmd_machine_list)
+
+    mr = mcsub.add_parser("render", help="one profile and mode -> a QEMU argv")
+    mr.add_argument("--profile", default="default")
+    mr.add_argument("--mode", required=True)
+    mr.add_argument("--iso", required=True)
+    mr.add_argument("--disk")
+    mr.add_argument("--qmp-socket", required=True)
+    mr.add_argument("--machine-log")
+    mr.add_argument("--trace-log")
+    mr.add_argument("--acpi-dir", type=Path)
+    mr.add_argument("--memory", help="override, e.g. 4G")
+    mr.add_argument("--smp", help="override, e.g. sockets=1,cores=2,threads=1")
+    mr.add_argument("--kvm", action="store_true")
+    mr.add_argument("--gdb-wait", action="store_true", help="halt at startup (-S)")
+    mr.add_argument(
+        "--check-version", action="store_true", help="refuse a QEMU below min_qemu"
+    )
+    mr.add_argument("--out", help="write here instead of stdout")
+    mr.set_defaults(fn=cmd_machine_render)
 
     dev = groups.add_parser("dev", help="loops against a local build")
     devsub = dev.add_subparsers(dest="command", required=True)

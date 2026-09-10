@@ -1,9 +1,8 @@
-"""Compile once, verify deeply, and repack without compiling the kernel."""
-
 import json
 import re
 import shutil
 import subprocess
+import sys
 import tarfile
 import tempfile
 import time
@@ -148,11 +147,8 @@ def _configuration_args(configuration: dict[str, Any]) -> list[str]:
     smp = configuration["smp"]
     return [
         *(f"-D{definition}" for definition in configuration["cmake_definitions"]),
-        f"-DQEMU_SMP_TOPO=sockets={smp['sockets']},cores={smp['cores']},threads={smp['threads']}",
-        f"-DQEMU_MEM_SIZE={configuration['memory_mib']}M",
-        "-DQEMU_NUMA=OFF"
-        if smp["sockets"] * smp["cores"] * smp["threads"] < 4
-        else "-DQEMU_NUMA=ON",
+        f"-DMACHINE_SMP=sockets={smp['sockets']},cores={smp['cores']},threads={smp['threads']}",
+        f"-DMACHINE_MEMORY={configuration['memory_mib']}M",
     ]
 
 
@@ -545,13 +541,12 @@ def repack(
     started = time.perf_counter()
     completed = subprocess.run(
         [
-            "cmake",
-            f"-DBUNDLE_DIR={bundle.root}",
-            f"-DCMDLINE={cmdline.resolve()}",
-            f"-DOUTPUT_ISO={iso_path}",
-            f"-DWORK_DIR={out_dir / 'repack-work'}",
-            "-P",
-            str(root / "cmake" / "repack_nightmare_bundle.cmake"),
+            sys.executable,
+            str(root / "scripts" / "repack_nightmare_bundle.py"),
+            f"--bundle-dir={bundle.root}",
+            f"--cmdline={cmdline.resolve()}",
+            f"--output-iso={iso_path}",
+            f"--work-dir={out_dir / 'repack-work'}",
         ],
         cwd=root,
         check=False,
@@ -576,80 +571,29 @@ def qemu_command(
     trace_log: Path,
     qmp_socket: Path,
 ) -> list[str]:
-    """Build the fixed runner command from verified bundle configuration."""
+    """Runner commnad"""
+    from .. import machine as machine_model
+
     configuration = bundle.document["configuration"]
     smp = configuration["smp"]
-    total_cpus = smp["sockets"] * smp["cores"] * smp["threads"]
-    memory_mib = configuration["memory_mib"]
-    command = [
-        "qemu-system-x86_64",
-        "-cdrom",
-        str(iso_path),
-        "-boot",
-        "d",
-        "-m",
-        f"{memory_mib}M",
-        "-smp",
-        f"sockets={smp['sockets']},cores={smp['cores']},threads={smp['threads']}",
-        "-M",
-        "q35",
-        "-qmp",
-        f"unix:{qmp_socket},server,nowait",
-        "-monitor",
-        "none",
-        "-device",
-        "intel-iommu,intremap=on",
-        "-device",
-        "qemu-xhci,id=xhci",
-        "-device",
-        "usb-kbd,bus=xhci.0,port=1,id=usbkbd",
-        "-device",
-        "usb-mouse,bus=xhci.0,port=2,id=usbmouse",
-        "-drive",
-        f"id=nvme0,file={disk_path},format=raw,if=none",
-        "-device",
-        "nvme,serial=boom,drive=nvme0",
-        "-d",
-        "trace:*xhci*",
-        "-trace",
-        f"file={trace_log}",
-        "-device",
-        "isa-debug-exit,iobase=0xf4,iosize=0x04",
-        "-display",
-        "none",
-        "-serial",
-        "stdio",
-        "-serial",
-        f"file:{machine_log}",
-    ]
-    if total_cpus >= 4:
-        per_node_mib = memory_mib // 4
-        if per_node_mib * 4 != memory_mib:
-            raise BundleError("NUMA bundle memory must divide evenly across four nodes")
-        for index in range(4):
-            command.extend(
-                [
-                    "-object",
-                    f"memory-backend-ram,size={per_node_mib}M,id=mem{index}",
-                ]
-            )
-        cpus_per_node = total_cpus // 4
-        if cpus_per_node * 4 != total_cpus:
-            raise BundleError("NUMA bundle CPUs must divide evenly across four nodes")
-        for index in range(4):
-            first = index * cpus_per_node
-            last = first + cpus_per_node - 1
-            command.extend(
-                [
-                    "-numa",
-                    f"node,cpus={first}-{last},nodeid={index},memdev=mem{index}",
-                ]
-            )
-    return command
+    profile = machine_model.load(configuration.get("machine_profile", "default"))
+    return machine_model.render(
+        profile,
+        "nightmare",
+        iso=iso_path,
+        disk=disk_path,
+        qmp_socket=qmp_socket,
+        machine_log=machine_log,
+        trace_log=trace_log,
+        memory_mib=configuration["memory_mib"],
+        smp=machine_model.Smp(
+            sockets=smp["sockets"], cores=smp["cores"], threads=smp["threads"]
+        ),
+    )
 
 
 def measure_transport(bundle: VerifiedBundle, out_dir: Path) -> dict[str, Any]:
-    """Measure local archive pack/unpack as the pre-Actions transport baseline."""
+    """Measure local archive pack/unpack as the baseline"""
     out_dir.mkdir(parents=True, exist_ok=True)
     archive = out_dir / f"{bundle.bundle_id}.tar.gz"
     pack_started = time.perf_counter()

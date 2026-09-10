@@ -141,7 +141,7 @@ class BuildTests(unittest.TestCase):
         args = C.build_args(self.suite)
         line = C.render(self.suite.task("locks_storm"), C.BootRequest(seed=1))
 
-        self.assertIn("-DQEMU_SMP_TOPO=sockets=2,cores=2,threads=2", args)
+        self.assertIn("-DMACHINE_SMP=sockets=2,cores=2,threads=2", args)
         self.assertNotIn("smp", line)
 
     def test_memory_renders_in_gibibytes_when_exact(self) -> None:

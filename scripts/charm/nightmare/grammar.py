@@ -8,8 +8,6 @@ MAX_VAR_LEN: Final = 128
 MAX_VAL_LEN: Final = 256
 MAX_CMDLINE_LEN: Final = 4096
 
-DURATION_UNITS: Final = ("ns", "us", "ms", "s", "m", "h", "d")
-
 BARE_VALUE_RE: Final = re.compile(r'^[^\s"\\]+$')
 KEY_RE: Final = re.compile(r"^[A-Za-z_][A-Za-z0-9_.]*$")
 NAME_RE: Final = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -113,6 +111,7 @@ def join(tokens: list[str]) -> str:
     line = " ".join(tokens)
     if len(line) > MAX_CMDLINE_LEN:
         raise GrammarError(
-            f"command line length ({len(line)} bytes) exceeds limit of {MAX_CMDLINE_LEN} bytes"
+            f"command line is {len(line)} bytes, over the host guard of "
+            f"{MAX_CMDLINE_LEN} bytes"
         )
     return line

@@ -70,7 +70,7 @@ ${BOLD}Targets:${NC} (passed to make)
 ${BOLD}Examples:${NC}
   ${self}                                  # Debug build, produce ISO
   ${self} -t Release run                   # Release build, run in QEMU
-  ${self} -- -DQEMU_KVM=ON -DQEMU_NUMA=OFF run
+  ${self} -- -DMACHINE_KVM=ON run
   ${self} --clean -t RelWithDebInfo tests
   ${self} -f "apc dpc" tests               # run only the apc and dpc tests
   ${self} --cmdline n.txt iso              # boot the command line in n.txt

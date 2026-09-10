@@ -1,14 +1,11 @@
-"""The nightmare config pipeline (DESIGN pole P2).
+"""The nightmare config pipeline
 
-    suite TOML  ──►  suite.load()   the model, defaults, validation
-                     codec.render() one boot's command line
-                     codec.write()  the n.txt artifact
-                          │
-                          ▼   CMDLINE=n.txt
-                cmake/gen_limine_conf.cmake ──► limine.conf ──► iso ──► boot
-
-Nothing here knows what a campaign is; it renders one boot at a time from a
-validated task, and the runner supplies the identity that varies.
+suite TOML  ──►  suite.load()   the model, defaults, validation
+                 codec.render() one boot's command line
+                 codec.write()  the n.txt artifact
+                      │
+                      ▼   CMDLINE=n.txt
+            scripts/gen_limine_conf.py  ──► limine.conf ──► iso ──► boot
 """
 
 from .codec import BootRequest, CodecError, build_args, build_command, render, write

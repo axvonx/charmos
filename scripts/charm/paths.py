@@ -24,3 +24,7 @@ def repo_root() -> Path:
 
 def nightmare_dir() -> Path:
     return repo_root() / "nightmare"
+
+
+def machines_dir() -> Path:
+    return repo_root() / "scripts" / "machines"

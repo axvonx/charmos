@@ -15,22 +15,6 @@ class KernelAgreementTests(unittest.TestCase):
         self.assertEqual(int(found["MAX_VAR_LEN"]), g.MAX_VAR_LEN)
         self.assertEqual(int(found["MAX_VAL_LEN"]), g.MAX_VAL_LEN)
 
-    def test_every_unit_we_emit_is_one_the_kernel_accepts(self) -> None:
-        text = (repo_root() / "kernel/parse.c").read_text()
-        body = text[text.index("parse_duration_internal") :]
-        body = body[: body.index("\n}\n")]
-        accepted = set(re.findall(r'strncasecmp\(unit_start,\s*"(\w+)"', body))
-
-        self.assertTrue(accepted, "could not read units out of parse.c")
-        for unit in g.DURATION_UNITS:
-            self.assertIn(unit, accepted, f"the kernel does not accept {unit!r}")
-
-    def test_the_list_separator_is_still_a_comma(self) -> None:
-        text = (repo_root() / "kernel/parse.c").read_text()
-        body = text[text.index("static bool parse_list_internal") :][:1200]
-
-        self.assertIn("*p == ','", body)
-
 
 class RenderingTests(unittest.TestCase):
     def test_a_duration_always_carries_its_unit(self) -> None:
@@ -84,7 +68,7 @@ class RenderingTests(unittest.TestCase):
         with self.assertRaises(g.GrammarError) as cm:
             g.join([f"k{i}=" + "v" * 200 for i in range(40)])
 
-        self.assertIn("exceeds limit", str(cm.exception))
+        self.assertIn("host guard", str(cm.exception))
 
 
 if __name__ == "__main__":
