@@ -45,7 +45,7 @@ def test_workflow_dispatch_is_batch_scoped_and_validates_before_queueing() -> No
     assert "batch_id:" in text
     assert "claim-{1}" in text
     assert text.index("- name: Validate and place") < text.index(
-        "- name: Classify immediate or deferred execution"
+        "- name: Classify execution"
     )
     assert "ownership=ad-hoc" in text
     assert "wait-until" not in text
