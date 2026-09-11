@@ -53,7 +53,7 @@ foreach (_mode run headless tests debug tests-debug)
             ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}/scripts ${Python3_EXECUTABLE} -m charm machine
             render --profile ${MACHINE_PROFILE} --mode ${_mode} --iso ${IMAGE_NAME}.iso --disk disk.img --qmp-socket
             ${QMP_SOCKET} --machine-log ${NDJSON_LOG} --trace-log trace.log --acpi-dir ${CMAKE_BINARY_DIR}/acpi
-            --check-version --out ${MACHINE_ARGS_DIR}/${_mode}.args ${MACHINE_RENDER_ARGS}
+            --out ${MACHINE_ARGS_DIR}/${_mode}.args ${MACHINE_RENDER_ARGS}
         RESULT_VARIABLE _machine_rc
         ERROR_VARIABLE _machine_err)
     if (NOT _machine_rc EQUAL 0)
