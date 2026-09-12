@@ -564,9 +564,7 @@ rt_scheduler_switch_cpu(size_t cpu, struct rt_scheduler_static *into) {
     semaphore_wait(&pcpu->switch_semaphore);
 
     kassert(!atomic_exchange(&pcpu->switch_into, into));
-
-    scheduler_request_resched(global.schedulers[cpu]);
-    scheduler_kick_resched(global.schedulers[cpu]);
+    scheduler_force_resched(global.schedulers[cpu]);
 
     /* It will signal us now */
     semaphore_wait(&pcpu->switch_semaphore);

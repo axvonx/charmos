@@ -194,28 +194,12 @@ static inline bool scheduler_core_idle(struct core *c) {
     return atomic_load(&c->idle);
 }
 
-/* Our scheduler reschedule semantics are split like this because
- * a flag is safe to modify from any calling context, HOWEVER, the
- * ipi_send call will hangup on the target processor if it is
- * spinning/waiting for a lock.
- *
- * Notably, the scheduler runqueue lock is taken as an irq_disable
- * lock, meaning that if we are on CPU 0 sending a reschedule out to
- * CPU 1 with the lock held, ipi_send will SPIN on the target CPU
- * to receive the IPI, which is an event that will not happen.
- *
- * TODO: There is an important semantic here: ipi_send spins
- * on the target CPU, so perhaps we can split this into an ipi_send_wait
- * and ipi_send_raw, but for now we'll keep the interface simple. */
-static inline void scheduler_request_resched(struct scheduler *sched) {
+static inline void scheduler_force_resched(struct scheduler *sched) {
     scheduler_mark_core_needs_resched(global.cores[sched->core_id], true);
+    (void) ipi_send_try(sched->core_id, IRQ_SCHEDULER);
 }
 
-static inline void scheduler_kick_resched(struct scheduler *sched) {
-    ipi_send(sched->core_id, IRQ_SCHEDULER);
-}
-
-/* Same rule as scheduler_kick_resched(): no spinlock may be held. */
+/* Uses the blocking ipi_send(), so no spinlock may be held. */
 static inline void scheduler_force_run_dpcs(cpu_id_t cpu) {
     ipi_send(cpu, IRQ_DPC);
 }

@@ -33,7 +33,6 @@ bool thread_wake(struct thread *t, enum thread_wake_reason reason,
 
     struct scheduler *best = scheduler_select_best_for_thread(t);
     struct scheduler *last_sch;
-    struct scheduler *kick = NULL;
 
     /* Lock the thread's runqueue and the best one. If the thread
      * can be placed on the best one, we put it over there */
@@ -94,8 +93,7 @@ bool thread_wake(struct thread *t, enum thread_wake_reason reason,
             thread_post_migrate(t, last_sch->core_id, best->core_id);
         }
 
-        scheduler_request_resched(best);
-        kick = best;
+        scheduler_force_resched(best);
     }
 
 out:
@@ -103,10 +101,6 @@ out:
 end:
 
     thread_unlock_thread_and_rq(last_sch, best, lirql, birql);
-
-    if (kick)
-        scheduler_kick_resched(kick);
-
     return woke;
 }
 

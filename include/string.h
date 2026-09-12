@@ -8,6 +8,9 @@ void *memmove(void *dest, const void *src, size_t n);
 int memcmp(const void *s1, const void *s2, size_t n);
 void *memchr(const void *s, int c, size_t n);
 void *memrchr(const void *s, int c, size_t n);
+void *memmem(const void *haystack, size_t haystack_len, const void *needle,
+             size_t needle_len);
+void *mempcpy(void *dest, const void *src, size_t n);
 
 #define __STRING_FAST static inline __attribute__((always_inline, artificial))
 
@@ -68,6 +71,10 @@ __STRING_FAST int __memcmp_inline(const void *s1, const void *s2, size_t n) {
 
 size_t strlen(const char *str);
 char *strcpy(char *dest, const char *src);
+/* Return the terminator */
+char *stpcpy(char *dest, const char *src);
+/* Pad to n bytes and return the first written NUL, or dest + n if truncated */
+char *stpncpy(char *dest, const char *src, size_t n);
 char *strcat(char *dest, const char *src);
 int strncmp(const char *s1, const char *s2, size_t n);
 int strcmp(const char *str1, const char *str2);
@@ -78,6 +85,9 @@ size_t strspn(const char *s, const char *accept);
 size_t strcspn(const char *s, const char *reject);
 char *strpbrk(const char *s, const char *accept);
 char *strstr(const char *haystack, const char *needle);
+char *strcasestr(const char *haystack, const char *needle);
+char *strnstr(const char *haystack, const char *needle, size_t len);
+char *strncasestr(const char *haystack, const char *needle, size_t len);
 
 char *strtok(char *str, const char *delim);
 char *strtok_r(char *str, const char *delim, char **saveptr);
@@ -92,6 +102,11 @@ int isalpha(int c);
 int isalnum(int c);
 int isspace(int c);
 int isprint(int c);
+int isblank(int c);
+int iscntrl(int c);
+int isgraph(int c);
+int ispunct(int c);
+int isxdigit(int c);
 int toupper(int c);
 int tolower(int c);
 

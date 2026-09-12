@@ -56,8 +56,10 @@ char *strcat(char *dest, const char *src) {
 
 int strncmp(const char *s1, const char *s2, size_t n) {
     for (size_t i = 0; i < n; i++) {
-        if (s1[i] != s2[i] || s1[i] == '\0')
-            return s1[i] < s2[i] ? -1 : 1;
+        unsigned char a = (unsigned char) s1[i];
+        unsigned char b = (unsigned char) s2[i];
+        if (a != b || a == '\0')
+            return (int) a - (int) b;
     }
     return 0;
 }
@@ -72,6 +74,44 @@ char *strncpy(char *dest, const char *src, size_t n) {
         dest[i] = '\0';
 
     return original_dest;
+}
+
+char *stpcpy(char *dest, const char *src) {
+    while ((*dest = *src++))
+        dest++;
+    return dest;
+}
+
+char *stpncpy(char *dest, const char *src, size_t n) {
+    size_t i = 0;
+    while (i < n && src[i]) {
+        dest[i] = src[i];
+        i++;
+    }
+    char *end = dest + i;
+    while (i < n)
+        dest[i++] = '\0';
+    return end;
+}
+
+void *mempcpy(void *dest, const void *src, size_t n) {
+    memcpy(dest, src, n);
+    return (unsigned char *) dest + n;
+}
+
+void *memmem(const void *haystack, size_t haystack_len, const void *needle,
+             size_t needle_len) {
+    if (!needle_len)
+        return (void *) haystack;
+    if (needle_len > haystack_len)
+        return NULL;
+
+    const unsigned char *h = haystack;
+    for (size_t i = 0; i <= haystack_len - needle_len; i++) {
+        if (memcmp(h + i, needle, needle_len) == 0)
+            return (void *) (h + i);
+    }
+    return NULL;
 }
 
 void *memchr(const void *s, int c, size_t n) {
@@ -139,6 +179,26 @@ int isspace(int c) {
 
 int isprint(int c) {
     return (unsigned) c - 0x20 < 0x5f;
+}
+
+int isblank(int c) {
+    return c == ' ' || c == '\t';
+}
+
+int iscntrl(int c) {
+    return (unsigned) c < 0x20 || c == 0x7f;
+}
+
+int isgraph(int c) {
+    return (unsigned) c - 0x21 < 0x5e;
+}
+
+int ispunct(int c) {
+    return isgraph(c) && !isalnum(c);
+}
+
+int isxdigit(int c) {
+    return isdigit(c) || (unsigned) c - 'a' < 6 || (unsigned) c - 'A' < 6;
 }
 
 int toupper(int c) {
@@ -254,6 +314,63 @@ char *strstr(const char *haystack, const char *needle) {
             return (char *) (haystack + i - nlen + 1);
     }
     return NULL;
+}
+
+char *strcasestr(const char *haystack, const char *needle) {
+    if (!*needle)
+        return (char *) haystack;
+    size_t nlen = strlen(needle);
+    size_t hlen = strlen(haystack);
+    if (nlen > hlen)
+        return NULL;
+
+    int64_t table[nlen];
+    table[0] = -1;
+    int64_t k = -1;
+    for (size_t i = 1; i < nlen; i++) {
+        while (k >= 0 && tolower(needle[k + 1]) != tolower(needle[i]))
+            k = table[k];
+        if (tolower(needle[k + 1]) == tolower(needle[i]))
+            k++;
+        table[i] = k;
+    }
+
+    int64_t q = -1;
+    for (size_t i = 0; i < hlen; i++) {
+        while (q >= 0 && tolower(needle[q + 1]) != tolower(haystack[i]))
+            q = table[q];
+        if (tolower(needle[q + 1]) == tolower(haystack[i]))
+            q++;
+        if (q == (int64_t) nlen - 1)
+            return (char *) (haystack + i - nlen + 1);
+    }
+    return NULL;
+}
+
+static char *strnstr_internal(const char *haystack, const char *needle,
+                              size_t len, bool ignore_case) {
+    size_t nlen = strlen(needle);
+    if (!nlen)
+        return (char *) haystack;
+    size_t hlen = strnlen(haystack, len);
+    if (nlen > hlen)
+        return NULL;
+
+    for (size_t i = 0; i <= hlen - nlen; i++) {
+        int cmp = ignore_case ? strncasecmp(haystack + i, needle, nlen)
+                              : memcmp(haystack + i, needle, nlen);
+        if (!cmp)
+            return (char *) (haystack + i);
+    }
+    return NULL;
+}
+
+char *strnstr(const char *haystack, const char *needle, size_t len) {
+    return strnstr_internal(haystack, needle, len, false);
+}
+
+char *strncasestr(const char *haystack, const char *needle, size_t len) {
+    return strnstr_internal(haystack, needle, len, true);
 }
 
 char *strtok(char *str, const char *delim) {

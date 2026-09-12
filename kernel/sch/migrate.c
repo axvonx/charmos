@@ -64,8 +64,6 @@ void thread_migrate(struct thread *t, size_t dest_core) {
     struct scheduler *src;
     struct scheduler *dst = global.schedulers[dest_core];
 
-    struct scheduler *kick = NULL;
-
     thread_lock_thread_and_rq(t, dst, &src, &sirql, &dirql);
 
     if (src == dst) {
@@ -92,8 +90,7 @@ void thread_migrate(struct thread *t, size_t dest_core) {
     if (thread_get_state(t) == THREAD_STATE_RUNNING ||
         !(thread_get_flags(t) & THREAD_FLAG_YIELDED)) {
         thread_set_migration_target(t, dest_core);
-        scheduler_request_resched(dst);
-        kick = dst;
+        scheduler_force_resched(dst);
     } else if (thread_get_state(t) == THREAD_STATE_READY) {
         scheduler_remove_thread(src, t, /* lock_held = */ true);
         scheduler_add_thread(dst, t, /* lock_held = */ true);
@@ -107,7 +104,4 @@ out:
 
 end:
     thread_unlock_thread_and_rq(src, dst, sirql, dirql);
-
-    if (kick)
-        scheduler_kick_resched(kick);
 }

@@ -64,15 +64,34 @@ bool lapic_timer_is_enabled() {
     return !(lvt & (1 << 16));
 }
 
+/* HIGH_LEVEL so ICR_HIGH and ICR_LOW writes
+ * are a singular atomic command */
+static void lapic_write_icr(uint8_t apic_id, uint8_t vector) {
+    lapic_write(LAPIC_ICR_HIGH, apic_id << LAPIC_DEST_SHIFT);
+    lapic_write(LAPIC_ICR_LOW, vector | LAPIC_DELIVERY_FIXED |
+                                   LAPIC_LEVEL_ASSERT | LAPIC_DEST_PHYSICAL);
+}
+
 static void lapic_send_ipi(uint8_t apic_id, uint8_t vector) {
     enum irql irql = irql_raise(IRQL_HIGH_LEVEL);
     while (lapic_read(LAPIC_ICR_LOW) & LAPIC_IPI_IN_FLIGHT)
         cpu_relax();
 
-    lapic_write(LAPIC_ICR_HIGH, apic_id << LAPIC_DEST_SHIFT);
-    lapic_write(LAPIC_ICR_LOW, vector | LAPIC_DELIVERY_FIXED |
-                                   LAPIC_LEVEL_ASSERT | LAPIC_DEST_PHYSICAL);
+    lapic_write_icr(apic_id, vector);
     irql_lower(irql);
+}
+
+static bool lapic_send_ipi_try(uint8_t apic_id, uint8_t vector) {
+    enum irql irql = irql_raise(IRQL_HIGH_LEVEL);
+
+    /* SDM forbids writing ICR whilst Delivery Status
+     * is in the Send Pending state, so we need to lock */
+    bool busy = lapic_read(LAPIC_ICR_LOW) & LAPIC_IPI_IN_FLIGHT;
+    if (!busy)
+        lapic_write_icr(apic_id, vector);
+
+    irql_lower(irql);
+    return !busy;
 }
 
 void x2apic_send_ipi(uint32_t apic_id, uint8_t vector) {
@@ -169,6 +188,15 @@ void ipi_send(uint32_t apic_id, uint8_t vector) {
         return x2apic_send_ipi(apic_id, vector);
 
     lapic_send_ipi(apic_id, vector);
+}
+
+bool ipi_send_try(uint32_t apic_id, uint8_t vector) {
+    if (x2apic_enabled) {
+        x2apic_send_ipi(apic_id, vector);
+        return true;
+    }
+
+    return lapic_send_ipi_try(apic_id, vector);
 }
 
 static struct irq_chip lapic_irq_chip = {

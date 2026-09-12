@@ -166,11 +166,9 @@ static void maybe_force_resched(struct thread *t) {
     enum irql irql;
     struct scheduler *sched = thread_get_scheduler(t, &irql);
 
-    scheduler_request_resched(sched);
+    scheduler_force_resched(sched);
 
     spin_unlock(&sched->lock, irql);
-
-    scheduler_kick_resched(sched);
 }
 
 static void wake_if_waiting(struct thread *t) {

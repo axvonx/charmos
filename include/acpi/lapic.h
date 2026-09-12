@@ -106,6 +106,8 @@ void panic_broadcast(size_t exclude_core);
 void x2apic_init();
 
 void ipi_send(uint32_t apic_id, uint8_t vector);
+
+bool ipi_send_try(uint32_t apic_id, uint8_t vector);
 void nmi_send(uint32_t apic_id);
 void lapic_clock_evdev_group_init(void);
 struct irq_chip *lapic_get_chip();
