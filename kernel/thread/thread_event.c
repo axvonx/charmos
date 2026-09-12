@@ -500,6 +500,7 @@ static bool set_state_and_update_reason(
         t->last_action = state;
         t->wait_token = ++t->token_ctr;
         t->wake_token = 0;
+        atomic_store_explicit(&t->wake_src, NULL, memory_order_release);
         t->expected_wake_src = wake_src;
     }
 

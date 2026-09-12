@@ -12,10 +12,18 @@ static inline bool safe_to_exec_apcs(void) {
         return false;
 
     struct thread *curr = thread_get_current();
-    if (!curr || thread_get_state(curr) != THREAD_STATE_RUNNING)
+    if (!curr)
         return false;
 
-    return true;
+    enum thread_state s = thread_get_state(curr);
+    if (s == THREAD_STATE_RUNNING)
+        return true;
+
+    if ((s == THREAD_STATE_SLEEPING || s == THREAD_STATE_BLOCKED) &&
+        !(thread_get_flags(curr) & THREAD_FLAG_YIELDED))
+        return true;
+
+    return false;
 }
 
 static inline enum apc_state apc_state_load(struct apc *a) {
@@ -183,6 +191,11 @@ bool apc_enqueue(struct thread *t, struct apc *a, enum apc_type type) {
     enum irql irql = thread_acquire(t, &ok);
     if (!ok)
         return false;
+
+    if (thread_is_dying(t)) {
+        thread_release(t, irql);
+        return false;
+    }
 
     if (!apc_get(a)) {
         thread_release(t, irql);
@@ -488,8 +501,11 @@ void thread_exec_event_apcs(struct thread *t) {
         apc_enqueue_tail(&t->event_apcs, a);
     }
 
-    /* Just in case */
-    apc_unset_bitmask(t, APC_TYPE_KERNEL);
+    enum irql irql = spin_lock_irq_disable(&t->lock);
+    if (apc_list_empty(t, APC_TYPE_KERNEL) &&
+        apc_queue_empty(&t->to_exec_event_apcs))
+        apc_unset_bitmask(t, APC_TYPE_KERNEL);
+    spin_unlock(&t->lock, irql);
 }
 
 void apc_disable_special() {
