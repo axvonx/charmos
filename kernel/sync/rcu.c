@@ -190,7 +190,7 @@ void rcu_read_unlock(void) {
 /* We might want to change next_is_idle to a thread pointer...
  *
  * Lock ordering here is scheduler -> leaf -> parents */
-void rcu_note_context_switch(struct thread *outgoing, bool next_is_idle) {
+void rcu_note_context_switch(struct thread *outgoing, struct thread *incoming) {
     if (!unlikely(rcu.ready))
         return;
 
@@ -203,10 +203,11 @@ void rcu_note_context_switch(struct thread *outgoing, bool next_is_idle) {
 
     enum irql irql = spin_lock_irq_disable(&leaf->lock);
 
-    if (next_is_idle)
+    if (incoming->state == THREAD_STATE_IDLE_THREAD) {
         cpu_mask_set(&leaf->idle_cpus, cpu);
-    else
+    } else {
         cpu_mask_clear(&leaf->idle_cpus, cpu);
+    }
 
     /* Registration uses the leaf's tracked seq, NOT gp_seq_seen
      *
@@ -216,16 +217,13 @@ void rcu_note_context_switch(struct thread *outgoing, bool next_is_idle) {
     uint64_t lseq = leaf->gp_seq;
     bool leaf_active = leaf->completed_seq != lseq;
 
-    if (outgoing &&
-        atomic_load_explicit(&outgoing->rcu_nesting, memory_order_relaxed) !=
-            0 &&
+    if (outgoing && atomic_load(&outgoing->rcu_nesting) &&
         !outgoing->rcu_leaf) {
         outgoing->rcu_leaf = leaf;
         outgoing->rcu_blocked_seq = 0;
         list_add_tail(&outgoing->rcu_list_node, &leaf->blocked);
 
-        uint64_t rseq =
-            atomic_load_explicit(&outgoing->rcu_read_seq, memory_order_relaxed);
+        uint64_t rseq = atomic_load(&outgoing->rcu_read_seq);
         if (leaf_active && rseq < lseq) {
             outgoing->rcu_blocked_seq = lseq;
             leaf->blocked_count++;
@@ -248,19 +246,15 @@ void rcu_note_irq_exit(void) {
     /* Just report when the interrupted context isn't holding an unregistered
      * read side critical section, as readers that are accounted in a leaf
      * don't need to be handled over here */
-    if (t && atomic_load_explicit(&t->rcu_nesting, memory_order_relaxed) != 0 &&
-        !t->rcu_leaf)
+    if (t && atomic_load(&t->rcu_nesting) && !t->rcu_leaf)
         return;
 
-    uint64_t gp_seq_seen =
-        atomic_load_explicit(&rcu.gp_seq, memory_order_acquire);
-    if (gp_seq_seen ==
-        atomic_load_explicit(&rcu.gp_completed, memory_order_relaxed))
+    uint64_t gp_seq_seen = atomic_load(&rcu.gp_seq);
+    if (gp_seq_seen == atomic_load(&rcu.gp_completed))
         return;
 
     cpu_id_t cpu = smp_id(TOPC_IRQ);
-    if (atomic_load_explicit(&rcu.cpus[cpu].reported_seq,
-                             memory_order_relaxed) == gp_seq_seen)
+    if (atomic_load(&rcu.cpus[cpu].reported_seq) == gp_seq_seen)
         return;
 
     /* Technically the IRQL stuff here is a no-op, but we'll
@@ -288,11 +282,10 @@ void rcu_defer(struct rcu_cb *cb, rcu_fn func, void *arg) {
     /* Pin + disable interrupts for queue selection */
     enum irql outer = irql_raise(IRQL_HIGH_LEVEL);
 
-    cb->enqueued_waiting_on_gen =
-        (size_t) atomic_load_explicit(&rcu.gp_seq, memory_order_relaxed);
+    cb->enqueued_waiting_on_gen = atomic_load(&rcu.gp_seq);
 
     if (unlikely(!rcu.ready)) {
-        /* Before rcu_init(), we have no tree, no worker, and the boot CPU
+        /* Before rcu_init(), we have nothing, and the boot CPU
          * is the only thing running RCU operations, so we can just do this */
         irql_lower(outer);
         cb->fn(cb, cb->arg);
@@ -358,8 +351,10 @@ static void rcu_kick_pending(uint64_t seq) {
         struct cpu_mask pending = CPU_MASK_INIT;
 
         enum irql irql = spin_lock_irq_disable(&leaf->lock);
+
         if (leaf->gp_seq == seq)
             cpu_mask_copy(&pending, &leaf->qs_cpus);
+
         spin_unlock(&leaf->lock, irql);
 
         cpu_id_t cpu;
@@ -375,8 +370,7 @@ static void rcu_report_stall(uint64_t seq, time_ms_t elapsed) {
     struct rcu_stall_blocker blockers[RCU_STALL_MAX_REPORTED];
     size_t nblockers = 0;
 
-    rcu_warn("grace period %llu stalled for %llu ms\n",
-             (unsigned long long) seq, (unsigned long long) elapsed);
+    rcu_warn("grace period %llu stalled for %llu ms\n", seq, elapsed);
 
     for (size_t l = 0; l < rcu.leaf_count; l++) {
         struct rcu_node *leaf = &rcu.leaves[l];
@@ -393,6 +387,7 @@ static void rcu_report_stall(uint64_t seq, time_ms_t elapsed) {
         list_for_each_entry(t, &leaf->blocked, rcu_list_node) {
             if (t->rcu_blocked_seq != seq)
                 continue;
+
             if (nblockers >= RCU_STALL_MAX_REPORTED)
                 break;
 
@@ -409,16 +404,15 @@ static void rcu_report_stall(uint64_t seq, time_ms_t elapsed) {
 
         if (!cpu_mask_empty(&pending) || blocked)
             rcu_warn("leaf %zu: cpus %#llx pending, %u blocking reader(s)\n", l,
-                     (unsigned long long)
-                         pending.bits[leaf->cpu_base / BITMAP_BITS_PER_WORD],
+
+                     pending.bits[leaf->cpu_base / BITMAP_BITS_PER_WORD],
                      blocked);
     }
 
     for (size_t i = 0; i < nblockers; i++)
-        rcu_warn("tid %llu \"%s\" state %d read_seq %llu\n",
-                 (unsigned long long) blockers[i].id,
+        rcu_warn("tid %llu \"%s\" state %d read_seq %llu\n", blockers[i].id,
                  blockers[i].name ? blockers[i].name : "?", blockers[i].state,
-                 (unsigned long long) blockers[i].read_seq);
+                 blockers[i].read_seq);
 }
 
 static uint64_t rcu_gp_start(struct list_head *batch) {
@@ -535,14 +529,11 @@ static void rcu_gp_worker(void *unused_arg) {
 void rcu_synchronize(void) {
     struct thread *t = thread_get_current();
 
-    kassert(!irq_in_interrupt() && !irq_in_nmi(),
-            "rcu_synchronize() from interrupt context");
-    kassert(irql_get() <= IRQL_APC_LEVEL, "rcu_synchronize() above APC level");
-    kassert(!t || atomic_load_explicit(&t->rcu_nesting, memory_order_relaxed) ==
-                      0,
-            "rcu_synchronize() inside an RCU read section");
-    kassert(!rcu.ready || t != rcu.worker,
-            "rcu_synchronize() from the RCU worker deadlocks");
+    kassert(!irq_in_interrupt() && !irq_in_nmi());
+    kassert(irql_get() <= IRQL_APC_LEVEL);
+    kassert(!t ||
+            atomic_load_explicit(&t->rcu_nesting, memory_order_relaxed) == 0);
+    kassert(!rcu.ready || t != rcu.worker);
 
     if (!rcu.ready)
         return;
@@ -621,10 +612,11 @@ static void rcu_build_tree(void) {
             if (owned > RCU_FANOUT)
                 owned = RCU_FANOUT;
 
-            if (node->is_leaf)
+            if (node->is_leaf) {
                 cpu_mask_set_range(&node->full_cpus, node->cpu_base, owned);
-            else
+            } else {
                 bitmap_fill(&node->full_children, owned);
+            }
         }
     }
 

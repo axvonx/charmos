@@ -6,59 +6,52 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "lock_chk_internal.h"
+#include "internal.h"
 
 static_assert((LOCK_CHK_HASH_BUCKETS & (LOCK_CHK_HASH_BUCKETS - 1)) == 0,
               "LOCK_CHK_HASH_BUCKETS must be a power of two");
 
-static size_t lock_chk_class_hash(const struct lock_chk_class *class,
-                                  uint8_t subclass) {
-    uintptr_t key = (uintptr_t) class;
-    return ((key >> 4) ^ (key >> 13) ^ subclass) & (LOCK_CHK_HASH_BUCKETS - 1);
-}
-
-static struct lock_chk_node *lock_chk_hash_next(struct lock_chk_node *node) {
+static struct lock_chk_node *node_hash_next(struct lock_chk_node *node) {
     if (node->hash_entry.next == NULL)
         return NULL;
 
     return hlist_entry(node->hash_entry.next, struct lock_chk_node, hash_entry);
 }
 
-static struct lock_chk_node *
-lock_chk_graph_find_node_locked(struct lock_chk_graph *graph,
-                                const struct lock_chk_class *class,
-                                uint8_t subclass) {
+static struct lock_chk_node *find_node(struct lock_chk_graph *graph,
+                                       const struct lock_chk_class *class,
+                                       uint8_t subclass) {
     size_t bucket = lock_chk_class_hash(class, subclass);
     struct hlist_node *first = graph->class_hash[bucket].first;
     struct lock_chk_node *node =
         first != NULL ? hlist_entry(first, struct lock_chk_node, hash_entry)
                       : NULL;
 
-    for (; node != NULL; node = lock_chk_hash_next(node))
+    for (; node != NULL; node = node_hash_next(node))
         if (node->class == class && node->subclass == subclass)
             return node;
 
     return NULL;
 }
 
-static enum lock_chk_result lock_chk_graph_record_context_locked(
-    struct lock_chk_node *base_node,
-    const struct lock_chk_acquire_request *request) {
-    if (request->type != LOCK_CHK_TYPE_SPIN &&
-        request->type != LOCK_CHK_TYPE_QSPIN)
+static enum lock_chk_result record_ctx(struct lock_chk_node *base_node,
+                                       const struct lock_chk_acq_req *request) {
+    if (!lock_chk_type_is_spin(request->lock.type))
         return LOCK_CHK_RESULT_OK;
 
     uint8_t ctx = 0;
     if (request->in_irq || irq_in_interrupt()) {
         ctx = LOCK_CHK_CTX_IRQ;
-    } else if (request->raw_operation) {
-        if (request->prev_irql >= IRQL_HIGH_LEVEL || !request->irqs_enabled)
+    } else if (request->op_flags & LOCK_OP_RAW) {
+        if (request->prev_irql >= IRQL_HIGH_LEVEL || !request->irqs_enabled) {
             ctx = LOCK_CHK_CTX_SPIN_HIGH;
-        else
+        } else {
             ctx = LOCK_CHK_CTX_SPIN_DISPATCH;
-    } else if (request->irq_safe) {
+        }
+    } else if ((request->op_flags & LOCK_OP_IRQ_MASK) == LOCK_OP_IRQ_HIGH) {
         ctx = LOCK_CHK_CTX_SPIN_HIGH;
     } else {
+        kassert(request->op_flags & LOCK_OP_IRQ_MASK);
         ctx = LOCK_CHK_CTX_SPIN_DISPATCH;
     }
 
@@ -75,18 +68,17 @@ static enum lock_chk_result lock_chk_graph_record_context_locked(
     return LOCK_CHK_RESULT_OK;
 }
 
-static enum lock_chk_result lock_chk_graph_resolve_node_locked(
-    struct lock_chk_graph *graph, struct lock_chk_map *map, uint8_t subclass,
-    const struct lock_chk_acquire_request *request,
-    struct lock_chk_node **out) {
+static enum lock_chk_result resolve_node(struct lock_chk_graph *graph,
+                                         struct lock_chk_map *map,
+                                         uint8_t subclass,
+                                         const struct lock_chk_acq_req *request,
+                                         struct lock_chk_node **out) {
     if (subclass >= LOCK_CHK_MAX_SUBCLASSES)
         return LOCK_CHK_RESULT_INTERNAL;
 
-    const struct lock_chk_class *class =
-        map->class != NULL ? map->class : &map->instance_class;
+    const struct lock_chk_class *class = lock_chk_map_class(map);
 
-    struct lock_chk_node *base_node =
-        lock_chk_graph_find_node_locked(graph, class, 0);
+    struct lock_chk_node *base_node = find_node(graph, class, 0);
     if (base_node == NULL) {
         if (graph->node_count == LOCK_CHK_MAX_NODES)
             return LOCK_CHK_RESULT_NODE_CAPACITY;
@@ -106,8 +98,7 @@ static enum lock_chk_result lock_chk_graph_resolve_node_locked(
     atomic_store_explicit(&map->base_node, base_node, memory_order_release);
 
     if (request != NULL) {
-        enum lock_chk_result ctx_res =
-            lock_chk_graph_record_context_locked(base_node, request);
+        enum lock_chk_result ctx_res = record_ctx(base_node, request);
         if (ctx_res != LOCK_CHK_RESULT_OK)
             return ctx_res;
     }
@@ -117,8 +108,7 @@ static enum lock_chk_result lock_chk_graph_resolve_node_locked(
         return LOCK_CHK_RESULT_OK;
     }
 
-    struct lock_chk_node *node =
-        lock_chk_graph_find_node_locked(graph, class, subclass);
+    struct lock_chk_node *node = find_node(graph, class, subclass);
     if (node == NULL) {
         if (graph->node_count == LOCK_CHK_MAX_NODES)
             return LOCK_CHK_RESULT_NODE_CAPACITY;
@@ -140,45 +130,22 @@ static enum lock_chk_result lock_chk_graph_resolve_node_locked(
     return LOCK_CHK_RESULT_OK;
 }
 
-static struct lock_chk_edge *lock_chk_graph_find_edge_locked(
-    struct lock_chk_node *from, enum lock_chk_mode from_mode,
-    struct lock_chk_node *to, enum lock_chk_mode to_mode) {
+static struct lock_chk_edge *find_edge(struct lock_chk_dep from,
+                                       struct lock_chk_dep to) {
     struct list_head *entry;
-    list_for_each(entry, &from->out_edges) {
+    list_for_each(entry, &from.node->out_edges) {
         struct lock_chk_edge *edge =
             list_entry(entry, struct lock_chk_edge, from_entry);
-        if (edge->to == to && edge->from_mode == from_mode &&
-            edge->to_mode == to_mode)
+        if (edge->to == to.node && edge->from_mode == from.mode &&
+            edge->to_mode == to.mode)
             return edge;
     }
 
     return NULL;
 }
 
-static uint16_t lock_chk_mode_bit(enum lock_chk_mode mode) {
-    kassert(mode == LOCK_CHK_MODE_SHARED || mode == LOCK_CHK_MODE_EXCLUSIVE);
-    return mode == LOCK_CHK_MODE_EXCLUSIVE ? 1 : 0;
-}
-
-static uint16_t lock_chk_mode_state(const struct lock_chk_node *node,
-                                    enum lock_chk_mode mode) {
-    return (uint16_t) (node->id * 2 + lock_chk_mode_bit(mode));
-}
-
-static struct lock_chk_node *lock_chk_state_node(struct lock_chk_graph *graph,
-                                                 uint16_t state) {
-    return &graph->nodes[state / 2];
-}
-
-static enum lock_chk_mode lock_chk_state_mode(uint16_t state) {
-    return (state % 2) != 0 ? LOCK_CHK_MODE_EXCLUSIVE : LOCK_CHK_MODE_SHARED;
-}
-
-static bool lock_chk_graph_path_locked(struct lock_chk_graph *graph,
-                                       struct lock_chk_node *start,
-                                       enum lock_chk_mode start_mode,
-                                       struct lock_chk_node *target,
-                                       enum lock_chk_mode target_mode) {
+static bool graph_path(struct lock_chk_graph *graph, struct lock_chk_dep start,
+                       struct lock_chk_dep target) {
     graph->generation++;
     if (graph->generation == 0) {
         memset(graph->visit_generation, 0, sizeof(graph->visit_generation));
@@ -186,7 +153,7 @@ static bool lock_chk_graph_path_locked(struct lock_chk_graph *graph,
     }
 
     uint16_t stack_depth = 0;
-    uint16_t start_state = lock_chk_mode_state(start, start_mode);
+    uint16_t start_state = lock_chk_mode_state(start.node, start.mode);
     graph->dfs_stack[stack_depth++] = start_state;
     graph->visit_generation[start_state] = graph->generation;
     graph->parent_state[start_state] = -1;
@@ -197,7 +164,7 @@ static bool lock_chk_graph_path_locked(struct lock_chk_graph *graph,
         struct lock_chk_node *node = lock_chk_state_node(graph, state);
         enum lock_chk_mode mode = lock_chk_state_mode(state);
 
-        if (node == target && lock_chk_modes_conflict(mode, target_mode)) {
+        if (node == target.node && lock_chk_modes_conflict(mode, target.mode)) {
             graph->last_cycle_end_state = (int32_t) state;
             return true;
         }
@@ -223,27 +190,26 @@ static bool lock_chk_graph_path_locked(struct lock_chk_graph *graph,
     return false;
 }
 
-static void lock_chk_graph_publish_edge_locked(
-    struct lock_chk_graph *graph, struct lock_chk_node *from,
-    enum lock_chk_mode from_mode, struct lock_chk_node *to,
-    enum lock_chk_mode to_mode, const struct lock_chk_site *site) {
+static void publish_edge(struct lock_chk_graph *graph, struct lock_chk_dep from,
+                         struct lock_chk_dep to,
+                         const struct lock_chk_site *site) {
     struct lock_chk_edge *edge = &graph->edges[graph->edge_count++];
-    edge->from = from;
-    edge->to = to;
-    edge->from_mode = from_mode;
-    edge->to_mode = to_mode;
+    edge->from = from.node;
+    edge->to = to.node;
+    edge->from_mode = from.mode;
+    edge->to_mode = to.mode;
     edge->first_site = site;
     INIT_LIST_HEAD(&edge->from_entry);
     INIT_LIST_HEAD(&edge->to_entry);
-    list_add_tail(&edge->from_entry, &from->out_edges);
-    list_add_tail(&edge->to_entry, &to->in_edges);
+    list_add_tail(&edge->from_entry, &from.node->out_edges);
+    list_add_tail(&edge->to_entry, &to.node->in_edges);
 }
 
-uint16_t lock_chk_graph_extract_cycle_locked(
-    struct lock_chk_graph *graph, struct lock_chk_node *from,
-    enum lock_chk_mode from_mode, struct lock_chk_node *to,
-    enum lock_chk_mode to_mode, const struct lock_chk_site *site,
-    struct lock_chk_cycle_hop *hops, uint16_t max_hops, bool *truncated) {
+static uint16_t extract_cycle(struct lock_chk_graph *graph,
+                              struct lock_chk_dep from, struct lock_chk_dep to,
+                              const struct lock_chk_site *site,
+                              struct lock_chk_cycle_hop *hops,
+                              uint16_t max_hops, bool *truncated) {
     if (max_hops == 0)
         return 0;
 
@@ -260,12 +226,12 @@ uint16_t lock_chk_graph_extract_cycle_locked(
     }
 
     hops[0] = (struct lock_chk_cycle_hop){
-        .from_class = from->class,
-        .from_subclass = from->subclass,
-        .from_mode = from_mode,
-        .to_class = to->class,
-        .to_subclass = to->subclass,
-        .to_mode = to_mode,
+        .from_class = from.node->class,
+        .from_subclass = from.node->subclass,
+        .from_mode = from.mode,
+        .to_class = to.node->class,
+        .to_subclass = to.node->subclass,
+        .to_mode = to.mode,
         .site = site,
     };
     uint16_t count = 1;
@@ -290,8 +256,8 @@ uint16_t lock_chk_graph_extract_cycle_locked(
     return count;
 }
 
-static int lock_chk_compare_hops(const struct lock_chk_cycle_hop *a,
-                                 const struct lock_chk_cycle_hop *b) {
+static int hops_cmp(const struct lock_chk_cycle_hop *a,
+                    const struct lock_chk_cycle_hop *b) {
     const char *from_a_name = a->from_class ? a->from_class->name : "";
     const char *from_b_name = b->from_class ? b->from_class->name : "";
     int c = strcmp(from_a_name, from_b_name);
@@ -341,28 +307,26 @@ static int lock_chk_compare_hops(const struct lock_chk_cycle_hop *a,
     return 0;
 }
 
-static int lock_chk_compare_rotations(const struct lock_chk_cycle_hop *hops,
-                                      uint16_t len, uint16_t rot_a,
-                                      uint16_t rot_b) {
+static int compare_rotations(const struct lock_chk_cycle_hop *hops,
+                             uint16_t len, uint16_t rot_a, uint16_t rot_b) {
     for (uint16_t offset = 0; offset < len; offset++) {
         const struct lock_chk_cycle_hop *hop_a = &hops[(rot_a + offset) % len];
         const struct lock_chk_cycle_hop *hop_b = &hops[(rot_b + offset) % len];
-        int c = lock_chk_compare_hops(hop_a, hop_b);
+        int c = hops_cmp(hop_a, hop_b);
         if (c != 0)
             return c;
     }
     return 0;
 }
 
-uint64_t
-lock_chk_calc_canonical_cycle_sig(const struct lock_chk_cycle_hop *hops,
-                                  uint16_t cycle_len) {
+uint64_t lock_chk_calc_sig(const struct lock_chk_cycle_hop *hops,
+                           uint16_t cycle_len) {
     if (cycle_len == 0)
         return 0;
 
     uint16_t best_rot = 0;
     for (uint16_t i = 1; i < cycle_len; i++) {
-        if (lock_chk_compare_rotations(hops, cycle_len, i, best_rot) < 0)
+        if (compare_rotations(hops, cycle_len, i, best_rot) < 0)
             best_rot = i;
     }
 
@@ -377,16 +341,16 @@ lock_chk_calc_canonical_cycle_sig(const struct lock_chk_cycle_hop *hops,
         const char *to_file = hop->to_class ? hop->to_class->file : "";
         uint32_t to_line = hop->to_class ? hop->to_class->line : 0;
 
-        signature = lock_chk_hash_string(signature, from_name);
-        signature = lock_chk_hash_string(signature, from_file);
+        signature = lock_chk_hash_str(signature, from_name);
+        signature = lock_chk_hash_str(signature, from_file);
         signature =
             lock_chk_hash_bytes(signature, &from_line, sizeof(from_line));
         signature = lock_chk_hash_bytes(signature, &hop->from_subclass,
                                         sizeof(hop->from_subclass));
         signature = lock_chk_hash_bytes(signature, &hop->from_mode,
                                         sizeof(hop->from_mode));
-        signature = lock_chk_hash_string(signature, to_name);
-        signature = lock_chk_hash_string(signature, to_file);
+        signature = lock_chk_hash_str(signature, to_name);
+        signature = lock_chk_hash_str(signature, to_file);
         signature = lock_chk_hash_bytes(signature, &to_line, sizeof(to_line));
         signature = lock_chk_hash_bytes(signature, &hop->to_subclass,
                                         sizeof(hop->to_subclass));
@@ -407,100 +371,99 @@ void lock_chk_graph_init(struct lock_chk_graph *graph) {
     memset(graph->visit_generation, 0, sizeof(graph->visit_generation));
 }
 
-enum lock_chk_result
-lock_chk_graph_resolve_node(struct lock_chk_graph *graph,
-                            struct lock_chk_map *map, uint8_t subclass,
-                            const struct lock_chk_acquire_request *request,
-                            struct lock_chk_node **out) {
-    bool irqs_enabled = raw_spin_lock_irq_disable(&graph->lock);
+enum lock_chk_result lock_chk_graph_resolve_node(const struct lock_chk_ctx *ctx,
+                                                 struct lock_chk_map *map,
+                                                 uint8_t subclass,
+                                                 struct lock_chk_node **out) {
+    bool irqs_enabled = raw_spin_lock_irq_disable(&ctx->graph->lock);
     enum lock_chk_result result =
-        lock_chk_graph_resolve_node_locked(graph, map, subclass, request, out);
-    raw_spin_unlock_irq_restore(&graph->lock, irqs_enabled);
+        resolve_node(ctx->graph, map, subclass, ctx->req, out);
+    raw_spin_unlock_irq_restore(&ctx->graph->lock, irqs_enabled);
     return result;
 }
 
-static void lock_chk_graph_fill_cycle_failure(
-    struct lock_chk_failure *failure_out, struct lock_chk_graph *graph,
-    struct lock_chk_node *from, enum lock_chk_mode from_mode,
-    struct lock_chk_node *to, enum lock_chk_mode to_mode,
-    const struct lock_chk_site *site) {
-    *failure_out = (struct lock_chk_failure){
+static void make_cycle_fail(const struct lock_chk_ctx *ctx,
+                            struct lock_chk_dep from, struct lock_chk_dep to) {
+    *ctx->fault = (struct lock_chk_fault){
         .kind = LOCK_CHK_FAIL_CYCLE,
-        .site = site,
-        .class = to->class,
-        .subclass = to->subclass,
-        .mode = to_mode,
+        .site = ctx->site,
+        .class = to.node->class,
+        .subclass = to.node->subclass,
+        .mode = to.mode,
+        .report = lock_chk_report_claim(),
     };
-    snprintf(failure_out->msg, sizeof(failure_out->msg),
+
+    struct lock_chk_report *report = ctx->fault->report;
+    if (report == NULL)
+        return;
+
+    snprintf(report->msg, sizeof(report->msg),
              "Dependency cycle detected (%s -> %s)",
-             from->class ? from->class->name : "lock",
-             to->class ? to->class->name : "lock");
-    failure_out->cycle_len = lock_chk_graph_extract_cycle_locked(
-        graph, from, from_mode, to, to_mode, site, failure_out->cycle_hops,
-        LOCK_CHK_MAX_CYCLE_HOPS, &failure_out->cycle_truncated);
-    failure_out->signature = lock_chk_calc_canonical_cycle_sig(
-        failure_out->cycle_hops, failure_out->cycle_len);
+             from.node->class ? from.node->class->name : "lock",
+             to.node->class ? to.node->class->name : "lock");
+    report->cycle_len =
+        extract_cycle(ctx->graph, from, to, ctx->site, report->cycle_hops,
+                      LOCK_CHK_MAX_CYCLE_HOPS, &report->cycle_truncated);
+    report->signature =
+        lock_chk_calc_sig(report->cycle_hops, report->cycle_len);
 }
 
-static void lock_chk_graph_fill_edge_capacity_failure(
-    struct lock_chk_failure *failure_out, struct lock_chk_graph *graph,
-    struct lock_chk_node *to, const struct lock_chk_site *site) {
-    *failure_out = (struct lock_chk_failure){
+static void make_cap_fail(const struct lock_chk_ctx *ctx,
+                          struct lock_chk_node *to) {
+    *ctx->fault = (struct lock_chk_fault){
         .kind = LOCK_CHK_FAIL_CAPACITY,
-        .site = site,
+        .site = ctx->site,
         .class = to->class,
         .subclass = to->subclass,
         .capacity_pool = "edges",
-        .capacity_used = graph->edge_count,
+        .capacity_used = ctx->graph->edge_count,
         .capacity_limit = LOCK_CHK_MAX_EDGES,
+        .report = lock_chk_report_claim(),
     };
-    snprintf(failure_out->msg, sizeof(failure_out->msg),
-             "Edge capacity exhausted (%u/%u)", graph->edge_count,
-             LOCK_CHK_MAX_EDGES);
+
+    if (ctx->fault->report != NULL)
+        snprintf(ctx->fault->report->msg, sizeof(ctx->fault->report->msg),
+                 "Edge capacity exhausted (%u/%u)", ctx->graph->edge_count,
+                 LOCK_CHK_MAX_EDGES);
 }
 
-enum lock_chk_result lock_chk_graph_add_dependency(
-    struct lock_chk_graph *graph, struct lock_chk_node *from,
-    enum lock_chk_mode from_mode, struct lock_chk_node *to,
-    enum lock_chk_mode to_mode, const struct lock_chk_site *site,
-    struct lock_chk_failure *failure_out) {
-    bool irqs_enabled = raw_spin_lock_irq_disable(&graph->lock);
+enum lock_chk_result lock_chk_graph_add_dep(const struct lock_chk_ctx *ctx,
+                                            struct lock_chk_dep from,
+                                            struct lock_chk_dep to) {
+    bool irqs_enabled = raw_spin_lock_irq_disable(&ctx->graph->lock);
     enum lock_chk_result result = LOCK_CHK_RESULT_OK;
 
-    if (lock_chk_graph_find_edge_locked(from, from_mode, to, to_mode) != NULL)
+    if (find_edge(from, to) != NULL)
         goto out;
 
-    if (lock_chk_graph_path_locked(graph, to, to_mode, from, from_mode)) {
-        if (failure_out != NULL)
-            lock_chk_graph_fill_cycle_failure(failure_out, graph, from,
-                                              from_mode, to, to_mode, site);
+    if (graph_path(ctx->graph, to, from)) {
+        if (ctx->fault != NULL)
+            make_cycle_fail(ctx, from, to);
         result = LOCK_CHK_RESULT_CYCLE;
         goto out;
     }
 
-    if (graph->edge_count == LOCK_CHK_MAX_EDGES) {
-        if (failure_out != NULL)
-            lock_chk_graph_fill_edge_capacity_failure(failure_out, graph, to,
-                                                      site);
+    if (ctx->graph->edge_count == LOCK_CHK_MAX_EDGES) {
+        if (ctx->fault != NULL)
+            make_cap_fail(ctx, to.node);
         result = LOCK_CHK_RESULT_EDGE_CAPACITY;
         goto out;
     }
 
-    lock_chk_graph_publish_edge_locked(graph, from, from_mode, to, to_mode,
-                                       site);
+    publish_edge(ctx->graph, from, to, ctx->site);
 
 out:
-    raw_spin_unlock_irq_restore(&graph->lock, irqs_enabled);
+    raw_spin_unlock_irq_restore(&ctx->graph->lock, irqs_enabled);
     return result;
 }
 
-static bool lock_chk_graph_dependency_repeated(
-    const struct lock_chk_thread_data *thread_data, uint8_t index) {
+static bool dep_repeated(const struct lock_chk_thread_data *thread_data,
+                         uint8_t index) {
     const struct lock_chk_held *candidate = &thread_data->held[index];
 
     for (uint8_t i = 0; i < index; i++) {
         const struct lock_chk_held *prior = &thread_data->held[i];
-        if ((prior->flags & LOCK_CHKD_ORDER) != 0 &&
+        if ((prior->lock.flags & LOCK_CHKD_ORDER) != 0 &&
             prior->node == candidate->node && prior->mode == candidate->mode)
             return true;
     }
@@ -508,101 +471,88 @@ static bool lock_chk_graph_dependency_repeated(
     return false;
 }
 
-static enum lock_chk_result lock_chk_graph_add_held_dependencies_locked(
-    struct lock_chk_graph *graph,
-    const struct lock_chk_thread_data *thread_data, struct lock_chk_node *to,
-    enum lock_chk_mode to_mode, const struct lock_chk_site *site,
-    struct lock_chk_failure *failure_out) {
+static struct lock_chk_dep held_dep(const struct lock_chk_held *held) {
+    return (struct lock_chk_dep){.node = held->node, .mode = held->mode};
+}
+
+static bool held_contribs(const struct lock_chk_thread_data *td,
+                          uint8_t index) {
+    return (td->held[index].lock.flags & LOCK_CHKD_ORDER) != 0 &&
+           !dep_repeated(td, index);
+}
+
+static enum lock_chk_result add_held_deps(const struct lock_chk_ctx *ctx,
+                                          struct lock_chk_dep to) {
+    const struct lock_chk_thread_data *thread_data = ctx->thread_data;
     size_t missing = 0;
 
     for (uint8_t i = 0; i < thread_data->depth; i++) {
-        const struct lock_chk_held *held = &thread_data->held[i];
-        if ((held->flags & LOCK_CHKD_ORDER) == 0 ||
-            lock_chk_graph_dependency_repeated(thread_data, i))
+        if (!held_contribs(thread_data, i))
             continue;
 
-        if (lock_chk_graph_find_edge_locked(held->node, held->mode, to,
-                                            to_mode) != NULL)
+        struct lock_chk_dep from = held_dep(&thread_data->held[i]);
+        if (find_edge(from, to) != NULL)
             continue;
 
-        if (lock_chk_graph_path_locked(graph, to, to_mode, held->node,
-                                       held->mode)) {
-            if (failure_out != NULL)
-                lock_chk_graph_fill_cycle_failure(failure_out, graph,
-                                                  held->node, held->mode, to,
-                                                  to_mode, site);
+        if (graph_path(ctx->graph, to, from)) {
+            if (ctx->fault != NULL)
+                make_cycle_fail(ctx, from, to);
             return LOCK_CHK_RESULT_CYCLE;
         }
         missing++;
     }
 
-    if (missing > (size_t) (LOCK_CHK_MAX_EDGES - graph->edge_count)) {
-        if (failure_out != NULL)
-            lock_chk_graph_fill_edge_capacity_failure(failure_out, graph, to,
-                                                      site);
+    if (missing > (size_t) (LOCK_CHK_MAX_EDGES - ctx->graph->edge_count)) {
+        if (ctx->fault != NULL)
+            make_cap_fail(ctx, to.node);
         return LOCK_CHK_RESULT_EDGE_CAPACITY;
     }
 
     for (uint8_t i = 0; i < thread_data->depth; i++) {
-        const struct lock_chk_held *held = &thread_data->held[i];
-        if ((held->flags & LOCK_CHKD_ORDER) == 0 ||
-            lock_chk_graph_dependency_repeated(thread_data, i) ||
-            lock_chk_graph_find_edge_locked(held->node, held->mode, to,
-                                            to_mode) != NULL)
+        if (!held_contribs(thread_data, i))
             continue;
 
-        lock_chk_graph_publish_edge_locked(graph, held->node, held->mode, to,
-                                           to_mode, site);
+        struct lock_chk_dep from = held_dep(&thread_data->held[i]);
+        if (find_edge(from, to) != NULL)
+            continue;
+
+        publish_edge(ctx->graph, from, to, ctx->site);
     }
 
     return LOCK_CHK_RESULT_OK;
 }
 
-enum lock_chk_result lock_chk_graph_add_held_dependencies(
-    struct lock_chk_graph *graph,
-    const struct lock_chk_thread_data *thread_data, struct lock_chk_node *to,
-    enum lock_chk_mode to_mode, const struct lock_chk_site *site,
-    struct lock_chk_failure *failure_out) {
-    bool irqs_enabled = raw_spin_lock_irq_disable(&graph->lock);
-    enum lock_chk_result result = lock_chk_graph_add_held_dependencies_locked(
-        graph, thread_data, to, to_mode, site, failure_out);
-    raw_spin_unlock_irq_restore(&graph->lock, irqs_enabled);
-    return result;
-}
-
-static void lock_chk_graph_rollback_nodes(struct lock_chk_graph *graph,
-                                          uint16_t old_node_count) {
+static void rollback_nodes(struct lock_chk_graph *graph,
+                           uint16_t old_node_count) {
     while (graph->node_count > old_node_count) {
         struct lock_chk_node *node = &graph->nodes[--graph->node_count];
         hlist_del(&node->hash_entry);
     }
 }
 
-enum lock_chk_result lock_chk_graph_prepare_acquire(
-    struct lock_chk_graph *graph, struct lock_chk_map *map, uint8_t subclass,
-    const struct lock_chk_acquire_request *request,
-    const struct lock_chk_thread_data *thread_data, struct lock_chk_node **out,
-    struct lock_chk_failure *failure_out) {
+enum lock_chk_result lock_chk_graph_prepare_acq(const struct lock_chk_ctx *ctx,
+                                                struct lock_chk_map *map,
+                                                uint8_t subclass,
+                                                struct lock_chk_node **out) {
+    struct lock_chk_graph *graph = ctx->graph;
+    const struct lock_chk_acq_req *request = ctx->req;
     bool irqs_enabled = raw_spin_lock_irq_disable(&graph->lock);
     uint16_t old_node_count = graph->node_count;
     struct lock_chk_node *old_base =
         atomic_load_explicit(&map->base_node, memory_order_relaxed);
-    const struct lock_chk_class *class =
-        map->class != NULL ? map->class : &map->instance_class;
-    struct lock_chk_node *existing_base =
-        lock_chk_graph_find_node_locked(graph, class, 0);
+    const struct lock_chk_class *class = lock_chk_map_class(map);
+    struct lock_chk_node *existing_base = find_node(graph, class, 0);
     uint8_t old_context_bits =
         existing_base != NULL ? existing_base->context_bits : 0;
 
     enum lock_chk_result result =
-        lock_chk_graph_resolve_node_locked(graph, map, subclass, request, out);
+        resolve_node(graph, map, subclass, request, out);
     if (result != LOCK_CHK_RESULT_OK)
         goto rollback;
 
-    if (request->wait_kind == LOCK_CHK_WAIT_BLOCKING) {
-        result = lock_chk_graph_add_held_dependencies_locked(
-            graph, thread_data, *out, request->mode, request->site,
-            failure_out);
+    if ((request->op_flags & LOCK_OP_KIND_MASK) == LOCK_OP_KIND_BLOCKING) {
+        result = add_held_deps(
+            ctx, (struct lock_chk_dep){.node = *out, .mode = request->mode});
         if (result != LOCK_CHK_RESULT_OK)
             goto rollback;
     }
@@ -611,7 +561,7 @@ enum lock_chk_result lock_chk_graph_prepare_acquire(
     return LOCK_CHK_RESULT_OK;
 
 rollback:
-    lock_chk_graph_rollback_nodes(graph, old_node_count);
+    rollback_nodes(graph, old_node_count);
     if (existing_base != NULL)
         existing_base->context_bits = old_context_bits;
     atomic_store_explicit(&map->base_node, old_base, memory_order_relaxed);

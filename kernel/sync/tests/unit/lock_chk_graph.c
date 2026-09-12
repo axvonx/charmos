@@ -1,8 +1,8 @@
+#include "sync/lock_chk/internal.h"
 #include "sync/tests/test_internal.h"
 
 #ifdef DEBUG_LOCK_CHK
 
-#include <sync/lock_chk_internal.h>
 #include <sync/mutex.h>
 #include <sync/mutex_simple.h>
 #include <sync/qspinlock.h>
@@ -13,9 +13,13 @@ LOCK_CHK_CLASS_DECLARE_LOCAL(graph_test_class_a);
 LOCK_CHK_CLASS_DECLARE_LOCAL(graph_test_class_b);
 LOCK_CHK_CLASS_DECLARE_LOCAL(graph_test_class_c);
 
+static struct lock_chk_graph lock_chk_test_graph;
+
+#define TEST_CTX(g, ...) (&(struct lock_chk_ctx){.graph = (g), __VA_ARGS__})
+
 TEST_DECLARE_UNIT(lock_chk, graph_node_resolution) {
-    static struct lock_chk_graph graph;
-    lock_chk_graph_init(&graph);
+    struct lock_chk_graph *graph = &lock_chk_test_graph;
+    lock_chk_graph_init(graph);
 
     struct lock_chk_map map_a =
         LOCK_CHK_MAP_VALUE_INIT(LOCK_CHK_CLASS(graph_test_class_a));
@@ -28,24 +32,24 @@ TEST_DECLARE_UNIT(lock_chk, graph_node_resolution) {
     struct lock_chk_node *node_b0 = NULL;
 
     TEST_ASSERT_EQ(
-        lock_chk_graph_resolve_node(&graph, &map_a, 0, NULL, &node_a0),
+        lock_chk_graph_resolve_node(TEST_CTX(graph), &map_a, 0, &node_a0),
         LOCK_CHK_RESULT_OK);
     TEST_ASSERT_NONNULL(node_a0);
 
     TEST_ASSERT_EQ(
-        lock_chk_graph_resolve_node(&graph, &map_a, 0, NULL, &node_a0_again),
+        lock_chk_graph_resolve_node(TEST_CTX(graph), &map_a, 0, &node_a0_again),
         LOCK_CHK_RESULT_OK);
     TEST_ASSERT_PTR_EQ(node_a0, node_a0_again);
 
     TEST_ASSERT_EQ(
-        lock_chk_graph_resolve_node(&graph, &map_a, 1, NULL, &node_a1),
+        lock_chk_graph_resolve_node(TEST_CTX(graph), &map_a, 1, &node_a1),
         LOCK_CHK_RESULT_OK);
     TEST_ASSERT_NONNULL(node_a1);
     TEST_ASSERT_PTR_NE(node_a1, node_a0);
     TEST_ASSERT_EQ(node_a1->subclass, 1);
 
     TEST_ASSERT_EQ(
-        lock_chk_graph_resolve_node(&graph, &map_b, 0, NULL, &node_b0),
+        lock_chk_graph_resolve_node(TEST_CTX(graph), &map_b, 0, &node_b0),
         LOCK_CHK_RESULT_OK);
     TEST_ASSERT_NONNULL(node_b0);
     TEST_ASSERT_PTR_NE(node_b0, node_a0);
@@ -54,8 +58,8 @@ TEST_DECLARE_UNIT(lock_chk, graph_node_resolution) {
 }
 
 TEST_DECLARE_UNIT(lock_chk, graph_cycle_detection) {
-    static struct lock_chk_graph graph;
-    lock_chk_graph_init(&graph);
+    struct lock_chk_graph *graph = &lock_chk_test_graph;
+    lock_chk_graph_init(graph);
 
     struct lock_chk_map map_a =
         LOCK_CHK_MAP_VALUE_INIT(LOCK_CHK_CLASS(graph_test_class_a));
@@ -69,105 +73,108 @@ TEST_DECLARE_UNIT(lock_chk, graph_cycle_detection) {
     struct lock_chk_node *node_c = NULL;
 
     TEST_ASSERT_EQ(
-        lock_chk_graph_resolve_node(&graph, &map_a, 0, NULL, &node_a),
+        lock_chk_graph_resolve_node(TEST_CTX(graph), &map_a, 0, &node_a),
         LOCK_CHK_RESULT_OK);
     TEST_ASSERT_EQ(
-        lock_chk_graph_resolve_node(&graph, &map_b, 0, NULL, &node_b),
+        lock_chk_graph_resolve_node(TEST_CTX(graph), &map_b, 0, &node_b),
         LOCK_CHK_RESULT_OK);
     TEST_ASSERT_EQ(
-        lock_chk_graph_resolve_node(&graph, &map_c, 0, NULL, &node_c),
+        lock_chk_graph_resolve_node(TEST_CTX(graph), &map_c, 0, &node_c),
         LOCK_CHK_RESULT_OK);
 
     /* A -> B */
-    TEST_ASSERT_EQ(lock_chk_graph_add_dependency(
-                       &graph, node_a, LOCK_CHK_MODE_EXCLUSIVE, node_b,
-                       LOCK_CHK_MODE_EXCLUSIVE, NULL, NULL),
+    TEST_ASSERT_EQ(lock_chk_graph_add_dep(
+                       TEST_CTX(graph),
+                       lock_chk_dep_make(node_a, LOCK_CHK_MODE_EXCLUSIVE),
+                       lock_chk_dep_make(node_b, LOCK_CHK_MODE_EXCLUSIVE)),
                    LOCK_CHK_RESULT_OK);
-    TEST_ASSERT_EQ(graph.edge_count, 1);
+    TEST_ASSERT_EQ(graph->edge_count, 1);
 
     /* Duplicate A -> B should be dedup without adding edge */
-    TEST_ASSERT_EQ(lock_chk_graph_add_dependency(
-                       &graph, node_a, LOCK_CHK_MODE_EXCLUSIVE, node_b,
-                       LOCK_CHK_MODE_EXCLUSIVE, NULL, NULL),
+    TEST_ASSERT_EQ(lock_chk_graph_add_dep(
+                       TEST_CTX(graph),
+                       lock_chk_dep_make(node_a, LOCK_CHK_MODE_EXCLUSIVE),
+                       lock_chk_dep_make(node_b, LOCK_CHK_MODE_EXCLUSIVE)),
                    LOCK_CHK_RESULT_OK);
-    TEST_ASSERT_EQ(graph.edge_count, 1);
+    TEST_ASSERT_EQ(graph->edge_count, 1);
 
     /* B -> C */
-    TEST_ASSERT_EQ(lock_chk_graph_add_dependency(
-                       &graph, node_b, LOCK_CHK_MODE_EXCLUSIVE, node_c,
-                       LOCK_CHK_MODE_EXCLUSIVE, NULL, NULL),
+    TEST_ASSERT_EQ(lock_chk_graph_add_dep(
+                       TEST_CTX(graph),
+                       lock_chk_dep_make(node_b, LOCK_CHK_MODE_EXCLUSIVE),
+                       lock_chk_dep_make(node_c, LOCK_CHK_MODE_EXCLUSIVE)),
                    LOCK_CHK_RESULT_OK);
-    TEST_ASSERT_EQ(graph.edge_count, 2);
+    TEST_ASSERT_EQ(graph->edge_count, 2);
 
     /* C -> A completes cycle A -> B -> C -> A reports CYCLE */
-    struct lock_chk_failure fail = {0};
-    TEST_ASSERT_EQ(lock_chk_graph_add_dependency(
-                       &graph, node_c, LOCK_CHK_MODE_EXCLUSIVE, node_a,
-                       LOCK_CHK_MODE_EXCLUSIVE, NULL, &fail),
+    struct lock_chk_fault fail = {0};
+    TEST_ASSERT_EQ(lock_chk_graph_add_dep(
+                       TEST_CTX(graph, .fault = &fail),
+                       lock_chk_dep_make(node_c, LOCK_CHK_MODE_EXCLUSIVE),
+                       lock_chk_dep_make(node_a, LOCK_CHK_MODE_EXCLUSIVE)),
                    LOCK_CHK_RESULT_CYCLE);
-    TEST_ASSERT_EQ(fail.cycle_len, 3);
-    TEST_ASSERT_NE(fail.signature, 0);
+    TEST_ASSERT_NONNULL(fail.report);
+    TEST_ASSERT_EQ(fail.report->cycle_len, 3);
+    TEST_ASSERT_NE(fail.report->signature, 0);
+    lock_chk_report_release();
 
     /* Direct B -> A completes 2-node cycle: must report CYCLE */
-    TEST_ASSERT_EQ(lock_chk_graph_add_dependency(
-                       &graph, node_b, LOCK_CHK_MODE_EXCLUSIVE, node_a,
-                       LOCK_CHK_MODE_EXCLUSIVE, NULL, NULL),
+    TEST_ASSERT_EQ(lock_chk_graph_add_dep(
+                       TEST_CTX(graph),
+                       lock_chk_dep_make(node_b, LOCK_CHK_MODE_EXCLUSIVE),
+                       lock_chk_dep_make(node_a, LOCK_CHK_MODE_EXCLUSIVE)),
                    LOCK_CHK_RESULT_CYCLE);
 
     return TEST_SUCCESS;
 }
 
 TEST_DECLARE_UNIT(lock_chk, irq_safety_conflict) {
-    static struct lock_chk_graph graph;
-    lock_chk_graph_init(&graph);
+    struct lock_chk_graph *graph = &lock_chk_test_graph;
+    lock_chk_graph_init(graph);
 
     struct lock_chk_map map_disp =
         LOCK_CHK_MAP_VALUE_INIT(LOCK_CHK_CLASS(graph_test_class_a));
     struct lock_chk_map map_high =
         LOCK_CHK_MAP_VALUE_INIT(LOCK_CHK_CLASS(graph_test_class_b));
 
-    struct lock_chk_acquire_request req_disp = {
-        .type = LOCK_CHK_TYPE_SPIN,
+    struct lock_chk_acq_req req_disp = {
+        .lock.type = LOCK_CHK_TYPE_SPIN,
         .prev_irql = IRQL_PASSIVE_LEVEL,
         .irqs_enabled = true,
-        .irq_safe = false,
-        .raw_operation = false,
+        .op_flags = LOCK_OP_IRQ_DISPATCH,
         .in_irq = false,
-        .in_nmi = false,
     };
-    struct lock_chk_acquire_request req_high = {
-        .type = LOCK_CHK_TYPE_SPIN,
+    struct lock_chk_acq_req req_high = {
+        .lock.type = LOCK_CHK_TYPE_SPIN,
         .prev_irql = IRQL_HIGH_LEVEL,
         .irqs_enabled = false,
-        .irq_safe = true,
-        .raw_operation = false,
+        .op_flags = LOCK_OP_IRQ_HIGH,
         .in_irq = false,
-        .in_nmi = false,
     };
 
     struct lock_chk_node *node = NULL;
 
-    TEST_ASSERT_EQ(
-        lock_chk_graph_resolve_node(&graph, &map_disp, 0, &req_disp, &node),
-        LOCK_CHK_RESULT_OK);
-    TEST_ASSERT_EQ(
-        lock_chk_graph_resolve_node(&graph, &map_disp, 0, &req_high, &node),
-        LOCK_CHK_RESULT_BAD_CONTEXT);
+    TEST_ASSERT_EQ(lock_chk_graph_resolve_node(
+                       TEST_CTX(graph, .req = &req_disp), &map_disp, 0, &node),
+                   LOCK_CHK_RESULT_OK);
+    TEST_ASSERT_EQ(lock_chk_graph_resolve_node(
+                       TEST_CTX(graph, .req = &req_high), &map_disp, 0, &node),
+                   LOCK_CHK_RESULT_BAD_CONTEXT);
 
     node = NULL;
-    TEST_ASSERT_EQ(
-        lock_chk_graph_resolve_node(&graph, &map_high, 0, &req_high, &node),
-        LOCK_CHK_RESULT_OK);
-    TEST_ASSERT_EQ(
-        lock_chk_graph_resolve_node(&graph, &map_high, 0, &req_disp, &node),
-        LOCK_CHK_RESULT_BAD_CONTEXT);
+    TEST_ASSERT_EQ(lock_chk_graph_resolve_node(
+                       TEST_CTX(graph, .req = &req_high), &map_high, 0, &node),
+                   LOCK_CHK_RESULT_OK);
+    TEST_ASSERT_EQ(lock_chk_graph_resolve_node(
+                       TEST_CTX(graph, .req = &req_disp), &map_high, 0, &node),
+                   LOCK_CHK_RESULT_BAD_CONTEXT);
 
     return TEST_SUCCESS;
 }
 
 TEST_DECLARE_UNIT(lock_chk, graph_acquire_dedup) {
-    static struct lock_chk_graph graph;
-    lock_chk_graph_init(&graph);
+    struct lock_chk_graph *graph = &lock_chk_test_graph;
+    lock_chk_graph_init(graph);
 
     struct lock_chk_map map_a =
         LOCK_CHK_MAP_VALUE_INIT(LOCK_CHK_CLASS(graph_test_class_a));
@@ -177,41 +184,43 @@ TEST_DECLARE_UNIT(lock_chk, graph_acquire_dedup) {
     struct lock_chk_node *node_b = NULL;
 
     TEST_ASSERT_EQ(
-        lock_chk_graph_resolve_node(&graph, &map_a, 0, NULL, &node_a),
+        lock_chk_graph_resolve_node(TEST_CTX(graph), &map_a, 0, &node_a),
         LOCK_CHK_RESULT_OK);
 
     struct lock_chk_thread_data held = {
         .held =
             {
                 {.node = node_a,
-                 .flags = LOCK_CHKD_ORDER,
+                 .lock.flags = LOCK_CHKD_ORDER,
                  .mode = LOCK_CHK_MODE_EXCLUSIVE},
                 {.node = node_a,
-                 .flags = LOCK_CHKD_ORDER,
+                 .lock.flags = LOCK_CHKD_ORDER,
                  .mode = LOCK_CHK_MODE_EXCLUSIVE},
             },
         .depth = 2,
     };
-    struct lock_chk_acquire_request request = {
+    struct lock_chk_acq_req request = {
         .map = &map_b,
-        .flags = LOCK_CHKD_ORDER,
-        .type = LOCK_CHK_TYPE_MUTEX,
+        .lock.flags = LOCK_CHKD_ORDER,
+        .lock.type = LOCK_CHK_TYPE_MUTEX,
         .mode = LOCK_CHK_MODE_EXCLUSIVE,
-        .wait_kind = LOCK_CHK_WAIT_BLOCKING,
+        .op_flags = LOCK_OP_KIND_BLOCKING,
     };
-    struct lock_chk_failure failure = {0};
+    struct lock_chk_fault failure = {0};
 
-    TEST_ASSERT_EQ(lock_chk_graph_prepare_acquire(&graph, &map_b, 0, &request,
-                                                  &held, &node_b, &failure),
+    TEST_ASSERT_EQ(lock_chk_graph_prepare_acq(TEST_CTX(graph, .req = &request,
+                                                       .thread_data = &held,
+                                                       .fault = &failure),
+                                              &map_b, 0, &node_b),
                    LOCK_CHK_RESULT_OK);
     TEST_ASSERT_NONNULL(node_b);
-    TEST_ASSERT_EQ(graph.edge_count, 1);
+    TEST_ASSERT_EQ(graph->edge_count, 1);
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(lock_chk, graph_acquire_rollback) {
-    static struct lock_chk_graph graph;
-    lock_chk_graph_init(&graph);
+TEST_DECLARE_UNIT(lock_chk, graph_acquire_cycle_fault_populated) {
+    struct lock_chk_graph *graph = &lock_chk_test_graph;
+    lock_chk_graph_init(graph);
 
     struct lock_chk_map map_a =
         LOCK_CHK_MAP_VALUE_INIT(LOCK_CHK_CLASS(graph_test_class_a));
@@ -221,34 +230,94 @@ TEST_DECLARE_UNIT(lock_chk, graph_acquire_rollback) {
     struct lock_chk_node *node_b = NULL;
 
     TEST_ASSERT_EQ(
-        lock_chk_graph_resolve_node(&graph, &map_a, 0, NULL, &node_a),
+        lock_chk_graph_resolve_node(TEST_CTX(graph), &map_a, 0, &node_a),
+        LOCK_CHK_RESULT_OK);
+    TEST_ASSERT_EQ(
+        lock_chk_graph_resolve_node(TEST_CTX(graph), &map_b, 0, &node_b),
+        LOCK_CHK_RESULT_OK);
+
+    TEST_ASSERT_EQ(lock_chk_graph_add_dep(
+                       TEST_CTX(graph),
+                       lock_chk_dep_make(node_b, LOCK_CHK_MODE_EXCLUSIVE),
+                       lock_chk_dep_make(node_a, LOCK_CHK_MODE_EXCLUSIVE)),
+                   LOCK_CHK_RESULT_OK);
+
+    struct lock_chk_thread_data held = {
+        .held = {{.node = node_a,
+                  .lock.flags = LOCK_CHKD_ORDER,
+                  .mode = LOCK_CHK_MODE_EXCLUSIVE}},
+        .depth = 1,
+    };
+    struct lock_chk_acq_req request = {
+        .map = &map_b,
+        .lock.flags = LOCK_CHKD_ORDER,
+        .lock.type = LOCK_CHK_TYPE_MUTEX,
+        .mode = LOCK_CHK_MODE_EXCLUSIVE,
+        .op_flags = LOCK_OP_KIND_BLOCKING,
+        .site = LOCK_CHK_SITE_HERE(),
+    };
+    struct lock_chk_fault fault = {0};
+    struct lock_chk_node *out = NULL;
+
+    TEST_ASSERT_EQ(lock_chk_graph_prepare_acq(
+                       TEST_CTX(graph, .req = &request, .thread_data = &held,
+                                .fault = &fault, .site = request.site),
+                       &map_b, 0, &out),
+                   LOCK_CHK_RESULT_CYCLE);
+
+    TEST_ASSERT_EQ(fault.kind, LOCK_CHK_FAIL_CYCLE);
+    TEST_ASSERT_NONNULL(fault.report);
+    TEST_ASSERT_NE(fault.report->cycle_len, 0);
+    TEST_ASSERT_NE(fault.report->signature, 0);
+    TEST_ASSERT_NE(fault.report->msg[0], '\0');
+    TEST_ASSERT_NONNULL(fault.class);
+    lock_chk_report_release();
+    return TEST_SUCCESS;
+}
+
+TEST_DECLARE_UNIT(lock_chk, graph_acquire_rollback) {
+    struct lock_chk_graph *graph = &lock_chk_test_graph;
+    lock_chk_graph_init(graph);
+
+    struct lock_chk_map map_a =
+        LOCK_CHK_MAP_VALUE_INIT(LOCK_CHK_CLASS(graph_test_class_a));
+    struct lock_chk_map map_b =
+        LOCK_CHK_MAP_VALUE_INIT(LOCK_CHK_CLASS(graph_test_class_b));
+    struct lock_chk_node *node_a = NULL;
+    struct lock_chk_node *node_b = NULL;
+
+    TEST_ASSERT_EQ(
+        lock_chk_graph_resolve_node(TEST_CTX(graph), &map_a, 0, &node_a),
         LOCK_CHK_RESULT_OK);
 
     struct lock_chk_thread_data held = {
         .held = {{.node = node_a,
-                  .flags = LOCK_CHKD_ORDER,
+                  .lock.flags = LOCK_CHKD_ORDER,
                   .mode = LOCK_CHK_MODE_EXCLUSIVE}},
         .depth = 1,
     };
-    struct lock_chk_acquire_request request = {
+    struct lock_chk_acq_req request = {
         .map = &map_b,
-        .flags = LOCK_CHKD_ORDER,
-        .type = LOCK_CHK_TYPE_MUTEX,
+        .lock.flags = LOCK_CHKD_ORDER,
+        .lock.type = LOCK_CHK_TYPE_MUTEX,
         .mode = LOCK_CHK_MODE_EXCLUSIVE,
-        .wait_kind = LOCK_CHK_WAIT_BLOCKING,
+        .op_flags = LOCK_OP_KIND_BLOCKING,
     };
-    struct lock_chk_failure failure = {0};
-    uint16_t nodes_before = graph.node_count;
-    graph.edge_count = LOCK_CHK_MAX_EDGES;
+    struct lock_chk_fault failure = {0};
+    uint16_t nodes_before = graph->node_count;
+    graph->edge_count = LOCK_CHK_MAX_EDGES;
 
-    TEST_ASSERT_EQ(lock_chk_graph_prepare_acquire(&graph, &map_b, 0, &request,
-                                                  &held, &node_b, &failure),
+    TEST_ASSERT_EQ(lock_chk_graph_prepare_acq(TEST_CTX(graph, .req = &request,
+                                                       .thread_data = &held,
+                                                       .fault = &failure),
+                                              &map_b, 0, &node_b),
                    LOCK_CHK_RESULT_EDGE_CAPACITY);
     TEST_ASSERT_NULL(node_b);
-    TEST_ASSERT_EQ(graph.node_count, nodes_before);
+    TEST_ASSERT_EQ(graph->node_count, nodes_before);
     TEST_ASSERT_NULL(
         atomic_load_explicit(&map_b.base_node, memory_order_relaxed));
     TEST_ASSERT_EQ(failure.kind, LOCK_CHK_FAIL_CAPACITY);
+    lock_chk_report_release();
     return TEST_SUCCESS;
 }
 
@@ -346,8 +415,8 @@ TEST_DECLARE_UNIT(lock_chk, mutex_simple_lifecycle) {
 }
 
 TEST_DECLARE_UNIT(lock_chk, rw_reader_ring_and_conflict) {
-    static struct lock_chk_graph graph;
-    lock_chk_graph_init(&graph);
+    struct lock_chk_graph *graph = &lock_chk_test_graph;
+    lock_chk_graph_init(graph);
 
     struct lock_chk_map map_a =
         LOCK_CHK_MAP_VALUE_INIT(LOCK_CHK_CLASS(graph_test_class_a));
@@ -358,53 +427,59 @@ TEST_DECLARE_UNIT(lock_chk, rw_reader_ring_and_conflict) {
     struct lock_chk_node *node_b = NULL;
 
     TEST_ASSERT_EQ(
-        lock_chk_graph_resolve_node(&graph, &map_a, 0, NULL, &node_a),
+        lock_chk_graph_resolve_node(TEST_CTX(graph), &map_a, 0, &node_a),
         LOCK_CHK_RESULT_OK);
     TEST_ASSERT_EQ(
-        lock_chk_graph_resolve_node(&graph, &map_b, 0, NULL, &node_b),
+        lock_chk_graph_resolve_node(TEST_CTX(graph), &map_b, 0, &node_b),
         LOCK_CHK_RESULT_OK);
 
     TEST_ASSERT_EQ(
-        lock_chk_graph_add_dependency(&graph, node_a, LOCK_CHK_MODE_SHARED,
-                                      node_b, LOCK_CHK_MODE_SHARED, NULL, NULL),
+        lock_chk_graph_add_dep(TEST_CTX(graph),
+                               lock_chk_dep_make(node_a, LOCK_CHK_MODE_SHARED),
+                               lock_chk_dep_make(node_b, LOCK_CHK_MODE_SHARED)),
         LOCK_CHK_RESULT_OK);
     TEST_ASSERT_EQ(
-        lock_chk_graph_add_dependency(&graph, node_b, LOCK_CHK_MODE_SHARED,
-                                      node_a, LOCK_CHK_MODE_SHARED, NULL, NULL),
+        lock_chk_graph_add_dep(TEST_CTX(graph),
+                               lock_chk_dep_make(node_b, LOCK_CHK_MODE_SHARED),
+                               lock_chk_dep_make(node_a, LOCK_CHK_MODE_SHARED)),
         LOCK_CHK_RESULT_OK);
 
-    lock_chk_graph_init(&graph);
+    lock_chk_graph_init(graph);
     TEST_ASSERT_EQ(
-        lock_chk_graph_resolve_node(&graph, &map_a, 0, NULL, &node_a),
+        lock_chk_graph_resolve_node(TEST_CTX(graph), &map_a, 0, &node_a),
         LOCK_CHK_RESULT_OK);
     TEST_ASSERT_EQ(
-        lock_chk_graph_resolve_node(&graph, &map_b, 0, NULL, &node_b),
+        lock_chk_graph_resolve_node(TEST_CTX(graph), &map_b, 0, &node_b),
         LOCK_CHK_RESULT_OK);
 
-    TEST_ASSERT_EQ(lock_chk_graph_add_dependency(
-                       &graph, node_a, LOCK_CHK_MODE_SHARED, node_b,
-                       LOCK_CHK_MODE_EXCLUSIVE, NULL, NULL),
+    TEST_ASSERT_EQ(lock_chk_graph_add_dep(
+                       TEST_CTX(graph),
+                       lock_chk_dep_make(node_a, LOCK_CHK_MODE_SHARED),
+                       lock_chk_dep_make(node_b, LOCK_CHK_MODE_EXCLUSIVE)),
                    LOCK_CHK_RESULT_OK);
-    TEST_ASSERT_EQ(lock_chk_graph_add_dependency(
-                       &graph, node_b, LOCK_CHK_MODE_SHARED, node_a,
-                       LOCK_CHK_MODE_EXCLUSIVE, NULL, NULL),
+    TEST_ASSERT_EQ(lock_chk_graph_add_dep(
+                       TEST_CTX(graph),
+                       lock_chk_dep_make(node_b, LOCK_CHK_MODE_SHARED),
+                       lock_chk_dep_make(node_a, LOCK_CHK_MODE_EXCLUSIVE)),
                    LOCK_CHK_RESULT_CYCLE);
 
-    lock_chk_graph_init(&graph);
+    lock_chk_graph_init(graph);
     TEST_ASSERT_EQ(
-        lock_chk_graph_resolve_node(&graph, &map_a, 0, NULL, &node_a),
+        lock_chk_graph_resolve_node(TEST_CTX(graph), &map_a, 0, &node_a),
         LOCK_CHK_RESULT_OK);
     TEST_ASSERT_EQ(
-        lock_chk_graph_resolve_node(&graph, &map_b, 0, NULL, &node_b),
+        lock_chk_graph_resolve_node(TEST_CTX(graph), &map_b, 0, &node_b),
         LOCK_CHK_RESULT_OK);
 
-    TEST_ASSERT_EQ(lock_chk_graph_add_dependency(
-                       &graph, node_a, LOCK_CHK_MODE_EXCLUSIVE, node_b,
-                       LOCK_CHK_MODE_EXCLUSIVE, NULL, NULL),
+    TEST_ASSERT_EQ(lock_chk_graph_add_dep(
+                       TEST_CTX(graph),
+                       lock_chk_dep_make(node_a, LOCK_CHK_MODE_EXCLUSIVE),
+                       lock_chk_dep_make(node_b, LOCK_CHK_MODE_EXCLUSIVE)),
                    LOCK_CHK_RESULT_OK);
-    TEST_ASSERT_EQ(lock_chk_graph_add_dependency(
-                       &graph, node_b, LOCK_CHK_MODE_EXCLUSIVE, node_a,
-                       LOCK_CHK_MODE_EXCLUSIVE, NULL, NULL),
+    TEST_ASSERT_EQ(lock_chk_graph_add_dep(
+                       TEST_CTX(graph),
+                       lock_chk_dep_make(node_b, LOCK_CHK_MODE_EXCLUSIVE),
+                       lock_chk_dep_make(node_a, LOCK_CHK_MODE_EXCLUSIVE)),
                    LOCK_CHK_RESULT_CYCLE);
 
     return TEST_SUCCESS;

@@ -5,50 +5,53 @@
 
 #ifdef DEBUG_LOCK_CHK
 
-#include "lock_chk_internal.h"
+#include "lock_chk/internal.h"
+
+static inline void mutex_simple_chk_stamp(struct mutex_simple *lock) {
+    lock->chk.instance = lock;
+    lock->chk.type = LOCK_CHK_TYPE_MUTEX_SIMPLE;
+}
 
 struct mutex_simple_chk_acquire_state {
-    struct lock_chk_acquire_request request;
-    struct lock_chk_acquire_token token;
+    struct lock_chk_acq_req request;
+    struct lock_chk_acq_token token;
 };
 
 struct mutex_simple_chk_release_state {
-    struct lock_chk_release_request request;
-    struct lock_chk_release_token token;
+    struct lock_chk_rel_req request;
+    struct lock_chk_rel_token token;
 };
 
 static void
 mutex_simple_chk_before_lock(struct mutex_simple_chk_acquire_state *state,
-                             struct mutex_simple *m, unsigned int subclass,
+                             struct mutex_simple *m, uint8_t subclass,
                              const struct lock_chk_site *site) {
-    lock_chk_note_lock_use(&m->chk, false, false);
-    m->chk.instance = m;
-    m->chk.type = LOCK_CHK_TYPE_MUTEX_SIMPLE;
-    state->request = lock_chk_acquire_request_make(
-        &m->chk, site, LOCK_CHK_MODE_EXCLUSIVE, LOCK_CHK_WAIT_BLOCKING,
-        subclass, false, false);
-    lock_chk_before_acquire(&state->token, &state->request);
+    enum lock_op_flags flags = LOCK_OP_IRQ_NONE | LOCK_OP_KIND_BLOCKING;
+    lock_chk_note_use(&m->chk, flags);
+    mutex_simple_chk_stamp(m);
+    state->request = lock_chk_acq_req_make(
+        &m->chk, site, LOCK_CHK_MODE_EXCLUSIVE, subclass, flags);
+    lock_chk_before_acq(&state->token, &state->request);
 }
 
 static void
 mutex_simple_chk_locked(struct mutex_simple_chk_acquire_state *state) {
-    lock_chk_acquired(&state->token);
+    lock_chk_acqd(&state->token);
 }
 
 static void
 mutex_simple_chk_before_unlock(struct mutex_simple_chk_release_state *state,
                                struct mutex_simple *m,
                                const struct lock_chk_site *site) {
-    m->chk.instance = m;
-    m->chk.type = LOCK_CHK_TYPE_MUTEX_SIMPLE;
+    mutex_simple_chk_stamp(m);
     state->request =
-        lock_chk_release_request_make(&m->chk, site, LOCK_CHK_MODE_EXCLUSIVE);
-    lock_chk_before_release(&state->token, &state->request);
+        lock_chk_rel_req_make(&m->chk, site, LOCK_CHK_MODE_EXCLUSIVE);
+    lock_chk_before_rel(&state->token, &state->request);
 }
 
 static void
 mutex_simple_chk_unlocked(struct mutex_simple_chk_release_state *state) {
-    lock_chk_released(&state->token);
+    lock_chk_reld(&state->token);
 }
 
 static void mutex_simple_chk_state_init(struct mutex_simple *m,
@@ -97,7 +100,7 @@ struct mutex_simple_chk_release_state {
 
 static inline void
 mutex_simple_chk_before_lock(struct mutex_simple_chk_acquire_state *state,
-                             struct mutex_simple *m, unsigned int subclass,
+                             struct mutex_simple *m, uint8_t subclass,
                              const struct lock_chk_site *site) {
     unused(state, m, subclass, site);
 }
@@ -262,8 +265,7 @@ struct thread *mutex_simple_get_owner(struct mutex_simple *m) {
 void mutex_simple_assert_held_internal(struct mutex_simple *m,
                                        const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
-    m->chk.instance = m;
-    m->chk.type = LOCK_CHK_TYPE_MUTEX_SIMPLE;
+    mutex_simple_chk_stamp(m);
     if (m->chk.flags != LOCK_UNCHKD && lock_chk_tracking_active() &&
         lock_chk_assert_held_deep(&m->chk, LOCK_CHK_MODE_IGNORED,
                                   /*want_held=*/true, site))
@@ -278,8 +280,7 @@ void mutex_simple_assert_held_internal(struct mutex_simple *m,
 void mutex_simple_assert_not_held_internal(struct mutex_simple *m,
                                            const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
-    m->chk.instance = m;
-    m->chk.type = LOCK_CHK_TYPE_MUTEX_SIMPLE;
+    mutex_simple_chk_stamp(m);
     if (m->chk.flags != LOCK_UNCHKD && lock_chk_tracking_active() &&
         lock_chk_assert_held_deep(&m->chk, LOCK_CHK_MODE_IGNORED,
                                   /*want_held=*/false, site))

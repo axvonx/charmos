@@ -31,21 +31,26 @@ enum lock_chk_mode : uint8_t {
     LOCK_CHK_MODE_EXCLUSIVE,
 };
 
-enum lock_chk_wait_kind : uint8_t {
-    LOCK_CHK_WAIT_BLOCKING,
-    LOCK_CHK_WAIT_TRY,
-};
-
 enum lock_chk_engine_state : uint8_t {
     LOCK_CHK_INACTIVE,
     LOCK_CHK_ACTIVE,
     LOCK_CHK_DEGRADED,
 };
 
-enum lock_debug_irq_usage : uint8_t {
-    LOCK_DEBUG_IRQ_NONE,
-    LOCK_DEBUG_IRQ_DISPATCH,
-    LOCK_DEBUG_IRQ_HIGH,
+#define LOCK_OP_IRQ_MASK 0x3
+#define LOCK_OP_KIND_MASK 0x18
+
+enum lock_op_flags : uint8_t {
+    LOCK_OP_IRQ_NONE = 0,
+    LOCK_OP_IRQ_DISPATCH = 1,
+    LOCK_OP_IRQ_HIGH = 2,
+    LOCK_OP_RAW = 1 << 2,
+
+    /* These are represented NOT as a single bit
+     * so a missing KIND can trip an assertion
+     * instead of assuming a state */
+    LOCK_OP_KIND_BLOCKING = 1 << 3,
+    LOCK_OP_KIND_TRY = 2 << 3,
 };
 
 struct lock_chk_site {
@@ -107,8 +112,8 @@ struct lock_chk_class {
  */
 #ifdef DEBUG_LOCK_CHK
 
-void lock_debug_spin_classify(_Atomic uint8_t *usage,
-                              enum lock_debug_irq_usage requested,
+void lock_debug_spin_classify(_Atomic enum lock_op_flags *usage,
+                              enum lock_op_flags requested,
                               struct lock_chk_lock *lock,
                               const struct lock_chk_site *site);
 bool lock_debug_spin_push(struct lock_chk_lock *lock, enum irql prev_irql,
@@ -118,39 +123,11 @@ void lock_debug_spin_validate_top(struct lock_chk_lock *lock,
                                   const struct lock_chk_site *site);
 void lock_debug_spin_pop(struct lock_chk_lock *lock);
 
-void lock_chk_note_lock_use(struct lock_chk_lock *lock, bool manages_irql,
-                            bool raw_operation);
+void lock_chk_note_use(struct lock_chk_lock *lock, enum lock_op_flags flags);
 
 void lock_chk_assert_schedulable(const struct lock_chk_site *site);
 
 #else /* !defined(DEBUG_LOCK_CHK) */
-
-static inline void lock_debug_spin_classify(_Atomic uint8_t *usage,
-                                            enum lock_debug_irq_usage requested,
-                                            void *instance,
-                                            enum lock_chk_type type,
-                                            const struct lock_chk_site *site) {
-    unused(usage, requested, instance, type, site);
-}
-
-static inline bool lock_debug_spin_push(void *instance, enum lock_chk_type type,
-                                        enum irql prev_irql,
-                                        const struct lock_chk_site *site) {
-    unused(instance, type, prev_irql, site);
-    return false;
-}
-
-static inline void
-lock_debug_spin_validate_top(void *instance, enum lock_chk_type type,
-                             enum irql prev_irql,
-                             const struct lock_chk_site *site) {
-    unused(instance, type, prev_irql, site);
-}
-
-static inline void lock_debug_spin_pop(void *instance,
-                                       enum lock_chk_type type) {
-    unused(instance, type);
-}
 
 static inline void lock_chk_note_lock_use(struct lock_chk_lock *lock,
                                           bool manages_irql,

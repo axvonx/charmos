@@ -118,7 +118,7 @@ static inline void cpuid_count(uint32_t leaf, uint32_t subleaf, uint32_t *eax,
                  : "a"(leaf), "c"(subleaf));
 }
 
-static inline uint64_t read_cr0() {
+static inline uint64_t read_cr0(void) {
     uint64_t cr0;
     asm volatile("mov %%cr0, %0" : "=r"(cr0));
     return cr0;
@@ -128,7 +128,7 @@ static inline void write_cr0(uint64_t cr0) {
     asm volatile("mov %0, %%cr0" : : "r"(cr0) : "memory");
 }
 
-static inline uint64_t read_cr4() {
+static inline uint64_t read_cr4(void) {
     uint64_t cr4;
     asm volatile("mov %%cr4, %0" : "=r"(cr4));
     return cr4;
@@ -197,13 +197,13 @@ static inline void invlpg(uint64_t virt) {
     asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
 }
 
-static inline uint64_t read_cr2() {
+static inline uint64_t read_cr2(void) {
     uint64_t cr2;
     asm volatile("mov %%cr2, %0" : "=r"(cr2));
     return cr2;
 }
 
-static inline uint64_t read_cr3() {
+static inline uint64_t read_cr3(void) {
     uint64_t cr3;
     asm volatile("mov %%cr3, %0" : "=r"(cr3));
     return cr3;
@@ -213,7 +213,7 @@ static inline void write_cr3(uint64_t cr3) {
     asm volatile("mov %0, %%cr3" ::"r"(cr3));
 }
 
-static inline void tlb_flush() {
+static inline void tlb_flush(void) {
     uint64_t cr3 = read_cr3();
     write_cr3(cr3);
 }
@@ -230,7 +230,7 @@ static inline void hcf(void) {
     asm volatile("cli; hlt");
 }
 
-static inline void do_idle_insn() {
+static inline void do_idle_insn(void) {
     asm volatile("sti\n\thlt" ::: "memory");
 }
 
@@ -238,6 +238,6 @@ static inline int clz(uint8_t a) {
     return __builtin_clz(a);
 }
 
-static inline void memory_barrier() {
+static inline void memory_barrier(void) {
     asm volatile("mfence" ::: "memory");
 }

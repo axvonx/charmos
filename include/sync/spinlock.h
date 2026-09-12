@@ -17,7 +17,7 @@ struct spinlock {
 
 #ifdef DEBUG_LOCK_CHK
     struct lock_chk_lock chk;
-    _Atomic uint8_t irq_usage;
+    _Atomic enum lock_op_flags irq_usage;
 #endif /* DEBUG_LOCK_CHK */
 };
 
@@ -41,7 +41,7 @@ spinlock_init_chk_internal(struct spinlock *lock,
 #ifdef DEBUG_LOCK_CHK
 
 #define __SPINLOCK_SHALLOW_VALUE_INIT                                          \
-    , .irq_usage = ATOMIC_VAR_INIT(LOCK_DEBUG_IRQ_NONE)
+    , .irq_usage = ATOMIC_VAR_INIT(LOCK_OP_IRQ_NONE)
 #define __SPINLOCK_LOCK_CHK_VALUE_INIT(class_, flags_)                         \
     , .chk = LOCK_CHK_LOCK_VALUE_INIT((class_), (flags_))
 #define SPINLOCK_INIT_CHK(class_, flags_)                                      \
@@ -69,7 +69,7 @@ static inline void spinlock_policy_init_internal(struct spinlock *lock,
     atomic_store_explicit(&lock->chk.used, false, memory_order_relaxed);
 }
 static inline void spinlock_shallow_init_internal(struct spinlock *lock) {
-    atomic_store_explicit(&lock->irq_usage, LOCK_DEBUG_IRQ_NONE,
+    atomic_store_explicit(&lock->irq_usage, LOCK_OP_IRQ_NONE,
                           memory_order_relaxed);
 }
 static inline void
@@ -81,8 +81,8 @@ spinlock_map_init_internal(struct spinlock *lock,
 }
 
 static inline void spinlock_note_use(struct spinlock *lock,
-                                     bool raw_operation) {
-    lock_chk_note_lock_use(&lock->chk, true, raw_operation);
+                                     enum lock_op_flags flags) {
+    lock_chk_note_use(&lock->chk, flags);
 }
 
 static inline bool spinlock_order_checked(struct spinlock *lock) {
@@ -90,11 +90,16 @@ static inline bool spinlock_order_checked(struct spinlock *lock) {
            (lock->chk.flags & LOCK_CHKD_ORDER) != 0;
 }
 
-static inline void spinlock_classify(struct spinlock *lock,
-                                     enum lock_debug_irq_usage usage,
-                                     const struct lock_chk_site *site) {
+/* TODO: unify stamping at initialization too */
+static inline void spinlock_stamp(struct spinlock *lock) {
     lock->chk.instance = lock;
     lock->chk.type = LOCK_CHK_TYPE_SPIN;
+}
+
+static inline void spinlock_classify(struct spinlock *lock,
+                                     enum lock_op_flags usage,
+                                     const struct lock_chk_site *site) {
+    spinlock_stamp(lock);
     lock_debug_spin_classify(&lock->irq_usage, usage, &lock->chk, site);
 }
 
@@ -102,24 +107,107 @@ static inline bool spinlock_deep_checked(struct spinlock *lock) {
     return lock_chk_tracking_active() && lock->chk.flags != LOCK_UNCHKD;
 }
 
-static inline struct lock_chk_acquire_request spinlock_chk_acquire_request(
-    struct spinlock *lock, const struct lock_chk_site *site,
-    enum lock_chk_wait_kind wait_kind, uint8_t subclass, bool raw_operation,
-    bool irq_safe) {
-    lock->chk.instance = lock;
-    lock->chk.type = LOCK_CHK_TYPE_SPIN;
-    return lock_chk_acquire_request_make(&lock->chk, site,
-                                         LOCK_CHK_MODE_EXCLUSIVE, wait_kind,
-                                         subclass, raw_operation, irq_safe);
+static inline struct lock_chk_acq_req
+spinlock_chk_acq_req(struct spinlock *lock, const struct lock_chk_site *site,
+                     uint8_t subclass, enum lock_op_flags flags) {
+    spinlock_stamp(lock);
+    return lock_chk_acq_req_make(&lock->chk, site, LOCK_CHK_MODE_EXCLUSIVE,
+                                 subclass, flags);
 }
 
-static inline struct lock_chk_release_request
-spinlock_chk_release_request(struct spinlock *lock,
-                             const struct lock_chk_site *site) {
-    lock->chk.instance = lock;
-    lock->chk.type = LOCK_CHK_TYPE_SPIN;
-    return lock_chk_release_request_make(&lock->chk, site,
-                                         LOCK_CHK_MODE_EXCLUSIVE);
+static inline struct lock_chk_rel_req
+spinlock_chk_rel_req(struct spinlock *lock, const struct lock_chk_site *site) {
+    spinlock_stamp(lock);
+    return lock_chk_rel_req_make(&lock->chk, site, LOCK_CHK_MODE_EXCLUSIVE);
+}
+
+struct spinlock_acq_scope {
+    struct lock_chk_acq_req req;
+    struct lock_chk_acq_token token;
+    bool checked;
+};
+
+struct spinlock_rel_scope {
+    struct lock_chk_rel_req req;
+    struct lock_chk_rel_token token;
+    bool checked;
+};
+
+static inline void spinlock_acq_begin(struct spinlock_acq_scope *scope,
+                                      struct spinlock *lock,
+                                      const struct lock_chk_site *site,
+                                      uint8_t subclass,
+                                      enum lock_op_flags flags) {
+    scope->checked = spinlock_deep_checked(lock);
+    if (!scope->checked)
+        return;
+
+    scope->req = spinlock_chk_acq_req(lock, site, subclass, flags);
+    lock_chk_before_acq(&scope->token, &scope->req);
+}
+
+static inline void spinlock_acq_commit(struct spinlock_acq_scope *scope) {
+    if (scope->checked)
+        lock_chk_acqd(&scope->token);
+}
+
+static inline void spinlock_acq_abort(struct spinlock_acq_scope *scope) {
+    if (scope->checked)
+        lock_chk_cancel(&scope->token);
+}
+
+static inline void spinlock_rel_begin(struct spinlock_rel_scope *scope,
+                                      struct spinlock *lock,
+                                      const struct lock_chk_site *site) {
+    scope->checked = spinlock_deep_checked(lock);
+    if (!scope->checked)
+        return;
+
+    scope->req = spinlock_chk_rel_req(lock, site);
+    lock_chk_before_rel(&scope->token, &scope->req);
+}
+
+static inline void spinlock_rel_commit(struct spinlock_rel_scope *scope) {
+    if (scope->checked)
+        lock_chk_reld(&scope->token);
+}
+
+static inline void spinlock_shallow_push(struct spinlock *lock, enum irql irql,
+                                         const struct lock_chk_site *site) {
+    spinlock_stamp(lock);
+    lock_debug_spin_push(&lock->chk, irql, site);
+}
+
+static inline void
+spinlock_shallow_validate_top(struct spinlock *lock, enum irql old,
+                              const struct lock_chk_site *site) {
+    spinlock_stamp(lock);
+    lock_debug_spin_validate_top(&lock->chk, old, site);
+}
+
+static inline void spinlock_shallow_pop(struct spinlock *lock) {
+    lock_debug_spin_pop(&lock->chk);
+}
+
+static inline bool spinlock_assert_held_deep(struct spinlock *lock,
+                                             bool want_held,
+                                             const struct lock_chk_site *site) {
+    spinlock_stamp(lock);
+    return spinlock_deep_checked(lock) &&
+           lock_chk_assert_held_deep(&lock->chk, LOCK_CHK_MODE_IGNORED,
+                                     want_held, site);
+}
+
+static inline void spinlock_assert_initialized(struct spinlock *lock) {
+    kassert(lock->chk.initialized);
+}
+
+static inline void spinlock_policy_set_internal(struct spinlock *lock,
+                                                enum lock_chk_flags flags) {
+    kassert(lock->chk.initialized);
+    kassert(!atomic_load_explicit(&lock->chk.used, memory_order_relaxed));
+    kassert((flags & ~LOCK_CHKD_FULL) == 0);
+    lock->chk.flags = flags;
 }
 
 #else /* !defined(DEBUG_LOCK_CHK) */
@@ -151,8 +239,8 @@ spinlock_map_init_internal(struct spinlock *lock,
 }
 
 static inline void spinlock_note_use(struct spinlock *lock,
-                                     bool raw_operation) {
-    unused(lock, raw_operation);
+                                     enum lock_op_flags flags) {
+    unused(lock, flags);
 }
 
 static inline bool spinlock_order_checked(struct spinlock *lock) {
@@ -161,7 +249,7 @@ static inline bool spinlock_order_checked(struct spinlock *lock) {
 }
 
 static inline void spinlock_classify(struct spinlock *lock,
-                                     enum lock_debug_irq_usage usage,
+                                     enum lock_op_flags usage,
                                      const struct lock_chk_site *site) {
     unused(lock, usage, site);
 }
@@ -169,6 +257,71 @@ static inline void spinlock_classify(struct spinlock *lock,
 static inline bool spinlock_deep_checked(struct spinlock *lock) {
     unused(lock);
     return false;
+}
+
+struct spinlock_acq_scope {
+    char unused_;
+};
+
+struct spinlock_rel_scope {
+    char unused_;
+};
+
+static inline void spinlock_acq_begin(struct spinlock_acq_scope *scope,
+                                      struct spinlock *lock,
+                                      const struct lock_chk_site *site,
+                                      uint8_t subclass,
+                                      enum lock_op_flags flags) {
+    unused(scope, lock, site, subclass, flags);
+}
+
+static inline void spinlock_acq_commit(struct spinlock_acq_scope *scope) {
+    unused(scope);
+}
+
+static inline void spinlock_acq_abort(struct spinlock_acq_scope *scope) {
+    unused(scope);
+}
+
+static inline void spinlock_rel_begin(struct spinlock_rel_scope *scope,
+                                      struct spinlock *lock,
+                                      const struct lock_chk_site *site) {
+    unused(scope, lock, site);
+}
+
+static inline void spinlock_rel_commit(struct spinlock_rel_scope *scope) {
+    unused(scope);
+}
+
+static inline void spinlock_shallow_push(struct spinlock *lock, enum irql irql,
+                                         const struct lock_chk_site *site) {
+    unused(lock, irql, site);
+}
+
+static inline void
+spinlock_shallow_validate_top(struct spinlock *lock, enum irql old,
+                              const struct lock_chk_site *site) {
+    unused(lock, old, site);
+}
+
+static inline void spinlock_shallow_pop(struct spinlock *lock) {
+    unused(lock);
+}
+
+static inline bool spinlock_assert_held_deep(struct spinlock *lock,
+                                             bool want_held,
+                                             const struct lock_chk_site *site) {
+    unused(lock, want_held, site);
+    return false;
+}
+
+static inline void spinlock_assert_initialized(struct spinlock *lock) {
+    unused(lock);
+}
+
+static inline void spinlock_policy_set_internal(struct spinlock *lock,
+                                                enum lock_chk_flags flags) {
+    unused(lock, flags);
 }
 
 #endif /* DEBUG_LOCK_CHK */
@@ -203,114 +356,63 @@ static inline void spinlock_restore_interrupts(bool enabled) {
 
 static inline bool __warn_unused_result spin_trylock_raw_internal(
     struct spinlock *lock, const struct lock_chk_site *site) {
-    spinlock_note_use(lock, true);
+    enum lock_op_flags flags =
+        LOCK_OP_RAW | LOCK_OP_KIND_TRY | LOCK_OP_IRQ_NONE;
+    spinlock_note_use(lock, flags);
 
-#ifdef DEBUG_LOCK_CHK
-    struct lock_chk_acquire_request req;
-    struct lock_chk_acquire_token token;
-    bool checked_deep = spinlock_deep_checked(lock);
-    if (checked_deep) {
-        req = spinlock_chk_acquire_request(lock, site, LOCK_CHK_WAIT_TRY, 0,
-                                           true, false);
-        lock_chk_before_acquire(&token, &req);
-    }
-#endif
+    struct spinlock_acq_scope chk;
+    spinlock_acq_begin(&chk, lock, site, 0, flags);
 
     if (spin_trylock_physical(lock)) {
-
-#ifdef DEBUG_LOCK_CHK
-        if (checked_deep)
-            lock_chk_acquired(&token);
-#endif
-
+        spinlock_acq_commit(&chk);
         return true;
     }
 
-#ifdef DEBUG_LOCK_CHK
-    if (checked_deep)
-        lock_chk_cancel(&token);
-#endif
-
+    spinlock_acq_abort(&chk);
     return false;
 }
 
 static inline void spin_lock_raw_internal(struct spinlock *lock,
                                           const struct lock_chk_site *site) {
-    spinlock_note_use(lock, true);
+    enum lock_op_flags flags =
+        LOCK_OP_RAW | LOCK_OP_KIND_BLOCKING | LOCK_OP_IRQ_NONE;
+    spinlock_note_use(lock, flags);
 
-#ifdef DEBUG_LOCK_CHK
-    struct lock_chk_acquire_request req;
-    struct lock_chk_acquire_token token;
-    bool checked_deep = spinlock_deep_checked(lock);
-    if (checked_deep) {
-        req = spinlock_chk_acquire_request(lock, site, LOCK_CHK_WAIT_BLOCKING,
-                                           0, true, false);
-        lock_chk_before_acquire(&token, &req);
-    }
-#endif
+    struct spinlock_acq_scope chk;
+    spinlock_acq_begin(&chk, lock, site, 0, flags);
 
     spin_lock_physical(lock);
-
-#ifdef DEBUG_LOCK_CHK
-    if (checked_deep)
-        lock_chk_acquired(&token);
-#endif
+    spinlock_acq_commit(&chk);
 }
 
 static inline void spin_unlock_raw_internal(struct spinlock *lock,
                                             const struct lock_chk_site *site) {
 
-#ifdef DEBUG_LOCK_CHK
-    struct lock_chk_release_request req;
-    struct lock_chk_release_token token;
-    bool checked_deep = spinlock_deep_checked(lock);
-    if (checked_deep) {
-        req = spinlock_chk_release_request(lock, site);
-        lock_chk_before_release(&token, &req);
-    }
-#endif
+    struct spinlock_rel_scope chk;
+    spinlock_rel_begin(&chk, lock, site);
 
     spin_unlock_physical(lock);
-
-#ifdef DEBUG_LOCK_CHK
-    if (checked_deep)
-        lock_chk_released(&token);
-#endif
+    spinlock_rel_commit(&chk);
 }
 
 static inline void spin_unlock_internal(struct spinlock *lock, enum irql old,
                                         const struct lock_chk_site *site) {
 
-#ifdef DEBUG_LOCK_CHK
     bool checked_shallow = spinlock_order_checked(lock);
-    struct lock_chk_release_request req;
-    struct lock_chk_release_token token;
-    bool checked_deep = spinlock_deep_checked(lock);
-#endif
+    struct spinlock_rel_scope chk;
 
     bool irqs_enabled = are_interrupts_enabled();
     disable_interrupts();
 
-#ifdef DEBUG_LOCK_CHK
-    /* TODO: the ad-hoc chk.x = y should be moved to init EVERYWHERE */
-    lock->chk.type = LOCK_CHK_TYPE_SPIN;
-    lock->chk.instance = lock;
     if (checked_shallow)
-        lock_debug_spin_validate_top(&lock->chk, old, site);
-    if (checked_deep) {
-        req = spinlock_chk_release_request(lock, site);
-        lock_chk_before_release(&token, &req);
-    }
-#endif
+        spinlock_shallow_validate_top(lock, old, site);
+    spinlock_rel_begin(&chk, lock, site);
 
     spin_unlock_physical(lock);
 
-#ifdef DEBUG_LOCK_CHK
-    if (checked_deep)
-        lock_chk_released(&token);
+    spinlock_rel_commit(&chk);
     if (checked_shallow)
-        lock_debug_spin_pop(&lock->chk);
-#endif
+        spinlock_shallow_pop(lock);
 
     spinlock_restore_interrupts(irqs_enabled);
 
@@ -324,21 +426,15 @@ static inline enum irql __warn_unused_result spin_lock_subclass_internal(
         (irq_in_interrupt() || irq_in_nmi()))
         panic("Attempted to take non-ISR safe spinlock outside thread context");
 
-    spinlock_note_use(lock, false);
+    enum lock_op_flags flags = LOCK_OP_KIND_BLOCKING | LOCK_OP_IRQ_DISPATCH;
+
+    spinlock_note_use(lock, flags);
     bool checked_shallow = spinlock_order_checked(lock);
     if (checked_shallow)
-        spinlock_classify(lock, LOCK_DEBUG_IRQ_DISPATCH, site);
+        spinlock_classify(lock, flags, site);
 
-#ifdef DEBUG_LOCK_CHK
-    struct lock_chk_acquire_request req;
-    struct lock_chk_acquire_token token;
-    bool checked_deep = spinlock_deep_checked(lock);
-    if (checked_deep) {
-        req = spinlock_chk_acquire_request(lock, site, LOCK_CHK_WAIT_BLOCKING,
-                                           subclass, false, false);
-        lock_chk_before_acquire(&token, &req);
-    }
-#endif
+    struct spinlock_acq_scope chk;
+    spinlock_acq_begin(&chk, lock, site, subclass, flags);
 
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
     spin_lock_physical(lock);
@@ -346,15 +442,9 @@ static inline enum irql __warn_unused_result spin_lock_subclass_internal(
     bool irqs_enabled = are_interrupts_enabled();
     disable_interrupts();
 
-#ifdef DEBUG_LOCK_CHK
-    lock->chk.instance = lock;
-    lock->chk.type = LOCK_CHK_TYPE_SPIN;
     if (checked_shallow)
-        lock_debug_spin_push(&lock->chk, irql, site);
-
-    if (checked_deep)
-        lock_chk_acquired(&token);
-#endif
+        spinlock_shallow_push(lock, irql, site);
+    spinlock_acq_commit(&chk);
 
     spinlock_restore_interrupts(irqs_enabled);
 
@@ -371,34 +461,22 @@ static inline enum irql __warn_unused_result spin_lock_irq_disable_internal(
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())
         panic("Attempted to take non-raw spinlock from an NMI");
 
-    spinlock_note_use(lock, false);
+    enum lock_op_flags flags = LOCK_OP_KIND_BLOCKING | LOCK_OP_IRQ_HIGH;
+
+    spinlock_note_use(lock, flags);
     bool checked_shallow = spinlock_order_checked(lock);
     if (checked_shallow)
-        spinlock_classify(lock, LOCK_DEBUG_IRQ_HIGH, site);
+        spinlock_classify(lock, flags, site);
 
-#ifdef DEBUG_LOCK_CHK
-    struct lock_chk_acquire_request req;
-    struct lock_chk_acquire_token token;
-    bool checked_deep = spinlock_deep_checked(lock);
-    if (checked_deep) {
-        req = spinlock_chk_acquire_request(lock, site, LOCK_CHK_WAIT_BLOCKING,
-                                           0, false, true);
-        lock_chk_before_acquire(&token, &req);
-    }
-#endif
+    struct spinlock_acq_scope chk;
+    spinlock_acq_begin(&chk, lock, site, 0, flags);
 
     enum irql irql = irql_raise(IRQL_HIGH_LEVEL);
     spin_lock_physical(lock);
 
-#ifdef DEBUG_LOCK_CHK
-    lock->chk.instance = lock;
-    lock->chk.type = LOCK_CHK_TYPE_SPIN;
     if (checked_shallow)
-        lock_debug_spin_push(&lock->chk, irql, site);
-
-    if (checked_deep)
-        lock_chk_acquired(&token);
-#endif
+        spinlock_shallow_push(lock, irql, site);
+    spinlock_acq_commit(&chk);
 
     return irql;
 }
@@ -409,45 +487,31 @@ static inline bool __warn_unused_result spin_trylock_internal(
         (irq_in_interrupt() || irq_in_nmi()))
         panic("Attempted to take non-ISR safe spinlock outside thread context");
 
-    spinlock_note_use(lock, false);
+    enum lock_op_flags flags = LOCK_OP_KIND_TRY | LOCK_OP_IRQ_DISPATCH;
+
+    spinlock_note_use(lock, flags);
+
     bool checked_shallow = spinlock_order_checked(lock);
     if (checked_shallow)
-        spinlock_classify(lock, LOCK_DEBUG_IRQ_DISPATCH, site);
+        spinlock_classify(lock, flags, site);
 
-#ifdef DEBUG_LOCK_CHK
-    struct lock_chk_acquire_request req;
-    struct lock_chk_acquire_token token;
-    bool checked_deep = spinlock_deep_checked(lock);
-    if (checked_deep) {
-        req = spinlock_chk_acquire_request(lock, site, LOCK_CHK_WAIT_TRY, 0,
-                                           false, false);
-        lock_chk_before_acquire(&token, &req);
-    }
-#endif
+    struct spinlock_acq_scope chk;
+    spinlock_acq_begin(&chk, lock, site, 0, flags);
 
     *out = irql_raise(IRQL_DISPATCH_LEVEL);
     if (spin_trylock_physical(lock)) {
         bool irqs_enabled = are_interrupts_enabled();
         disable_interrupts();
 
-#ifdef DEBUG_LOCK_CHK
-        lock->chk.instance = lock;
-        lock->chk.type = LOCK_CHK_TYPE_SPIN;
         if (checked_shallow)
-            lock_debug_spin_push(&lock->chk, *out, site);
-        if (checked_deep)
-            lock_chk_acquired(&token);
-#endif
+            spinlock_shallow_push(lock, *out, site);
+        spinlock_acq_commit(&chk);
 
         spinlock_restore_interrupts(irqs_enabled);
         return true;
     }
 
-#ifdef DEBUG_LOCK_CHK
-    if (checked_deep)
-        lock_chk_cancel(&token);
-#endif
-
+    spinlock_acq_abort(&chk);
     irql_lower(*out);
     return false;
 }
@@ -457,41 +521,26 @@ static inline bool __warn_unused_result spin_trylock_irq_disable_internal(
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())
         panic("Attempted to take non-raw spinlock from an NMI");
 
-    spinlock_note_use(lock, false);
+    enum lock_op_flags flags = LOCK_OP_KIND_TRY | LOCK_OP_IRQ_HIGH;
+
+    spinlock_note_use(lock, flags);
     bool checked_shallow = spinlock_order_checked(lock);
     if (checked_shallow)
-        spinlock_classify(lock, LOCK_DEBUG_IRQ_HIGH, site);
+        spinlock_classify(lock, flags, site);
 
-#ifdef DEBUG_LOCK_CHK
-    struct lock_chk_acquire_request req;
-    struct lock_chk_acquire_token token;
-    bool checked_deep = spinlock_deep_checked(lock);
-    if (checked_deep) {
-        req = spinlock_chk_acquire_request(lock, site, LOCK_CHK_WAIT_TRY, 0,
-                                           false, true);
-        lock_chk_before_acquire(&token, &req);
-    }
-#endif
+    struct spinlock_acq_scope chk;
+    spinlock_acq_begin(&chk, lock, site, 0, flags);
 
     *out = irql_raise(IRQL_HIGH_LEVEL);
     if (spin_trylock_physical(lock)) {
-
-#ifdef DEBUG_LOCK_CHK
-        lock->chk.instance = lock;
-        lock->chk.type = LOCK_CHK_TYPE_SPIN;
         if (checked_shallow)
-            lock_debug_spin_push(&lock->chk, *out, site);
-        if (checked_deep)
-            lock_chk_acquired(&token);
-#endif
+            spinlock_shallow_push(lock, *out, site);
+        spinlock_acq_commit(&chk);
 
         return true;
     }
 
-#ifdef DEBUG_LOCK_CHK
-    if (checked_deep)
-        lock_chk_cancel(&token);
-#endif
+    spinlock_acq_abort(&chk);
     irql_lower(*out);
     return false;
 }
@@ -524,57 +573,33 @@ static inline bool spinlock_locked(struct spinlock *lock) {
 
 static inline void spinlock_set_chk_flags(struct spinlock *lock,
                                           enum lock_chk_flags flags) {
-
-#ifdef DEBUG_LOCK_CHK
-    kassert(lock->chk.initialized);
     kassert(!spinlock_locked(lock));
-    kassert(!atomic_load_explicit(&lock->chk.used, memory_order_relaxed));
-    kassert((flags & ~LOCK_CHKD_FULL) == 0);
-    lock->chk.flags = flags;
-#endif
+    spinlock_policy_set_internal(lock, flags);
 }
 
 static inline void spinlock_reinit_chk(struct spinlock *lock,
                                        const struct lock_chk_class *class,
                                        enum lock_chk_flags flags) {
-
-#ifdef DEBUG_LOCK_CHK
-    kassert(lock->chk.initialized);
     kassert(!spinlock_locked(lock));
-#endif
-
+    spinlock_assert_initialized(lock);
     spinlock_init_chk_internal(lock, class, flags);
 }
 
 static inline void
 spinlock_assert_held_internal(struct spinlock *lock,
                               const struct lock_chk_site *site) {
-#ifdef DEBUG_LOCK_CHK
-    lock->chk.instance = lock;
-    lock->chk.type = LOCK_CHK_TYPE_SPIN;
-    if (spinlock_deep_checked(lock) &&
-        lock_chk_assert_held_deep(&lock->chk, LOCK_CHK_MODE_IGNORED,
-                                  /*want_held=*/true, site))
+    if (spinlock_assert_held_deep(lock, /*want_held=*/true, site))
         return;
-#else
-    unused(site);
-#endif
+
     SPINLOCK_ASSERT_LOCKED(lock);
 }
 
 static inline void
 spinlock_assert_not_held_internal(struct spinlock *lock,
                                   const struct lock_chk_site *site) {
-#ifdef DEBUG_LOCK_CHK
-    lock->chk.instance = lock;
-    lock->chk.type = LOCK_CHK_TYPE_SPIN;
-    if (spinlock_deep_checked(lock) &&
-        lock_chk_assert_held_deep(&lock->chk, LOCK_CHK_MODE_IGNORED,
-                                  /*want_held=*/false, site))
+    if (spinlock_assert_held_deep(lock, /*want_held=*/false, site))
         return;
-#else
-    unused(site);
-#endif
+
     kassert(!spinlock_locked(lock), "spinlock unexpectedly locked");
 }
 

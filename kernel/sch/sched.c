@@ -12,7 +12,7 @@
 
 #ifdef DEBUG_LOCK_CHK
 
-#include "sync/lock_chk_internal.h"
+#include "sync/lock_chk/internal.h"
 
 static void scheduler_lock_chk_assert(void) {
     lock_chk_assert_schedulable(LOCK_CHK_SITE_HERE());
@@ -373,8 +373,7 @@ void schedule(void) {
      *
      * Threads still in a read-side critical section
      * are registered here */
-    rcu_note_context_switch(curr, /* next_is_idle = */ next->state ==
-                                      THREAD_STATE_IDLE_THREAD);
+    rcu_note_context_switch(curr, next);
 
     load_thread(sched, next, time);
 

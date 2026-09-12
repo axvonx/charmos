@@ -1,9 +1,9 @@
+#include "sync/lock_chk/internal.h"
 #include "sync/tests/test_internal.h"
 
 #ifdef DEBUG_LOCK_CHK
 
 #include <sync/lock_chk_assert.h>
-#include <sync/lock_chk_internal.h>
 #include <sync/mutex.h>
 #include <sync/mutex_simple.h>
 #include <sync/qspinlock.h>

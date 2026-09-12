@@ -6,10 +6,9 @@
 
 #ifdef DEBUG_LOCK_CHK
 
-#include "lock_chk_internal.h"
+#include "internal.h"
 
-static _Atomic enum lock_chk_engine_state lock_chk_state = LOCK_CHK_INACTIVE;
-static bool lock_chk_panic_on_exhaustion = true;
+struct lock_chk_globals lock_chk_global = {0};
 
 static CMDLINE_DECLARE(lock_chk, .flags = CMDLINE_ENTRY_SYMBOLIC,
                        .desc = "Lock validator command line namespace");
@@ -17,38 +16,35 @@ static CMDLINE_DECLARE(lock_chk, .flags = CMDLINE_ENTRY_SYMBOLIC,
 CMDLINE_CHILDREN_DECLARE(
     lock_chk,
     CMDLINE_INNER_VAR(
-        panic_on_exhaustion, lock_chk_panic_on_exhaustion,
+        panic_on_exhaustion, lock_chk_global.panic_on_exhaustion,
         .default_val = "true",
         .desc = "Panic when lock validator capacity is exhausted"),
     CMDLINE_INNER_VAR(
-        capacity_panic, lock_chk_panic_on_exhaustion, .default_val = "true",
+        capacity_panic, lock_chk_global.panic_on_exhaustion,
+        .default_val = "true",
         .desc = "Panic when lock validator capacity is exhausted (alias)"));
 
 void lock_chk_init(void) {
     kassert(bootstage_get() >= BOOTSTAGE_LATE);
     lock_chk_deep_activate();
     lock_debug_activate();
-    atomic_store_explicit(&lock_chk_state, LOCK_CHK_ACTIVE,
+    atomic_store_explicit(&lock_chk_global.state, LOCK_CHK_ACTIVE,
                           memory_order_release);
 }
 
 bool lock_chk_tracking_active(void) {
-    return atomic_load_explicit(&lock_chk_state, memory_order_acquire) ==
-           LOCK_CHK_ACTIVE;
+    return lock_chk_state_active(&lock_chk_global.state);
 }
 
-bool lock_chk_capacity_should_panic(void) {
-    return lock_chk_panic_on_exhaustion;
-}
-
-void lock_chk_note_lock_use(struct lock_chk_lock *lock, bool manages_irql,
-                            bool raw_operation) {
+void lock_chk_note_use(struct lock_chk_lock *lock, enum lock_op_flags flags) {
     if (!lock_chk_tracking_active())
         return;
 
+    bool manages_irql = (flags & LOCK_OP_IRQ_MASK) != 0;
+    bool raw = flags & LOCK_OP_RAW;
     kassert(lock->initialized);
     kassert((lock->flags & ~LOCK_CHKD_FULL) == 0);
-    if (manages_irql && !raw_operation)
+    if (manages_irql && !raw)
         kassert((lock->flags & LOCK_CHKD_THREAD) == 0 ||
                 (lock->flags & LOCK_CHKD_ORDER) != 0);
 

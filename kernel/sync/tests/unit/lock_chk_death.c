@@ -12,7 +12,7 @@
 #include <time/spin_sleep.h>
 
 #ifdef DEBUG_LOCK_CHK
-#include "sync/lock_chk_internal.h"
+#include "sync/lock_chk/internal.h"
 #endif /* DEBUG_LOCK_CHK */
 
 TEST_GROUP_DECLARE(lock_chk);
@@ -136,18 +136,18 @@ TEST_DECLARE_UNIT(lock_chk, death_checked_in_nmi,
 #ifdef DEBUG_LOCK_CHK
     struct lock_chk_map map =
         LOCK_CHK_MAP_VALUE_INIT(LOCK_CHK_CLASS(death_nmi_class));
-    struct lock_chk_acquire_token tok;
-    struct lock_chk_acquire_request req = {
+    struct lock_chk_acq_token tok;
+    struct lock_chk_acq_req req = {
         .map = &map,
-        .instance = &map,
-        .flags = LOCK_CHKD_FULL,
-        .type = LOCK_CHK_TYPE_SPIN,
+        .lock = {.instance = &map,
+                 .flags = LOCK_CHKD_FULL,
+                 .type = LOCK_CHK_TYPE_SPIN},
         .mode = LOCK_CHK_MODE_EXCLUSIVE,
-        .wait_kind = LOCK_CHK_WAIT_BLOCKING,
+        .op_flags = LOCK_OP_KIND_BLOCKING,
         .in_nmi = true,
         .site = LOCK_CHK_SITE_HERE(),
     };
-    lock_chk_before_acquire(&tok, &req);
+    lock_chk_before_acq(&tok, &req);
 #endif
     return TEST_SUCCESS;
 }

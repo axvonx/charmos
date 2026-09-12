@@ -36,7 +36,7 @@ void rcu_defer(struct rcu_cb *cb, rcu_fn fn, void *arg);
 
 /* TODO: next_is_idle is a little funny... perhaps it's better to explicitly
  * state *prev, *next here and just check the idle state inside */
-void rcu_note_context_switch(struct thread *outgoing, bool next_is_idle);
+void rcu_note_context_switch(struct thread *outgoing, struct thread *incoming);
 void rcu_note_irq_exit(void);
 
 #define rcu_dereference(p) atomic_load_explicit(&(p), memory_order_acquire)
