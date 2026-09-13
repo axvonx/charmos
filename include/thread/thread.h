@@ -151,6 +151,25 @@ struct thread_activity_metrics {
     uint8_t wake_freq;
 };
 
+#ifdef TEST_ENABLED
+
+#define THREAD_WAIT_TRACE_DEPTH 16
+
+struct thread_wait_arm {
+    const char *site;        /* which arming path */
+    void *ra;                /* caller of the arm */
+    void *expected_wake_src; /* what this arm wants to be woken by */
+    uint64_t first_token;    /* wait_token when this descriptor was installed */
+    uint64_t last_token;     /* wait_token of the most recent identical arm */
+    uint64_t repeats;        /* consecutive arms carrying this descriptor */
+    time_ms_t last_ms;
+    uint8_t state;     /* enum thread_state armed into */
+    uint8_t wait_type; /* enum thread_wait_type armed with */
+    uint8_t reason;    /* block/sleep reason byte */
+};
+
+#endif
+
 struct thread {
     /* ========== Metadata ========== */
     /* Unique ID allocated from global thread ID tree */
@@ -319,6 +338,19 @@ struct thread {
 
     uint64_t token_ctr;
 
+#ifdef TEST_ENABLED
+
+    struct thread_wait_arm wait_trace[THREAD_WAIT_TRACE_DEPTH];
+    uint64_t wait_arm_count;
+    uint64_t wait_arm_total;
+
+    uint64_t wake_rejects_not_waiting;
+    uint64_t wake_rejects_mismatch;
+    void *last_reject_src;
+    void *last_reject_expected;
+
+#endif
+
     struct condvar_with_cb cv_cb_object; /* wait object */
     struct list_head io_wait_tokens;     /* list of tokens */
 
@@ -433,6 +465,11 @@ void thread_prepare_to_wait_locked(struct thread *t, enum thread_state state,
                                    uint8_t reason, enum thread_wait_type type,
                                    void *expect_wake_src);
 bool thread_rearm_wait(struct thread *t);
+
+#ifdef TEST_ENABLED
+void thread_dump_wait_trace(struct thread *t, const char *role, size_t idx);
+#endif
+
 enum thread_wait_status thread_wait_yield(void);
 void thread_yield_until_wake_match(void);
 enum thread_wait_status thread_yield_interruptible(void);
