@@ -803,6 +803,11 @@ void thread_dump_wait_trace(struct thread *t, const char *role, size_t idx) {
                 role, idx, t->last_reject_src, t->last_reject_expected);
     }
 
+    log_msg(LOG_ERROR,
+            "  %s[%zu]   apc: entries=%llu max_burst=%llu deliver_ra=%p", role,
+            idx, (unsigned long long) t->apc_deliver_entries,
+            (unsigned long long) t->apc_deliver_max, t->apc_last_deliver_ra);
+
     uint64_t shown =
         count < THREAD_WAIT_TRACE_DEPTH ? count : THREAD_WAIT_TRACE_DEPTH;
 

@@ -349,6 +349,10 @@ struct thread {
     void *last_reject_src;
     void *last_reject_expected;
 
+    uint64_t apc_deliver_entries; /* calls to deliver_apc_type() */
+    uint64_t apc_deliver_max;     /* most APCs drained by a single call */
+    void *apc_last_deliver_ra;    /* who called apc_check_and_deliver() */
+
 #endif
 
     struct condvar_with_cb cv_cb_object; /* wait object */
