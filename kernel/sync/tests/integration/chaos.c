@@ -162,6 +162,10 @@ static void chaos_waker(void *arg) {
     }
 }
 
+/* Ring depth per thread in a stall report */
+#define CHAOS_ARMS_FOCUS 16
+#define CHAOS_ARMS_LIVE 4
+
 #define CHAOS_JOIN_POLL_MS 5000
 #define CHAOS_QUIET_POLLS 3
 #define CHAOS_MAX_REPORTS 2
@@ -173,8 +177,9 @@ static bool chaos_progress_moved(_Atomic uint64_t *counter, uint64_t *last) {
     return moved;
 }
 
+/* `max_arms` caps the wait-arm ring dump and 0 skips the trace */
 static void chaos_dump_thread(const char *role, size_t idx, struct thread *t,
-                              bool deep) {
+                              uint64_t max_arms) {
     if (!t) {
         log_msg(LOG_ERROR, "  %s[%zu]: <null>", role, idx);
         return;
@@ -185,12 +190,14 @@ static void chaos_dump_thread(const char *role, size_t idx, struct thread *t,
             (unsigned) thread_get_flags(t), (int) thread_get_wait_type(t));
 
     log_msg(LOG_ERROR,
-            "  %s[%zu]   wake_src=%p expected=%p mask=0x%x apcs_ran=%u", role,
-            idx, (void *) atomic_load(&t->wake_src), t->expected_wake_src,
-            (unsigned) atomic_load(&t->apc_pending_mask), t->total_apcs_ran);
+            "  %s[%zu]   wake_src=%p expected=%p mask=0x%x apcs_ran=%u "
+            "ctxsw=%zu",
+            role, idx, (void *) atomic_load(&t->wake_src), t->expected_wake_src,
+            (unsigned) atomic_load(&t->apc_pending_mask), t->total_apcs_ran,
+            t->context_switches);
 
-    if (deep)
-        thread_dump_wait_trace(t, role, idx);
+    if (max_arms)
+        thread_dump_wait_trace(t, role, idx, max_arms);
 }
 
 static void chaos_report_stall(const char *waiting_on, size_t waiting_idx,
@@ -214,12 +221,18 @@ static void chaos_report_stall(const char *waiting_on, size_t waiting_idx,
         log_msg(LOG_ERROR, "  sleeper[%zu] alive=%d iters=%llu", i,
                 (int) atomic_load(&states[i].alive),
                 (unsigned long long) atomic_load(&chaos_iters[i]));
-        chaos_dump_thread("sleeper", i, threads[i],
-                          /* deep = */ stuck_sleeper && i == waiting_idx);
+        uint64_t arms = 0;
+        if (stuck_sleeper && i == waiting_idx)
+            arms = CHAOS_ARMS_FOCUS;
+        else if (atomic_load(&states[i].alive))
+            arms = CHAOS_ARMS_LIVE;
+
+        chaos_dump_thread("sleeper", i, threads[i], arms);
     }
 
-    chaos_dump_thread("spammer", 0, spammer, /* deep = */ !stuck_sleeper);
-    chaos_dump_thread("waker", 0, waker, /* deep = */ !stuck_sleeper);
+    uint64_t helper_arms = stuck_sleeper ? CHAOS_ARMS_LIVE : CHAOS_ARMS_FOCUS;
+    chaos_dump_thread("spammer", 0, spammer, helper_arms);
+    chaos_dump_thread("waker", 0, waker, helper_arms);
 }
 
 static void chaos_join_watched(struct thread *t, const char *role, size_t idx,

@@ -471,7 +471,8 @@ void thread_prepare_to_wait_locked(struct thread *t, enum thread_state state,
 bool thread_rearm_wait(struct thread *t);
 
 #ifdef TEST_ENABLED
-void thread_dump_wait_trace(struct thread *t, const char *role, size_t idx);
+void thread_dump_wait_trace(struct thread *t, const char *role, size_t idx,
+                            uint64_t max_arms);
 #endif
 
 enum thread_wait_status thread_wait_yield(void);
