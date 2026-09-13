@@ -74,6 +74,8 @@ enum thread_flags : uint32_t {
     THREAD_FLAG_RT_FAULT_TOLERANCE = 1 << 6,
     THREAD_FLAG_JOINABLE = 1 << 7,
     THREAD_FLAG_JOINED = 1 << 8,
+
+    THREAD_FLAG_DIAG = 1 << 9,
 };
 
 enum thread_prio_class : uint8_t {

@@ -67,15 +67,7 @@ bool thread_wake(struct thread *t, enum thread_wake_reason reason,
          t->expected_wake_src != THREAD_WAIT_ANY_SRC &&
          t->expected_wake_src != wake_src) ||
         wt == THREAD_WAIT_NONE) {
-#ifdef TEST_ENABLED
-        if (wt == THREAD_WAIT_NONE) {
-            t->wake_rejects_not_waiting++;
-        } else {
-            t->wake_rejects_mismatch++;
-            t->last_reject_src = wake_src;
-            t->last_reject_expected = t->expected_wake_src;
-        }
-#endif
+        thread_diag_record_wake_reject(t, wake_src, wt);
         goto out;
     }
 

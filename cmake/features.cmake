@@ -28,6 +28,7 @@ set(DEBUG_FLAGS
     DEBUG_USB_XHCI
     DEBUG_SLAB
     DEBUG_SLAB_DEEP
+    DEBUG_LIST
     DEBUG_CMDLINE
     DEBUG_ASSERT # Debug assertions
 )

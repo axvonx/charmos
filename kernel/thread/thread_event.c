@@ -461,48 +461,6 @@ void thread_add_sleep_reason(struct thread *t, uint8_t reason) {
                             time_get_ms(), t->activity_stats);
 }
 
-static inline void thread_record_wait_arm(struct thread *t, const char *site,
-                                          void *ra, void *expect_wake_src,
-                                          enum thread_state state,
-                                          enum thread_wait_type type,
-                                          uint8_t reason) {
-#ifdef TEST_ENABLED
-    t->wait_arm_total++;
-
-    struct thread_wait_arm *newest =
-        t->wait_arm_count
-            ? &t->wait_trace[(t->wait_arm_count - 1) % THREAD_WAIT_TRACE_DEPTH]
-            : NULL;
-
-    if (newest && newest->expected_wake_src == expect_wake_src &&
-        newest->wait_type == (uint8_t) type &&
-        newest->state == (uint8_t) state && newest->reason == reason) {
-        newest->last_token = t->wait_token;
-        newest->last_ms = time_get_ms();
-        newest->repeats++;
-        return;
-    }
-
-    struct thread_wait_arm *e =
-        &t->wait_trace[t->wait_arm_count % THREAD_WAIT_TRACE_DEPTH];
-
-    e->site = site;
-    e->ra = ra;
-    e->expected_wake_src = expect_wake_src;
-    e->first_token = t->wait_token;
-    e->last_token = t->wait_token;
-    e->repeats = 1;
-    e->last_ms = time_get_ms();
-    e->state = (uint8_t) state;
-    e->wait_type = (uint8_t) type;
-    e->reason = reason;
-
-    t->wait_arm_count++;
-#else
-    unused(t, site, ra, expect_wake_src, state, type, reason);
-#endif
-}
-
 static bool set_state_and_update_reason(
     struct thread *t, uint8_t reason, enum thread_state state,
     void (*callback)(struct thread *, uint8_t), void *wake_src,
@@ -545,7 +503,7 @@ static bool set_state_and_update_reason(
         t->wake_token = 0;
         atomic_store_explicit(&t->wake_src, NULL, memory_order_release);
         t->expected_wake_src = wake_src;
-        thread_record_wait_arm(t, arm_site, arm_ra, wake_src, state, type,
+        thread_diag_record_arm(t, arm_site, arm_ra, wake_src, state, type,
                                reason);
     }
 
@@ -772,65 +730,3 @@ enum thread_wait_status thread_yield_arbitrary(enum thread_wait_type type) {
     thread_yield_until_wake_match();
     return THREAD_WAIT_MATCHED;
 }
-
-#ifdef TEST_ENABLED
-
-static const char *thread_wait_type_str(uint8_t type) {
-    switch (type) {
-    case THREAD_WAIT_NONE: return "NONE";
-    case THREAD_WAIT_UNINTERRUPTIBLE: return "UNINT";
-    case THREAD_WAIT_INTERRUPTIBLE: return "INTR";
-    default: return "?";
-    }
-}
-
-void thread_dump_wait_trace(struct thread *t, const char *role, size_t idx,
-                            uint64_t max_arms) {
-    if (!t)
-        return;
-
-    uint64_t count = t->wait_arm_count;
-
-    log_msg(LOG_ERROR,
-            "  %s[%zu]   arms=%llu (%llu distinct) rejects: mismatch=%llu "
-            "not_waiting=%llu",
-            role, idx, (unsigned long long) t->wait_arm_total,
-            (unsigned long long) count,
-            (unsigned long long) t->wake_rejects_mismatch,
-            (unsigned long long) t->wake_rejects_not_waiting);
-
-    if (t->wake_rejects_mismatch) {
-        log_msg(LOG_ERROR, "  %s[%zu]   last mismatch: src=%p vs expected=%p",
-                role, idx, t->last_reject_src, t->last_reject_expected);
-    }
-
-    log_msg(LOG_ERROR,
-            "  %s[%zu]   apc: entries=%llu max_burst=%llu deliver_ra=%p", role,
-            idx, (unsigned long long) t->apc_deliver_entries,
-            (unsigned long long) t->apc_deliver_max, t->apc_last_deliver_ra);
-
-    uint64_t depth =
-        max_arms < THREAD_WAIT_TRACE_DEPTH ? max_arms : THREAD_WAIT_TRACE_DEPTH;
-    uint64_t shown = count < depth ? count : depth;
-
-    for (uint64_t i = 0; i < shown; i++) {
-        uint64_t seq = count - 1 - i;
-        struct thread_wait_arm *e =
-            &t->wait_trace[seq % THREAD_WAIT_TRACE_DEPTH];
-
-        log_msg(LOG_ERROR, "  %s[%zu]   arm#%llu %s ra=%p x%llu", role, idx,
-                (unsigned long long) seq, e->site ? e->site : "?", e->ra,
-                (unsigned long long) e->repeats);
-
-        log_msg(LOG_ERROR,
-                "  %s[%zu]     -> state=%d %s exp=%p reason=%u "
-                "tok=%llu..%llu last=%llums",
-                role, idx, (int) e->state, thread_wait_type_str(e->wait_type),
-                e->expected_wake_src, (unsigned) e->reason,
-                (unsigned long long) e->first_token,
-                (unsigned long long) e->last_token,
-                (unsigned long long) e->last_ms);
-    }
-}
-
-#endif

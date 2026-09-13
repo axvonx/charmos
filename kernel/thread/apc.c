@@ -3,6 +3,7 @@
 #include <smp/core.h>
 #include <thread/apc.h>
 #include <thread/thread.h>
+#include <thread/thread_diag.h>
 
 #include "sch/internal.h"
 #include <mem/alloc.h>
@@ -120,18 +121,16 @@ static void apc_execute(struct apc *a) {
     curr->total_apcs_ran++;
 }
 
+/* TODO: Work on this budget thing */
+#define APC_DELIVER_BUDGET 32
+
 static void deliver_apc_type(struct thread *t, enum apc_type type) {
-#ifdef TEST_ENABLED
+    uint32_t budget = APC_DELIVER_BUDGET;
     uint64_t drained = 0;
 
-    t->apc_deliver_entries++;
-#endif
+    while (budget--) {
+        thread_diag_apc_deliver_batch(t, drained);
 
-    while (true) {
-#ifdef TEST_ENABLED
-        if (drained > t->apc_deliver_max)
-            t->apc_deliver_max = drained;
-#endif
         bool ok;
         enum irql irql = thread_acquire(t, &ok);
         if (!ok)
@@ -157,9 +156,7 @@ static void deliver_apc_type(struct thread *t, enum apc_type type) {
         atomic_store_explicit(&apc->state, APC_STATE_IDLE,
                               memory_order_release);
         apc_put(apc);
-#ifdef TEST_ENABLED
         drained++;
-#endif
     }
 }
 
@@ -566,10 +563,8 @@ void apc_check_and_deliver(struct thread *t) {
     if (thread_get_flags(t) & (THREAD_FLAG_EXECUTING_APC | THREAD_FLAG_DYING))
         return;
 
-#ifdef TEST_ENABLED
     /* Which IRQL-lowering site keeps handing this thread back to delivery */
-    t->apc_last_deliver_ra = __builtin_return_address(0);
-#endif
+    thread_diag_apc_deliver_enter(t, __builtin_return_address(0));
 
     enum irql irql = irql_raise(IRQL_APC_LEVEL);
 

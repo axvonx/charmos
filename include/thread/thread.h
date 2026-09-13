@@ -21,6 +21,7 @@
 #include <sync/rcu.h>
 #include <sync/spinlock.h>
 #include <thread/apc_types.h>
+#include <thread/thread_diag.h>
 #include <thread/thread_types.h>
 #include <time/time.h>
 #include <types/refcount.h>
@@ -150,25 +151,6 @@ struct thread_activity_metrics {
     uint8_t sleep_ratio;
     uint8_t wake_freq;
 };
-
-#ifdef TEST_ENABLED
-
-#define THREAD_WAIT_TRACE_DEPTH 16
-
-struct thread_wait_arm {
-    const char *site;        /* which arming path */
-    void *ra;                /* caller of the arm */
-    void *expected_wake_src; /* what this arm wants to be woken by */
-    uint64_t first_token;    /* wait_token when this descriptor was installed */
-    uint64_t last_token;     /* wait_token of the most recent identical arm */
-    uint64_t repeats;        /* consecutive arms carrying this descriptor */
-    time_ms_t last_ms;
-    uint8_t state;     /* enum thread_state armed into */
-    uint8_t wait_type; /* enum thread_wait_type armed with */
-    uint8_t reason;    /* block/sleep reason byte */
-};
-
-#endif
 
 struct thread {
     /* ========== Metadata ========== */
@@ -338,23 +320,6 @@ struct thread {
 
     uint64_t token_ctr;
 
-#ifdef TEST_ENABLED
-
-    struct thread_wait_arm wait_trace[THREAD_WAIT_TRACE_DEPTH];
-    uint64_t wait_arm_count;
-    uint64_t wait_arm_total;
-
-    uint64_t wake_rejects_not_waiting;
-    uint64_t wake_rejects_mismatch;
-    void *last_reject_src;
-    void *last_reject_expected;
-
-    uint64_t apc_deliver_entries; /* calls to deliver_apc_type() */
-    uint64_t apc_deliver_max;     /* most APCs drained by a single call */
-    void *apc_last_deliver_ra;    /* who called apc_check_and_deliver() */
-
-#endif
-
     struct condvar_with_cb cv_cb_object; /* wait object */
     struct list_head io_wait_tokens;     /* list of tokens */
 
@@ -469,11 +434,6 @@ void thread_prepare_to_wait_locked(struct thread *t, enum thread_state state,
                                    uint8_t reason, enum thread_wait_type type,
                                    void *expect_wake_src);
 bool thread_rearm_wait(struct thread *t);
-
-#ifdef TEST_ENABLED
-void thread_dump_wait_trace(struct thread *t, const char *role, size_t idx,
-                            uint64_t max_arms);
-#endif
 
 enum thread_wait_status thread_wait_yield(void);
 void thread_yield_until_wake_match(void);

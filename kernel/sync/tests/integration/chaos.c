@@ -1,4 +1,5 @@
 #include "sync/tests/test_internal.h"
+#include <mem/alloc_or_die.h>
 
 struct chaos_state {
     struct thread *t;
@@ -33,11 +34,35 @@ static _Atomic uint64_t chaos_iters[CHAOS_THREADS_MAX];
 static _Atomic uint64_t chaos_spammer_iters;
 static _Atomic uint64_t chaos_waker_iters;
 
-/* Contend on a global lock from inside the APC,
- * as the interleaving is what we fuzz.
- *
- * Blocking here means we spin irq disabled,
- * so we trylock and record skips */
+#define CHAOS_DIAG_SPAMMER CHAOS_THREADS_MAX
+#define CHAOS_DIAG_WAKER (CHAOS_THREADS_MAX + 1)
+#define CHAOS_DIAG_COUNT (CHAOS_THREADS_MAX + 2)
+
+static struct thread_diag *chaos_diag[CHAOS_DIAG_COUNT];
+
+static void chaos_diag_attach(struct thread *t, size_t slot) {
+    if (!t || chaos_diag[slot])
+        return;
+
+    struct thread_diag *d =
+        kmalloc_or_die(sizeof(struct thread_diag), ALLOC_FLAGS_ZERO);
+
+    if (!thread_diag_attach(t, d)) {
+        kfree(d);
+        return;
+    }
+
+    chaos_diag[slot] = d;
+}
+
+static void chaos_diag_release(struct thread *t, size_t slot) {
+    if (t)
+        thread_diag_detach(t);
+
+    kfree(chaos_diag[slot]);
+    chaos_diag[slot] = NULL;
+}
+
 static void chaos_apc_fn(void *arg) {
     unused(arg);
     CHAOS_LOG("apc executed on %p", thread_get_current());
@@ -291,6 +316,7 @@ TEST_DECLARE_INTEGRATION(mutex, interruptible_apc_fuzz,
         TEST_ASSERT_NONNULL(threads[i]);
         thread_set_joinable(threads[i]);
         kassert(thread_get(threads[i]));
+        chaos_diag_attach(threads[i], i);
         thread_enqueue(threads[i]);
     }
 
@@ -300,6 +326,9 @@ TEST_DECLARE_INTEGRATION(mutex, interruptible_apc_fuzz,
     struct thread *waker =
         thread_spawn_joinable("chaos_waker", chaos_waker, NULL);
     TEST_ASSERT_NONNULL(waker);
+
+    chaos_diag_attach(spammer, CHAOS_DIAG_SPAMMER);
+    chaos_diag_attach(waker, CHAOS_DIAG_WAKER);
 
     atomic_store(&starter_ok, true);
 
@@ -315,8 +344,13 @@ TEST_DECLARE_INTEGRATION(mutex, interruptible_apc_fuzz,
     chaos_join_watched(waker, "waker", 0, &chaos_waker_iters, threads, spammer,
                        waker);
 
-    for (size_t i = 0; i < chaos_threads; i++)
+    for (size_t i = 0; i < chaos_threads; i++) {
+        chaos_diag_release(threads[i], i);
         thread_put(threads[i]);
+    }
+
+    chaos_diag_release(spammer, CHAOS_DIAG_SPAMMER);
+    chaos_diag_release(waker, CHAOS_DIAG_WAKER);
 
     TEST_ASSERT_EQ(atomic_load(&sync_chaos_left), 0);
 

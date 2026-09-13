@@ -2,11 +2,40 @@
 #pragma once
 #include <compiler.h>
 #include <container_of.h>
+#include <stdbool.h>
 #include <stddef.h>
 
 struct list_head {
     struct list_head *next, *prev;
 };
+
+#ifdef DEBUG_LIST
+bool __list_add_valid(const struct list_head *new, const struct list_head *prev,
+                      const struct list_head *next);
+bool __list_del_entry_valid(const struct list_head *entry);
+bool __list_splice_valid(const struct list_head *list,
+                         const struct list_head *prev,
+                         const struct list_head *next);
+#else
+static inline bool __list_add_valid(const struct list_head *new,
+                                    const struct list_head *prev,
+                                    const struct list_head *next) {
+    unused(new, prev, next);
+    return true;
+}
+
+static inline bool __list_del_entry_valid(const struct list_head *entry) {
+    unused(entry);
+    return true;
+}
+
+static inline bool __list_splice_valid(const struct list_head *list,
+                                       const struct list_head *prev,
+                                       const struct list_head *next) {
+    unused(list, prev, next);
+    return true;
+}
+#endif /* DEBUG_LIST */
 
 #define LIST_HEAD_INIT(name) {&(name), &(name)}
 
@@ -19,6 +48,9 @@ static inline void INIT_LIST_HEAD(struct list_head *list) {
 
 static inline void __list_add(struct list_head *new, struct list_head *prev,
                               struct list_head *next) {
+    if (unlikely(!__list_add_valid(new, prev, next)))
+        return;
+
     next->prev = new;
     new->next = next;
     new->prev = prev;
@@ -40,6 +72,9 @@ static inline void __list_del(struct list_head *prev, struct list_head *next) {
 }
 
 static inline void list_del(struct list_head *entry) {
+    if (unlikely(!__list_del_entry_valid(entry)))
+        return;
+
     __list_del(entry->prev, entry->next);
     entry->next = NULL;
     entry->prev = NULL;
@@ -105,6 +140,9 @@ static inline struct list_head *list_pop_tail_init(struct list_head *head) {
 static inline void __list_splice(const struct list_head *list,
                                  struct list_head *prev,
                                  struct list_head *next) {
+    if (unlikely(!__list_splice_valid(list, prev, next)))
+        return;
+
     struct list_head *first = list->next;
     struct list_head *last = list->prev;
 
@@ -118,6 +156,9 @@ static inline void __list_splice(const struct list_head *list,
 static inline void list_splice_init(struct list_head *src,
                                     struct list_head *dst) {
     if (!list_empty(src)) {
+        if (unlikely(!__list_splice_valid(src, dst->prev, dst)))
+            return;
+
         struct list_head *first = src->next;
         struct list_head *last = src->prev;
         struct list_head *at = dst;
