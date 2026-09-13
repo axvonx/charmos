@@ -151,7 +151,7 @@ static struct turnstile *turnstile_freelist_pop(struct turnstile *ts) {
 static void turnstile_insert(struct turnstile_hash_chain *chain,
                              struct turnstile *ts, void *lock_obj) {
     SPINLOCK_ASSERT_HELD(&chain->lock);
-    list_add_tail(&chain->list, &ts->hash_list);
+    list_add_tail(&ts->hash_list, &chain->list);
     ts->state = TURNSTILE_STATE_IN_HASH_TABLE;
     ts->lock_obj = lock_obj;
 }
@@ -164,35 +164,25 @@ static void turnstile_remove(struct turnstile_hash_chain *chain,
     ts->lock_obj = NULL;
 }
 
-struct turnstile *turnstile_lookup_internal(void *obj) {
+static struct turnstile *turnstile_lookup_internal(void *obj) {
     struct turnstile_hash_chain *chain = turnstile_chain_for(obj);
     struct list_head *pos;
 
-    struct turnstile *ts = NULL;
     list_for_each(pos, &chain->list) {
-        if ((ts = turnstile_from_hash_list_node(pos))->lock_obj == obj)
-            goto out;
+        struct turnstile *ts = turnstile_from_hash_list_node(pos);
+        if (ts->lock_obj == obj)
+            return ts;
     }
 
-out:
-    return ts;
+    return NULL;
 }
 
 struct turnstile *turnstile_lookup(void *obj, enum irql *irql_out) {
     struct turnstile_hash_chain *chain = turnstile_chain_for(obj);
 
     enum irql irql = turnstile_hash_chain_lock(chain);
-    struct list_head *pos;
-    struct turnstile *ts = NULL;
-
-    list_for_each(pos, &chain->list) {
-        if ((ts = turnstile_from_hash_list_node(pos))->lock_obj == obj)
-            goto out;
-    }
-
-out:
     *irql_out = irql;
-    return ts;
+    return turnstile_lookup_internal(obj);
 }
 
 void turnstile_pi_remove(struct turnstile *ts) {
