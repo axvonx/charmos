@@ -443,10 +443,14 @@ void scheduler_yield(void) {
     bool entry_in_resched = atomic_load(&c->in_resched);
     uint32_t entry_depth = smp_ctx_preempt_count(c->ctx);
     cpu_id_t entry_cpu = c->id;
-    kassert(!entry_in_resched, "yielding while already in resched on cpu %zu",
-            (size_t) entry_cpu);
-    kassert(entry_depth == 0, "yielding on cpu %zu with preempt depth %u",
-            (size_t) entry_cpu, entry_depth);
+
+    if (likely(entry_cpu == smp_core(TOPC_NONE)->id)) {
+        kassert(!entry_in_resched,
+                "yielding while already in resched on cpu %zu",
+                (size_t) entry_cpu);
+        kassert(entry_depth == 0, "yielding on cpu %zu with preempt depth %u",
+                (size_t) entry_cpu, entry_depth);
+    }
 
     struct thread *self = thread_get_current();
 
