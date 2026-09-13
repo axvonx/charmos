@@ -153,6 +153,94 @@ static void chaos_waker(void *arg) {
     }
 }
 
+#define CHAOS_JOIN_POLL_MS 5000
+#define CHAOS_QUIET_POLLS 3
+#define CHAOS_MAX_REPORTS 2
+
+struct chaos_progress {
+    uint32_t left;
+    uint64_t taken;
+    uint64_t skips;
+};
+
+static void chaos_progress_sample(struct chaos_progress *p) {
+    p->left = atomic_load(&sync_chaos_left);
+    p->taken = atomic_load(&chaos_apc_lock_taken);
+    p->skips = atomic_load(&chaos_apc_lock_skips);
+}
+
+static bool chaos_progress_moved(struct chaos_progress *p) {
+    struct chaos_progress now;
+    chaos_progress_sample(&now);
+
+    bool moved =
+        now.left != p->left || now.taken != p->taken || now.skips != p->skips;
+    *p = now;
+    return moved;
+}
+
+static void chaos_dump_thread(const char *role, size_t idx, struct thread *t) {
+    if (!t) {
+        log_msg(LOG_ERROR, "  %s[%zu]: <null>", role, idx);
+        return;
+    }
+
+    log_msg(LOG_ERROR, "  %s[%zu] '%s': state=%d flags=0x%x wait_type=%d", role,
+            idx, t->name, (int) thread_get_state(t),
+            (unsigned) thread_get_flags(t), (int) thread_get_wait_type(t));
+
+    log_msg(LOG_ERROR,
+            "  %s[%zu]   wake_src=%p expected=%p mask=0x%x apcs_ran=%u", role,
+            idx, (void *) atomic_load(&t->wake_src), t->expected_wake_src,
+            (unsigned) atomic_load(&t->apc_pending_mask), t->total_apcs_ran);
+}
+
+static void chaos_report_stall(const char *waiting_on, size_t waiting_idx,
+                               struct thread **threads, struct thread *spammer,
+                               struct thread *waker) {
+    log_msg(LOG_ERROR,
+            "chaos: no progress while joining %s[%zu] -- left=%u stop=%d "
+            "threads=%zu apc_taken=%llu apc_skips=%llu",
+            waiting_on, waiting_idx, atomic_load(&sync_chaos_left),
+            (int) atomic_load(&chaos_stop), chaos_threads,
+            (unsigned long long) atomic_load(&chaos_apc_lock_taken),
+            (unsigned long long) atomic_load(&chaos_apc_lock_skips));
+
+    for (size_t i = 0; i < chaos_threads; i++) {
+        log_msg(LOG_ERROR, "  sleeper[%zu] alive=%d", i,
+                (int) atomic_load(&states[i].alive));
+        chaos_dump_thread("sleeper", i, threads[i]);
+    }
+
+    chaos_dump_thread("spammer", 0, spammer);
+    chaos_dump_thread("waker", 0, waker);
+}
+
+static void chaos_join_watched(struct thread *t, const char *role, size_t idx,
+                               struct thread **threads, struct thread *spammer,
+                               struct thread *waker) {
+    struct chaos_progress p;
+    chaos_progress_sample(&p);
+
+    size_t quiet = 0;
+    size_t reports = 0;
+    int status;
+
+    while (!thread_join_timeout(t, CHAOS_JOIN_POLL_MS, &status)) {
+        if (chaos_progress_moved(&p)) {
+            quiet = 0;
+            continue;
+        }
+
+        if (++quiet < CHAOS_QUIET_POLLS)
+            continue;
+
+        quiet = 0;
+        if (reports++ < CHAOS_MAX_REPORTS)
+            chaos_report_stall(role, idx, threads, spammer, waker);
+    }
+}
+
 TEST_DECLARE_INTEGRATION(mutex, interruptible_apc_fuzz,
                          TEST_INTENSITY(4, 12, CHAOS_THREADS_MAX)) {
     if (global.core_count < 2) {
@@ -192,12 +280,12 @@ TEST_DECLARE_INTEGRATION(mutex, interruptible_apc_fuzz,
     atomic_store(&starter_ok, true);
 
     for (size_t i = 0; i < chaos_threads; i++)
-        thread_join(threads[i]);
+        chaos_join_watched(threads[i], "sleeper", i, threads, spammer, waker);
 
     atomic_store(&chaos_stop, true);
 
-    thread_join(spammer);
-    thread_join(waker);
+    chaos_join_watched(spammer, "spammer", 0, threads, spammer, waker);
+    chaos_join_watched(waker, "waker", 0, threads, spammer, waker);
 
     TEST_ASSERT_EQ(atomic_load(&sync_chaos_left), 0);
 

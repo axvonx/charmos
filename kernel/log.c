@@ -214,6 +214,14 @@ static void k_printf_from_log(const char *fmt, const uint64_t *args,
         print(fmt, args[0], args[1], args[2], args[3], args[4], args[5],
               args[6], args[7]);
         break;
+    case 9:
+        print(fmt, args[0], args[1], args[2], args[3], args[4], args[5],
+              args[6], args[7], args[8]);
+        break;
+    case 10:
+        print(fmt, args[0], args[1], args[2], args[3], args[4], args[5],
+              args[6], args[7], args[8], args[9]);
+        break;
     default: print("<invalid nargs>");
     }
 }
@@ -255,6 +263,13 @@ static void snprintf_from_log(char *buf, size_t size, const char *fmt,
     case 8:
         snprintf(buf, size, fmt, args[0], args[1], args[2], args[3], args[4],
                  args[5], args[6], args[7]);
+    case 9:
+        snprintf(buf, size, fmt, args[0], args[1], args[2], args[3], args[4],
+                 args[5], args[6], args[7], args[8]);
+        break;
+    case 10:
+        snprintf(buf, size, fmt, args[0], args[1], args[2], args[3], args[4],
+                 args[5], args[6], args[7], args[8], args[9]);
         break;
     default: snprintf(buf, size, "<invalid nargs>"); break;
     }
@@ -451,7 +466,7 @@ void log_emit_internal(struct log_site *site, struct log_handle *handle,
     /* pack args */
     va_list ap;
     va_start(ap, fmt);
-    for (int i = 0; i < narg && i < 8; i++) {
+    for (int i = 0; i < narg && i < 10; i++) {
         rec.args[i] = va_arg(ap, uint64_t);
         rec.nargs++;
     }

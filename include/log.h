@@ -11,6 +11,7 @@
 #include <types/refcount.h>
 #include <types/types.h>
 
+#define LOG_NARGS 10
 struct log_site;
 struct log_record;
 
@@ -87,7 +88,7 @@ struct log_record {
     const char *fmt; /* Becomes a pointer to the shadow_buf in cases where
                       * LOG_SITE_DUP_MESSAGES is set */
     uint8_t nargs;
-    uint64_t args[8];
+    uint64_t args[LOG_NARGS];
 
     char *caller_fn;
     char *caller_file;
