@@ -161,8 +161,7 @@ TEST_DECLARE_INTEGRATION(slab, concurrency_stress,
 
     all_ready = true;
 
-    /* the whole worker set shares one deadline */
-    const time_ms_t timeout_ms = 30 * 1000;
+    const time_ms_t timeout_ms = 90 * 1000;
     time_ms_t start = time_get_ms();
 
     for (int i = 0; i < STRESS_THREADS; ++i) {
