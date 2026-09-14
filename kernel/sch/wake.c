@@ -63,10 +63,20 @@ bool thread_wake(struct thread *t, enum thread_wake_reason reason,
      * if it is UNINTERRUPTIBLE and we are NOT the expected waker, then we leave
      */
     enum thread_wait_type wt = thread_get_wait_type(t);
-    if ((wt == THREAD_WAIT_UNINTERRUPTIBLE &&
-         t->expected_wake_src != THREAD_WAIT_ANY_SRC &&
-         t->expected_wake_src != wake_src) ||
+    bool matches = t->expected_wake_src == THREAD_WAIT_ANY_SRC ||
+                   t->expected_wake_src == wake_src;
+    if ((wt == THREAD_WAIT_UNINTERRUPTIBLE && !matches) ||
         wt == THREAD_WAIT_NONE) {
+
+        /* Not armed as of now, so nothing can make this runnable, but
+         * we need to inform the thread of this so the next arm
+         * will consume it and return */
+        if (wt == THREAD_WAIT_NONE) {
+            t->pending_wake = true;
+            t->pending_wake_src = wake_src;
+            t->pending_wake_reason = (uint8_t) reason;
+        }
+
         thread_diag_record_wake_reject(t, wake_src, wt);
         goto out;
     }

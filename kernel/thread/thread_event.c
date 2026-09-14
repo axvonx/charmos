@@ -506,6 +506,21 @@ static bool set_state_and_update_reason(
         t->expected_wake_src = wake_src;
         thread_diag_record_arm(t, arm_site, arm_ra, wake_src, state, type,
                                reason);
+
+        /* A wake between waits gets its 'level triggered' flags checked
+         * here, so we don't miss a wake delivered in that manner */
+        bool pending_match =
+            wake_src == THREAD_WAIT_ANY_SRC || t->pending_wake_src == wake_src;
+        if (t->pending_wake && pending_match) {
+            atomic_store_explicit(&t->wake_src, t->pending_wake_src,
+                                  memory_order_release);
+            t->wake_token = t->wait_token;
+            thread_or_flags(t, THREAD_FLAG_WAKE_MATCHED);
+
+            t->pending_wake = false;
+            t->pending_wake_src = NULL;
+            t->pending_wake_reason = 0;
+        }
     }
 
     /* only change the state if it is NOT both RUNNING and being set to READY */

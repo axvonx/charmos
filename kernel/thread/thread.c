@@ -221,6 +221,9 @@ static struct thread *thread_init(struct thread *thread,
     thread->refcount = 1;
     thread->timeslice_length_raw_ms = THREAD_DEFAULT_TIMESLICE;
     thread->wait_type = THREAD_WAIT_NONE;
+    thread->pending_wake = false;
+    thread->pending_wake_src = NULL;
+    thread->pending_wake_reason = 0;
     thread->activity_class = THREAD_ACTIVITY_CLASS_UNKNOWN;
     thread->exit_status = 0;
     spinlock_init(&thread->lock);

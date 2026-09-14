@@ -318,6 +318,21 @@ struct thread {
     _Atomic(void *) wake_src;
     uint64_t wake_token;
 
+    /* This is for wakes that arrive when the thread was unarmed.
+     *
+     * Sometimes, when waking a thread, there is a gap
+     * between one wait finishing and the next wait being armed
+     * where the waker wants to go wake, so this effectively
+     * allows the wake to become "level triggered", i.e.
+     * immediately acknowledged when this data is read
+     *
+     * access under thread->lock
+     *
+     * TODO: maybe there is a more elegant solution */
+    void *pending_wake_src;
+    uint8_t pending_wake_reason;
+    bool pending_wake;
+
     uint64_t token_ctr;
 
     struct condvar_with_cb cv_cb_object; /* wait object */
@@ -675,6 +690,13 @@ static inline void thread_clear_wake_data_raw(struct thread *t) {
     t->last_action_reason = 0;
     t->last_action = THREAD_STATE_READY;
     t->wake_token = 0;
+
+    /* Finishing a wait happens before the gap a latch can be recorded in, so
+     * dropping it here bounds how long a stale one can survive: at most from
+     * the moment it is set to the next arm. */
+    t->pending_wake = false;
+    t->pending_wake_src = NULL;
+    t->pending_wake_reason = 0;
 }
 
 static inline void thread_finish_wait_raw(struct thread *t) {
