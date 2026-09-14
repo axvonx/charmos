@@ -1,35 +1,87 @@
+#include <math/fixed.h>
+#include <math/levenshtein.h>
+#include <math/min_max.h>
 #include <mem/alloc.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
+static inline char fuzzy_fold_char(char c, bool ignore_case) {
+    if (ignore_case && c >= 'A' && c <= 'Z')
+        return c + ('a' - 'A');
 
-int64_t levenshtein_distance(const char *s1, const char *s2) {
-    int64_t len1 = strlen(s1);
-    int64_t len2 = strlen(s2);
+    return c;
+}
 
-    int64_t *prev = kmalloc((len2 + 1) * sizeof(int64_t));
-    int64_t *curr = kmalloc((len2 + 1) * sizeof(int64_t));
+static int64_t fuzzy_substr_distance(const char *pattern, const char *text,
+                                     size_t p_len, size_t t_len,
+                                     bool ignore_case) {
+    int64_t *prev = kmalloc((t_len + 1) * sizeof(int64_t));
+    int64_t *curr = kmalloc((t_len + 1) * sizeof(int64_t));
+    int64_t best_dist = -1;
+
     if (!prev || !curr)
-        return -1;
+        goto out;
 
-    for (int64_t j = 0; j <= len2; j++)
-        prev[j] = j;
+    for (size_t j = 0; j <= t_len; j++)
+        prev[j] = 0;
 
-    for (int64_t i = 1; i <= len1; i++) {
+    for (size_t i = 1; i <= p_len; i++) {
         curr[0] = i;
-        for (int64_t j = 1; j <= len2; j++) {
-            int64_t cost = (s1[i - 1] == s2[j - 1]) ? 0 : 1;
+
+        char pc = fuzzy_fold_char(pattern[i - 1], ignore_case);
+
+        for (size_t j = 1; j <= t_len; j++) {
+            char tc = fuzzy_fold_char(text[j - 1], ignore_case);
+
+            int64_t cost = pc == tc ? 0 : 1;
+
             curr[j] =
                 MIN(MIN(curr[j - 1] + 1, prev[j] + 1), prev[j - 1] + cost);
         }
+
         int64_t *tmp = prev;
         prev = curr;
         curr = tmp;
     }
 
-    int64_t result = prev[len2];
+    best_dist = prev[0];
+
+    for (size_t j = 1; j <= t_len; j++) {
+        if (prev[j] < best_dist)
+            best_dist = prev[j];
+    }
+
+out:
     kfree(prev);
     kfree(curr);
-    return result;
+
+    return best_dist;
+}
+
+/* [0, 1] */
+fx32_32_t fuzzy_substr_conf(const char *pattern, const char *text,
+                            bool ignore_case) {
+    size_t p_len = strlen(pattern);
+    size_t t_len = strlen(text);
+
+    if (p_len == 0)
+        return FX_ONE;
+
+    if (t_len == 0)
+        return FX_ZERO;
+
+    int64_t best_dist =
+        fuzzy_substr_distance(pattern, text, p_len, t_len, ignore_case);
+
+    if (best_dist < 0)
+        return FX_ZERO;
+
+    if ((size_t) best_dist >= p_len)
+        return FX_ZERO;
+
+    fx32_32_t max_len = fx_from_int(p_len);
+    fx32_32_t dist = fx_div(fx_from_int(best_dist), max_len);
+
+    return FX_ONE - dist;
 }

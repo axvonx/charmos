@@ -1,5 +1,6 @@
 #include <sch/sched.h>
 #include <string.h>
+#include <thread/apc.h>
 #include <thread/thread.h>
 
 #include "sch/internal.h"
@@ -694,6 +695,16 @@ void thread_yield_until_wake_match(void) {
         enum thread_wait_status st = thread_wait_yield();
         if (st == THREAD_WAIT_MATCHED)
             break;
+
+        /* interruptible arms report interrupted, we must yield loop */
+        if (st == THREAD_WAIT_INTERRUPTED) {
+            uint32_t ran = curr->total_apcs_ran;
+
+            apc_check_and_deliver(curr);
+
+            if (curr->total_apcs_ran == ran)
+                scheduler_yield();
+        }
 
         if (thread_rearm_wait(curr))
             break;

@@ -212,7 +212,11 @@ def cmd_workflow_policy(_args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 1
-    print(f"ok: {len(WP.PROTECTED_WORKFLOWS)} protected workflows")
+    checked = len(WP.all_paths())
+    print(
+        f"ok: {checked} workflows checked "
+        f"({len(WP.EXECUTION_WORKFLOWS)} held to the execution rules)"
+    )
     return 0
 
 

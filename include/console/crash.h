@@ -227,6 +227,7 @@ struct crash_context {
     struct crash_payload payload;
     enum crash_source source;
     enum crash_format_flags formats;
+    const char *stmt;
     const char *file;
     int line;
     const char *func;
@@ -271,11 +272,6 @@ __noreturn void assert_impl_default(struct crash_payload payload,
                                     const char *file, int line,
                                     const char *func, const char *fmt, ...);
 
-__noreturn void assert_impl_assertion(struct crash_payload payload,
-                                      const char *file, int line,
-                                      const char *func, const char *prefix,
-                                      const char *assertion, const char *fmt,
-                                      ...);
 __noreturn void crash_full(const struct crash_context *ctx);
 
 bool crash_cpu_is_owner(uint64_t id);

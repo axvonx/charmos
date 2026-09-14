@@ -3,8 +3,13 @@ from pathlib import Path
 from charm import workflow_policy as WP
 
 
-def test_protected_workflows_follow_policy() -> None:
+def test_every_workflow_follows_policy() -> None:
     assert WP.check() == []
+
+
+def test_check_covers_more_than_the_execution_workflows() -> None:
+    names = {path.name for path in WP.all_paths()}
+    assert set(WP.EXECUTION_WORKFLOWS) < names
 
 
 def test_every_rule_reports_its_line() -> None:
@@ -21,7 +26,58 @@ password: ${{ secrets.GHCR_KEY }}
         (4, "git_mutation"),
         (5, "mutable_runner_image"),
         (6, "broad_registry_secret"),
+        (5, "container_without_packages_read"),
     ]
+
+
+def test_git_rules_are_scoped_to_execution_workflows() -> None:
+    text = """
+permissions:
+  contents: write
+  packages: read
+run: git push origin main
+"""
+    assert [v.rule for v in WP.check_text(Path("w.yml"), text)] == [
+        "repository_write",
+        "git_mutation",
+    ]
+    assert WP.check_text(Path("w.yml"), text, execution=False) == []
+
+
+def test_registry_rules_still_apply_to_a_non_execution_workflow() -> None:
+    text = """
+permissions:
+  contents: write
+jobs:
+  bump:
+    container:
+      image: ghcr.io/example/kernel@sha256:{d}
+""".format(d="a" * 64)
+    violations = WP.check_text(Path("w.yml"), text, execution=False)
+    assert [v.rule for v in violations] == ["container_without_packages_read"]
+
+
+def test_packages_read_satisfies_the_container_rule() -> None:
+    text = """
+permissions:
+  contents: write
+  packages: read
+jobs:
+  bump:
+    container:
+      image: ghcr.io/example/kernel@sha256:{d}
+""".format(d="a" * 64)
+    assert WP.check_text(Path("w.yml"), text, execution=False) == []
+
+
+def test_a_container_without_any_permissions_block_is_left_alone() -> None:
+    text = """
+jobs:
+  bump:
+    container:
+      image: ghcr.io/example/kernel@sha256:{d}
+""".format(d="a" * 64)
+    assert WP.check_text(Path("w.yml"), text) == []
 
 
 def test_comments_do_not_trigger_policy() -> None:

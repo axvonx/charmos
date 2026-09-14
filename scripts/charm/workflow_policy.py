@@ -6,7 +6,7 @@ from pathlib import Path
 
 from .paths import repo_root
 
-PROTECTED_WORKFLOWS = (
+EXECUTION_WORKFLOWS = (
     "build.yml",
     "nightmare-contract.yml",
     "nightmare-orchestrator.yml",
@@ -17,7 +17,9 @@ PROTECTED_WORKFLOWS = (
     "update.yml",
 )
 
-_RULES = (
+PROTECTED_WORKFLOWS = EXECUTION_WORKFLOWS
+
+_EXECUTION_RULES = (
     (
         "repository_write",
         re.compile(r"\bcontents\s*:\s*write\b"),
@@ -28,6 +30,10 @@ _RULES = (
         re.compile(r"\bgit\s+(?:commit|push)\b"),
         "automation may not commit or push",
     ),
+)
+
+# Applied to every workflow
+_UNIVERSAL_RULES = (
     (
         "broad_registry_secret",
         re.compile(r"secrets\.(?:GHCR_KEY|PAT|GITHUB_PAT|PERSONAL_ACCESS_TOKEN)\b"),
@@ -37,6 +43,9 @@ _RULES = (
 
 _CHARM_INVOCATION = re.compile(r"\bpython3?\s+-m\s+charm\b")
 _PYTHONPATH = re.compile(r"\bPYTHONPATH\b")
+
+_PERMISSIONS_BLOCK = re.compile(r"^\s*permissions\s*:\s*$", re.M)
+_PACKAGES_SCOPE = re.compile(r"^\s+packages\s*:\s*(?:read|write)\s*$", re.M)
 
 _RUNNER_IMAGE = re.compile(r"\bimage\s*:\s*(ghcr\.io/[^\s#]+)")
 _IMMUTABLE_IMAGE = re.compile(
@@ -55,8 +64,9 @@ class Violation:
         return f"{self.path}:{self.line}: {self.rule}: {self.message}"
 
 
-def check_text(path: Path, text: str) -> list[Violation]:
-    """Return every policy violation in one workflow."""
+def check_text(path: Path, text: str, *, execution: bool = True) -> list[Violation]:
+    rules = _UNIVERSAL_RULES + (_EXECUTION_RULES if execution else ())
+
     violations: list[Violation] = []
     for line_number, line in enumerate(text.splitlines(), start=1):
         if line.lstrip().startswith("#"):
@@ -73,18 +83,39 @@ def check_text(path: Path, text: str) -> list[Violation]:
                     "runner images must use an immutable sha256 digest",
                 )
             )
-        for name, pattern, message in _RULES:
+        for name, pattern, message in rules:
             if pattern.search(line):
                 violations.append(Violation(path, line_number, name, message))
 
     violations.extend(_check_charm_importable(path, text))
+    violations.extend(_check_container_can_pull(path, text))
     return violations
 
 
+def _check_container_can_pull(path: Path, text: str) -> list[Violation]:
+    if not _PERMISSIONS_BLOCK.search(text):
+        return []
+    if _PACKAGES_SCOPE.search(text):
+        return []
+
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        if line.lstrip().startswith("#"):
+            continue
+        if _RUNNER_IMAGE.search(line) is None:
+            continue
+        return [
+            Violation(
+                path,
+                line_number,
+                "container_without_packages_read",
+                "a job running in a GHCR container needs `packages: read` "
+                "once the workflow declares a permissions block",
+            )
+        ]
+    return []
+
+
 def _check_charm_importable(path: Path, text: str) -> list[Violation]:
-    """
-    PYTHONPATH must point at scripts/
-    """
     if _PYTHONPATH.search(text):
         return []
     for line_number, line in enumerate(text.splitlines(), start=1):
@@ -102,19 +133,29 @@ def _check_charm_importable(path: Path, text: str) -> list[Violation]:
     return []
 
 
+def workflows_dir(root: Path | None = None) -> Path:
+    return (root or repo_root()) / ".github" / "workflows"
+
+
 def protected_paths(root: Path | None = None) -> tuple[Path, ...]:
-    base = (root or repo_root()) / ".github" / "workflows"
-    return tuple(base / name for name in PROTECTED_WORKFLOWS)
+    base = workflows_dir(root)
+    return tuple(base / name for name in EXECUTION_WORKFLOWS)
+
+
+def all_paths(root: Path | None = None) -> tuple[Path, ...]:
+    base = workflows_dir(root)
+    return tuple(sorted(base.glob("*.yml")) + sorted(base.glob("*.yaml")))
 
 
 def check(paths: tuple[Path, ...] | None = None) -> list[Violation]:
-    """Check the protected build/execution workflows."""
     violations: list[Violation] = []
-    for path in paths or protected_paths():
+    for path in paths or all_paths():
         try:
             text = path.read_text(encoding="utf-8")
         except OSError as error:
             violations.append(Violation(path, 0, "unreadable", str(error)))
             continue
-        violations.extend(check_text(path, text))
+        violations.extend(
+            check_text(path, text, execution=path.name in EXECUTION_WORKFLOWS)
+        )
     return violations

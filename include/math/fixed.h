@@ -3,6 +3,7 @@
 #include <kassert.h>
 #include <types/types.h>
 
+#define FX_ZERO ((fx32_32_t) 0)
 #define FX_ONE ((fx32_32_t) (1LL << 32))
 #define FX_HALF ((fx32_32_t) (1LL << 31))
 

@@ -94,7 +94,11 @@ static void chaos_apc_spammer(void *arg) {
             continue;
         }
 
-        if (!thread_get(states[id].t)) {
+        rcu_read_lock();
+        bool got = thread_get_rcu(states[id].t);
+        rcu_read_unlock();
+
+        if (!got) {
             scheduler_yield();
             continue;
         }
@@ -173,7 +177,11 @@ static void chaos_waker(void *arg) {
             continue;
         }
 
-        if (!thread_get(states[id].t)) {
+        rcu_read_lock();
+        bool got = thread_get_rcu(states[id].t);
+        rcu_read_unlock();
+
+        if (!got) {
             scheduler_yield();
             continue;
         }
@@ -260,7 +268,7 @@ static void chaos_report_stall(const char *waiting_on, size_t waiting_idx,
     chaos_dump_thread("waker", 0, waker, helper_arms);
 }
 
-static void chaos_join_watched(struct thread *t, const char *role, size_t idx,
+static bool chaos_join_watched(struct thread *t, const char *role, size_t idx,
                                _Atomic uint64_t *counter,
                                struct thread **threads, struct thread *spammer,
                                struct thread *waker) {
@@ -280,9 +288,19 @@ static void chaos_join_watched(struct thread *t, const char *role, size_t idx,
             continue;
 
         quiet = 0;
-        if (reports++ < CHAOS_MAX_REPORTS)
-            chaos_report_stall(role, idx, threads, spammer, waker);
+        chaos_report_stall(role, idx, threads, spammer, waker);
+
+        if (++reports < CHAOS_MAX_REPORTS)
+            continue;
+
+        log_msg(LOG_ERROR,
+                "chaos: giving up on %s[%zu] after %zu stall report(s) -- "
+                "failing the test",
+                role, idx, reports);
+        return false;
     }
+
+    return true;
 }
 
 TEST_DECLARE_INTEGRATION(mutex, interruptible_apc_fuzz,
@@ -295,7 +313,10 @@ TEST_DECLARE_INTEGRATION(mutex, interruptible_apc_fuzz,
     if (chaos_threads > CHAOS_THREADS_MAX)
         chaos_threads = CHAOS_THREADS_MAX;
 
-    for (size_t i = 0; i < chaos_threads; i++) {
+    /* The whole array, not just the live prefix: `chaos_threads` follows the
+     * intensity knob, so a shorter run would otherwise inherit the previous
+     * run's stale thread pointers in the tail slots. */
+    for (size_t i = 0; i < CHAOS_THREADS_MAX; i++) {
         states[i].t = NULL;
         atomic_store(&states[i].alive, false);
     }
@@ -332,17 +353,33 @@ TEST_DECLARE_INTEGRATION(mutex, interruptible_apc_fuzz,
 
     atomic_store(&starter_ok, true);
 
-    for (size_t i = 0; i < chaos_threads; i++)
-        chaos_join_watched(threads[i], "sleeper", i, &chaos_iters[i], threads,
-                           spammer, waker);
+    bool wedged = false;
+    for (size_t i = 0; i < chaos_threads; i++) {
+        if (!chaos_join_watched(threads[i], "sleeper", i, &chaos_iters[i],
+                                threads, spammer, waker)) {
+            wedged = true;
+            break;
+        }
+    }
 
     atomic_store(&chaos_stop, true);
 
-    chaos_join_watched(spammer, "spammer", 0, &chaos_spammer_iters, threads,
-                       spammer, waker);
-    spammer = NULL; /* The join consumed its last caller-owned reference. */
-    chaos_join_watched(waker, "waker", 0, &chaos_waker_iters, threads, spammer,
-                       waker);
+    if (!wedged) {
+        wedged =
+            !chaos_join_watched(spammer, "spammer", 0, &chaos_spammer_iters,
+                                threads, spammer, waker);
+        if (!wedged) {
+            /* The join consumed its last caller-owned ref */
+            spammer = NULL;
+            wedged = !chaos_join_watched(waker, "waker", 0, &chaos_waker_iters,
+                                         threads, spammer, waker);
+            if (!wedged)
+                waker = NULL; /* do not touch it past this point. */
+        }
+    }
+
+    if (wedged)
+        return TEST_FAIL("chaos threads made no progress");
 
     for (size_t i = 0; i < chaos_threads; i++) {
         chaos_diag_release(threads[i], i);

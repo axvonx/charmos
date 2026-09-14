@@ -10,6 +10,7 @@
 #include <mem/pmm.h>
 #include <scaled_param.h>
 #include <stdbool.h>
+#include <test/test_api_internal.h>
 
 typedef void (*test_fn_t)(void);
 struct test_context;
@@ -46,9 +47,6 @@ enum test_flags {
 
     /* If this is enabled, TEST_FLAG_HONORS_INTENSITY is auto-enabled */
     TEST_FLAG_INHERITS_INTENSITY = 1 << 1,
-
-    /* TODO: implement */
-    TEST_FLAG_DEATH_TEST = 1 << 2,
 };
 
 enum test_skip_reason {
@@ -99,6 +97,28 @@ struct test_group {
     size_t num_tests_enabled[TEST_TIER_MAX];
 };
 
+/*
+ * The idea with (line|msg|stmt)_hint is that crash codes
+ * get reused in various different places, and it's sometimes not enough
+ * to merely check that the code matches, because it could still
+ * be tripping the wrong assertion.
+ *
+ * So, we have these hints instead to fuzzy match and note/warn
+ * when a hint does(n't) match. The expected crash code matching
+ * will pass regardless, and hints just give a bit more data.
+ *
+ * msg_hint fuzzy matches against the message, if any, and
+ * stmt_hint fuzzy matches against the statement, if any, e.g.
+ *
+ * kassert(my_var) would have the 'stmt' of my_var
+ */
+struct test_death {
+    enum crash_code expect;
+    uint32_t line_hint;
+    const char *msg_hint;
+    const char *stmt_hint;
+};
+
 struct test {
     const char *name;
     const char *fname;
@@ -115,13 +135,15 @@ struct test {
     time_ms_t duration_ms;
 
     /* A lot of these have to be full bools for the cmdline parse */
+    struct test_death *death;
     bool print_logs;         /* Prints logs *as* they are logged */
     enum test_state enabled; /* If this is set to TEST_SENTINEL,
                               * it means we default */
-    bool keep_going;         /* This basically means that with run_times,
-                              * if it fails once, don't bother, and keep going
-                              * until it runs run_times, however, it is overridden
-                              * by exit_on_fail from the test_group */
+
+    bool keep_going; /* This basically means that with run_times,
+                      * if it fails once, don't bother, and keep going
+                      * until it runs run_times, however, it is overridden
+                      * by exit_on_fail from the test_group */
 
     fx32_32_t intensity; /* also [0, 1]. the point of this one is that
                           * it can be set by the command line, and the
@@ -203,91 +225,50 @@ struct test_globals {
 };
 
 #define TEST_GROUP_NONE test_group_orphan_parent
-
-/* Goofy macros needed for the DECLARE macro */
-#define __test_group_TEST_GROUP_NONE test_group_orphan_parent
-#define __test_group_none test_group_orphan_parent
-#define __test_group_orphan test_group_orphan_parent
-#define __test_group_test_group_orphan_parent test_group_orphan_parent
-
 #define TEST_GROUP(name) &(__test_group_##name)
 #define TEST_GROUP_DEFINE(name) extern struct test_group __test_group_##name
 
 #define TEST(grp, id) __test_##grp##_##id
-#define TEST_DECLARE(grp, id, ...)                                                                                                                                                                                                                                                                                                                                    \
-    static struct test_verdict __test_fn_##grp##_##id(                                                                                                                                                                                                                                                                                                                \
-        struct test_context *ctx);                                                                                                                                                                                                                                                                                                                                    \
-    extern struct test_group __test_group_##grp;                                                                                                                                                                                                                                                                                                                      \
-    extern struct test __test_##grp##_##id;                                                                                                                                                                                                                                                                                                                           \
-    LINKER_SECTION_OBJECT(struct test, tests)                                                                                                                                                                                                                                                                                                                         \
-    __test_##grp##_##id = {                                                                                                                                                                                                                                                                                                                                           \
-        .name = #id, .fname = __RELFILE__, .line = __LINE__, .func = __test_fn_##grp##_##id, .run_times = 1, .group = TEST_GROUP(grp), .enabled = TEST_STATE_SENTINEL, .inject_count = 0, .msg_cap = 0, .seed = 0, .print_logs = false, .tier = TEST_TIER_UNIT, .intensity = TEST_INTENSITY_SENTINEL, .intensity_desc = TEST_INTENSITY_DESC_SENTINEL, ##__VA_ARGS__}; \
-                                                                                                                                                                                                                                                                                                                                                                      \
-    static struct test_verdict __test_fn_##grp##_##id(                                                                                                                                                                                                                                                                                                                \
+#define TEST_DECLARE(grp, id, ...)                                             \
+    static struct test_verdict __test_fn_##grp##_##id(                         \
+        struct test_context *ctx);                                             \
+    extern struct test_group __test_group_##grp;                               \
+    extern struct test __test_##grp##_##id;                                    \
+    LINKER_SECTION_OBJECT(struct test, tests)                                  \
+    __test_##grp##_##id = {.name = #id,                                        \
+                           .fname = __RELFILE__,                               \
+                           .line = __LINE__,                                   \
+                           .func = __test_fn_##grp##_##id,                     \
+                           .run_times = 1,                                     \
+                           .group = TEST_GROUP(grp),                           \
+                           .enabled = TEST_STATE_SENTINEL,                     \
+                           .inject_count = 0,                                  \
+                           .msg_cap = 0,                                       \
+                           .seed = 0,                                          \
+                           .print_logs = false,                                \
+                           .tier = TEST_TIER_UNIT,                             \
+                           .intensity = TEST_INTENSITY_SENTINEL,               \
+                           .intensity_desc = TEST_INTENSITY_DESC_SENTINEL,     \
+                           ##__VA_ARGS__};                                     \
+                                                                               \
+    static struct test_verdict __test_fn_##grp##_##id(                         \
         struct test_context *ctx __unused)
-
-#define TEST_DECLARE_SMOKE(grp, id, ...)                                       \
-    TEST_DECLARE(grp, id, .tier = TEST_TIER_SMOKE, ##__VA_ARGS__)
-#define TEST_DECLARE_UNIT(grp, id, ...)                                        \
-    TEST_DECLARE(grp, id, .tier = TEST_TIER_UNIT, ##__VA_ARGS__)
-#define TEST_DECLARE_INTEGRATION(grp, id, ...)                                 \
-    TEST_DECLARE(grp, id, .tier = TEST_TIER_INTEGRATION, ##__VA_ARGS__)
 
 #define TEST_GROUP_DECLARE(n, ...)                                             \
     extern struct test_group __test_group_##n;                                 \
     LINKER_SECTION_OBJECT(struct test_group, test_groups)                      \
-    __test_group_##n = {                                                       \
-        .name = #n, .incremental = false, .exit_on_fail = false, .fname = __RELFILE__, .line = __LINE__, .enabled = TEST_STATE_SENTINEL, .smoke_enabled = TEST_STATE_SENTINEL, .unit_enabled = TEST_STATE_SENTINEL, .integration_enabled = TEST_STATE_SENTINEL, .default_intensity = TEST_INTENSITY_SENTINEL, .intensity_desc = TEST_INTENSITY_DESC_SENTINEL, ##__VA_ARGS__}
-
-/* 1D piecewise-log */
-#define TEST_INTENSITY_LOG(min, def, max, unit_str)                            \
-    .flags = TEST_FLAG_HONORS_INTENSITY, .intensity_desc = {                   \
-                                             .curve = SCALE_PIECEWISE_LOG,     \
-                                             .min_val = (min),                 \
-                                             .def_val = (def),                 \
-                                             .max_val = (max),                 \
-                                             .unit = (unit_str),               \
-                                         }
-
-/* Linear scaling */
-#define TEST_INTENSITY_LINEAR(min, def, max, unit_str)                         \
-    .flags = TEST_FLAG_HONORS_INTENSITY, .intensity_desc = {                   \
-                                             .curve = SCALE_PIECEWISE_LINEAR,  \
-                                             .min_val = (min),                 \
-                                             .def_val = (def),                 \
-                                             .max_val = (max),                 \
-                                             .unit = (unit_str),               \
-                                         }
-
-/* Core-scaled thread counts (threads = base * core_count) */
-#define TEST_INTENSITY_CORES(min_per_core, def_per_core, max_per_core,         \
-                             unit_str)                                         \
-    .flags = TEST_FLAG_HONORS_INTENSITY, .intensity_desc = {                   \
-                                             .curve = SCALE_CORE_MULTIPLIER,   \
-                                             .min_val = (min_per_core),        \
-                                             .def_val = (def_per_core),        \
-                                             .max_val = (max_per_core),        \
-                                             .unit = (unit_str),               \
-                                         }
-
-/* set scale with min and max */
-#define TEST_INTENSITY_CUSTOM_PRINT(scale, min, def, max, unit_str, print_fn)  \
-    .flags = TEST_FLAG_HONORS_INTENSITY, .intensity_desc = {                   \
-                                             .curve = scale,                   \
-                                             .min_val = (min),                 \
-                                             .def_val = (def),                 \
-                                             .max_val = (max),                 \
-                                             .unit = (unit_str),               \
-                                             .custom_print = (print_fn),       \
-                                         }
-
-/* Entirely custom */
-#define TEST_INTENSITY_CUSTOM(scale_fn, print_fn)                              \
-    .flags = TEST_FLAG_HONORS_INTENSITY, .intensity_desc = {                   \
-                                             .curve = SCALE_CUSTOM,            \
-                                             .custom_scale = (scale_fn),       \
-                                             .custom_print = (print_fn),       \
-                                         }
+    __test_group_##n = {.name = #n,                                            \
+                        .incremental = false,                                  \
+                        .exit_on_fail = false,                                 \
+                        .fname = __RELFILE__,                                  \
+                        .line = __LINE__,                                      \
+                        .enabled = TEST_STATE_SENTINEL,                        \
+                        .smoke_enabled = TEST_STATE_SENTINEL,                  \
+                        .unit_enabled = TEST_STATE_SENTINEL,                   \
+                        .integration_enabled = TEST_STATE_SENTINEL,            \
+                        .default_intensity = TEST_INTENSITY_SENTINEL,          \
+                        .intensity_desc = TEST_INTENSITY_DESC_SENTINEL,        \
+                        ##__VA_ARGS__}
 
 #define TEST_SUCCESS ((struct test_verdict) {.result = TEST_RESULT_OK})
 #define TEST_FAIL(m)                                                           \

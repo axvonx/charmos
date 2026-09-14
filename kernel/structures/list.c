@@ -1,10 +1,27 @@
 #include <kassert.h>
+#include <math/align.h>
+#include <mem/address_range.h>
 #include <structures/list.h>
 
 #ifdef DEBUG_LIST
 
+static bool list_link_is_plausible(const struct list_head *n) {
+    uintptr_t v = (uintptr_t) n;
+
+    return v >= ADDRESS_RANGE_KERNEL_START && IS_ALIGNED(v, sizeof(void *));
+}
+
 static bool list_node_looks_linked(const struct list_head *n) {
-    return n->next != NULL && n->prev != NULL && n->next != n && n->prev != n;
+    if (n->next == NULL || n->prev == NULL)
+        return false;
+
+    if (n->next == n || n->prev == n)
+        return false;
+
+    if (!list_link_is_plausible(n->next) || !list_link_is_plausible(n->prev))
+        return false;
+
+    return n->next->prev == n && n->prev->next == n;
 }
 
 bool __list_add_valid(const struct list_head *new, const struct list_head *prev,

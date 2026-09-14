@@ -30,7 +30,11 @@ static void yd_enqueue_main(void *arg) {
         return;
 
     apc_init(apc, yd_apc, NULL, apc_destroy_free);
-    if (thread_get(target)) {
+    rcu_read_lock();
+    bool got = thread_get_rcu(target);
+    rcu_read_unlock();
+
+    if (got) {
         apc_enqueue(target, apc, APC_TYPE_KERNEL);
         thread_put(target);
     }

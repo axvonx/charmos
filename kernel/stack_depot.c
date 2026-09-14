@@ -114,6 +114,7 @@ stack_handle_t stack_depot_save(uintptr_t *entries, size_t num_entries,
     }
 
     refcount_init(&rec->refcount, 1);
+    INIT_LIST_HEAD(&rec->hash_list);
     rec->hash = hash;
     rec->num_entries = num_entries;
     memcpy(rec->entries, entries, num_entries * sizeof(uintptr_t));

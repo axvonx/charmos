@@ -600,6 +600,20 @@ static inline enum thread_flags thread_and_flags(struct thread *t,
     return atomic_fetch_and(&t->flags, flags);
 }
 
+static inline enum thread_flags thread_set_flag(struct thread *t,
+                                                enum thread_flags flag) {
+    return thread_or_flags(t, flag);
+}
+
+static inline enum thread_flags thread_clear_flag(struct thread *t,
+                                                  enum thread_flags flag) {
+    return thread_and_flags(t, ~flag);
+}
+
+static inline bool thread_test_flag(struct thread *t, enum thread_flags flag) {
+    return (thread_get_flags(t) & flag) == flag;
+}
+
 static inline size_t thread_get_migration_generation(struct thread *t) {
     return atomic_load_explicit(&t->migration_generation, memory_order_acquire);
 }

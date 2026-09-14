@@ -1572,7 +1572,7 @@ void kfree_internal(void *p, enum alloc_behavior behavior) {
 #endif
 
 #ifdef DEBUG_SLAB
-    memset(p, 0x67, ksize(p));
+    memset(p, SLAB_FREE_POISON_BYTE, ksize(p));
 #endif
 
 #ifdef DEBUG_ASAN

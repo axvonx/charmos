@@ -621,7 +621,8 @@ void thread_unlock_thread_and_rq(struct scheduler *thread_rq,
     spin_unlock(&first->lock, irq_first);
 }
 
-/* This is surprisngly tricky to implement */
+/* TODO: This is surprisngly tricky to implement, and the primary reason why
+ * is because of invocations during boundaries. */
 bool thread_in_context(void) {
     if (global.current_bootstage < BOOTSTAGE_LATE)
         return false;
@@ -630,6 +631,8 @@ bool thread_in_context(void) {
         return false;
 
     struct thread *self = thread_get_current();
+    if (thread_test_flag(self, THREAD_FLAG_EXECUTING_APC))
+        return false;
 
     return true;
 }

@@ -39,6 +39,7 @@ struct slab_size_constant {
     SLAB_SIZE_REGISTER(sname, sizeof(struct sname), al)
 
 #define SLAB_OBJ_ALIGN_DEFAULT 8u
+#define SLAB_FREE_POISON_BYTE 0x67
 
 void slab_allocator_init();
 void slab_domain_init(void);
