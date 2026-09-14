@@ -560,15 +560,20 @@ void apc_check_and_deliver(struct thread *t) {
     if (!t || !safe_to_exec_apcs() || !thread_can_exec_any_apcs(t))
         return;
 
-    if (thread_get_flags(t) & (THREAD_FLAG_EXECUTING_APC | THREAD_FLAG_DYING))
+    if (thread_get_flags(t) & (THREAD_FLAG_EXECUTING_APC |
+                               THREAD_FLAG_DELIVERING_APCS | THREAD_FLAG_DYING))
         return;
 
     /* Which IRQL-lowering site keeps handing this thread back to delivery */
     thread_diag_apc_deliver_enter(t, __builtin_return_address(0));
+
+    thread_or_flags(t, THREAD_FLAG_DELIVERING_APCS);
 
     enum irql irql = irql_raise(IRQL_APC_LEVEL);
 
     thread_exec_apcs(t);
 
     irql_lower(irql);
+
+    thread_and_flags(t, ~THREAD_FLAG_DELIVERING_APCS);
 }

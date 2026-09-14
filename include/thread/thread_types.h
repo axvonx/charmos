@@ -76,6 +76,10 @@ enum thread_flags : uint32_t {
     THREAD_FLAG_JOINED = 1 << 8,
 
     THREAD_FLAG_DIAG = 1 << 9,
+
+    /* This is for when inside the APC subsystem, whereas
+     * THREAD_FLAG_EXECUTING_APC is for an actual APC callback */
+    THREAD_FLAG_DELIVERING_APCS = 1 << 10,
 };
 
 enum thread_prio_class : uint8_t {
