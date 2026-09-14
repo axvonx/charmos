@@ -8,12 +8,12 @@
  *
  *      ┌───────────────────────────────────────────────────────┐
  * Bits │ 31..28 27..24 23..20 19..16 15..12  11..8  7..4  3..0 │
- * Use  │  %%%%   %%%%   %%PM   ID##   ####    ####  ####  #### │
+ * Use  │  %%%%   %%%%   %%Pd   ID##   ####    ####  ####  #### │
  *      └───────────────────────────────────────────────────────┘
  *
  * I - IRQ timer - not executed in DPC
  * D - Deferrable (Only activates when CPU non-idle)
- * M - Migrating
+ * d - DPC queued
  * P - Pinned
  *
  * %%% - Bucket idx (if present, up to 1023)
@@ -36,7 +36,7 @@ enum timer_flags {
     TIMER_FLAG_NONE = 0,
     TIMER_FLAG_DEFERRABLE = 1 << 18,
     TIMER_FLAG_IRQ = 1 << 19,
-    TIMER_FLAG_MIGRATING = 1 << 20,
+    TIMER_FLAG_DPC_QUEUED = 1 << 20,
     TIMER_FLAG_PINNED = 1 << 21,
 };
 

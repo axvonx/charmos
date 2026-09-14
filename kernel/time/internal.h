@@ -84,6 +84,8 @@ struct timer_percpu {
 
     struct spinlock lock; /* THIS one is for the dpc_timers */
     struct hlist_head dpc_timers;
+
+    struct timer *dispatching;
     struct clock_evdev *active_evdev;
 };
 

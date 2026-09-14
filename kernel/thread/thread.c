@@ -443,6 +443,7 @@ void thread_sleep_for_us(uint64_t us) {
     }
 
     struct thread *curr = thread_get_current();
+
     struct timer sleep_timer;
     timer_init(&sleep_timer, wake_thread_timer_cb, curr);
 

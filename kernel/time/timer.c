@@ -35,6 +35,7 @@ static void timer_percpu_ctor(struct timer_percpu *p, cpu_id_t cpu) {
 
     spinlock_init(&p->lock);
     INIT_HLIST_HEAD(&p->dpc_timers);
+    p->dispatching = NULL;
     dpc_init(&p->timer_dpc, timer_dpc, p);
 }
 
@@ -154,6 +155,9 @@ static void timer_dpc(void *ctx) {
         struct timer *timer =
             hlist_entry(pcpu->dpc_timers.first, struct timer, hlist_node);
         timer_list_del(timer);
+
+        timer->flags &= ~TIMER_FLAG_DPC_QUEUED;
+        pcpu->dispatching = timer;
         spin_unlock(&pcpu->lock, irql);
 
         struct timer_base *base = timer_base_for_flags(timer->flags);
@@ -168,6 +172,10 @@ static void timer_dpc(void *ctx) {
         birql = spin_lock_irq_disable(&base->lock);
         base->running = NULL;
         spin_unlock(&base->lock, birql);
+
+        irql = spin_lock_irq_disable(&pcpu->lock);
+        pcpu->dispatching = NULL;
+        spin_unlock(&pcpu->lock, irql);
     }
 }
 
@@ -192,6 +200,7 @@ static void timer_expire_bucket(struct timer_base *base,
             enum irql pirql = spin_lock_irq_disable(&base->percpu->lock);
 
             hlist_add_head(&timer->hlist_node, &base->percpu->dpc_timers);
+            timer->flags |= TIMER_FLAG_DPC_QUEUED;
             dpc_enqueue_local(&base->percpu->timer_dpc);
 
             spin_unlock(&base->percpu->lock, pirql);
@@ -340,8 +349,17 @@ static bool timer_delete_internal(struct timer *timer, bool shutdown) {
     enum irql irql;
     struct timer_base *base = timer_lock_base(timer, &irql);
 
-    bool pending = hlist_unhashed(&timer->hlist_node) == 0;
-    if (pending) {
+    struct timer_percpu *pcpu = base->percpu;
+    enum irql pirql = spin_lock_irq_disable(&pcpu->lock);
+    bool dpc_queued = timer->flags & TIMER_FLAG_DPC_QUEUED;
+    if (dpc_queued) {
+        timer_list_del(timer);
+        timer->flags &= ~TIMER_FLAG_DPC_QUEUED;
+    }
+    spin_unlock(&pcpu->lock, pirql);
+
+    bool bucketed = false;
+    if (!dpc_queued && !hlist_unhashed(&timer->hlist_node)) {
         timer_list_del(timer);
 
         uint32_t idx = timer_bucket_get(timer);
@@ -349,7 +367,10 @@ static bool timer_delete_internal(struct timer *timer, bool shutdown) {
             bitmap_clear(base->pending_map, idx);
 
         timer_recalc_next_expiration(base);
+        bucketed = true;
     }
+
+    bool pending = dpc_queued || bucketed;
 
     if (shutdown)
         timer->func = NULL;
@@ -357,7 +378,7 @@ static bool timer_delete_internal(struct timer *timer, bool shutdown) {
     cpu_id_t cpu = base->cpu;
     spin_unlock(&base->lock, irql);
 
-    if (pending)
+    if (bucketed)
         timer_base_reprogram_hardware(cpu);
 
     return pending;
@@ -371,11 +392,25 @@ bool timer_shutdown(struct timer *timer) {
     return timer_delete_internal(timer, true);
 }
 
+/* caller holds base->lock */
+static bool timer_dpc_is_dispatching(struct timer_base *base,
+                                     struct timer *timer) {
+    struct timer_percpu *pcpu = base->percpu;
+    if (!pcpu)
+        return false;
+
+    enum irql pirql = spin_lock_irq_disable(&pcpu->lock);
+    bool dispatching = pcpu->dispatching == timer;
+    spin_unlock(&pcpu->lock, pirql);
+
+    return dispatching;
+}
+
 static bool timer_sync_wait(struct timer *timer) {
     enum irql irql;
     struct timer_base *base = timer_lock_base(timer, &irql);
 
-    while (base->running == timer) {
+    while (base->running == timer || timer_dpc_is_dispatching(base, timer)) {
         spin_unlock(&base->lock, irql);
         timer_sync_wait_spin();
         base = timer_lock_base(timer, &irql);
