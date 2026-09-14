@@ -78,7 +78,7 @@ struct irq_desc {
     bool enabled;
 };
 
-struct irq_context {
+struct irq_registers {
     uint64_t rax;
     uint64_t rbx;
     uint64_t rcx;
@@ -102,7 +102,23 @@ struct irq_context {
     uint64_t ss;
 };
 
-static inline void irq_context_to_crash_regs(const struct irq_context *ictx,
+struct irq_context {
+    struct irq_registers *regs;
+
+    /* This scratch buffer is stack allocated, and is set upon
+     * IRQ entry, allowing the top half of the IRQ to modify it
+     *
+     * For exception_sync_cb, it is passed into the callback as a parameter */
+    uint8_t *irq_stack_scratch_buf;
+
+    /* Remains valid in the top half, once the bottom half is
+     * reached, this becomes IRQL_NONE */
+    enum irql irq_entered_irql; /* What IRQL were we at before
+                                 * entering an ISR (if !in_interrupt,
+                                 * this should be IRQL_NONE */
+};
+
+static inline void irq_context_to_crash_regs(const struct irq_registers *ictx,
                                              struct crash_regs *out) {
     if (!ictx || !out)
         return;

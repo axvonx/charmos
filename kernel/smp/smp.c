@@ -283,7 +283,6 @@ void smp_init() {
             memset(global.cores[i], 0, sizeof(struct core));
         }
 
-        global.cores[i]->irq_entered_irql = IRQL_NONE;
         global.cores[i]->id = i;
         global.cores[i]->numa_node = numa_node_for_cpu(i);
         global.cores[i]->domain = global.domains[d];
@@ -322,7 +321,6 @@ void smp_setup_bsp(void) {
     if (!c)
         panic("Could not allocate space for core structure on BSP");
 
-    c->irq_entered_irql = IRQL_NONE;
     c->id = 0;
     c->self = c;
     c->current_irql = IRQL_PASSIVE_LEVEL;

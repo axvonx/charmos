@@ -18,6 +18,7 @@ struct qspinlock;
 struct rwlock;
 struct mutex;
 struct thread;
+struct irq_registers;
 struct irq_context;
 
 #define CRASH_REG_COUNT 20
@@ -270,7 +271,9 @@ LINKER_SECTION_DEFINE(struct crash_facility, crash_facilities);
 
 __noreturn void assert_impl_default(struct crash_payload payload,
                                     const char *file, int line,
-                                    const char *func, const char *fmt, ...);
+                                    const char *func, const char *prefix,
+                                    const char *assertion, const char *fmt,
+                                    ...);
 
 __noreturn void crash_full(const struct crash_context *ctx);
 
@@ -278,7 +281,7 @@ bool crash_cpu_is_owner(uint64_t id);
 void crash_broadcast_nmi(void);
 void crash_facilities_init(void);
 const char *crash_code_from_facility_to_str(enum crash_code code);
-__noreturn void crash_nmi_handoff(void *p, struct irq_context *ctx);
+void crash_nmi_handoff(void *p, struct irq_registers *irqc);
 void debug_print_stack(void);
 void crash_facility_printf(const char *fmt, ...);
 void crash_perthread_init(struct thread *t);

@@ -68,22 +68,10 @@ struct core {
     atomic_bool executing_dpcs;
     atomic_bool idle;
 
-    /* This scratch buffer is stack allocated, and is set upon
-     * IRQ entry, allowing the top half of the IRQ to modify it
-     *
-     * For exception_sync_cb, it is passed into the callback as a parameter */
-    uint8_t *irq_stack_scratch_buf;
-
     /* Execution context in one word, using SMP_CTX_* below */
     uint32_t ctx;
 
     enum irql current_irql;
-
-    /* Remains valid in the top half, once the bottom half is
-     * reached, this becomes IRQL_NONE */
-    enum irql irq_entered_irql; /* What IRQL were we at before
-                                 * entering an ISR (if !in_interrupt,
-                                 * this should be IRQL_NONE */
 
     atomic_bool needs_run_dpcs; /* Set before sending IRQ_NOP, which is then
                                  * checked in the isr_common_entry */
@@ -149,7 +137,8 @@ void smp_caller_verify(enum topology_caller caller);
 
 #define smp_read(cond, member)                                                 \
     ({                                                                         \
-        smp_caller_verify(cond);                                               \
+        if (cond != TOPC_NONE)                                                 \
+            smp_caller_verify(cond);                                           \
         static_assert(                                                         \
             smp_member_size(member) == 1 || smp_member_size(member) == 2 ||    \
                 smp_member_size(member) == 4 || smp_member_size(member) == 8,  \
@@ -192,7 +181,8 @@ void smp_caller_verify(enum topology_caller caller);
 
 #define smp_write(cond, member, val)                                           \
     do {                                                                       \
-        smp_caller_verify(cond);                                               \
+        if (cond != TOPC_NONE)                                                 \
+            smp_caller_verify(cond);                                           \
         static_assert(                                                         \
             smp_member_size(member) == 1 || smp_member_size(member) == 2 ||    \
                 smp_member_size(member) == 4 || smp_member_size(member) == 8,  \

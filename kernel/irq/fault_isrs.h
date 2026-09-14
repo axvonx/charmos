@@ -7,10 +7,10 @@
         (void) ctx;                                                            \
         (void) vector;                                                         \
         struct crash_regs pregs;                                               \
-        irq_context_to_crash_regs(rsp, &pregs);                                \
+        irq_context_to_crash_regs(rsp->regs, &pregs);                          \
         char msg[CRASH_MSG_MAX];                                               \
         snprintf(msg, sizeof(msg), "CPU %u fault: " message " at %p",          \
-                 (uint32_t) smp_id_raw(), (void *) rsp->rip);                  \
+                 (uint32_t) smp_id_raw(), (void *) rsp->regs->rip);            \
         crash_full(&(struct crash_context) {                                   \
             .source = CRASH_SOURCE_CPU_EXCEPTION,                              \
             .formats = CRASH_FMT_DEFAULT,                                      \
@@ -24,11 +24,12 @@
     }
 
 enum irq_result gpf_handler(void *ctx, uint8_t vector,
-                            struct irq_context *rsp) {
+                            struct irq_context *ictx) {
     (void) ctx;
     (void) vector;
 
     uint64_t core = smp_id_raw();
+    struct irq_registers *rsp = ictx->regs;
     uint64_t ec = rsp->error_code;
 
     printf("\n=== General Protection Fault ===\n");
@@ -94,7 +95,7 @@ enum irq_result panic_nmi_isr(void *ctx, uint8_t vector,
         if (crash_cpu_is_owner(smp_id_raw()))
             return IRQ_HANDLED;
 
-        crash_nmi_handoff(ctx, rsp);
+        crash_nmi_handoff(ctx, rsp->regs);
     }
 
     return IRQ_NONE;
@@ -102,9 +103,7 @@ enum irq_result panic_nmi_isr(void *ctx, uint8_t vector,
 
 enum irq_result hw_error_nmi_isr(void *ctx, uint8_t vector,
                                  struct irq_context *ictx) {
-    (void) ctx;
-    (void) vector;
-    (void) ictx;
+    unused(ctx, vector, ictx);
     uint8_t port61 = inb(0x61);
     if (port61 & 0xC0) {
         char msg[CRASH_MSG_MAX];
@@ -126,13 +125,13 @@ enum irq_result hw_error_nmi_isr(void *ctx, uint8_t vector,
 
 enum irq_result nop_handler(void *ctx, uint8_t vector,
                             struct irq_context *rsp) {
-    (void) ctx, (void) vector, (void) rsp;
+    unused(ctx, vector, rsp);
     return IRQ_HANDLED;
 }
 
 enum irq_result dpc_handler(void *ctx, uint8_t vector,
                             struct irq_context *rsp) {
     scheduler_mark_self_needs_run_dpcs(true);
-    (void) ctx, (void) vector, (void) rsp;
+    unused(ctx, vector, rsp);
     return IRQ_HANDLED;
 }

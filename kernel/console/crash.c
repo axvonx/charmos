@@ -54,7 +54,7 @@ bool crash_cpu_is_owner(uint64_t id) {
            (int64_t) id;
 }
 
-void crash_nmi_handoff(void *p, struct irq_context *irqc) {
+void crash_nmi_handoff(void *p, struct irq_registers *irqc) {
     (void) p;
     /* _NONE here for safety reasons (the validator could
      * crash again depending on why we crashed),

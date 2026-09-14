@@ -59,16 +59,17 @@ static void irq_execute_vector_handlers(irq_t vector,
 
 /* TODO: Someday we will need to handle nmi_depth > 1 and do a fancy asm
  * trampoline to handle cases where IRQs fire in NMIs due to the IRET issue */
-void isr_nmi_entry(struct irq_context *irq_ctx) {
+void isr_nmi_entry(struct irq_registers *irq_regs) {
     /* vector == IRQ_NMI, of course */
     kassert(!irq_mark_self_in_nmi(true));
 
-    irq_execute_vector_handlers(IRQ_NMI, irq_ctx);
+    struct irq_context irq_ctx = {.regs = irq_regs};
+    irq_execute_vector_handlers(IRQ_NMI, &irq_ctx);
 
     kassert(irq_mark_self_in_nmi(false) == 1);
 }
 
-void isr_standard_entry(irq_t vector, struct irq_context *irq_ctx) {
+void isr_standard_entry(irq_t vector, struct irq_registers *irq_regs) {
     irq_mark_self_in_interrupt(true);
 
     enum irql old = irql_raise(IRQL_HIGH_LEVEL);
@@ -79,16 +80,10 @@ void isr_standard_entry(irq_t vector, struct irq_context *irq_ctx) {
     if (!is_exception)
         kassert(old != IRQL_HIGH_LEVEL);
 
-    /* All IRQ scoped, _raw is fine */
-    kassert(smp_core_raw()->irq_entered_irql == IRQL_NONE, "Potential race");
-
-    smp_core_raw()->irq_entered_irql = old;
-    smp_core_raw()->irq_stack_scratch_buf = scratch_buf;
-
-    irq_execute_vector_handlers(vector, irq_ctx);
-
-    smp_core_raw()->irq_entered_irql = IRQL_NONE;
-    smp_core_raw()->irq_stack_scratch_buf = NULL;
+    struct irq_context irq_ctx = {.irq_entered_irql = old,
+                                  .irq_stack_scratch_buf = scratch_buf,
+                                  .regs = irq_regs};
+    irq_execute_vector_handlers(vector, &irq_ctx);
 
     /* We explicitly exclude exceptions, since the context
      * might be anywhere, including within RCU itself */
@@ -117,7 +112,7 @@ void isr_standard_entry(irq_t vector, struct irq_context *irq_ctx) {
 
         struct exception_sync_cb *escb = &exception_cbs[vector];
         if (escb->fn)
-            escb->fn(escb, irq_ctx, scratch_buf);
+            escb->fn(escb, &irq_ctx, scratch_buf);
 
     } else {
         irql_lower(old);
@@ -147,11 +142,11 @@ void isr_standard_entry(irq_t vector, struct irq_context *irq_ctx) {
     }
 }
 
-void isr_common_entry(irq_t vector, struct irq_context *irq_ctx) {
+void isr_common_entry(irq_t vector, struct irq_registers *irq_regs) {
     if (vector != IRQ_NMI) {
-        isr_standard_entry(vector, irq_ctx);
+        isr_standard_entry(vector, irq_regs);
     } else {
-        isr_nmi_entry(irq_ctx);
+        isr_nmi_entry(irq_regs);
     }
 }
 

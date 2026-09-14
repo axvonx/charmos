@@ -36,10 +36,9 @@ enum irq_result page_fault_isr(void *context, uint8_t vector,
      * to the exception_sync_cb below, this is just how the ISR
      * gets access to said buffer without extra parameters */
     struct page_fault_scratch_buffer *pfsb =
-        (struct page_fault_scratch_buffer *) smp_core(TOPC_IRQ)
-            ->irq_stack_scratch_buf;
+        (struct page_fault_scratch_buffer *) rsp->irq_stack_scratch_buf;
 
-    uint64_t error_code = rsp->error_code;
+    uint64_t error_code = rsp->regs->error_code;
     uint64_t fault_addr;
     asm volatile("mov %%cr2, %0" : "=r"(fault_addr));
     pfsb->error_code = error_code;
@@ -145,9 +144,10 @@ static bool addr_is_mapped(uint64_t addr) {
            (uintptr_t) -1;
 }
 
-static void dump_slab_exec_fault(struct thread *curr, struct irq_context *rsp) {
+static void dump_slab_exec_fault(struct thread *curr, struct irq_context *ctx) {
     printf("\n=== SLAB EXEC FAULT DEBUG ===\n");
 
+    struct irq_registers *rsp = ctx->regs;
     printf("Faulting RIP (from CPU): %p\n", rsp->rip);
     printf("Faulting RSP (from CPU): %p\n", rsp->rsp);
 
@@ -228,12 +228,14 @@ static void dump_slab_exec_fault(struct thread *curr, struct irq_context *rsp) {
 
 static void __noreturn page_fault_report_crash(vaddr_t fault_addr,
                                                uint64_t error_code,
-                                               struct irq_context *irqc) {
+                                               struct irq_context *ctx) {
 
     struct thread *curr = thread_get_current();
 
     struct address_range *ar = address_range_for_addr(fault_addr);
     const char *name = ar ? ar->name : "UNKNOWN";
+
+    struct irq_registers *irqc = ctx->regs;
 
     spin_lock_raw(&pf_lock);
 
@@ -290,7 +292,7 @@ static void __noreturn page_fault_report_crash(vaddr_t fault_addr,
     }
 
     if (is_slab_exec)
-        dump_slab_exec_fault(curr, irqc);
+        dump_slab_exec_fault(curr, ctx);
 
     struct crash_regs pregs;
     irq_context_to_crash_regs(irqc, &pregs);
