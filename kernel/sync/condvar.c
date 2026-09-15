@@ -59,7 +59,8 @@ struct thread *condvar_signal(struct condvar *cv) {
 void condvar_broadcast_callback(struct condvar *cv,
                                 thread_action_callback tac) {
     while (thread_wait_header_satisfy(&cv->waiters,
-                                      THREAD_WAKE_REASON_SLEEP_MANUAL, tac)) {}
+                                      THREAD_WAKE_REASON_SLEEP_MANUAL, tac))
+        ;
 }
 
 void condvar_broadcast(struct condvar *cv) {
@@ -71,9 +72,9 @@ static void condvar_timeout_wakeup(struct timer *timer) {
     struct thread *t = ck->thread;
 
     /* Signals and timeouts use the same block */
-    thread_wait_satisfy_epoch(&t->wait_blocks[THREAD_WAIT_BLOCK_SYNC],
-                              ck->cookie, THREAD_WAKE_REASON_SLEEP_TIMEOUT,
-                              NULL);
+    kassert(thread_wait_satisfy_epoch(&t->wait_blocks[THREAD_WAIT_BLOCK_SYNC],
+                                      ck->cookie,
+                                      THREAD_WAKE_REASON_SLEEP_TIMEOUT, NULL));
 }
 
 enum wake_reason condvar_wait_timeout(struct condvar *cv, struct spinlock *lock,

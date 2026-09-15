@@ -233,7 +233,6 @@ void turnstile_wake(struct turnstile *ts, size_t queue, size_t num_threads,
 
     /* un-inherit the priority we inherited */
     turnstile_pi_remove(ts);
-    ts->owner = NULL;
 
     /* yo, wake up */
     while (num_threads-- > 0) {

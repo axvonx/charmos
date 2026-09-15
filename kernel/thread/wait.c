@@ -231,6 +231,12 @@ static void finish_locked(struct thread *t) {
 
 struct thread_wait_result thread_wait_complete(void) {
     struct thread *t = thread_get_current();
+
+    /* Whether the previous loop ran any APCs. We need this because
+     * a delivery pass would leave the thread RUNNING. The
+     * pass after one that delivers has to go actually block. */
+    bool delivered = false;
+
     while (true) {
         enum irql irql = spin_lock_irq_disable(&t->wait_lock);
         kassert(t->active_wait_blocks);
@@ -247,8 +253,7 @@ struct thread_wait_result thread_wait_complete(void) {
 
         enum irql tirql = spin_lock_irq_disable(&t->lock);
 
-        /* If any APCs came in, we can satisfy them now */
-        bool apc = t->wait_type == THREAD_WAIT_INTERRUPTIBLE &&
+        bool apc = t->wait_type == THREAD_WAIT_INTERRUPTIBLE && !delivered &&
                    atomic_load(&t->apc_pending_mask) != 0;
 
         thread_clear_flag(t, THREAD_FLAG_YIELDED);
@@ -262,6 +267,8 @@ struct thread_wait_result thread_wait_complete(void) {
 
         if (apc)
             apc_check_and_deliver(t);
+
+        delivered = apc;
 
         scheduler_yield();
     }
