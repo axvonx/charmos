@@ -3,11 +3,11 @@
 #include <stdbool.h>
 #include <sync/lock_chk_types.h>
 #include <sync/spinlock.h>
-#include <thread/queue.h>
+#include <thread/wait.h>
 
 struct mutex_simple {
     struct thread *owner;
-    struct thread_queue waiters;
+    struct thread_wait_header waiters;
     struct spinlock lock;
 
 #ifdef DEBUG_LOCK_CHK
@@ -44,7 +44,7 @@ void mutex_simple_assert_not_held_internal(struct mutex_simple *m,
         .owner = NULL,                                                         \
         .waiters =                                                             \
             {                                                                  \
-                .list = LIST_HEAD_INIT((id_).waiters.list),                    \
+                .waiters = LIST_HEAD_INIT((id_).waiters.waiters),              \
                 .lock = SPINLOCK_INIT_CHK(NULL, LOCK_UNCHKD),                  \
             },                                                                 \
         .lock = SPINLOCK_INIT_CHK(NULL, LOCK_UNCHKD),                          \
@@ -70,7 +70,7 @@ void mutex_simple_assert_not_held_internal(struct mutex_simple *m,
         .owner = NULL,                                                         \
         .waiters =                                                             \
             {                                                                  \
-                .list = LIST_HEAD_INIT((id_).waiters.list),                    \
+                .waiters = LIST_HEAD_INIT((id_).waiters.waiters),              \
                 .lock = SPINLOCK_INIT_CHK(NULL, LOCK_UNCHKD),                  \
             },                                                                 \
         .lock = SPINLOCK_INIT_CHK(NULL, LOCK_UNCHKD),                          \

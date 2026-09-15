@@ -18,21 +18,17 @@ void nightmare_publish_stop(enum nightmare_stop reason) {
         }
     }
 
-    /* Workers and heartbeat may be between polls in timed sleeps, so
-     * we need to wake them here so teardown doesn't depend on their timers */
-
-    /* Threads blocked on other stuff don't care because the expected
-     * wake source won't match what we give them here */
+    /* Alert parked/alertable workers, with uninterruptable
+     * timers and waits finishing normally */
     if (advanced && observed == NM_RUN) {
         for (size_t i = 0; i < nightmare_runtime.total_worker_count; i++) {
             struct thread *thread = atomic_load_explicit(
                 &nightmare_runtime.workers[i].th, memory_order_acquire);
             if (thread)
-                scheduler_wake_manual(thread, thread);
+                thread_alert(thread);
         }
         if (nightmare_runtime.heartbeat)
-            scheduler_wake_manual(nightmare_runtime.heartbeat,
-                                  nightmare_runtime.heartbeat);
+            thread_alert(nightmare_runtime.heartbeat);
     }
 }
 

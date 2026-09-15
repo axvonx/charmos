@@ -7,6 +7,13 @@
 struct thread;
 struct cpu_context;
 
+typedef uint8_t thread_act_reason_t; /* Polymorphic type:
+                                      * all the THREAD_*_REASONs
+                                      * are uint8_t, and often, we
+                                      * may need just a generic reason.
+                                      *
+                                      * This is that. */
+
 /* Both ASAN and the lock validator are very eager to consume
  * stack memory, so we'll give threads four times as many pages
  * if either of those happen to be on, and this should
@@ -30,20 +37,14 @@ enum thread_state : uint8_t {
 
 enum thread_wait_type : uint8_t {
     THREAD_WAIT_NONE,
-    THREAD_WAIT_UNINTERRUPTIBLE, /* Cannot be interrupted by anything
-                                    besides the wake source */
-
-    THREAD_WAIT_INTERRUPTIBLE, /* Can be interrupted */
+    THREAD_WAIT_UNINTERRUPTIBLE, /* Only object matching/satisfaction ends it */
+    THREAD_WAIT_INTERRUPTIBLE,   /* APCs OK, alerts end the wait */
 };
 
 enum thread_wait_status : uint8_t {
-    THREAD_WAIT_MATCHED = 0, /* Woken and expected_wake_src matched */
-    THREAD_WAIT_INTERRUPTED, /* Interrupted by APC, signal, or non matching wake
-                              */
-    THREAD_WAIT_SPURIOUS,    /* TODO: Start using this */
+    THREAD_WAIT_SATISFIED,
+    THREAD_WAIT_ALERTED,
 };
-
-#define THREAD_WAIT_ANY_SRC ((void *) 0)
 
 /* thread_flags: 32 bit bitflags:
  *
@@ -56,7 +57,7 @@ enum thread_wait_status : uint8_t {
  * E - Executing APC
  * D - Dying
  * Y - Yielded after a wait (block, sleep)
- * W - Wake matched
+ * W - Available
  * r - Realtime fault tolerance
  * j - Joinable - someone holds a join reference on this thread
  * J - Joined - a join is in progress or consumed the join reference
@@ -70,7 +71,6 @@ enum thread_flags : uint32_t {
     THREAD_FLAG_EXECUTING_APC = 1 << 2,
     THREAD_FLAG_DYING = 1 << 3,
     THREAD_FLAG_YIELDED = 1 << 4,
-    THREAD_FLAG_WAKE_MATCHED = 1 << 5,
     THREAD_FLAG_RT_FAULT_TOLERANCE = 1 << 6,
     THREAD_FLAG_JOINABLE = 1 << 7,
     THREAD_FLAG_JOINED = 1 << 8,
@@ -93,7 +93,7 @@ enum thread_prio_class : uint8_t {
 /* Different enums are used for the little
  * bit of type safety since different ringbuffers
  * are used to keep track of different reasons */
-enum thread_wake_reason : uint8_t {
+enum thread_resume_reason : uint8_t {
     THREAD_WAKE_REASON_BLOCKING_IO = 1,
     THREAD_WAKE_REASON_BLOCKING_MANUAL = 2,
     THREAD_WAKE_REASON_SLEEP_TIMEOUT = 3,
@@ -109,7 +109,7 @@ enum thread_sleep_reason : uint8_t {
     THREAD_SLEEP_REASON_MANUAL = 7,
 };
 
-/* Used in condvars, totally separate from thread_wake_reason */
+/* Used in condvars, totally separate from thread_resume_reason */
 enum wake_reason {
     WAKE_REASON_NONE = 0,    /* No reason specified */
     WAKE_REASON_SIGNAL = 1,  /* Signal from something */

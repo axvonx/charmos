@@ -2,6 +2,9 @@
 #include <mem/alloc_or_die.h>
 
 struct chaos_state {
+    struct thread_wait_header wait;
+    struct spinlock lock;
+    bool signaled;
     struct thread *t;
     atomic_bool alive;
 };
@@ -154,9 +157,17 @@ static void chaos_sleeper(void *arg) {
         qspin_unlock(&chaos_fuzz_qspin, irql);
 
         /* Sleep and wait for waker */
-        thread_prepare_to_sleep(t, THREAD_SLEEP_REASON_MANUAL,
-                                THREAD_WAIT_INTERRUPTIBLE, (void *) id);
-        thread_yield_until_wake_match();
+        struct chaos_state *state = &states[id];
+        irql = spin_lock_irq_disable(&state->lock);
+        if (!state->signaled) {
+            thread_wait_prepare_to_sleep(&state->wait, state,
+                                         THREAD_WAIT_INTERRUPTIBLE);
+            spin_unlock(&state->lock, irql);
+            thread_wait_complete();
+            irql = spin_lock_irq_disable(&state->lock);
+        }
+        state->signaled = false;
+        spin_unlock(&state->lock, irql);
         CHAOS_LOG("sleeper %zu woke up, iter %zu", id, i);
     }
 
@@ -187,8 +198,12 @@ static void chaos_waker(void *arg) {
         }
 
         CHAOS_LOG("wake %p", states[id].t);
-        thread_wake(states[id].t, THREAD_WAKE_REASON_SLEEP_MANUAL,
-                    THREAD_PRIO_CLASS_TIMESHARE, (void *) (uintptr_t) id);
+        struct chaos_state *state = &states[id];
+        enum irql irql = spin_lock_irq_disable(&state->lock);
+        state->signaled = true;
+        thread_wait_header_satisfy(&state->wait,
+                                   THREAD_WAKE_REASON_SLEEP_MANUAL, NULL);
+        spin_unlock(&state->lock, irql);
         thread_put(states[id].t);
 
         scheduler_yield();
@@ -223,11 +238,10 @@ static void chaos_dump_thread(const char *role, size_t idx, struct thread *t,
             (unsigned) thread_get_flags(t), (int) thread_get_wait_type(t));
 
     log_msg(LOG_ERROR,
-            "  %s[%zu]   wake_src=%p expected=%p mask=0x%x apcs_ran=%u "
+            "  %s[%zu]   mask=0x%x apcs_ran=%u "
             "ctxsw=%zu",
-            role, idx, (void *) atomic_load(&t->wake_src), t->expected_wake_src,
-            (unsigned) atomic_load(&t->apc_pending_mask), t->total_apcs_ran,
-            t->context_switches);
+            role, idx, (unsigned) atomic_load(&t->apc_pending_mask),
+            t->total_apcs_ran, t->context_switches);
 
     if (max_arms)
         thread_dump_wait_trace(t, role, idx, max_arms);
@@ -313,11 +327,11 @@ TEST_DECLARE_INTEGRATION(mutex, interruptible_apc_fuzz,
     if (chaos_threads > CHAOS_THREADS_MAX)
         chaos_threads = CHAOS_THREADS_MAX;
 
-    /* The whole array, not just the live prefix: `chaos_threads` follows the
-     * intensity knob, so a shorter run would otherwise inherit the previous
-     * run's stale thread pointers in the tail slots. */
     for (size_t i = 0; i < CHAOS_THREADS_MAX; i++) {
         states[i].t = NULL;
+        thread_wait_header_init(&states[i].wait);
+        spinlock_init(&states[i].lock);
+        states[i].signaled = false;
         atomic_store(&states[i].alive, false);
     }
 

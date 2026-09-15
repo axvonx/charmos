@@ -158,7 +158,7 @@ xhci_request_init_blocking(struct xhci_request *req, struct xhci_command *cmd,
     req->type = t;
     req->completion_code = 0;
     req->command = cmd;
-    req->private = thread_get_current();
+    req->private = NULL;
     req->callback = xhci_wake_waiter;
     req->list_owner = XHCI_REQ_LIST_NONE;
     req->port = port;
@@ -191,18 +191,17 @@ static inline bool xhci_send_command_and_block(struct xhci_device *dev,
                                                struct io_wait_token *iot) {
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
 
-    struct io_wait_token tok;
+    struct io_wait_token tok = IO_WAIT_TOKEN_EMPTY;
+    if (iot && io_wait_token_active(iot))
+        io_wait_end(iot, IO_WAIT_END_NO_OP);
 
     if (iot) {
-        io_wait_begin(iot, dev);
+        io_wait_begin(iot, &cmd->request->wait);
     } else {
-        io_wait_begin(&tok, dev);
+        io_wait_begin(&tok, &cmd->request->wait);
     }
 
     if (!xhci_send_command(dev, cmd)) {
-        thread_wake_unlocked(thread_get_current(),
-                             THREAD_WAKE_REASON_BLOCKING_MANUAL, dev);
-
         if (iot) {
             io_wait_end(iot, IO_WAIT_END_NO_OP);
         } else {
@@ -215,7 +214,7 @@ static inline bool xhci_send_command_and_block(struct xhci_device *dev,
 
     irql_lower(irql);
 
-    thread_yield_until_wake_match();
+    io_wait_complete(iot ? iot : &tok);
 
     if (!iot)
         io_wait_end(&tok, IO_WAIT_END_YIELD);

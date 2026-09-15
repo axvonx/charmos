@@ -1,6 +1,6 @@
 #pragma once
 #include <sync/spinlock.h>
-#include <thread/queue.h>
+#include <thread/wait.h>
 #include <time/timer.h>
 
 #define CONDVAR_INIT_IRQ_DISABLE true
@@ -10,7 +10,7 @@ typedef void (*condvar_callback)(void *);
 typedef void (*thread_action_callback)(struct thread *woke);
 
 struct condvar {
-    struct thread_queue waiters;
+    struct thread_wait_header waiters;
     bool irq_disable;
 };
 

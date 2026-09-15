@@ -72,24 +72,21 @@ static bool rw_sync(struct block_device *disk, uint64_t lba, uint8_t *buf,
     /* tells ISR handler to mark status properly */
     req.trigger_completion = true;
 
-    struct thread *curr = thread_get_current();
-
     if (io_wait_token_active(io_wait_tok))
         io_wait_end(io_wait_tok, IO_WAIT_END_NO_OP);
 
-    io_wait_begin(io_wait_tok, dev);
+    io_wait_begin(io_wait_tok, &req.wait);
 
-    dev->io_waiters[ahci_disk->port][req.slot] = curr;
+    req.has_waiter = true;
 
     if (!function(disk, lba, buf, count, &req)) {
+        thread_wait_cancel();
         spin_unlock(&dev->lock, irql);
         return false;
     }
 
     spin_unlock(&dev->lock, irql);
-    thread_yield_until_wake_match();
-
-    dev->io_waiters[ahci_disk->port][req.slot] = NULL;
+    io_wait_complete(io_wait_tok);
 
     return req.status == 0;
 }

@@ -48,8 +48,11 @@ enum wake_storm_failure_phase : uint8_t {
 struct wake_storm_sleeper {
     _Atomic(struct thread *) th;
 
-    /* These don't have to be equal because thread_wake() sets WAKE_MATCHED
-     * regardless of if the target has reached thread_prepare_to_sleep() */
+    struct spinlock lock;
+    struct thread_wait_header wait;
+    bool permit;
+    _Atomic uint64_t alerts;
+
     _Atomic uint64_t issued;
     _Atomic uint64_t observed;
 
@@ -199,37 +202,54 @@ static void wake_storm_sleeper_main(struct nightmare_ctx *ctx,
 
         wake_storm_contend(state, self);
 
-        /* expected_wake_src is the thread pointer
-         *
-         * this means that it decides who can wake us:
-         *
-         * - our waker
-         * - nightmare_publish_stop
-         * - built-in waker perturber */
-        thread_prepare_to_sleep(t, THREAD_SLEEP_REASON_MANUAL,
-                                THREAD_WAIT_INTERRUPTIBLE, t);
+        enum irql irql = spin_lock_irq_disable(&me->lock);
+        bool object_completion = true;
+        if (!me->permit) {
+            thread_wait_prepare_to_sleep(&me->wait, me,
+                                         THREAD_WAIT_INTERRUPTIBLE);
+            spin_unlock(&me->lock, irql);
 
-        /* Re check after we arm */
-        if (nightmare_must_stop() || nightmare_must_park()) {
-            atomic_fetch_add_explicit(&me->issued, 1, memory_order_release);
-            thread_wake(t, THREAD_WAKE_REASON_SLEEP_MANUAL,
-                        THREAD_PRIO_CLASS_TIMESHARE, t);
+            if (nightmare_must_stop() || nightmare_must_park())
+                thread_alert(t);
+
+            struct thread_wait_result result = thread_wait_complete();
+            object_completion = result.status == THREAD_WAIT_SATISFIED;
+            irql = spin_lock_irq_disable(&me->lock);
         }
 
-        thread_yield_until_wake_match();
+        if (object_completion)
+            me->permit = false;
+
+        spin_unlock(&me->lock, irql);
+
+        if (!object_completion)
+            atomic_fetch_add_explicit(&me->alerts, 1, memory_order_release);
 
         if (nightmare_must_stop())
             break;
 
-        atomic_fetch_add_explicit(&me->observed, 1, memory_order_release);
+        if (object_completion)
+            atomic_fetch_add_explicit(&me->observed, 1, memory_order_release);
         NIGHTMARE_PROGRESS();
     }
 }
 
+static void wake_storm_signal(struct wake_storm_sleeper *sleeper,
+                              bool counted) {
+    enum irql irql = spin_lock_irq_disable(&sleeper->lock);
+    if (counted)
+        atomic_fetch_add_explicit(&sleeper->issued, 1, memory_order_release);
+
+    sleeper->permit = true;
+    thread_wait_header_satisfy(&sleeper->wait, THREAD_WAKE_REASON_SLEEP_MANUAL,
+                               NULL);
+
+    spin_unlock(&sleeper->lock, irql);
+}
+
 /* Wake up EVERYONE, which is used because otherwise the stutter perturber
  * would time out waiting for subjects that cannot park because they're
- * busy waiting for the wake match. TODO: Generalize this and revise
- * the sleeping functions */
+ * waiting for an object permit */
 static void wake_storm_release_all(struct wake_storm_state *state,
                                    bool count_issued) {
     for (size_t i = 0; i < state->sleeper_count; i++) {
@@ -238,10 +258,10 @@ static void wake_storm_release_all(struct wake_storm_state *state,
         if (!t || !thread_get(t))
             continue;
         if (count_issued)
-            atomic_fetch_add_explicit(&state->sleepers[i].issued, 1,
-                                      memory_order_release);
-        thread_wake(t, THREAD_WAKE_REASON_SLEEP_MANUAL,
-                    THREAD_PRIO_CLASS_TIMESHARE, t);
+            wake_storm_signal(&state->sleepers[i], true);
+        else
+            thread_alert(t);
+
         thread_put(t);
     }
 }
@@ -285,13 +305,8 @@ static void wake_storm_waker_main(struct nightmare_ctx *ctx,
 
         if (drop) {
             atomic_fetch_add_explicit(&target->issued, 1, memory_order_release);
-        } else if (uncounted) {
-            thread_wake(t, THREAD_WAKE_REASON_SLEEP_MANUAL,
-                        THREAD_PRIO_CLASS_TIMESHARE, t);
         } else {
-            atomic_fetch_add_explicit(&target->issued, 1, memory_order_release);
-            thread_wake(t, THREAD_WAKE_REASON_SLEEP_MANUAL,
-                        THREAD_PRIO_CLASS_TIMESHARE, t);
+            wake_storm_signal(target, !uncounted);
         }
 
         thread_put(t);
@@ -349,6 +364,7 @@ static void wake_storm_probe(struct nightmare_ctx *ctx) {
             sleeper->last_change_ms = now;
             continue;
         }
+
         if (now - sleeper->last_change_ms < state->sleeper_stall_ms)
             continue;
 
@@ -430,9 +446,7 @@ static struct nightmare_verdict wake_storm_finish(struct nightmare_ctx *ctx) {
     struct wake_storm_state *state = wake_state(ctx);
 
     /* Invariants that never had a chance to fail have not passed...
-     * thread_prepare_to_sleep() will exit if a wake already matched,
-     * and thread_yield_until_wake_match() returns without yielding at all
-     * afterwards, so we never measure a yield, thus, we use aggregates here
+     * Pending object permits or alerts can complete before yielding
      */
     bool cut_short =
         atomic_load_explicit(&state->starvation_claimed, memory_order_acquire);
@@ -479,8 +493,11 @@ static struct nightmare_verdict wake_storm_prepare(struct nightmare_ctx *ctx) {
             : WAKE_STORM_DEFAULT_SLEEPER_STALL_MS;
 
     time_ms_t now = time_get_ms();
-    for (size_t i = 0; i < sleeper_count; i++)
+    for (size_t i = 0; i < sleeper_count; i++) {
         state->sleepers[i].last_change_ms = now;
+        spinlock_init(&state->sleepers[i].lock);
+        thread_wait_header_init(&state->sleepers[i].wait);
+    }
 
     ctx->private = state;
     return NIGHTMARE_OK;

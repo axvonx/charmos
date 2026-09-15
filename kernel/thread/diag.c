@@ -30,7 +30,7 @@ void thread_diag_detach(struct thread *t) {
 }
 
 void thread_diag_record_arm(struct thread *t, const char *site, void *ra,
-                            void *expect_wake_src, enum thread_state state,
+                            void *object, enum thread_state state,
                             enum thread_wait_type type, uint8_t reason) {
     struct thread_diag *d = thread_diag(t);
     if (!d)
@@ -43,10 +43,11 @@ void thread_diag_record_arm(struct thread *t, const char *site, void *ra,
             ? &d->wait_trace[(d->wait_arm_count - 1) % THREAD_WAIT_TRACE_DEPTH]
             : NULL;
 
-    if (newest && newest->expected_wake_src == expect_wake_src &&
+    if (newest && newest->object == object &&
+        newest->block_count == t->wait_block_count &&
         newest->wait_type == (uint8_t) type &&
         newest->state == (uint8_t) state && newest->reason == reason) {
-        newest->last_token = t->wait_token;
+        newest->last_epoch = t->wait_epoch;
         newest->last_ms = time_get_ms();
         newest->repeats++;
         return;
@@ -57,32 +58,17 @@ void thread_diag_record_arm(struct thread *t, const char *site, void *ra,
 
     e->site = site;
     e->ra = ra;
-    e->expected_wake_src = expect_wake_src;
-    e->first_token = t->wait_token;
-    e->last_token = t->wait_token;
+    e->object = object;
+    e->first_epoch = t->wait_epoch;
+    e->last_epoch = t->wait_epoch;
     e->repeats = 1;
     e->last_ms = time_get_ms();
     e->state = (uint8_t) state;
     e->wait_type = (uint8_t) type;
     e->reason = reason;
+    e->block_count = t->wait_block_count;
 
     d->wait_arm_count++;
-}
-
-void thread_diag_record_wake_reject(struct thread *t, void *wake_src,
-                                    enum thread_wait_type wt) {
-    struct thread_diag *d = thread_diag(t);
-    if (!d)
-        return;
-
-    if (wt == THREAD_WAIT_NONE) {
-        d->wake_rejects_not_waiting++;
-        return;
-    }
-
-    d->wake_rejects_mismatch++;
-    d->last_reject_src = wake_src;
-    d->last_reject_expected = t->expected_wake_src;
 }
 
 void thread_diag_apc_deliver_enter(struct thread *t, void *ra) {
@@ -120,16 +106,8 @@ void thread_dump_wait_trace(struct thread *t, const char *role, size_t idx,
 
     uint64_t count = d->wait_arm_count;
 
-    log_msg(LOG_ERROR,
-            "  %s[%zu]   arms=%llu (%llu distinct) rejects: mismatch=%llu "
-            "not_waiting=%llu",
-            role, idx, d->wait_arm_total, count, d->wake_rejects_mismatch,
-            d->wake_rejects_not_waiting);
-
-    if (d->wake_rejects_mismatch) {
-        log_msg(LOG_ERROR, "  %s[%zu]   last mismatch: src=%p vs expected=%p",
-                role, idx, d->last_reject_src, d->last_reject_expected);
-    }
+    log_msg(LOG_ERROR, "  %s[%zu]   arms=%llu (%llu distinct)", role, idx,
+            d->wait_arm_total, count);
 
     log_msg(LOG_ERROR,
             "  %s[%zu]   apc: entries=%llu max_burst=%llu deliver_ra=%p", role,
@@ -149,10 +127,10 @@ void thread_dump_wait_trace(struct thread *t, const char *role, size_t idx,
                 seq, e->site ? e->site : "?", e->ra, e->repeats);
 
         log_msg(LOG_ERROR,
-                "  %s[%zu]     -> state=%d %s exp=%p reason=%u "
-                "tok=%llu..%llu last=%llums",
+                "  %s[%zu]     -> state=%d %s object=%p reason=%u "
+                "epoch=%llu..%llu last=%llums blocks=%u",
                 role, idx, (int) e->state, thread_wait_type_str(e->wait_type),
-                e->expected_wake_src, (unsigned) e->reason, e->first_token,
-                e->last_token, e->last_ms);
+                e->object, (unsigned) e->reason, e->first_epoch, e->last_epoch,
+                e->last_ms, e->block_count);
     }
 }

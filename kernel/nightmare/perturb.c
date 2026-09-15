@@ -129,8 +129,7 @@ void nightmare_perturb_waker(struct nightmare_ctx *ctx,
             struct thread *target_th =
                 atomic_load_explicit(&target_worker->th, memory_order_acquire);
             if (target_th) {
-                thread_wake(target_th, THREAD_WAKE_REASON_SLEEP_MANUAL,
-                            THREAD_PRIO_CLASS_TIMESHARE, NULL);
+                thread_alert(target_th);
             }
         }
 

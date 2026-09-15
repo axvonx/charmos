@@ -60,11 +60,8 @@ static atomic_size_t stop_sleepers_waiting;
 
 static void heartbeat_waiter(void *arg) {
     (void) arg;
-    struct thread *self = thread_get_current();
-    thread_prepare_to_sleep(self, THREAD_SLEEP_REASON_MANUAL,
-                            THREAD_WAIT_UNINTERRUPTIBLE, self);
     atomic_fetch_add_explicit(&stop_sleepers_waiting, 1, memory_order_release);
-    thread_yield_until_wake_match();
+    thread_park();
 }
 
 TEST_DECLARE_UNIT(nightmare_harness, first_stop_wakes_sleepers) {
@@ -95,12 +92,12 @@ TEST_DECLARE_UNIT(nightmare_harness, first_stop_wakes_sleepers) {
 
     bool worker_joined = thread_join_timeout(worker_thread, 250, NULL);
     if (!worker_joined) {
-        scheduler_wake_manual(worker_thread, worker_thread);
+        thread_alert(worker_thread);
         thread_join(worker_thread);
     }
     bool heartbeat_joined = thread_join_timeout(heartbeat, 250, NULL);
     if (!heartbeat_joined) {
-        scheduler_wake_manual(heartbeat, heartbeat);
+        thread_alert(heartbeat);
         thread_join(heartbeat);
     }
 

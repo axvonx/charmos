@@ -9,7 +9,7 @@
 
 #include "mutex_internal.h"
 
-/* LOCK ORDERING: TS -> THREAD */
+/* LOCK ORDERING: chain -> thread.wait_lock -> header / runqueues -> thread */
 
 SLAB_SIZE_REGISTER_FOR_STRUCT(turnstile, SLAB_OBJ_ALIGN_DEFAULT);
 
@@ -101,6 +101,7 @@ static int32_t turnstile_thread_cmp(const struct rbt_node *a,
 }
 
 struct turnstile *turnstile_init(struct turnstile *ts) {
+    thread_wait_header_init(&ts->wait);
     ts->lock_obj = NULL;
     ts->waiters = 0;
     ts->state = TURNSTILE_STATE_UNUSED;
@@ -232,16 +233,17 @@ void turnstile_wake(struct turnstile *ts, size_t queue, size_t num_threads,
 
     /* un-inherit the priority we inherited */
     turnstile_pi_remove(ts);
+    ts->owner = NULL;
 
     /* yo, wake up */
     while (num_threads-- > 0) {
         /* wake the one of highest priority */
         struct thread *to_wake = turnstile_dequeue_first(ts, queue);
-        thread_wake(to_wake, THREAD_WAKE_REASON_BLOCKING_MANUAL,
-                    to_wake->perceived_prio_class, ts);
+        kassert(
+            thread_wait_satisfy(&to_wake->wait_blocks[THREAD_WAIT_BLOCK_SYNC],
+                                THREAD_WAKE_REASON_BLOCKING_MANUAL, NULL));
     }
 
-    ts->owner = NULL;
     turnstile_hash_chain_unlock(chain, lock_irql);
 }
 
@@ -318,8 +320,9 @@ static void turnstile_block_on(struct turnstile *ts, size_t queue_num) {
 
     atomic_store(&curr->blocked_ts, ts);
 
-    thread_prepare_to_block(curr, THREAD_BLOCK_REASON_MANUAL,
-                            THREAD_WAIT_UNINTERRUPTIBLE, ts);
+    thread_wait_prepare_one(&ts->wait, ts->lock_obj,
+                            THREAD_WAIT_UNINTERRUPTIBLE,
+                            THREAD_BLOCK_REASON_MANUAL);
 
     rbt_insert(&ts->queues[queue_num], &curr->wq_tree_node);
 }
@@ -364,7 +367,7 @@ struct turnstile *turnstile_block(struct turnstile *ts, size_t queue_num,
 
     /* it is the waking thread's job to decrement waiters and
      * mark me as no longer being blocked on the lock object */
-    thread_yield_until_wake_match();
+    thread_wait_complete();
 
     thread_remove_boost();
 

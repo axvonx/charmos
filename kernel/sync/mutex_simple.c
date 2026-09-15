@@ -69,7 +69,7 @@ void mutex_simple_set_chk_flags(struct mutex_simple *m,
                                 enum lock_chk_flags flags) {
     kassert(m->chk.initialized);
     kassert(m->owner == NULL);
-    kassert(list_empty(&m->waiters.list));
+    kassert(list_empty(&m->waiters.waiters));
     kassert(!spinlock_locked(&m->waiters.lock));
     kassert(!spinlock_locked(&m->lock));
     kassert(!atomic_load_explicit(&m->chk.used, memory_order_relaxed));
@@ -82,7 +82,7 @@ void mutex_simple_reinit_chk(struct mutex_simple *m,
                              enum lock_chk_flags flags) {
     kassert(m->chk.initialized);
     kassert(m->owner == NULL);
-    kassert(list_empty(&m->waiters.list));
+    kassert(list_empty(&m->waiters.waiters));
     kassert(!spinlock_locked(&m->waiters.lock));
     kassert(!spinlock_locked(&m->lock));
     mutex_simple_init_chk_internal(m, class, flags);
@@ -177,16 +177,22 @@ static bool spin_wait_simple_mutex(struct mutex_simple *m,
 
 static void block_on_simple_mutex(struct mutex_simple *m) {
     enum irql irql = spin_lock(&m->lock);
-    thread_block_on(&m->waiters, THREAD_WAIT_UNINTERRUPTIBLE, m);
+    /* owner can release between failed fast path and this lock */
+    if (!m->owner) {
+        spin_unlock(&m->lock, irql);
+        return;
+    }
+    thread_wait_prepare_one(&m->waiters, m, THREAD_WAIT_UNINTERRUPTIBLE,
+                            THREAD_BLOCK_REASON_MANUAL);
     spin_unlock(&m->lock, irql);
-    scheduler_yield();
+    thread_wait_complete();
 }
 
 void mutex_simple_init_chk_internal(struct mutex_simple *m,
                                     const struct lock_chk_class *class,
                                     enum lock_chk_flags flags) {
     m->owner = NULL;
-    INIT_LIST_HEAD(&m->waiters.list);
+    INIT_LIST_HEAD(&m->waiters.waiters);
     spinlock_init(&m->waiters.lock, LOCK_UNCHKD);
     spinlock_init(&m->lock, LOCK_UNCHKD);
     mutex_simple_chk_state_init(m, class, flags);
@@ -241,10 +247,8 @@ void mutex_simple_unlock_internal(struct mutex_simple *m,
 
     m->owner = NULL;
 
-    struct thread *next = thread_queue_pop_front(&m->waiters);
-    if (next != NULL)
-        thread_wake(next, THREAD_WAKE_REASON_BLOCKING_MANUAL,
-                    next->perceived_prio_class, m);
+    thread_wait_header_satisfy(&m->waiters, THREAD_WAKE_REASON_BLOCKING_MANUAL,
+                               NULL);
 
     spin_unlock(&m->lock, irql);
 

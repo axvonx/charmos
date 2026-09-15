@@ -57,8 +57,8 @@ TEST_DECLARE_INTEGRATION(sched, short_sleep_lost_wake) {
     bool joined = thread_join_timeout(t, 1000, NULL);
     if (!joined) {
         atomic_store(&short_sleep_stop, true);
-        thread_wake(t, THREAD_WAKE_REASON_SLEEP_TIMEOUT,
-                    t->perceived_prio_class, t);
+        /* alert must not rescue a uninterruptible wait */
+        kassert(joined, "short timed sleep lost its object completion");
         thread_join(t);
     }
 
@@ -70,6 +70,7 @@ TEST_DECLARE_INTEGRATION(sched, short_sleep_lost_wake) {
     return TEST_SUCCESS;
 }
 
+static struct thread_wait_header si_wait;
 static atomic_bool si_apc_ran = false;
 static struct thread *si_t;
 static atomic_bool si_ok = false;
@@ -99,12 +100,9 @@ static void apc_enqueue_thread(void *) {
 }
 
 static void sleeping_thread(void *) {
+    thread_wait_prepare_to_sleep(&si_wait, &si_wait, THREAD_WAIT_INTERRUPTIBLE);
     atomic_store(&si_started, true);
-
-    thread_prepare_to_sleep(thread_get_current(), THREAD_SLEEP_REASON_MANUAL,
-                            THREAD_WAIT_INTERRUPTIBLE, (void *) 4);
-
-    thread_yield_until_wake_match();
+    thread_wait_complete();
 
     atomic_store(&si_ok, true);
 }
@@ -113,8 +111,7 @@ static void waking_thread(void *) {
     while (!atomic_load(&si_apc_ran))
         scheduler_yield();
 
-    thread_wake(si_t, THREAD_WAKE_REASON_SLEEP_MANUAL,
-                si_t->perceived_prio_class, (void *) 4);
+    thread_wait_header_satisfy(&si_wait, THREAD_WAKE_REASON_SLEEP_MANUAL, NULL);
 }
 
 TEST_DECLARE_INTEGRATION(sched, sleep_interruptible_apc) {
@@ -123,6 +120,7 @@ TEST_DECLARE_INTEGRATION(sched, sleep_interruptible_apc) {
         return TEST_SKIP(TEST_SKIP_NONE);
     }
 
+    thread_wait_header_init(&si_wait);
     atomic_store(&si_apc_ran, false);
     atomic_store(&si_ok, false);
     atomic_store(&si_started, false);
@@ -169,6 +167,9 @@ static void apc_sub_enq_thread(void *) {
 
     if (got) {
         apc_enqueue(sub_t, apc, APC_TYPE_KERNEL);
+        while (!atomic_load(&sub_apc_ran))
+            scheduler_yield();
+        thread_alert(sub_t);
         thread_put(sub_t);
     }
     apc_put(apc);
@@ -177,12 +178,8 @@ static void apc_sub_enq_thread(void *) {
 static void sleeping_sub_thread(void *) {
     atomic_store(&sub_started, true);
 
-    thread_prepare_to_sleep(thread_get_current(), THREAD_SLEEP_REASON_MANUAL,
-                            THREAD_WAIT_INTERRUPTIBLE, (void *) 0xdeadbeef);
-
-    enum thread_wait_status st = thread_yield_interruptible();
-    if (st == THREAD_WAIT_INTERRUPTED)
-        atomic_store(&sub_interrupted, true);
+    thread_park();
+    atomic_store(&sub_interrupted, true);
 }
 
 TEST_DECLARE_INTEGRATION(sched, wait_interruptible_substrate) {
@@ -219,10 +216,8 @@ static atomic_bool arb_matched = false;
 static void arbitrary_sleeping_thread(void *) {
     atomic_store(&arb_started, true);
 
-    enum thread_wait_status st =
-        thread_yield_arbitrary(THREAD_WAIT_UNINTERRUPTIBLE);
-    if (st == THREAD_WAIT_MATCHED)
-        atomic_store(&arb_matched, true);
+    thread_park();
+    atomic_store(&arb_matched, true);
 }
 
 static void arbitrary_waking_thread(void *) {
@@ -231,11 +226,10 @@ static void arbitrary_waking_thread(void *) {
 
     thread_sleep_for_ms(5);
 
-    thread_wake(arb_t, THREAD_WAKE_REASON_SLEEP_MANUAL,
-                arb_t->perceived_prio_class, (void *) 0xcafe);
+    thread_alert(arb_t);
 }
 
-TEST_DECLARE_INTEGRATION(sched, wait_arbitrary_any_src) {
+TEST_DECLARE_INTEGRATION(sched, park_alert) {
     if (global.core_count < 3) {
         test_info("too few cores");
         return TEST_SKIP(TEST_SKIP_NONE);

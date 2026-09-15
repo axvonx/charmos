@@ -19,6 +19,7 @@
 #include <time/spin_sleep.h>
 
 #include "internal.h"
+#include <thread/io_wait.h>
 #include <thread/thread.h>
 
 static enum bio_request_status nvme_to_bio_status(uint16_t status_word) {
@@ -55,7 +56,8 @@ done:
 
 static void nvme_process_one(struct nvme_device *dev,
                              struct nvme_request *req) {
-    struct thread *t = req->waiter;
+    (void) dev;
+    bool has_waiter = req->has_waiter;
 
     if (--req->remaining_parts == 0) {
         if (req->bio_data->prp_list_phys)
@@ -67,10 +69,9 @@ static void nvme_process_one(struct nvme_device *dev,
         req->status = nvme_to_bio_status(req->status);
         if (req->on_complete)
             req->on_complete(req);
+        if (has_waiter)
+            io_wait_signal(&req->wait);
     }
-
-    if (t)
-        thread_wake_from_io_block(t, dev);
 }
 
 static struct nvme_request *nvme_finished_pop_front(struct nvme_device *dev) {

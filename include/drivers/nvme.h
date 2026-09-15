@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <sync/semaphore.h>
 #include <sync/spinlock.h>
+#include <thread/wait.h>
 #include <thread/workqueue.h>
 
 struct nvme_command {
@@ -94,7 +95,8 @@ struct nvme_request {
 
     void (*on_complete)(struct nvme_request *);
     struct nvme_bio_data *bio_data;
-    struct thread *waiter;
+    struct thread_wait_header wait;
+    bool has_waiter;
 
     void *user_data;
 

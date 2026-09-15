@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <structures/list.h>
+#include <thread/wait.h>
 #include <types/refcount.h>
 struct usb_controller;
 struct usb_device;
@@ -370,6 +371,7 @@ struct usb_device {
 };
 
 struct usb_request {
+    struct thread_wait_header wait;
     struct usb_device *dev;
     struct usb_endpoint *ep;
     enum usb_transfer_type type;

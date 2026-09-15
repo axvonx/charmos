@@ -22,27 +22,26 @@ LOG_HANDLE_DECLARE_PRINT(usb);
 enum usb_error usb_transfer_sync(enum usb_error (*fn)(struct usb_request *),
                                  struct usb_request *request,
                                  struct io_wait_token *tok) {
-    struct thread *curr = thread_get_current();
     request->complete = usb_wake_waiter;
-    request->context = curr;
+    request->context = NULL;
 
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
 
     struct io_wait_token iowt = IO_WAIT_TOKEN_EMPTY;
 
+    if (tok && io_wait_token_active(tok))
+        io_wait_end(tok, IO_WAIT_END_NO_OP);
+
     /* Begin it regardless */
     if (tok) {
-        io_wait_begin(tok, request->dev);
+        io_wait_begin(tok, &request->wait);
     } else {
-        io_wait_begin(&iowt, request->dev);
+        io_wait_begin(&iowt, &request->wait);
     }
 
     enum usb_error ret = fn(request);
     if (ret != USB_OK) {
         usb_warn("ret != USB_OK");
-
-        thread_wake_unlocked(curr, THREAD_WAKE_REASON_BLOCKING_MANUAL,
-                             request->dev);
 
         /* Always end it */
         if (tok) {
@@ -57,7 +56,7 @@ enum usb_error usb_transfer_sync(enum usb_error (*fn)(struct usb_request *),
 
     irql_lower(irql);
 
-    thread_yield_until_wake_match();
+    io_wait_complete(tok ? tok : &iowt);
 
     /* Only end if the wait is local OR it was fatal */
     if (!tok) {
@@ -70,7 +69,7 @@ enum usb_error usb_transfer_sync(enum usb_error (*fn)(struct usb_request *),
 }
 
 void usb_wake_waiter(struct usb_request *rq) {
-    thread_wake_from_io_block(rq->context, rq->dev);
+    io_wait_signal(&rq->wait);
 }
 
 void usb_destroy(struct usb_request *rq) {

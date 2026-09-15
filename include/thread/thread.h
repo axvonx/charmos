@@ -23,6 +23,7 @@
 #include <thread/apc_types.h>
 #include <thread/thread_diag.h>
 #include <thread/thread_types.h>
+#include <thread/wait.h>
 #include <time/time.h>
 #include <types/refcount.h>
 #include <types/types.h>
@@ -70,13 +71,13 @@ struct cpu_context {
 #define THREAD_EVENT_REASON_NONE 0xFF
 
 struct thread_event_association {
-    uint8_t reason;
+    thread_act_reason_t reason;
     uint64_t cycle; /* Cycle for the associated reason */
 };
 
 #define THREAD_ASSOCIATED_REASON_NONE 0xFF
 struct thread_event_reason {
-    uint8_t reason;
+    thread_act_reason_t reason;
     struct thread_event_association associated_reason;
     time_ms_t timestamp;
     uint64_t cycle;
@@ -285,10 +286,6 @@ struct thread {
     struct condvar join_cv;    /* joiners wait here */
     int exit_status;
 
-    /* For condvar */
-    volatile enum wake_reason wake_reason;
-    size_t wait_cookie;
-
     /* RCU stuff:
      *
      * rcu_nesting and rcu_read_seq are written ONLY by this thread
@@ -305,35 +302,25 @@ struct thread {
     uint64_t rcu_blocked_seq;      /* GP we are counted against or 0 */
     struct rcu_cb free_rcu;
 
-    /* Block/sleep and wake sync. */
+    enum thread_state wait_state;
+    enum thread_resume_reason wait_completion_reason;
+
+    /* Storage */
+    struct spinlock wait_lock;
+    struct thread_wait_block wait_blocks[THREAD_NUM_WAIT_BLOCKS];
+    struct thread_wait_block *active_wait_blocks;
+
+    size_t wait_block_count;
+    uint64_t wait_epoch;
+    uint16_t wait_key;
+
+    bool wait_done;
+    enum thread_wait_status wait_status;
+
+    bool alert_pending;
+    bool object_wait;
+
     _Atomic enum thread_wait_type wait_type;
-    void *expected_wake_src;
-    uint64_t wait_token;
-
-    uint8_t last_action_reason;
-
-    /* used in wait_for_wake */
-    enum thread_state last_action;
-
-    _Atomic(void *) wake_src;
-    uint64_t wake_token;
-
-    /* This is for wakes that arrive when the thread was unarmed.
-     *
-     * Sometimes, when waking a thread, there is a gap
-     * between one wait finishing and the next wait being armed
-     * where the waker wants to go wake, so this effectively
-     * allows the wake to become "level triggered", i.e.
-     * immediately acknowledged when this data is read
-     *
-     * access under thread->lock
-     *
-     * TODO: maybe there is a more elegant solution */
-    void *pending_wake_src;
-    uint8_t pending_wake_reason;
-    bool pending_wake;
-
-    uint64_t token_ctr;
 
     struct condvar_with_cb cv_cb_object; /* wait object */
     struct list_head io_wait_tokens;     /* list of tokens */
@@ -435,58 +422,22 @@ void thread_apply_wake_boost(struct thread *t);
 void thread_update_effective_priority(struct thread *t);
 void thread_apply_cpu_penalty(struct thread *t);
 
-void thread_add_wake_reason(struct thread *t, uint8_t reason);
-void scheduler_wake_manual(struct thread *t, void *wake_src);
+void thread_add_wake_reason(struct thread *t, thread_act_reason_t reason);
 void thread_calculate_activity_data(struct thread *t);
 
-void thread_add_block_reason(struct thread *t, uint8_t reason);
-void thread_add_sleep_reason(struct thread *t, uint8_t reason);
-
-void thread_prepare_to_wait(struct thread *t, enum thread_state state,
-                            uint8_t reason, enum thread_wait_type type,
-                            void *expect_wake_src);
-void thread_prepare_to_wait_locked(struct thread *t, enum thread_state state,
-                                   uint8_t reason, enum thread_wait_type type,
-                                   void *expect_wake_src);
-bool thread_rearm_wait(struct thread *t);
-
-enum thread_wait_status thread_wait_yield(void);
-void thread_yield_until_wake_match(void);
-enum thread_wait_status thread_yield_interruptible(void);
-enum thread_wait_status thread_yield_arbitrary(enum thread_wait_type type);
-
-void thread_prepare_to_block(struct thread *t, enum thread_block_reason r,
-                             enum thread_wait_type wait_type,
-                             void *expect_wake_src);
-void thread_prepare_to_sleep(struct thread *t, enum thread_sleep_reason r,
-                             enum thread_wait_type wait_type,
-                             void *expect_wake_src);
-
-/* Turnstile wants this */
-void thread_prepare_to_block_locked(struct thread *t,
-                                    enum thread_block_reason r,
-                                    enum thread_wait_type type,
-                                    void *expect_wake_src);
+void thread_add_block_reason(struct thread *t, thread_act_reason_t reason);
+void thread_add_sleep_reason(struct thread *t, thread_act_reason_t reason);
 
 void thread_set_timesharing(struct thread *t);
 void thread_set_background(struct thread *t);
-void thread_wake_unlocked(struct thread *t, enum thread_wake_reason r,
-                          void *wake_src);
 void thread_migrate(struct thread *t, size_t dest_core);
 enum thread_prio_class thread_unboost_self();
 enum thread_prio_class thread_boost_self(enum thread_prio_class new);
 struct scheduler *thread_get_scheduler(struct thread *t, enum irql *sirql_out);
 
-struct thread_queue;
-void thread_block_on(struct thread_queue *q, enum thread_wait_type type,
-                     void *wake_src);
-
 void thread_enqueue(struct thread *t);
 void thread_enqueue_on_core(struct thread *t, uint64_t core_id);
 
-bool thread_wake(struct thread *t, enum thread_wake_reason reason,
-                 enum thread_prio_class prio, void *wake_src);
-void thread_wake_from_io_block(struct thread *t, void *wake_src);
 bool thread_inherit_priority(struct thread *boosted, struct thread *from,
                              enum thread_prio_class *old_class_out);
 
@@ -680,49 +631,6 @@ static inline void thread_release(struct thread *t, enum irql irql) {
 static inline bool thread_is_rt(struct thread *t) {
     return t->perceived_prio_class == THREAD_PRIO_CLASS_URGENT ||
            t->perceived_prio_class == THREAD_PRIO_CLASS_RT;
-}
-
-static inline void thread_clear_wake_data_raw(struct thread *t) {
-    atomic_store_explicit(&t->wake_src, NULL, memory_order_release);
-    thread_and_flags(t, ~THREAD_FLAG_WAKE_MATCHED);
-    t->expected_wake_src = NULL;
-    t->wait_type = THREAD_WAIT_NONE;
-    t->last_action_reason = 0;
-    t->last_action = THREAD_STATE_READY;
-    t->wake_token = 0;
-
-    /* Finishing a wait happens before the gap a latch can be recorded in, so
-     * dropping it here bounds how long a stale one can survive: at most from
-     * the moment it is set to the next arm. */
-    t->pending_wake = false;
-    t->pending_wake_src = NULL;
-    t->pending_wake_reason = 0;
-}
-
-static inline void thread_finish_wait_raw(struct thread *t) {
-    enum thread_state s = thread_get_state(t);
-    if (s == THREAD_STATE_BLOCKED || s == THREAD_STATE_SLEEPING)
-        thread_set_state(t, THREAD_STATE_RUNNING);
-
-    thread_clear_wake_data_raw(t);
-}
-
-static inline void thread_finish_wait_locked(struct thread *t) {
-    thread_finish_wait_raw(t);
-}
-
-static inline void thread_finish_wait(struct thread *t) {
-    bool aok;
-    enum irql irql = thread_acquire(t, &aok);
-    kassert(aok);
-
-    thread_finish_wait_locked(t);
-
-    thread_release(t, irql);
-}
-
-static inline void thread_clear_wake_data(struct thread *t) {
-    thread_finish_wait(t);
 }
 
 static inline enum thread_wait_type thread_get_wait_type(struct thread *t) {

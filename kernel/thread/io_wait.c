@@ -2,46 +2,43 @@
 #include <thread/io_wait.h>
 #include <thread/thread.h>
 
-static atomic_size_t io_wait_magic = ATOMIC_VAR_INIT(0);
-
-void io_wait_begin(struct io_wait_token *out, void *io_object) {
+void io_wait_begin(struct io_wait_token *out,
+                   struct thread_wait_header *request) {
     struct thread *t = thread_get_current();
-
-    *out = (struct io_wait_token){.wait_object = io_object,
-                                  .active = true,
-                                  .magic = atomic_fetch_add(&io_wait_magic, 1),
-                                  .owner = t};
+    kassert(!out->active);
+    out->active = true;
     list_add_tail(&out->list, &t->io_wait_tokens);
 
-    thread_prepare_to_block(t, THREAD_BLOCK_REASON_IO,
-                            THREAD_WAIT_UNINTERRUPTIBLE, io_object);
+    thread_wait_header_init(request);
+    const struct thread_wait_object object = {request, request};
+    thread_wait_prepare(&object, 1, &out->block, THREAD_WAIT_UNINTERRUPTIBLE,
+                        THREAD_BLOCK_REASON_IO);
+}
+
+void io_wait_complete(struct io_wait_token *t) {
+    kassert(t->active && t->block.thread == thread_get_current());
+    kassert(thread_get_current()->active_wait_blocks == &t->block);
+    thread_wait_complete();
+}
+
+void io_wait_signal(struct thread_wait_header *request) {
+    thread_wait_header_satisfy(request, THREAD_WAKE_REASON_BLOCKING_IO, NULL);
 }
 
 void io_wait_end(struct io_wait_token *t, enum io_wait_end_action act) {
     struct thread *c = thread_get_current();
-    bool found = false;
+    kassert(t->active && t->block.thread == c);
 
-    /* double check */
-    struct io_wait_token *iter;
-    list_for_each_entry(iter, &c->io_wait_tokens, list) {
-        kassert(iter->active);
-        kassert(iter->owner == c);
-        if (iter == t) {
-            found = true;
-            break;
-        }
-    }
+    /* submission failures can end registrations without yielding */
+    if (c->active_wait_blocks == &t->block)
+        thread_wait_cancel();
 
-    kassert(found);
-
-    list_del(&t->list);
+    list_del_init(&t->list);
+    t->active = false;
 
     if (list_empty(&c->io_wait_tokens)) {
         thread_unboost_self();
-
         if (act == IO_WAIT_END_YIELD)
             scheduler_yield();
     }
-
-    t->active = false;
 }

@@ -78,25 +78,21 @@ enum irq_result ide_irq_handler(void *ctx, irq_t irq_num,
         goto out;
     }
 
-    if (req->trigger_completion) {
-        req->status = translate_status(status, error);
-        req->done = true;
-
-        if (req->on_complete)
-            req->on_complete(req);
-    }
-
-    if (req->waiter)
-        thread_wake_from_io_block(req->waiter, d);
+    req->status = translate_status(status, error);
+    req->done = true;
 
 next_request:
-
-    chan->head = chan->head->next;
-
+    chan->head = req->next;
     if (chan->head) {
         ide_start_next(chan, true);
     } else {
         chan->busy = false;
+    }
+
+    if (req->has_waiter) {
+        io_wait_signal(&req->wait);
+    } else if (req->trigger_completion && req->on_complete) {
+        req->on_complete(req);
     }
 
 out:
@@ -183,9 +179,9 @@ static inline void submit_and_wait(struct ata_drive *d, struct ide_request *req,
     if (io_wait_token_active(token))
         io_wait_end(token, IO_WAIT_END_NO_OP);
 
-    io_wait_begin(token, d);
+    io_wait_begin(token, &req->wait);
 
-    req->waiter = thread_get_current();
+    req->has_waiter = true;
     submit_async(d, req);
     spin_unlock(&req->lock, irql);
 }
@@ -242,7 +238,7 @@ static bool rw_sync(struct ata_drive *d, uint64_t lba, uint8_t *b, uint8_t cnt,
     struct ide_request *req = request_init(lba, b, cnt, write);
 
     submit_and_wait(d, req, tk);
-    thread_yield_until_wake_match();
+    io_wait_complete(tk);
 
     bool ret = !req->status;
 

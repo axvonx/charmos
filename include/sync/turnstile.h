@@ -3,6 +3,7 @@
 #include <structures/rbt.h>
 #include <thread/queue.h>
 #include <thread/thread_types.h>
+#include <thread/wait.h>
 
 #define TURNSTILE_WRITER_QUEUE 0
 #define TURNSTILE_READER_QUEUE 1
@@ -21,6 +22,7 @@ enum turnstile_state {
 };
 
 struct turnstile {
+    struct thread_wait_header wait;
     struct thread *owner;
 
     /* If a boost occurs, what did we give it? */

@@ -207,7 +207,6 @@ struct ahci_device {
     struct ahci_controller *ctrl;
     uint64_t port_count;
 
-    struct thread *io_waiters[AHCI_MAX_PORTS][32];
     uint16_t io_statuses[AHCI_MAX_PORTS][32];
 
     struct ahci_request *io_requests[AHCI_MAX_PORTS][32];
@@ -274,6 +273,8 @@ LOG_SITE_EXTERN(ahci);
     log(LOG_SITE(ahci), LOG_HANDLE(ahci), log_level, fmt, ##__VA_ARGS__)
 
 struct ahci_request {
+    struct thread_wait_header wait;
+    bool has_waiter;
     uint32_t port;
     uint32_t slot;
     uint64_t lba;

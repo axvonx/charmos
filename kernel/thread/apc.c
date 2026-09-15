@@ -167,30 +167,9 @@ static void add_apc_to_thread(struct thread *t, struct apc *a,
     apc_set_bitmask(t, type);
 }
 
-static inline bool thread_is_active(struct thread *t) {
-    enum thread_state s = thread_get_state(t);
-    return s == THREAD_STATE_READY || s == THREAD_STATE_RUNNING;
-}
-
-static void maybe_force_resched(struct thread *t) {
-    enum irql irql;
-    struct scheduler *sched = thread_get_scheduler(t, &irql);
-
-    scheduler_force_resched(sched);
-
-    spin_unlock(&sched->lock, irql);
-}
-
 static void wake_if_waiting(struct thread *t) {
-    if (thread_is_active(t))
-        maybe_force_resched(t);
-
-    /* Get it running again */
-    if (!thread_apc_sanity_check(t))
-        return;
-
-    /* set the wake_src as the thread that enqueued the APC */
-    scheduler_wake_manual(t, /* wake_src = */ t);
+    if (thread_apc_sanity_check(t))
+        scheduler_resume_for_apc(t);
 }
 
 bool apc_enqueue(struct thread *t, struct apc *a, enum apc_type type) {

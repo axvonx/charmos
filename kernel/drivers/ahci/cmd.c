@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include <thread/io_wait.h>
 #include <thread/thread.h>
 #include <time/spin_sleep.h>
 
@@ -32,21 +33,17 @@ void ahci_process_completions(struct ahci_device *dev, uint32_t port) {
 
         struct ahci_request *req = dev->io_requests[port][slot];
 
+        dev->io_requests[port][slot] = NULL;
         if (req && req->trigger_completion) {
+            bool has_waiter = req->has_waiter;
             req->done = true;
             req->status = 0;
-
+            atomic_fetch_and(&fp->slot_bitmap, ~mask);
             if (req->on_complete)
                 req->on_complete(req);
-            atomic_store(&fp->slot_bitmap,
-                         atomic_load(&fp->slot_bitmap) & ~mask);
+            if (has_waiter)
+                io_wait_signal(&req->wait);
         }
-
-        struct thread *t = dev->io_waiters[port][slot];
-        if (t)
-            thread_wake_from_io_block(t, dev);
-
-        dev->io_requests[port][slot] = NULL;
     }
 
     mmio_write_32(&p->is, p->is);

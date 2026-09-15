@@ -225,7 +225,11 @@ static inline void scheduler_release_two_raw_locks(struct scheduler *a,
 }
 
 /* Internal use only */
-void thread_prepare_to_wake_locked(struct thread *t, enum thread_wake_reason r,
-                                   void *wake_src);
 void scheduler_switch_in();
 void thread_post_migrate(struct thread *t, size_t old_cpu, size_t new_cpu);
+
+/* Called with wait_lock held after every object link is removed */
+void scheduler_complete_object_wait(struct thread *t,
+                                    enum thread_resume_reason reason);
+
+void scheduler_resume_for_apc(struct thread *t);

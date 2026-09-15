@@ -1,10 +1,8 @@
-#include <thread/io_wait.h>
-
 #include "internal.h"
 
 struct scheduler *scheduler_select_best_for_thread(struct thread *t) {
     /* Pinned threads are already placed, don't bother here */
-    if ((thread_get_flags(t) & THREAD_FLAG_PINNED) && t->scheduler)
+    if (thread_test_flag(t, THREAD_FLAG_PINNED) && t->scheduler)
         return t->scheduler;
 
     struct scheduler *sched = NULL;
@@ -25,114 +23,81 @@ struct scheduler *scheduler_select_best_for_thread(struct thread *t) {
     return kassert(sched);
 }
 
-bool thread_wake(struct thread *t, enum thread_wake_reason reason,
-                 enum thread_prio_class prio, void *wake_src) {
-    kassert(t);
-
+/* Only scheduler entries are object completion and APC execution */
+static void resume_thread(struct thread *t, enum thread_resume_reason reason,
+                          bool completion) {
     enum irql birql, lirql;
 
     struct scheduler *best = scheduler_select_best_for_thread(t);
-    struct scheduler *last_sch;
+    struct scheduler *last;
+    thread_lock_thread_and_rq(t, best, &last, &lirql, &birql);
 
-    /* Lock the thread's runqueue and the best one. If the thread
-     * can be placed on the best one, we put it over there */
-    thread_lock_thread_and_rq(t, best, &last_sch, &lirql, &birql);
-
-    /* this is a fun one. because threads can sleep/block in modes
-     * that aren't just wakeable in one way, we must take care here.
-     *
-     * first, we acquire the scheduler lock so the thread doesn't enter/exit
-     * the runqueues. then we acquire the thread lock
-     * so it doesn't decide to block/sleep (this is because of
-     * wait_for_wake_match -- the yield() loop will abort if it sees
-     * that someone else has set wake_matched).
-     *
-     * this puts us in a position where by the time the thread sees us publish
-     * the `wake` changes we make to it, it will absolutely wake up.
-     */
-
-    bool woke = false;
     bool ok;
     enum irql tirql = thread_acquire(t, &ok);
     if (!ok)
         goto end;
 
-    /* now that we have acquired the locks, we will take a
-     * peek at the wait type.
-     *
-     * if it is UNINTERRUPTIBLE and we are NOT the expected waker, then we leave
-     */
-    enum thread_wait_type wt = thread_get_wait_type(t);
-    bool matches = t->expected_wake_src == THREAD_WAIT_ANY_SRC ||
-                   t->expected_wake_src == wake_src;
-    if ((wt == THREAD_WAIT_UNINTERRUPTIBLE && !matches) ||
-        wt == THREAD_WAIT_NONE) {
+    enum thread_state state = thread_get_state(t);
+    if (completion) {
+        kassert(t->object_wait);
+    } else if (!t->object_wait || t->wait_type != THREAD_WAIT_INTERRUPTIBLE) {
 
-        /* Not armed as of now, so nothing can make this runnable, but
-         * we need to inform the thread of this so the next arm
-         * will consume it and return */
-        if (wt == THREAD_WAIT_NONE) {
-            t->pending_wake = true;
-            t->pending_wake_src = wake_src;
-            t->pending_wake_reason = (uint8_t) reason;
-        }
+        if (state == THREAD_STATE_RUNNING || state == THREAD_STATE_READY)
+            scheduler_force_resched(last);
 
-        thread_diag_record_wake_reject(t, wake_src, wt);
         goto out;
     }
 
-    woke = true;
+    bool yielded = thread_test_flag(t, THREAD_FLAG_YIELDED);
 
-    /* we get the earlier state here */
-    enum thread_state state = thread_get_state(t);
-    bool yielded = thread_get_flags(t) & THREAD_FLAG_YIELDED;
+    /* A prepared waiter can preempt before complete(), so we need
+     * to remove the old queue entry and then change class for completion */
+    bool requeue = completion && state == THREAD_STATE_READY;
+    if (requeue)
+        scheduler_remove_thread(last, t, true);
 
-    thread_prepare_to_wake_locked(t, reason, wake_src);
-    thread_apply_wake_boost(t);
-    t->perceived_prio_class = prio;
+    enum thread_state to_state =
+        yielded ? THREAD_STATE_READY : THREAD_STATE_RUNNING;
 
-    /* if the thread has NOT yielded after it set itself blocked it is
-     * completely unsafe to put it back on the runqueues as it is currently
-     * running, but is marked as BLOCKED or SLEEPING. This can happen when an
-     * ISR enters this code, when the thread we are looking at is on the same
-     * CPU and marked as BLOCKED/SLEEPING when in reality it is actually running
-     * but wanting to block/sleep but has not yielded */
-    if (yielded && state != THREAD_STATE_RUNNING &&
-        state != THREAD_STATE_READY) {
-        scheduler_add_thread(best, t, /* lock_held = */ true);
-        if (last_sch != best) {
-            thread_post_migrate(t, last_sch->core_id, best->core_id);
-        }
+    if (state != THREAD_STATE_RUNNING && state != THREAD_STATE_READY)
+        thread_set_state(t, to_state);
+
+    /* NOTE: completion is automatically given the boost *here* */
+    if (completion) {
+        thread_add_wake_reason(t, reason);
+        thread_apply_wake_boost(t);
+
+        if (reason == THREAD_WAKE_REASON_BLOCKING_IO)
+            t->perceived_prio_class = THREAD_PRIO_CLASS_URGENT;
+    }
+
+    bool queuable =
+        state != THREAD_STATE_RUNNING && state != THREAD_STATE_READY;
+
+    if (requeue || (yielded && queuable)) {
+        scheduler_add_thread(best, t, true);
+
+        if (last != best)
+            thread_post_migrate(t, last->core_id, best->core_id);
 
         scheduler_force_resched(best);
+    } else if (!completion) {
+        scheduler_force_resched(last);
     }
 
 out:
     thread_release(t, tirql);
-end:
 
-    thread_unlock_thread_and_rq(last_sch, best, lirql, birql);
-    return woke;
+end:
+    thread_unlock_thread_and_rq(last, best, lirql, birql);
 }
 
-void thread_wake_from_io_block(struct thread *t, void *wake_src) {
-    /* we are just inspecting the thread to see if this structure exists, no
-     * synchronization needed */
-    struct io_wait_token *iter;
-    bool found = false;
-    list_for_each_entry(iter, &t->io_wait_tokens, list) {
-        if (iter->wait_object == wake_src)
-            found = true;
-    }
-    if (!found) {
-        printf("Problem with %s %p\n", t->name, t);
-        list_for_each_entry(iter, &t->io_wait_tokens, list) {
-            printf("wait obj %p src %p\n", iter->wait_object, wake_src);
-        }
-    }
+void scheduler_complete_object_wait(struct thread *t,
+                                    enum thread_resume_reason reason) {
+    SPINLOCK_ASSERT_HELD(&t->wait_lock);
+    resume_thread(t, reason, true);
+}
 
-    kassert(found, "On thread %p", t);
-
-    thread_wake(t, THREAD_WAKE_REASON_BLOCKING_IO, THREAD_PRIO_CLASS_URGENT,
-                wake_src);
+void scheduler_resume_for_apc(struct thread *t) {
+    resume_thread(t, THREAD_WAKE_REASON_BLOCKING_MANUAL, false);
 }

@@ -95,8 +95,8 @@ void thread_exit_with_status(int status) {
 
     apc_rundown_thread(self);
 
-    /* Walk into thread_wake() and take runqueue locks, woken joiners
-     * can't free us, because our reference lives until the next thread drops */
+    /* Resumed joiners can't free because our ref stays alive
+     * until dropped by the next thread */
     condvar_broadcast(&self->join_cv);
 
     climb_thread_remove(self);
@@ -221,12 +221,10 @@ static struct thread *thread_init(struct thread *thread,
     thread->refcount = 1;
     thread->timeslice_length_raw_ms = THREAD_DEFAULT_TIMESLICE;
     thread->wait_type = THREAD_WAIT_NONE;
-    thread->pending_wake = false;
-    thread->pending_wake_src = NULL;
-    thread->pending_wake_reason = 0;
     thread->activity_class = THREAD_ACTIVITY_CLASS_UNKNOWN;
     thread->exit_status = 0;
     spinlock_init(&thread->lock);
+    thread_wait_init(thread);
     spinlock_init(&thread->join_lock);
 
     /* join_lock/join_cv are only ever touched from thread context, and
@@ -422,21 +420,9 @@ struct thread *thread_queue_pop_front(struct thread_queue *q) {
     return thread_from_wq_list_node(lhead);
 }
 
-void thread_block_on(struct thread_queue *q, enum thread_wait_type type,
-                     void *wake_src) {
-    struct thread *current = thread_get_current();
-
-    enum irql irql = spin_lock_irq_disable(&q->lock);
-    thread_prepare_to_block(current, THREAD_BLOCK_REASON_MANUAL, type,
-                            wake_src);
-    list_add_tail(&current->wq_list_node, &q->list);
-    spin_unlock(&q->lock, irql);
-}
-
 static void wake_thread_timer_cb(struct timer *timer) {
-    struct thread *t = timer->data;
-    thread_wake(t, THREAD_WAKE_REASON_SLEEP_TIMEOUT, t->perceived_prio_class,
-                t);
+    struct thread_wait_header *wait = timer->data;
+    thread_wait_header_satisfy(wait, THREAD_WAKE_REASON_SLEEP_TIMEOUT, NULL);
 }
 
 void thread_sleep_for_us(uint64_t us) {
@@ -445,33 +431,21 @@ void thread_sleep_for_us(uint64_t us) {
         return;
     }
 
-    struct thread *curr = thread_get_current();
-
+    struct thread_wait_header wait;
+    thread_wait_header_init(&wait);
     struct timer sleep_timer;
-    timer_init(&sleep_timer, wake_thread_timer_cb, curr);
+    timer_init(&sleep_timer, wake_thread_timer_cb, &wait);
 
-    /* Publish the wait because shorter timers can fire before yield */
-    thread_prepare_to_sleep(curr, THREAD_SLEEP_REASON_MANUAL,
-                            THREAD_WAIT_UNINTERRUPTIBLE, curr);
+    thread_wait_prepare_to_sleep(&wait, &sleep_timer,
+                                 THREAD_WAIT_UNINTERRUPTIBLE);
     timer_modify(&sleep_timer, timer_delta_us(us));
 
-    thread_yield_until_wake_match();
+    thread_wait_complete();
     timer_delete_sync(&sleep_timer);
 }
 
 void thread_sleep_for_ms(uint64_t ms) {
     thread_sleep_for_us(MS_TO_US(ms));
-}
-
-void scheduler_wake_manual(struct thread *t, void *wake_src) {
-    enum thread_state s = thread_get_state(t);
-
-    if (s == THREAD_STATE_BLOCKED)
-        thread_wake(t, THREAD_WAKE_REASON_BLOCKING_MANUAL,
-                    t->perceived_prio_class, wake_src);
-    else if (s == THREAD_STATE_SLEEPING)
-        thread_wake(t, THREAD_WAKE_REASON_SLEEP_MANUAL, t->perceived_prio_class,
-                    wake_src);
 }
 
 struct scheduler *thread_get_scheduler(struct thread *t, enum irql *sirql_out) {

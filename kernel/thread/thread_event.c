@@ -5,12 +5,12 @@
 
 #include "sch/internal.h"
 
-static inline bool thread_wake_is_from_block(uint8_t wake_reason) {
+static inline bool resume_is_from_block(uint8_t wake_reason) {
     return wake_reason == THREAD_WAKE_REASON_BLOCKING_IO ||
            wake_reason == THREAD_WAKE_REASON_BLOCKING_MANUAL;
 }
 
-static inline bool thread_wake_is_from_sleep(uint8_t wake_reason) {
+static inline bool resume_is_from_sleep(uint8_t wake_reason) {
     return wake_reason == THREAD_WAKE_REASON_SLEEP_TIMEOUT ||
            wake_reason == THREAD_WAKE_REASON_SLEEP_MANUAL;
 }
@@ -25,7 +25,7 @@ static const char *thread_prio_class_str(enum thread_prio_class c) {
     }
 }
 
-static const char *reason_str(uint8_t reason) {
+static const char *reason_str(thread_act_reason_t reason) {
     switch (reason) {
     case THREAD_WAKE_REASON_BLOCKING_IO: return "WAKE_IO";
     case THREAD_WAKE_REASON_BLOCKING_MANUAL: return "WAKE_MANUAL";
@@ -151,10 +151,10 @@ most_recent(struct thread_event_reason *reasons, size_t head) {
 static struct thread_event_reason *
 wake_reason_associated_reason(struct thread_activity_data *data,
                               struct thread_event_reason *wake) {
-    if (thread_wake_is_from_block(wake->reason)) {
+    if (resume_is_from_block(wake->reason)) {
         return &data->block_reasons[wake->associated_reason.reason %
                                     THREAD_EVENT_RINGBUFFER_CAPACITY];
-    } else if (thread_wake_is_from_sleep(wake->reason)) {
+    } else if (resume_is_from_sleep(wake->reason)) {
         return &data->sleep_reasons[wake->associated_reason.reason %
                                     THREAD_EVENT_RINGBUFFER_CAPACITY];
     }
@@ -168,12 +168,12 @@ static bool thread_event_reason_is_valid(struct thread_activity_data *data,
     return assoc->cycle == reason->associated_reason.cycle;
 }
 
-static bool is_block(uint8_t reason) {
+static bool is_block(thread_act_reason_t reason) {
     return reason == THREAD_BLOCK_REASON_IO ||
            reason == THREAD_BLOCK_REASON_MANUAL;
 }
 
-static bool is_sleep(uint8_t reason) {
+static bool is_sleep(thread_act_reason_t reason) {
     return reason == THREAD_SLEEP_REASON_MANUAL;
 }
 
@@ -250,7 +250,7 @@ static void clear_event_slot(struct thread_event_reason *slot) {
 
 static struct thread_event_reason *
 thread_add_event_reason(struct thread_event_reason *ring, uint8_t *head,
-                        uint8_t reason, time_ms_t time,
+                        thread_act_reason_t reason, time_ms_t time,
                         struct thread_activity_stats *stats) {
 
     struct thread_event_reason *slot =
@@ -297,9 +297,9 @@ static void update_bucket_data(struct thread_event_reason *wake,
     if (bucket->cycle != current_cycle)
         clear_bucket_set_cycle(bucket, current_cycle);
 
-    if (thread_wake_is_from_block(wake->reason)) {
+    if (resume_is_from_block(wake->reason)) {
         bucket->block_duration += overlap;
-    } else if (thread_wake_is_from_sleep(wake->reason)) {
+    } else if (resume_is_from_sleep(wake->reason)) {
         bucket->sleep_duration += overlap;
     }
 }
@@ -379,7 +379,7 @@ void thread_update_activity_stats(struct thread *t, time_ms_t time) {
     stats->last_wake_index = wake_head;
 }
 
-void thread_add_wake_reason(struct thread *t, uint8_t reason) {
+void thread_add_wake_reason(struct thread *t, thread_act_reason_t reason) {
     struct thread_activity_data *d = t->activity_data;
     time_ms_t now = time_get_ms();
 
@@ -394,10 +394,10 @@ void thread_add_wake_reason(struct thread *t, uint8_t reason) {
     struct thread_event_reason *past = NULL;
     size_t past_head = 0;
 
-    if (thread_wake_is_from_block(reason)) {
+    if (resume_is_from_block(reason)) {
         past_head = d->block_reasons_head - 1;
         past = most_recent(d->block_reasons, d->block_reasons_head);
-    } else if (thread_wake_is_from_sleep(reason)) {
+    } else if (resume_is_from_sleep(reason)) {
         past_head = d->sleep_reasons_head - 1;
         past = most_recent(d->sleep_reasons, d->sleep_reasons_head);
     } else {
@@ -448,121 +448,18 @@ void thread_update_runtime_buckets(struct thread *thread, time_ms_t time) {
     thread->virtual_period_runtime += new_ms * mult;
 }
 
-void thread_add_block_reason(struct thread *t, uint8_t reason) {
+void thread_add_block_reason(struct thread *t, thread_act_reason_t reason) {
     struct thread_activity_data *d = t->activity_data;
     t->total_block_count++;
     thread_add_event_reason(d->block_reasons, &d->block_reasons_head, reason,
                             time_get_ms(), t->activity_stats);
 }
 
-void thread_add_sleep_reason(struct thread *t, uint8_t reason) {
+void thread_add_sleep_reason(struct thread *t, thread_act_reason_t reason) {
     struct thread_activity_data *d = t->activity_data;
     t->total_sleep_count++;
     thread_add_event_reason(d->sleep_reasons, &d->sleep_reasons_head, reason,
                             time_get_ms(), t->activity_stats);
-}
-
-static bool set_state_and_update_reason(
-    struct thread *t, uint8_t reason, enum thread_state state,
-    void (*callback)(struct thread *, uint8_t), void *wake_src,
-    bool already_locked, enum thread_wait_type type, bool exit_if_match,
-    const char *arm_site, void *arm_ra) {
-    /* do not preempt us. this is raised to HIGH because it is sometimes
-     * called from HIGH and we can't "raise from HIGH to DISPATCH" */
-    enum irql irql = IRQL_NONE;
-    bool aok = true;
-
-    if (!already_locked)
-        irql = thread_acquire(t, &aok);
-    else
-        SPINLOCK_ASSERT_HELD(&t->lock);
-
-    kassert(aok);
-
-    bool ok = false;
-    if (exit_if_match) {
-        if ((thread_get_flags(t) & THREAD_FLAG_WAKE_MATCHED) &&
-            t->wake_token == t->wait_token) {
-            ok = true;
-            goto out;
-        }
-    }
-
-    if (state == THREAD_STATE_READY) {
-        atomic_store_explicit(&t->wake_src, wake_src, memory_order_release);
-        if (wake_src == t->expected_wake_src ||
-            t->expected_wake_src == THREAD_WAIT_ANY_SRC) {
-            t->wake_token = t->wait_token;
-            thread_or_flags(t, THREAD_FLAG_WAKE_MATCHED);
-        }
-    } else {
-        thread_and_flags(t, ~(THREAD_FLAG_YIELDED | THREAD_FLAG_WAKE_MATCHED));
-        atomic_store_explicit(&t->wait_type, type, memory_order_release);
-        t->last_action_reason = reason;
-        t->last_action = state;
-        t->wait_token = ++t->token_ctr;
-        t->wake_token = 0;
-        atomic_store_explicit(&t->wake_src, NULL, memory_order_release);
-        t->expected_wake_src = wake_src;
-        thread_diag_record_arm(t, arm_site, arm_ra, wake_src, state, type,
-                               reason);
-
-        /* A wake between waits gets its 'level triggered' flags checked
-         * here, so we don't miss a wake delivered in that manner */
-        bool pending_match =
-            wake_src == THREAD_WAIT_ANY_SRC || t->pending_wake_src == wake_src;
-        if (t->pending_wake && pending_match) {
-            atomic_store_explicit(&t->wake_src, t->pending_wake_src,
-                                  memory_order_release);
-            t->wake_token = t->wait_token;
-            thread_or_flags(t, THREAD_FLAG_WAKE_MATCHED);
-
-            t->pending_wake = false;
-            t->pending_wake_src = NULL;
-            t->pending_wake_reason = 0;
-        }
-    }
-
-    /* only change the state if it is NOT both RUNNING and being set to READY */
-    if (!(state == THREAD_STATE_READY &&
-          thread_get_state(t) == THREAD_STATE_RUNNING))
-        atomic_store(&t->state, state);
-
-    /* NOTE: special case: the thread has not re-entered runqueues yet */
-    if ((!(thread_get_flags(t) & THREAD_FLAG_YIELDED)) &&
-        state == THREAD_STATE_READY)
-        atomic_store(&t->state, THREAD_STATE_RUNNING);
-
-    callback(t, reason);
-
-    time_ms_t time = time_get_ms();
-
-    if (state != THREAD_STATE_READY)
-        thread_update_runtime_buckets(t, time);
-
-out:
-    if (!already_locked)
-        thread_release(t, irql);
-
-    return ok;
-}
-
-void thread_wake_unlocked(struct thread *t, enum thread_wake_reason r,
-                          void *wake_src) {
-    set_state_and_update_reason(
-        t, r, THREAD_STATE_READY, thread_add_wake_reason, wake_src,
-        /*already_locked=*/false,
-        /* set this to 0 because it is no-op on wake */ 0,
-        /* exit_if_match = */ false, /* arm_site = */ NULL,
-        /* arm_ra = */ NULL);
-}
-
-void thread_prepare_to_wake_locked(struct thread *t, enum thread_wake_reason r,
-                                   void *wake_src) {
-    set_state_and_update_reason(
-        t, r, THREAD_STATE_READY, thread_add_wake_reason, wake_src,
-        /*already_locked=*/true, /* type = */ 0, /* exit_if_match = */ false,
-        /* arm_site = */ NULL, /* arm_ra = */ NULL);
 }
 
 void thread_set_timesharing(struct thread *t) {
@@ -573,186 +470,4 @@ void thread_set_timesharing(struct thread *t) {
 void thread_set_background(struct thread *t) {
     t->base_prio_class = THREAD_PRIO_CLASS_BACKGROUND;
     t->perceived_prio_class = THREAD_PRIO_CLASS_BACKGROUND;
-}
-
-static void prepare_to_wait_internal(struct thread *t, enum thread_state state,
-                                     uint8_t reason, enum thread_wait_type type,
-                                     void *expect_wake_src, bool already_locked,
-                                     const char *site, void *ra) {
-    void (*callback)(struct thread *, uint8_t) = NULL;
-    if (state == THREAD_STATE_BLOCKED)
-        callback = thread_add_block_reason;
-    else if (state == THREAD_STATE_SLEEPING)
-        callback = thread_add_sleep_reason;
-    else
-        panic("%s: invalid state %u", site, (unsigned) state);
-
-    set_state_and_update_reason(t, reason, state, callback, expect_wake_src,
-                                already_locked, type,
-                                /*exit_if_match=*/false, site, ra);
-}
-
-void thread_prepare_to_wait(struct thread *t, enum thread_state state,
-                            uint8_t reason, enum thread_wait_type type,
-                            void *expect_wake_src) {
-    prepare_to_wait_internal(t, state, reason, type, expect_wake_src,
-                             /*already_locked=*/false, "prepare_to_wait",
-                             __builtin_return_address(0));
-}
-
-void thread_prepare_to_wait_locked(struct thread *t, enum thread_state state,
-                                   uint8_t reason, enum thread_wait_type type,
-                                   void *expect_wake_src) {
-    prepare_to_wait_internal(t, state, reason, type, expect_wake_src,
-                             /*already_locked=*/true, "prepare_to_wait_locked",
-                             __builtin_return_address(0));
-}
-
-void thread_prepare_to_block(struct thread *t, enum thread_block_reason r,
-                             enum thread_wait_type type,
-                             void *expect_wake_src) {
-    prepare_to_wait_internal(t, THREAD_STATE_BLOCKED, (uint8_t) r, type,
-                             expect_wake_src, /*already_locked=*/false,
-                             "prepare_to_block", __builtin_return_address(0));
-}
-
-void thread_prepare_to_block_locked(struct thread *t,
-                                    enum thread_block_reason r,
-                                    enum thread_wait_type type,
-                                    void *expect_wake_src) {
-    prepare_to_wait_internal(t, THREAD_STATE_BLOCKED, (uint8_t) r, type,
-                             expect_wake_src, /*already_locked=*/true,
-                             "prepare_to_block_locked",
-                             __builtin_return_address(0));
-}
-
-void thread_prepare_to_sleep(struct thread *t, enum thread_sleep_reason r,
-                             enum thread_wait_type type,
-                             void *expect_wake_src) {
-    prepare_to_wait_internal(t, THREAD_STATE_SLEEPING, (uint8_t) r, type,
-                             expect_wake_src, /*already_locked=*/false,
-                             "prepare_to_sleep", __builtin_return_address(0));
-}
-
-static bool block_interruptible(struct thread *t, enum thread_block_reason r,
-                                enum thread_wait_type type,
-                                void *expect_wake_src) {
-    return set_state_and_update_reason(
-        t, r, THREAD_STATE_BLOCKED, thread_add_block_reason, expect_wake_src,
-        /*already_locked=*/false, type, /* exit_if_match = */ true,
-        "rearm_block", /* arm_ra = */ NULL);
-}
-
-static bool sleep_interruptible(struct thread *t, enum thread_sleep_reason r,
-                                enum thread_wait_type type,
-                                void *expect_wake_src) {
-    return set_state_and_update_reason(
-        t, r, THREAD_STATE_SLEEPING, thread_add_sleep_reason, expect_wake_src,
-        /*already_locked=*/false, type, /* exit_if_match = */ true,
-        "rearm_sleep", /* arm_ra = */ NULL);
-}
-
-bool thread_rearm_wait(struct thread *t) {
-    if (t->last_action != THREAD_STATE_BLOCKED &&
-        t->last_action != THREAD_STATE_SLEEPING)
-        return true;
-
-    if (t->last_action == THREAD_STATE_BLOCKED) {
-        return block_interruptible(
-            t, (enum thread_block_reason) t->last_action_reason, t->wait_type,
-            t->expected_wake_src);
-    } else {
-        return sleep_interruptible(
-            t, (enum thread_sleep_reason) t->last_action_reason, t->wait_type,
-            t->expected_wake_src);
-    }
-}
-
-enum thread_wait_status thread_wait_yield(void) {
-    struct thread *curr = thread_get_current();
-    uint32_t apcs_before = curr->total_apcs_ran;
-
-    /* If our wake has already matched before yielding, don't yield */
-    if (!(thread_get_flags(curr) & THREAD_FLAG_WAKE_MATCHED)) {
-        if (curr->wait_type == THREAD_WAIT_INTERRUPTIBLE) {
-            if (atomic_load_explicit(&curr->apc_pending_mask,
-                                     memory_order_acquire) != 0 ||
-                curr->total_apcs_ran != apcs_before ||
-                atomic_load_explicit(&curr->wake_src, memory_order_acquire) !=
-                    NULL) {
-                return THREAD_WAIT_INTERRUPTED;
-            }
-        }
-
-        scheduler_yield();
-    }
-
-    if (thread_get_flags(curr) & THREAD_FLAG_WAKE_MATCHED)
-        return THREAD_WAIT_MATCHED;
-
-    if (curr->wait_type == THREAD_WAIT_INTERRUPTIBLE) {
-        if (curr->total_apcs_ran != apcs_before ||
-            atomic_load_explicit(&curr->apc_pending_mask,
-                                 memory_order_acquire) != 0 ||
-            atomic_load_explicit(&curr->wake_src, memory_order_acquire) !=
-                NULL) {
-            return THREAD_WAIT_INTERRUPTED;
-        }
-    }
-
-    return THREAD_WAIT_SPURIOUS;
-}
-
-void thread_yield_until_wake_match(void) {
-    struct thread *curr = thread_get_current();
-
-    while (true) {
-        enum thread_wait_status st = thread_wait_yield();
-        if (st == THREAD_WAIT_MATCHED)
-            break;
-
-        /* interruptible arms report interrupted, we must yield loop */
-        if (st == THREAD_WAIT_INTERRUPTED) {
-            uint32_t ran = curr->total_apcs_ran;
-
-            apc_check_and_deliver(curr);
-
-            if (curr->total_apcs_ran == ran)
-                scheduler_yield();
-        }
-
-        if (thread_rearm_wait(curr))
-            break;
-    }
-
-    thread_finish_wait(curr);
-}
-
-enum thread_wait_status thread_yield_interruptible(void) {
-    struct thread *curr = thread_get_current();
-
-    while (true) {
-        enum thread_wait_status st = thread_wait_yield();
-        if (st == THREAD_WAIT_MATCHED || st == THREAD_WAIT_INTERRUPTED) {
-            thread_finish_wait(curr);
-            return st;
-        }
-
-        if (thread_rearm_wait(curr)) {
-            thread_finish_wait(curr);
-            return THREAD_WAIT_MATCHED;
-        }
-    }
-}
-
-enum thread_wait_status thread_yield_arbitrary(enum thread_wait_type type) {
-    struct thread *curr = thread_get_current();
-    thread_prepare_to_wait(curr, THREAD_STATE_SLEEPING,
-                           THREAD_SLEEP_REASON_MANUAL, type,
-                           THREAD_WAIT_ANY_SRC);
-    if (type == THREAD_WAIT_INTERRUPTIBLE)
-        return thread_yield_interruptible();
-
-    thread_yield_until_wake_match();
-    return THREAD_WAIT_MATCHED;
 }

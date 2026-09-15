@@ -165,21 +165,23 @@ static bool rw_sync(struct block_device *disk, uint64_t lba, uint8_t *buffer,
     req.remaining_parts = 1;
     INIT_LIST_HEAD(&req.list_node);
 
-    struct thread *curr = thread_get_current();
-
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
-    req.waiter = curr;
+    req.has_waiter = true;
 
     if (io_wait_token_active(iowt))
         io_wait_end(iowt, IO_WAIT_END_NO_OP);
 
-    io_wait_begin(iowt, disk->driver_data);
+    io_wait_begin(iowt, &req.wait);
 
-    function(disk, &req);
+    if (!function(disk, &req)) {
+        thread_wait_cancel();
+        irql_lower(irql);
+        return false;
+    }
     irql_lower(irql);
 
     /* Go run something else now */
-    thread_yield_until_wake_match();
+    io_wait_complete(iowt);
 
     return !req.status;
 }

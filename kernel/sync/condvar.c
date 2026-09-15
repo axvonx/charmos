@@ -12,19 +12,20 @@ static enum irql condvar_lock_internal(struct condvar *cv,
 }
 
 static void condvar_prepare_wait(struct condvar *cv) {
-    struct thread *curr = thread_get_current();
-    curr->wake_reason = WAKE_REASON_NONE;
-    curr->wait_cookie++;
-    thread_block_on(&cv->waiters, THREAD_WAIT_UNINTERRUPTIBLE, cv);
+    thread_wait_prepare_one(&cv->waiters, cv, THREAD_WAIT_UNINTERRUPTIBLE,
+                            THREAD_BLOCK_REASON_MANUAL);
 }
 
 static enum wake_reason condvar_finish_wait(struct condvar *cv,
                                             struct spinlock *lock,
                                             enum irql irql, enum irql *out) {
     spin_unlock(lock, irql);
-    thread_yield_until_wake_match();
+    struct thread_wait_result result = thread_wait_complete();
+    enum wake_reason reason = result.reason == THREAD_WAKE_REASON_SLEEP_TIMEOUT
+                                  ? WAKE_REASON_TIMEOUT
+                                  : WAKE_REASON_SIGNAL;
     *out = condvar_lock_internal(cv, lock);
-    return thread_get_current()->wake_reason;
+    return reason;
 }
 
 enum wake_reason condvar_wait(struct condvar *cv, struct spinlock *lock,
@@ -34,21 +35,8 @@ enum wake_reason condvar_wait(struct condvar *cv, struct spinlock *lock,
 }
 
 void condvar_init(struct condvar *cv, bool irq_disable) {
-    thread_queue_init(&cv->waiters);
+    thread_wait_header_init(&cv->waiters);
     cv->irq_disable = irq_disable;
-}
-
-static void set_wake_reason_and_wake(struct condvar *cv, struct thread *t,
-                                     enum wake_reason reason) {
-    if (!t)
-        return;
-
-    t->wake_reason = reason;
-    enum thread_wake_reason r = reason == WAKE_REASON_TIMEOUT
-                                    ? THREAD_WAKE_REASON_SLEEP_TIMEOUT
-                                    : THREAD_WAKE_REASON_SLEEP_MANUAL;
-
-    thread_wake(t, r, t->perceived_prio_class, cv);
 }
 
 static void nop_callback(struct thread *unused) {
@@ -57,9 +45,10 @@ static void nop_callback(struct thread *unused) {
 
 struct thread *condvar_signal_callback(struct condvar *cv,
                                        thread_action_callback tac) {
-    struct thread *t = thread_queue_pop_front(&cv->waiters);
-    tac(t);
-    set_wake_reason_and_wake(cv, t, WAKE_REASON_SIGNAL);
+    struct thread *t = thread_wait_header_satisfy(
+        &cv->waiters, THREAD_WAKE_REASON_SLEEP_MANUAL, tac);
+    if (!t)
+        tac(NULL);
     return t;
 }
 
@@ -69,11 +58,8 @@ struct thread *condvar_signal(struct condvar *cv) {
 
 void condvar_broadcast_callback(struct condvar *cv,
                                 thread_action_callback tac) {
-    struct thread *t;
-    while ((t = thread_queue_pop_front(&cv->waiters)) != NULL) {
-        tac(t);
-        set_wake_reason_and_wake(cv, t, WAKE_REASON_SIGNAL);
-    }
+    while (thread_wait_header_satisfy(&cv->waiters,
+                                      THREAD_WAKE_REASON_SLEEP_MANUAL, tac)) {}
 }
 
 void condvar_broadcast(struct condvar *cv) {
@@ -84,30 +70,23 @@ static void condvar_timeout_wakeup(struct timer *timer) {
     struct condvar_with_cb *ck = timer->data;
     struct thread *t = ck->thread;
 
-    if (t->wait_cookie != ck->cookie)
-        return;
-
-    enum irql irql = spin_lock_irq_disable(&ck->cv->waiters.lock);
-
-    if (!list_empty(&t->wq_list_node))
-        list_del_init(&t->wq_list_node);
-
-    spin_unlock(&ck->cv->waiters.lock, irql);
-    set_wake_reason_and_wake(ck->cv, t, WAKE_REASON_TIMEOUT);
+    /* Signals and timeouts use the same block */
+    thread_wait_satisfy_epoch(&t->wait_blocks[THREAD_WAIT_BLOCK_SYNC],
+                              ck->cookie, THREAD_WAKE_REASON_SLEEP_TIMEOUT,
+                              NULL);
 }
 
 enum wake_reason condvar_wait_timeout(struct condvar *cv, struct spinlock *lock,
                                       time_ms_t timeout_ms, enum irql irql,
                                       enum irql *out) {
     struct thread *curr = thread_get_current();
-    curr->wake_reason = WAKE_REASON_NONE;
 
     struct condvar_with_cb *cwcb = &curr->cv_cb_object;
     cwcb->cv = cv;
     cwcb->thread = curr;
 
     condvar_prepare_wait(cv);
-    cwcb->cookie = curr->wait_cookie;
+    cwcb->cookie = curr->wait_epoch;
     timer_init(&cwcb->timer, condvar_timeout_wakeup, cwcb);
 
     /* TOPC_NONE because it is not imperative that we have the timer run here */

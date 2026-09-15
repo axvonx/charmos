@@ -18,12 +18,12 @@ struct completion {
     struct condvar cv;
 };
 
-#define COMPLETION_INIT(irq_dis)                                               \
+#define COMPLETION_INIT(name_, irq_dis)                                        \
     (struct completion) {                                                      \
         .done = ATOMIC_VAR_INIT(0), .irq_disable = (irq_dis),                  \
         .lock = SPINLOCK_INIT,                                                 \
         .cv = {                                                                \
-            .waiters = THREAD_QUEUE_INIT,                                      \
+            .waiters = THREAD_WAIT_HEADER_INIT((name_).cv.waiters),            \
             .irq_disable = (irq_dis),                                          \
         },                                                                     \
     }

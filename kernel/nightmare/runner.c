@@ -333,6 +333,7 @@ static bool nightmare_spawn_threads(void) {
             "nightmare_%s_%zu", nightmare_thread_main, worker, worker->role, i);
         if (!thread)
             goto fail;
+        kassert(thread_get(thread));
         atomic_store_explicit(&worker->th, thread, memory_order_release);
         created++;
     }
@@ -341,6 +342,7 @@ static bool nightmare_spawn_threads(void) {
         "nightmare_heartbeat", nightmare_heartbeat_main, NULL);
     if (!nightmare_runtime.heartbeat)
         goto fail;
+    kassert(thread_get(nightmare_runtime.heartbeat));
     return true;
 
 fail:
@@ -371,6 +373,20 @@ static void nightmare_join_threads(void) {
     }
     if (nightmare_runtime.heartbeat)
         thread_join(nightmare_runtime.heartbeat);
+}
+
+/* All workers are joined and timer/probe callbacks are quiescent */
+static void nightmare_release_threads(void) {
+    for (size_t i = 0; i < nightmare_runtime.total_worker_count; i++) {
+        struct thread *thread = atomic_exchange_explicit(
+            &nightmare_runtime.workers[i].th, NULL, memory_order_acq_rel);
+        if (thread)
+            thread_put(thread);
+    }
+    if (nightmare_runtime.heartbeat) {
+        thread_put(nightmare_runtime.heartbeat);
+        nightmare_runtime.heartbeat = NULL;
+    }
 }
 
 void nightmare_publish_perturb_verdict(struct nightmare_verdict verdict) {
@@ -573,6 +589,7 @@ void nightmare_run(void) {
     if (!nightmare_spawn_threads()) {
         timer_shutdown_sync(&nightmare_runtime.soft_timer);
         timer_shutdown_sync(&nightmare_runtime.hard_timer);
+        nightmare_release_threads();
         nightmare_emit_verdict(
             NIGHTMARE_FAIL("thread_create", "could not create all threads"),
             "thread_create");
@@ -591,6 +608,8 @@ void nightmare_run(void) {
     struct nightmare_verdict final = nightmare_finalize_verdict(nm);
     atomic_store_explicit(&nightmare_runtime.active, false,
                           memory_order_release);
+
+    nightmare_release_threads();
 
     kfree(nightmare_runtime.workers);
     nightmare_runtime.workers = NULL;

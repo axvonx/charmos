@@ -305,6 +305,7 @@ TEST_DECLARE_INTEGRATION(mutex, pi_revert) {
     thread_pin(rt);
 
     thread_set_joinable(ts);
+    kassert(thread_get(ts));
     thread_set_joinable(rt);
 
     thread_enqueue_on_core(ts, cpu);
@@ -316,6 +317,9 @@ TEST_DECLARE_INTEGRATION(mutex, pi_revert) {
     thread_join(ts);
     thread_join(rt);
 
+    uint32_t boosts = ts->boost_count;
+    thread_put(ts);
+    TEST_ASSERT_EQ(boosts, 1);
     TEST_ASSERT(atomic_load(&pi_reverted));
 
     return TEST_SUCCESS;

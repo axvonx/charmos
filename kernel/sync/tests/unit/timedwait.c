@@ -137,3 +137,13 @@ TEST_DECLARE_UNIT(completion, timedwait) {
 
     return TEST_SUCCESS;
 }
+
+TEST_DECLARE_UNIT(completion, static_init) {
+    struct completion c = COMPLETION_INIT(c, COMPLETION_INIT_NORMAL);
+    TEST_ASSERT(list_empty(&c.cv.waiters.waiters));
+    TEST_ASSERT(!completion_try_wait(&c));
+    complete(&c);
+    TEST_ASSERT(completion_try_wait(&c));
+    TEST_ASSERT(!completion_try_wait(&c));
+    return TEST_SUCCESS;
+}
