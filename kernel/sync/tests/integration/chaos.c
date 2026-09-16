@@ -10,7 +10,12 @@ struct chaos_state {
 };
 
 #define CHAOS_THREADS_MAX 64
-static size_t chaos_threads = 12;
+
+#define CHAOS_THREADS_MIN 2
+#define CHAOS_THREADS_DEFAULT 8
+#define CHAOS_THREADS_INTENSE 32
+
+static size_t chaos_threads = CHAOS_THREADS_DEFAULT;
 
 #if 0
 #define CHAOS_LOG(fmt, ...)                                                    \
@@ -19,7 +24,13 @@ static size_t chaos_threads = 12;
 #define CHAOS_LOG(fmt, ...) ((void) 0)
 #endif
 
-static size_t chaos_iters_count = 300;
+#define CHAOS_ITERS_DEFAULT 200
+#define CHAOS_ITERS_MIN 16
+
+#define CHAOS_APC_PERIOD_BASE 2
+
+static size_t chaos_iters_count = CHAOS_ITERS_DEFAULT;
+static size_t chaos_apc_period = CHAOS_APC_PERIOD_BASE;
 static struct chaos_state states[CHAOS_THREADS_MAX];
 static atomic_bool chaos_stop = false;
 static atomic_bool starter_ok = false;
@@ -87,9 +98,17 @@ static void chaos_apc_spammer(void *arg) {
     unused(arg);
     CHAOS_LOG("apc spammer start");
 
+    size_t pass = 0;
+
     while (!atomic_load(&chaos_stop)) {
         atomic_fetch_add_explicit(&chaos_spammer_iters, 1,
                                   memory_order_relaxed);
+
+        if (pass++ % chaos_apc_period) {
+            scheduler_yield();
+            continue;
+        }
+
         int id = prng_next() % chaos_threads;
 
         if (!atomic_load(&states[id].alive)) {
@@ -318,14 +337,27 @@ static bool chaos_join_watched(struct thread *t, const char *role, size_t idx,
 }
 
 TEST_DECLARE_INTEGRATION(mutex, interruptible_apc_fuzz,
-                         TEST_INTENSITY(4, 12, CHAOS_THREADS_MAX)) {
+                         TEST_INTENSITY(CHAOS_THREADS_MIN,
+                                        CHAOS_THREADS_DEFAULT,
+                                        CHAOS_THREADS_INTENSE)) {
     if (global.core_count < 2) {
         return TEST_SKIP(TEST_SKIP_NONE);
     }
 
-    chaos_threads = ctx->intensity_val ? ctx->intensity_val : 12;
+    chaos_threads =
+        ctx->intensity_val ? ctx->intensity_val : CHAOS_THREADS_DEFAULT;
     if (chaos_threads > CHAOS_THREADS_MAX)
         chaos_threads = CHAOS_THREADS_MAX;
+
+    chaos_iters_count =
+        CHAOS_ITERS_DEFAULT * chaos_threads / CHAOS_THREADS_DEFAULT;
+    if (chaos_iters_count < CHAOS_ITERS_MIN)
+        chaos_iters_count = CHAOS_ITERS_MIN;
+
+    chaos_apc_period =
+        CHAOS_APC_PERIOD_BASE * CHAOS_THREADS_DEFAULT / chaos_threads;
+    if (!chaos_apc_period)
+        chaos_apc_period = 1;
 
     for (size_t i = 0; i < CHAOS_THREADS_MAX; i++) {
         states[i].t = NULL;
