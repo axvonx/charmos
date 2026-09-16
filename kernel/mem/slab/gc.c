@@ -1,5 +1,4 @@
-#include <math/bit_ops.h>
-#include <math/ilog2.h>
+#include <math/bit.h>
 #include <sch/sched.h>
 #include <stack_depot.h>
 

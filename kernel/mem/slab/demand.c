@@ -1,4 +1,3 @@
-#include <math/pow.h>
 #include <mem/demand_page.h>
 #include <mem/domain.h>
 #include <mem/page_fault.h>

@@ -2,7 +2,6 @@
 #include <bootstage.h>
 #include <crypto/prng.h>
 #include <irq/idt.h>
-#include <math/clamp.h>
 #include <math/fixed.h>
 #include <math/min_max.h>
 #include <registry.h>

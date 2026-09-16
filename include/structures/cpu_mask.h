@@ -1,6 +1,6 @@
 /* @title: CPU Mask */
 #pragma once
-#include <math/div.h>
+#include <math/align.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -26,7 +26,7 @@ struct cpu_mask {
 /* Used to overload cpu_mask to carry an error at times */
 #define CPU_MASK_ERR(e)                                                        \
     (struct cpu_mask) {                                                        \
-        .bits = {(bitmap_word_t) (e)}                                          \
+        .bits = {(bitmap_word_t) (e) }                                         \
     }
 
 static inline bool cpu_mask_init(struct cpu_mask *m, size_t nbits) {

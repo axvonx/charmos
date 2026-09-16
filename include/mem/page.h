@@ -3,7 +3,7 @@
 #include <compiler.h>
 #include <global.h>
 #include <math/align.h>
-#include <math/kb_mb_gb_tb.h>
+#include <math/units.h>
 #include <mem/hhdm.h>
 #include <stdint.h>
 #include <sync/spinlock.h>

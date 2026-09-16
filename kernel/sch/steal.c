@@ -1,4 +1,4 @@
-#include <math/ilog2.h>
+#include <math/bit.h>
 #include <sch/sched.h>
 #include <stdatomic.h>
 #include <stdbool.h>

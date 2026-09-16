@@ -1,4 +1,4 @@
-#include <math/bit_ops.h>
+#include <math/bit.h>
 #include <math/min_max.h>
 #include <mem/alloc.h>
 #include <string.h>

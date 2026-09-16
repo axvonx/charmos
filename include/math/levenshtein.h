@@ -1,4 +1,4 @@
-/* @title: Levenshtein */
+/* @title: Levenshtein Distance & Fuzzy Matching */
 #pragma once
 #include <stddef.h>
 #include <stdint.h>

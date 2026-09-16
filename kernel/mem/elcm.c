@@ -1,11 +1,10 @@
 #include <kassert.h>
-#include <math/bit_ops.h>
-#include <math/div.h>
+#include <math/align.h>
+#include <math/arith.h>
+#include <math/bit.h>
 #include <math/fixed.h>
-#include <math/fixed_extended.h>
-#include <math/gcd_lcm.h>
 #include <math/sort.h>
-#include <math/to_bits_bytes.h>
+#include <math/units.h>
 #include <mem/alloc.h>
 #include <mem/alloc_or_die.h>
 #include <mem/elcm.h>

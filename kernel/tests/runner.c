@@ -7,7 +7,7 @@
 #include <crypto/prng.h>
 #include <global.h>
 #include <irq/irq.h>
-#include <math/div.h>
+#include <math/align.h>
 #include <math/sort.h>
 #include <mem/alloc_or_die.h>
 #include <mem/vas.h>

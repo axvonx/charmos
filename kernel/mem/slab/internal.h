@@ -2,9 +2,7 @@
 #include <container_of.h>
 #include <kassert.h>
 #include <math/align.h>
-#include <math/bit_ops.h>
-#include <math/div.h>
-#include <math/ilog2.h>
+#include <math/bit.h>
 #include <mem/alloc.h>
 #include <mem/fixed_size_alloc.h>
 #include <mem/page.h>

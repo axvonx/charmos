@@ -1,4 +1,4 @@
-#include <math/bit_ops.h>
+#include <math/bit.h>
 #include <mem/alloc.h>
 #include <structures/mpmc_queue.h>
 

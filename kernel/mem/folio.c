@@ -1,4 +1,4 @@
-#include <math/pow.h>
+#include <math/bit.h>
 #include <mem/anon_vma.h>
 #include <mem/fixed_size_alloc.h>
 #include <mem/folio.h>

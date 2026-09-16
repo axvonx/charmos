@@ -1,4 +1,4 @@
-/* @title: Hash Functions (primarily for hashmap/sets) */
+/* @title: Hash Functions */
 #pragma once
 #include <stddef.h>
 #include <stdint.h>

@@ -1,6 +1,6 @@
 /* @title: Bitmap */
 #pragma once
-#include <math/div.h>
+#include <math/align.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>

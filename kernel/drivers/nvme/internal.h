@@ -1,7 +1,7 @@
 #include <console/printf.h>
 #include <drivers/nvme.h>
 #include <log.h>
-#include <math/div.h>
+#include <math/align.h>
 #include <mem/vmm.h>
 
 #define NVME_CMD_TIMEOUT_MS 2000    // Normal command timeout

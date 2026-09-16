@@ -1,6 +1,5 @@
 #include <cmdline.h>
 #include <irq/irq.h>
-#include <math/clamp.h>
 #include <math/min_max.h>
 #include <mem/alloc.h>
 #include <smp/percpu.h>

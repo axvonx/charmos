@@ -1,11 +1,17 @@
 /* @title: Fixed Point Arithmetic */
 #pragma once
 #include <kassert.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <types/types.h>
 
 #define FX_ZERO ((fx32_32_t) 0)
 #define FX_ONE ((fx32_32_t) (1LL << 32))
 #define FX_HALF ((fx32_32_t) (1LL << 31))
+
+#define FP_PI 3.14159265358979323846
+#define FX_PI FX(3.14159265358979323846)
+#define FX_E FX(2.71828182845045235360)
 
 /* Cast truncates towards zero, so we need to round */
 #define FX(x) ((fx32_32_t) ((x) * 4294967296.0 + ((x) < 0 ? -0.5 : 0.5)))
@@ -144,3 +150,11 @@ static inline fx32_32_t fx_round_up(fx32_32_t x, fx32_32_t multiple) {
 static inline fx32_32_t fx_round_down(fx32_32_t x, fx32_32_t multiple) {
     return fx_mul(fx_div(x, multiple), multiple);
 }
+
+/* Extended fixed-point math functions implemented in kernel/math/fixed.c */
+fx32_32_t fx_poly_eval(fx32_32_t x, const fx32_32_t *c, int n);
+fx32_32_t fx_exp(fx32_32_t x);
+fx32_32_t fx_ln(fx32_32_t x);
+fx32_32_t fx_sin(fx32_32_t angle);
+fx32_32_t fx_cos(fx32_32_t angle);
+void fx_sincos(fx32_32_t angle, fx32_32_t *sin_out, fx32_32_t *cos_out);

@@ -1,7 +1,7 @@
 /* @title: Folio */
 #pragma once
 #include <compiler.h>
-#include <math/pow.h>
+#include <math/bit.h>
 #include <mem/alloc.h>
 #include <mem/hhdm.h>
 #include <mem/page.h>

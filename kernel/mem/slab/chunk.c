@@ -1,7 +1,6 @@
-#include <math/bit_ops.h>
-#include <math/div.h>
-#include <math/ilog2.h>
-#include <math/to_bits_bytes.h>
+#include <math/align.h>
+#include <math/bit.h>
+#include <math/units.h>
 #include <mem/asan.h>
 #include <mem/hhdm.h>
 #include <mem/pmm.h>

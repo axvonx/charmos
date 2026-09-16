@@ -1,8 +1,7 @@
 #include <global.h>
 #include <kassert.h>
-#include <math/clamp.h>
 #include <math/fixed.h>
-#include <math/fixed_extended.h>
+#include <math/min_max.h>
 #include <math/range.h>
 #include <scaled_param.h>
 #include <smp/core.h>

@@ -1,5 +1,4 @@
 #include <log.h>
-#include <math/clamp.h>
 #include <math/min_max.h>
 #include <sch/climb.h>
 #include <sch/periodic_work.h>

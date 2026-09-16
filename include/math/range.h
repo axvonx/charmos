@@ -1,6 +1,9 @@
-/* @title: Range Macros */
+/* @title: Range and Interval Operations */
 #pragma once
 #include <kassert.h>
+#include <stdbool.h>
+#include <stdint.h>
+
 #define IN_RANGE(x, min, max)                                                  \
     ({                                                                         \
         (void) kassert((min) <= (max));                                        \

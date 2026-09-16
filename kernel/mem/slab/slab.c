@@ -122,10 +122,9 @@
 
 #include <console/printf.h>
 #include <kassert.h>
-#include <math/bit_ops.h>
-#include <math/div.h>
-#include <math/ilog2.h>
-#include <math/pow.h>
+#include <math/align.h>
+#include <math/arith.h>
+#include <math/bit.h>
 #include <math/sort.h>
 #include <mem/address_range.h>
 #include <mem/alloc.h>

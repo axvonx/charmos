@@ -1,6 +1,18 @@
-/* @title: Min and Max macros */
+/* @title: Min, Max, Clamping, and Absolute Value */
 #pragma once
 #include <compiler.h>
+#include <kassert.h>
+
+#define abs(N) (((N) < 0) ? (-(N)) : (N))
+
+#define CLAMP(__var, __min, __max)                                             \
+    do {                                                                       \
+        kassert((__min) <= (__max));                                           \
+        if ((__var) > (__max))                                                 \
+            (__var) = (__max);                                                 \
+        if ((__var) < (__min))                                                 \
+            (__var) = (__min);                                                 \
+    } while (0)
 
 #define _MIN_1(a) (a)
 

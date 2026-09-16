@@ -1,5 +1,4 @@
 #include <math/align.h>
-#include <math/div.h>
 #include <mem/page.h>
 #include <test/static_assert.h>
 

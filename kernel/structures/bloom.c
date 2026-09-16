@@ -1,5 +1,4 @@
 #include <math/fixed.h>
-#include <math/fixed_extended.h>
 #include <math/hash.h>
 #include <mem/alloc.h>
 #include <stdbool.h>

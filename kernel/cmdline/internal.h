@@ -8,7 +8,7 @@
 #include <global.h>
 #include <kassert.h>
 #include <log.h>
-#include <math/bit_ops.h>
+#include <math/bit.h>
 #include <math/fixed.h>
 #include <math/range.h>
 #include <mem/alloc.h>

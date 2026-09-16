@@ -1,5 +1,4 @@
 #include <math/fixed.h>
-#include <math/fixed_extended.h>
 
 fx32_32_t fx_exp(fx32_32_t x) {
     int64_t k = fx_to_int(fx_mul(x, FX(1.44269504089)));

@@ -1,7 +1,6 @@
 #include <console/panic.h>
 #include <kassert.h>
 #include <math/align.h>
-#include <math/div.h>
 #include <mem/address_range.h>
 #include <mem/alloc.h>
 #include <mem/hhdm.h>

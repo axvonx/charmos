@@ -1,5 +1,4 @@
-#include <math/bit_ops.h>
-#include <math/pow.h>
+#include <math/bit.h>
 #include <mem/domain.h>
 #include <mem/pmm.h>
 
