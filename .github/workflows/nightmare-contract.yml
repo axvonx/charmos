@@ -54,7 +54,7 @@ jobs:
 
       - name: Planner and matrix smoke
         env:
-          RUNNER_IMAGE: ghcr.io/axvonx/charmos-x86-env@sha256:2f77dec0b8a479bdfb8f9237ceb0c10320e418c5725592033cd9451e63fced87
+          RUNNER_IMAGE: ghcr.io/axvonx/charmos-x86-env@sha256:5a15823fa602f60da3d2819181db0729237eba7d812baaab0d27d59e9c4ebdc3
         run: |
           export PYTHONPATH=scripts
           python3 -m charm nightmare repository-command \
@@ -73,7 +73,7 @@ jobs:
 
       - name: Planner smoke for a gating suite
         env:
-          RUNNER_IMAGE: ghcr.io/axvonx/charmos-x86-env@sha256:2f77dec0b8a479bdfb8f9237ceb0c10320e418c5725592033cd9451e63fced87
+          RUNNER_IMAGE: ghcr.io/axvonx/charmos-x86-env@sha256:5a15823fa602f60da3d2819181db0729237eba7d812baaab0d27d59e9c4ebdc3
         run: |
           export PYTHONPATH=scripts
           python3 -m charm nightmare repository-command \

@@ -29,7 +29,7 @@ jobs:
           - name: limine
             path: limine
     container:
-      image: ghcr.io/axvonx/charmos-x86-env@sha256:2f77dec0b8a479bdfb8f9237ceb0c10320e418c5725592033cd9451e63fced87
+      image: ghcr.io/axvonx/charmos-x86-env@sha256:5a15823fa602f60da3d2819181db0729237eba7d812baaab0d27d59e9c4ebdc3
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
