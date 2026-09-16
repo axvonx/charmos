@@ -127,3 +127,206 @@ TEST_DECLARE_UNIT(bit_ops, popcount_standard) {
 
     return TEST_SUCCESS;
 }
+
+TEST_DECLARE_UNIT(bit_ops, bit_macros_basic) {
+    uint8_t u8 = 0;
+    u8 = BIT_SET(u8, 2);
+    TEST_ASSERT_EQ(u8, 4);
+    TEST_ASSERT_EQ(sizeof(BIT_SET(u8, 2)), sizeof(uint8_t));
+    TEST_ASSERT(BIT_TEST(u8, 2));
+    TEST_ASSERT(!BIT_TEST(u8, 3));
+
+    u8 = BIT_TOGGLE(u8, 2);
+    TEST_ASSERT_EQ(u8, 0);
+    TEST_ASSERT_EQ(sizeof(BIT_TOGGLE(u8, 2)), sizeof(uint8_t));
+
+    uint32_t u32 = 0x12345678;
+    u32 = BIT_CLEAR(u32, 3);
+    TEST_ASSERT_EQ(u32, 0x12345670);
+    TEST_ASSERT_EQ(sizeof(BIT_CLEAR(u32, 3)), sizeof(uint32_t));
+
+    TEST_ASSERT(BIT_ANY(u32, UINT32_C(0x70)));
+    TEST_ASSERT(!BIT_ANY(u32, UINT32_C(0x80)));
+    TEST_ASSERT(BIT_ALL(u32, UINT32_C(0x12345670)));
+    TEST_ASSERT(!BIT_ALL(u32, UINT32_C(0x12345678)));
+
+    return TEST_SUCCESS;
+}
+
+TEST_DECLARE_UNIT(bit_ops, bit_fields_and_ranges) {
+    uint32_t reg32 = 0;
+    reg32 = BIT_SET_FIELD(reg32, 0xA, 4, 7);
+    TEST_ASSERT_EQ(reg32, 0xA0);
+    TEST_ASSERT_EQ(sizeof(BIT_SET_FIELD(reg32, 0xA, 4, 7)), sizeof(uint32_t));
+    TEST_ASSERT_EQ(BIT_GET_FIELD(reg32, 4, 7), 0xA);
+    TEST_ASSERT_EQ(sizeof(BIT_GET_FIELD(reg32, 4, 7)), sizeof(uint32_t));
+
+    uint64_t reg64 = 0;
+    reg64 = BIT_SET_FIELD(reg64, 0xDEADBEEFULL, 32, 63);
+    TEST_ASSERT_EQ(BIT_GET_FIELD(reg64, 32, 63), 0xDEADBEEFULL);
+
+    TEST_ASSERT_EQ(BIT_MASK(0, 0), 1ULL);
+    TEST_ASSERT_EQ(BIT_MASK(4, 7), 0xF0ULL);
+    TEST_ASSERT_EQ(BIT_MASK(0, 63), UINT64_MAX);
+
+    TEST_ASSERT_EQ(BIT_RANGE(0xABCD, 4, 7), 0xC);
+    TEST_ASSERT_EQ(BIT_WIDTH(4, 7), 4);
+    TEST_ASSERT_EQ(BIT_WIDTH(0, 63), 64);
+
+    return TEST_SUCCESS;
+}
+
+TEST_DECLARE_UNIT(bit_ops, align_and_rounding) {
+    size_t value = 5;
+    size_t alignment = 4;
+    TEST_ASSERT_EQ(ALIGN_UP(value++, alignment++), 8);
+    TEST_ASSERT_EQ(value, 6);
+    TEST_ASSERT_EQ(alignment, 5);
+
+    value = 9;
+    alignment = 8;
+    TEST_ASSERT_EQ(ALIGN_DOWN(value++, alignment++), 8);
+    TEST_ASSERT_EQ(value, 10);
+    TEST_ASSERT_EQ(alignment, 9);
+
+    value = 8;
+    alignment = 8;
+    TEST_ASSERT(IS_ALIGNED(value++, alignment++));
+    TEST_ASSERT_EQ(value, 9);
+    TEST_ASSERT_EQ(alignment, 9);
+
+    value = 4;
+    alignment = 3;
+    TEST_ASSERT(!IS_ALIGNED_UNCHECKED(value++, alignment++));
+    TEST_ASSERT_EQ(value, 5);
+    TEST_ASSERT_EQ(alignment, 4);
+    alignment = 0;
+    TEST_ASSERT(!IS_ALIGNED_UNCHECKED(value, alignment));
+    TEST_ASSERT_EQ(ALIGN_UP_WRAPPING(SIZE_MAX, 2), 0);
+
+    size_t divisor = 4;
+    value = 5;
+    TEST_ASSERT_EQ(DIV_ROUND_UP(value++, divisor++), 2);
+    TEST_ASSERT_EQ(value, 6);
+    TEST_ASSERT_EQ(divisor, 5);
+    TEST_ASSERT_EQ(DIV_ROUND_UP(SIZE_MAX, 2), SIZE_MAX / 2 + 1);
+
+    return TEST_SUCCESS;
+}
+
+TEST_DECLARE_UNIT(bit_ops, abs_and_pow2_macros) {
+    int value = -3;
+    TEST_ASSERT_EQ(abs(value++), 3);
+    TEST_ASSERT_EQ(value, -2);
+    value = 0;
+    TEST_ASSERT_EQ(abs(value), 0);
+    value = 3;
+    TEST_ASSERT_EQ(abs(value), 3);
+
+    size_t alignment = 8;
+    TEST_ASSERT(IS_POW2(alignment++));
+    TEST_ASSERT_EQ(alignment, 9);
+    TEST_ASSERT(!IS_POW2(alignment));
+    TEST_ASSERT(IS_POW2(SIZE_MAX / 2 + 1));
+    TEST_ASSERT(!IS_POW2((size_t) 0));
+
+    int signed_align = -8;
+    TEST_ASSERT(!IS_POW2(signed_align));
+
+    return TEST_SUCCESS;
+}
+
+TEST_DECLARE_UNIT(bit_ops, common_domain_comparisons) {
+    uint32_t small = 5;
+    uint64_t big = 9;
+    TEST_ASSERT_EQ(MIN(small, big), 5);
+    TEST_ASSERT_EQ(MIN(big, small), 5);
+    TEST_ASSERT_EQ(MAX(small, big), 9);
+    TEST_ASSERT_EQ(MAX(big, small), 9);
+    TEST_ASSERT_EQ(sizeof(MIN(small, big)), sizeof(uint64_t));
+    TEST_ASSERT_EQ(sizeof(MIN(big, small)), sizeof(uint64_t));
+
+    int64_t wide_signed = -4;
+    TEST_ASSERT_EQ(MIN(small, wide_signed), -4);
+    TEST_ASSERT_EQ(sizeof(MIN(small, wide_signed)), sizeof(int64_t));
+
+    int32_t narrow_signed = -3;
+    TEST_ASSERT_EQ(MAX(narrow_signed, wide_signed), -3);
+
+    size_t len = 7;
+    TEST_ASSERT_EQ(MIN(len, 0), 0);
+    TEST_ASSERT_EQ(MIN(0, len), 0);
+    TEST_ASSERT_EQ(MAX(len, 1), 7);
+    TEST_ASSERT_EQ(sizeof(MIN(len, 0)), sizeof(size_t));
+
+    uint8_t a8 = 200;
+    uint8_t b8 = 100;
+    TEST_ASSERT_EQ(MIN(a8, b8), 100);
+    TEST_ASSERT_EQ(sizeof(MIN(a8, b8)), sizeof(uint8_t));
+    TEST_ASSERT_EQ(sizeof(MAX(a8, b8)), sizeof(uint8_t));
+
+    uint32_t left = 4;
+    uint32_t right = 6;
+    TEST_ASSERT_EQ(MIN(left++, right++), 4);
+    TEST_ASSERT_EQ(left, 5);
+    TEST_ASSERT_EQ(right, 7);
+
+    TEST_ASSERT_EQ(MAX(small, big, (uint64_t) 2), 9);
+    TEST_ASSERT_EQ(MIN(small, big, (uint64_t) 2), 2);
+
+    return TEST_SUCCESS;
+}
+
+TEST_DECLARE_UNIT(bit_ops, common_domain_range_and_clamp) {
+    uint64_t value = 40;
+    uint32_t low = 10;
+    TEST_ASSERT(IN_RANGE(value, low, 64));
+    TEST_ASSERT(!IN_RANGE(value, low, 32));
+    TEST_ASSERT(IN_RANGE(value, 0, value));
+
+    int32_t signed_value = -5;
+    TEST_ASSERT(IN_RANGE(signed_value, -19, 20));
+    TEST_ASSERT(!IN_RANGE(signed_value, 0, 20));
+
+    uint32_t narrow = 500;
+    uint64_t ceiling = 100;
+    CLAMP(narrow, 0, ceiling);
+    TEST_ASSERT_EQ(narrow, 100);
+    TEST_ASSERT_EQ(sizeof(narrow), sizeof(uint32_t));
+
+    int32_t delta = -80;
+    CLAMP(delta, -20, 20);
+    TEST_ASSERT_EQ(delta, -20);
+
+    return TEST_SUCCESS;
+}
+
+TEST_DECLARE_UNIT(bit_ops, bit_macros_preserve_operand_type) {
+    uint32_t reg = 0x80000000u;
+    TEST_ASSERT_EQ(sizeof(BIT_TEST(reg, 31)), sizeof(bool));
+    TEST_ASSERT(BIT_TEST(reg, 31));
+    TEST_ASSERT(!BIT_TEST(reg, 30));
+
+    uint32_t index = 31;
+    TEST_ASSERT(BIT_TEST(reg, index++));
+    TEST_ASSERT_EQ(index, 32);
+
+    uint32_t packed = 0x0000ABCDu;
+    TEST_ASSERT_EQ(BIT_RANGE(packed, 4, 7), 0xC);
+    TEST_ASSERT_EQ(sizeof(BIT_RANGE(packed, 4, 7)), sizeof(uint32_t));
+
+    uint64_t wide = UINT64_C(0xDEADBEEF) << 32;
+    TEST_ASSERT_EQ(BIT_RANGE(wide, 32, 63), UINT64_C(0xDEADBEEF));
+    TEST_ASSERT_EQ(sizeof(BIT_RANGE(wide, 32, 63)), sizeof(uint64_t));
+
+    TEST_ASSERT(BIT_ANY(packed, 0xF0));
+    TEST_ASSERT(!BIT_ANY(packed, 0xF0000000u));
+    TEST_ASSERT(BIT_ALL(packed, 0xABCD));
+    TEST_ASSERT_EQ(sizeof(BIT_ANY(packed, 0xF0)), sizeof(bool));
+
+    uint32_t lo = 4;
+    TEST_ASSERT_EQ(BIT_MASK(lo++, 7), 0xF0ULL);
+    TEST_ASSERT_EQ(lo, 5);
+
+    return TEST_SUCCESS;
+}

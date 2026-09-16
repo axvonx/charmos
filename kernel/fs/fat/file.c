@@ -76,7 +76,7 @@ bool fat_write_file(struct fat_fs *fs, struct fat_dirent *ent, uint32_t offset,
     }
 
     uint32_t end_offset = offset + size;
-    uint32_t needed_clusters = (end_offset + cluster_size - 1) / cluster_size;
+    uint32_t needed_clusters = DIV_ROUND_UP(end_offset, cluster_size);
 
     // extend chain to needed length
     uint32_t chain_len = 1;

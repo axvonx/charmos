@@ -1,6 +1,7 @@
 #include <asm.h>
 #include <console/printf.h>
 #include <elf.h>
+#include <math/bit.h>
 #include <mem/page.h>
 #include <mem/pmm.h>
 #include <mem/vmm.h>
@@ -118,12 +119,12 @@ uintptr_t map_user_stack(uintptr_t user_pml4_phys) {
 
 void syscall_setup(void *syscall_entry) {
     uint64_t efer = rdmsr(0xC0000080);
-    efer |= (1 << 0); // SCE: Enable syscall/sysret
+    efer |= BIT(0); // SCE: Enable syscall/sysret
     wrmsr(0xC0000080, efer);
 
     wrmsr(0xC0000082, (uint64_t) syscall_entry);
 
-    wrmsr(0xC0000084, (1 << 9));
+    wrmsr(0xC0000084, BIT(9));
 
     uint64_t star = ((uint64_t) 0x08 << 32) | ((uint64_t) 0x28 << 48);
     wrmsr(0xC0000081, star);
@@ -136,7 +137,7 @@ enter_userspace(uintptr_t entry_point, uintptr_t user_stack_top,
 
     uint64_t rflags;
     asm volatile("pushfq; popq %0" : "=r"(rflags));
-    rflags |= (1 << 9);
+    rflags |= BIT(9);
 
     asm volatile("cli\n"
                  "pushq %0\n" // SS

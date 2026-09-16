@@ -63,9 +63,7 @@ enum errno ext2_readlink(struct ext2_fs *fs, struct ext2_full_inode *node,
         return ERR_INVAL;
 
     uint64_t link_size = node->node.size;
-
-    if (link_size > size)
-        link_size = size;
+    link_size = MIN(link_size, size);
 
     /* inline data stored in i_block[] */
     if (link_size <= 60) {

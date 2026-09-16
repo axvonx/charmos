@@ -179,7 +179,7 @@ struct gap_ctx {
 static vaddr_t gap_fits(vaddr_t floor, vaddr_t ceil, const struct gap_ctx *c) {
     if (ceil <= floor)
         return 0;
-    vaddr_t a = ALIGN_UP(floor, c->align);
+    vaddr_t a = ALIGN_UP_WRAPPING(floor, c->align);
     if (a < floor) /* ALIGN_UP wrapped */
         return 0;
     if (a + c->len < a) /* len overflow */
@@ -235,7 +235,7 @@ static vaddr_t gap_search(struct rbit_node *n, vaddr_t *floor,
 
 vaddr_t mm_vma_range_find_gap(struct mm *mm, size_t len, size_t align,
                               vaddr_t low, vaddr_t high) {
-    kassert(align != 0);
+    kassert(IS_POW2(align));
     if (len == 0 || high <= low || high - low < len)
         return 0;
 
@@ -252,7 +252,7 @@ vaddr_t mm_vma_range_find_gap(struct mm *mm, size_t len, size_t align,
 
 vaddr_t mm_map(struct mm *mm, vaddr_t hint, size_t len,
                enum vma_range_protection prot, enum mm_map_flags flags) {
-    len = PAGE_ALIGN_UP(len);
+    len = PAGE_ALIGN_UP_WRAPPING(len);
     if (len == 0)
         return 0;
 
@@ -270,7 +270,11 @@ vaddr_t mm_map(struct mm *mm, vaddr_t hint, size_t len,
             return 0;
         }
     } else {
-        vaddr_t low = hint ? PAGE_ALIGN_UP(hint) : mm->mmap_cursor;
+        vaddr_t low = hint ? PAGE_ALIGN_UP_WRAPPING(hint) : mm->mmap_cursor;
+        if (hint && low < hint) {
+            rw_unlock(&mm->lock);
+            return 0;
+        }
         addr = mm_vma_range_find_gap(mm, len, PAGE_SIZE, low, MM_USER_MAX);
         if (!addr)
             addr = mm_vma_range_find_gap(mm, len, PAGE_SIZE, MM_USER_MIN,

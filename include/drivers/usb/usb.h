@@ -3,6 +3,7 @@
 #include <compiler.h>
 #include <linker/symbols.h>
 #include <log.h>
+#include <math/bit.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -57,8 +58,8 @@ struct io_wait_token;
 #define USB_REQUEST_RECIPIENT(byte) (byte & 0x1F)
 
 /* Config bitmap definitions */
-#define USB_CONFIG_SELF_POWERED (1 << 7)
-#define USB_CONFIG_REMOTE_WAKEUP (1 << 6)
+#define USB_CONFIG_SELF_POWERED BIT(7)
+#define USB_CONFIG_REMOTE_WAKEUP BIT(6)
 
 /* Endpoint address bitmap definitions */
 #define USB_ENDPOINT_ADDR_EP_DIRECTION_OUT 0

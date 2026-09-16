@@ -398,7 +398,7 @@ uint64_t cmdline_entry_value_u64(const struct cmdline_entry *e) {
         }
     }
 
-    if (e->types >= (1ULL << CMDLINE_TYPE_OFFSET)) {
+    if (e->types >= BIT(CMDLINE_TYPE_OFFSET)) {
         if (e->value.type == CMDLINE_TYPE_STRING ||
             e->value.type == CMDLINE_TYPE_LIST ||
             e->value.type == CMDLINE_TYPE_CPU_MASK ||

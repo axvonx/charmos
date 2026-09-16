@@ -4,6 +4,8 @@
 #include <string.h>
 #include <structures/spsc_fifo.h>
 
+#define SPSC_FIFO_MIN_CAPACITY ((size_t) 2)
+
 void spsc_fifo_init_with(struct spsc_fifo *fifo, void *buffer, size_t size) {
     fifo->size = size;
     fifo->mask = size - 1;
@@ -13,10 +15,7 @@ void spsc_fifo_init_with(struct spsc_fifo *fifo, void *buffer, size_t size) {
 }
 
 bool spsc_fifo_init(struct spsc_fifo *fifo, size_t size) {
-    size_t cap = next_pow2(size);
-    if (cap < 2) {
-        cap = 2;
-    }
+    size_t cap = MAX(next_pow2(size), SPSC_FIFO_MIN_CAPACITY);
 
     uint8_t *buf = kmalloc(cap, ALLOC_FLAGS_ZERO);
     if (!buf) {

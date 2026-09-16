@@ -1,5 +1,6 @@
 #include <kassert.h>
 #include <math/fixed.h>
+#include <math/units.h>
 #include <mem/alloc.h>
 #include <mem/alloc_or_die.h>
 #include <parse.h>
@@ -82,25 +83,25 @@ static bool parse_data_size_internal(const char *str, uint64_t *out) {
     switch (*str) {
     case 'K':
     case 'k':
-        multiplier = 1024ULL;
+        multiplier = KB(1);
         has_prefix = true;
         str++;
         break;
     case 'M':
     case 'm':
-        multiplier = 1024ULL * 1024ULL;
+        multiplier = MB(1);
         has_prefix = true;
         str++;
         break;
     case 'G':
     case 'g':
-        multiplier = 1024ULL * 1024ULL * 1024ULL;
+        multiplier = GB(1);
         has_prefix = true;
         str++;
         break;
     case 'T':
     case 't':
-        multiplier = 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+        multiplier = TB(1);
         has_prefix = true;
         str++;
         break;

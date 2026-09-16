@@ -303,7 +303,7 @@ bool fat_write_dirent(struct fat_fs *fs, uint32_t dir_cluster,
             fs->bpb->root_entry_count * sizeof(struct fat_dirent);
 
         uint32_t root_dir_sectors =
-            (root_dir_size + bytes_per_sector - 1) / bytes_per_sector;
+            DIV_ROUND_UP(root_dir_size, bytes_per_sector);
         uint32_t dirent_size = sizeof(struct fat_dirent);
 
         uint32_t entry_offset_bytes = entry_index * dirent_size;

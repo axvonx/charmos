@@ -1,4 +1,5 @@
 #include <console/printf.h>
+#include <math/units.h>
 #include <mem/alloc.h>
 #include <mem/bitmap.h>
 #include <mem/hhdm.h>
@@ -25,7 +26,7 @@ paddr_t bitmap_alloc_pages(uint64_t count, enum alloc_flags flags) {
     uint64_t start_index = 0;
     bool found = false;
 
-    for (uint64_t i = last_allocated_index; i < bitmap_size * 8; i++) {
+    for (uint64_t i = last_allocated_index; i < to_bits(bitmap_size); i++) {
         if (!test_bit(i)) {
             if (consecutive == 0)
                 start_index = i;
@@ -42,7 +43,7 @@ paddr_t bitmap_alloc_pages(uint64_t count, enum alloc_flags flags) {
     }
 
     if (!found) {
-        for (uint64_t i = 0; i < bitmap_size * 8; i++) {
+        for (uint64_t i = 0; i < to_bits(bitmap_size); i++) {
             if (!test_bit(i)) {
                 if (consecutive == 0)
                     start_index = i;
@@ -78,8 +79,8 @@ void bitmap_free_pages(paddr_t addr, uint64_t count) {
 
     uint64_t start_index = (uint64_t) addr / PAGE_SIZE;
 
-    if (start_index >= bitmap_size * 8 ||
-        start_index + count > bitmap_size * 8) {
+    if (start_index >= to_bits(bitmap_size) ||
+        start_index + count > to_bits(bitmap_size)) {
         printf("Invalid address range to free: 0x%zx with count %zu\n",
                (uint64_t) addr, count);
         return;

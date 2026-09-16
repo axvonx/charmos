@@ -3,6 +3,7 @@
 #include <global.h>
 #include <kassert.h>
 #include <math/align.h>
+#include <math/min_max.h>
 #include <mem/asan.h>
 #include <mem/hhdm.h>
 #include <mem/page.h>
@@ -401,15 +402,14 @@ static inline void asan_check_access_core(const void *addr, size_t size,
     uintptr_t start = (uintptr_t) addr;
     uintptr_t last = start + (size - 1);
 
-    for (uintptr_t g = start & ~(ASAN_GRANULE - 1); g <= last;
+    for (uintptr_t g = ALIGN_DOWN(start, ASAN_GRANULE); g <= last;
          g += ASAN_GRANULE) {
         uint8_t s = *asan_shadow_for_internal((const void *) g);
         if (s == 0)
             continue;
 
         /* Bytes of this granule the access actually touches: [lo, hi) */
-        uintptr_t hi =
-            (last - g < ASAN_GRANULE - 1) ? (last - g) + 1 : ASAN_GRANULE;
+        uintptr_t hi = MIN(last - g + 1, ASAN_GRANULE);
 
         /* A partial granule keeps its first `s` bytes accessible */
         if (!asan_shadow_is_poison(s) && hi <= s)

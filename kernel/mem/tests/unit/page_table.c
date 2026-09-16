@@ -6,13 +6,13 @@ TEST_GROUP_DECLARE(page_table);
  *   [ payload high 53 ][ AVAIL2 ][ LOCK ][ payload low 6 ][ type 2 ][ P=0 ]
  */
 
-#define PTE_PAYLOAD_MAX ((1ULL << PTE_TAGGED_PAYLOAD_BITS) - 1)
+#define PTE_PAYLOAD_MAX (BIT(PTE_TAGGED_PAYLOAD_BITS) - 1)
 
 TEST_DECLARE_UNIT(page_table, tagged_roundtrip) {
     static const uint64_t payloads[] = {
         0,     1,          0x3F, /* fills the low chunk */
         0x40,                    /* first bit of the high chunk */
-        0x3FF, 0xDEADBEEF, 1ULL << 32, PTE_PAYLOAD_MAX - 1, PTE_PAYLOAD_MAX,
+        0x3FF, 0xDEADBEEF, BIT(32), PTE_PAYLOAD_MAX - 1, PTE_PAYLOAD_MAX,
     };
 
     for (size_t i = 0; i < TEST_ARRAY_LEN(payloads); i++) {
@@ -33,7 +33,7 @@ TEST_DECLARE_UNIT(page_table, tagged_roundtrip) {
 TEST_DECLARE_UNIT(page_table, tagged_payload_walk) {
     for (unsigned bit = 0; bit < PTE_TAGGED_PAYLOAD_BITS; bit++) {
         struct pte_tagged in = {.type = PTE_TAG_TYPE_DEMAND_PAGED,
-                                .payload = 1ULL << bit};
+                                .payload = BIT(bit)};
 
         struct pte_tagged out = pte_tagged_unpack(pte_tagged_pack(&in));
         TEST_ASSERT_EQ(out.payload, in.payload);
@@ -49,7 +49,7 @@ TEST_DECLARE_UNIT(page_table, tagged_pack_reserved_bits) {
 
     for (unsigned bit = 0; bit < PTE_TAGGED_PAYLOAD_BITS; bit++) {
         struct pte_tagged in = {.type = PTE_TAG_TYPE_DEMAND_PAGED,
-                                .payload = 1ULL << bit};
+                                .payload = BIT(bit)};
         TEST_ASSERT_EQ((pte_tagged_pack(&in) & reserved), 0);
     }
 

@@ -1,5 +1,6 @@
 /* @title: Bitmap allocator */
 #pragma once
+#include <math/bit.h>
 #include <mem/alloc.h>
 #include <mem/page.h>
 #include <mem/vmm.h>
@@ -7,7 +8,7 @@
 #include <stdint.h>
 #include <types/types.h>
 
-#define BOOT_BITMAP_SIZE ((1024 * 1024 * 128) / PAGE_SIZE / 8)
+#define BOOT_BITMAP_SIZE (MB(128) / PAGE_SIZE / 8)
 
 extern uint8_t boot_bitmap[BOOT_BITMAP_SIZE];
 extern uint8_t *bitmap;
@@ -18,7 +19,8 @@ void bitmap_free_pages(paddr_t addr, uint64_t count);
 
 __no_sanitize_address static inline void set_bit(uint64_t index) {
     uint64_t byte = index / 8;
-    uint8_t mask = 1 << (index % 8);
+    uint8_t mask = 0;
+    mask = BIT_SET(mask, index % 8);
     if (byte >= BOOT_BITMAP_SIZE)
         return;
 
@@ -27,7 +29,8 @@ __no_sanitize_address static inline void set_bit(uint64_t index) {
 
 __no_sanitize_address static inline void clear_bit(uint64_t index) {
     uint64_t byte = index / 8;
-    uint8_t mask = ~(1 << (index % 8));
+    uint8_t mask = UINT8_MAX;
+    mask = BIT_CLEAR(mask, index % 8);
     if (byte >= BOOT_BITMAP_SIZE)
         return;
 
@@ -41,5 +44,5 @@ __no_sanitize_address static inline bool test_bit(uint64_t index) {
         return false;
 
     __atomic_load(&bitmap[byte], &value, __ATOMIC_SEQ_CST);
-    return (value & (1 << (index % 8))) != 0;
+    return BIT_TEST(value, index % 8);
 }

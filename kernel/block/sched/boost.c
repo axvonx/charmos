@@ -1,6 +1,7 @@
 #include <block/block.h>
 #include <block/sched.h>
 #include <console/printf.h>
+#include <math/min_max.h>
 #include <mem/alloc.h>
 #include <stdint.h>
 #include <sync/spinlock.h>
@@ -19,7 +20,8 @@ static inline uint64_t get_boost_depth(struct bio_request *req) {
 static inline uint64_t get_boosted_prio(struct bio_request *req) {
     uint64_t step = get_boost_depth(req);
     uint64_t prio = req->priority + BIO_SCHED_STARVATION_BOOST + step;
-    return prio > BIO_SCHED_MAX ? BIO_SCHED_MAX : prio;
+    uint64_t max_prio = BIO_SCHED_MAX;
+    return MIN(prio, max_prio);
 }
 
 static bool should_boost(struct bio_request *req) {

@@ -6,6 +6,7 @@
 #include <asm.h>
 #include <compiler.h>
 #include <log.h>
+#include <math/range.h>
 #include <mem/page.h>
 #include <sch/climb.h>
 #include <sch/rt_sched_types.h>
@@ -53,8 +54,7 @@
 #define THREAD_ACT_SLEEPY_MIN THREAD_BAND_MIN(THREAD_ACT_SLEEPY_AVG)
 #define THREAD_ACT_SLEEPY_MAX THREAD_BAND_MAX(THREAD_ACT_SLEEPY_AVG)
 
-#define THREAD_NICENESS_VALID(n)                                               \
-    ((((nice_t) (n)) >= -19) && (((nice_t) (n)) <= 20))
+#define THREAD_NICENESS_VALID(n) IN_RANGE((nice_t) (n), NICE_MIN, NICE_MAX)
 
 /* pluh */
 struct cpu_context {

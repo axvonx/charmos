@@ -2,6 +2,7 @@
 #pragma once
 #include <compiler.h>
 #include <errno.h>
+#include <math/bit.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -305,7 +306,7 @@
     do {                                                                       \
         uint64_t _v = (uint64_t) (val);                                        \
         uint32_t _b = (uint32_t) (bit);                                        \
-        if (!(_v & (1ULL << _b))) {                                            \
+        if (!BIT_TEST(_v, _b)) {                                               \
             test_err("assert bit set \"%s bit %u\" failed (val=0x%llx)", #val, \
                      _b, (unsigned long long) _v);                             \
             return TEST_FAIL(#val " bit " #bit " is set");                     \
@@ -316,7 +317,7 @@
     do {                                                                       \
         uint64_t _v = (uint64_t) (val);                                        \
         uint32_t _b = (uint32_t) (bit);                                        \
-        if (_v & (1ULL << _b)) {                                               \
+        if (BIT_TEST(_v, _b)) {                                                \
             test_err("assert bit clear \"%s bit %u\" failed (val=0x%llx)",     \
                      #val, _b, (unsigned long long) _v);                       \
             return TEST_FAIL(#val " bit " #bit " is clear");                   \

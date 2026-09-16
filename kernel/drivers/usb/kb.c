@@ -4,6 +4,7 @@
 #include <drivers/usb/usb.h>
 #include <drivers/usb/xhci.h>
 #include <log.h>
+#include <math/bit.h>
 #include <mem/alloc.h>
 #include <mem/page.h>
 #include <mem/pmm.h>
@@ -50,9 +51,9 @@ static void generic_keyboard_dispatch(struct generic_keyboard *kbd,
     if (generic_keyboard_is_modifier(keycode)) {
         uint8_t bit = keycode - USB_HID_MODIFIER_BASE;
         if (pressed)
-            kbd->modifiers |= (1 << bit);
+            kbd->modifiers |= BIT(bit);
         else
-            kbd->modifiers &= ~(1 << bit);
+            kbd->modifiers &= ~BIT(bit);
         return;
     }
 
@@ -60,8 +61,8 @@ static void generic_keyboard_dispatch(struct generic_keyboard *kbd,
 }
 
 static inline bool usb_kbd_shift_active(const struct generic_keyboard *kbd) {
-    const uint8_t shift_mask = (1 << 1) | /* Left Shift */
-                               (1 << 5);  /* Right Shift */
+    const uint8_t shift_mask = BIT(1) | /* Left Shift */
+                               BIT(5);  /* Right Shift */
 
     return (kbd->modifiers & shift_mask) != 0;
 }
@@ -92,11 +93,11 @@ void usb_kbd_process_report(struct usb_hid_keyboard *kbd,
     uint8_t changed = prev->modifiers ^ cur->modifiers;
     if (changed) {
         for (int bit = 0; bit < 8; bit++) {
-            if (!(changed & (1 << bit)))
+            if (!BIT_TEST(changed, bit))
                 continue;
 
             uint32_t keycode = USB_HID_MODIFIER_BASE + bit;
-            bool pressed = cur->modifiers & (1 << bit);
+            bool pressed = BIT_TEST(cur->modifiers, bit);
 
             kbd->gkbd.emit(&kbd->gkbd, keycode, pressed);
         }

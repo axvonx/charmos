@@ -1,4 +1,5 @@
 #include <console/panic.h>
+#include <math/min_max.h>
 #include <structures/avl.h>
 
 static inline int avl_height(const struct avl_tree_node *node) {
@@ -12,7 +13,7 @@ static inline int avl_balance_factor(const struct avl_tree_node *node) {
 static inline void avl_update_height(struct avl_tree_node *node) {
     int lh = avl_height(node->left);
     int rh = avl_height(node->right);
-    node->height = 1 + (lh > rh ? lh : rh);
+    node->height = 1 + MAX(lh, rh);
 }
 
 static void avl_check_cycle(struct avl_tree_node *node, const char *caller) {
@@ -300,7 +301,7 @@ static int avl_validate_node(const struct avl_tree *tree,
     if (!avl_validate_node(tree, node->right, node, &rh))
         return 0;
 
-    int expected = 1 + (lh > rh ? lh : rh);
+    int expected = 1 + MAX(lh, rh);
     if (node->height != expected) {
         panic("AVL height mismatch: stored %d, actual %d", node->height,
               expected);

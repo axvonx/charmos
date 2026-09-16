@@ -1,6 +1,7 @@
 #include <console/panic.h>
 #include <kassert.h>
 #include <math/align.h>
+#include <math/bit.h>
 #include <mem/address_range.h>
 #include <mem/alloc.h>
 #include <mem/hhdm.h>
@@ -99,7 +100,7 @@ static vaddr_t magazine_alloc(struct vas_arena *arena, uint32_t cls,
 }
 
 static bool magazine_free(struct vas_arena *arena, uint32_t cls, vaddr_t addr) {
-    if (addr & (PAGE_SIZE - 1))
+    if (!IS_PAGE_ALIGNED(addr))
         return false;
     struct vas_magazine *mag = &arena->magazines[cls];
     for (uint32_t i = 0; i < mag_capacities[cls]; i++) {
@@ -138,14 +139,14 @@ static uint32_t size_to_bin(size_t size) {
 static void bin_insert(struct vas_arena *arena, struct vas_segment *seg) {
     uint32_t bin = size_to_bin(seg->length);
     list_add(&seg->bin_node, &arena->free_bins[bin]);
-    arena->bin_mask |= 1ULL << bin;
+    arena->bin_mask = BIT_SET(arena->bin_mask, bin);
 }
 
 static void bin_remove(struct vas_arena *arena, struct vas_segment *seg) {
     uint32_t bin = size_to_bin(seg->length);
     list_del_init(&seg->bin_node);
     if (list_empty(&arena->free_bins[bin]))
-        arena->bin_mask &= ~(1ULL << bin);
+        arena->bin_mask = BIT_CLEAR(arena->bin_mask, bin);
 }
 
 static struct vas_segment *segment_alloc(struct vas_arena *arena) {
@@ -484,8 +485,7 @@ static vaddr_t import_alloc(struct vas *vas, uint32_t cpu, size_t size,
 }
 
 vaddr_t vas_alloc(struct vas *vas, size_t size, size_t align) {
-    if (!vas || !size || !align || !IS_ALIGNED(align, align) ||
-        size > vas->limit - vas->base)
+    if (!vas || !size || !IS_POW2(align) || size > vas->limit - vas->base)
         return 0;
 
     enum irql outer = vas_enter();
@@ -791,7 +791,7 @@ void vas_unmap(struct vas *vas, void *vaddr, size_t len) {
     if (!size)
         panic("vas_unmap: invalid length %zu", len);
 
-    vaddr_t base = ALIGN_DOWN((vaddr_t) vaddr, PAGE_SIZE);
+    vaddr_t base = PAGE_ALIGN_DOWN(vaddr);
     vmm_unmap((void *) base, size, VMM_FLAG_NONE);
     vas_free(vas, base, size);
 }

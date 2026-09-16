@@ -1,6 +1,7 @@
 #include <acpi/hpet.h>
 #include <asm.h>
 #include <log.h>
+#include <math/bit.h>
 #include <mem/alloc_or_die.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -38,7 +39,7 @@ static bool tsc_has_invariant(void) {
         return false;
 
     cpuid_count(0x80000007, 0, &eax, &ebx, &ecx, &edx);
-    return (edx & (1 << 8)) != 0; /* Invariant TSC flag */
+    return BIT_TEST(edx, 8); /* Invariant TSC flag */
 }
 
 freq_hz_t tsc_calibrate_hpet(void) {

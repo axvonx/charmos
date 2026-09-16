@@ -21,7 +21,7 @@ TEST_DECLARE_UNIT(elcm, slab_geometry_and_bounds) {
         TEST_ASSERT_OK(err);
 
         struct elcm_candidate *out = &params.out;
-        TEST_ASSERT(out->pages >= 1 && out->pages <= params.max_pages);
+        TEST_ASSERT_IN_RANGE(out->pages, (size_t) 1, params.max_pages);
         TEST_ASSERT_GT(out->obj_count, 0);
 
         size_t total_required = out->metadata_bytes + out->bitmap_bytes +

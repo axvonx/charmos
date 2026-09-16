@@ -1,4 +1,6 @@
 #include <math/align.h>
+#include <math/bit.h>
+#include <math/min_max.h>
 #include <math/sort.h>
 #include <mem/alloc.h>
 #include <mem/alloc_or_die.h>
@@ -74,7 +76,7 @@ static void buddy_add_block_to_global(size_t start_pfn, int order) {
 static void domain_distribute_block(struct domain_buddy *dom, size_t start_pfn,
                                     int order, size_t domain_start,
                                     size_t domain_end) {
-    size_t block_size = 1ULL << order;
+    size_t block_size = BIT(order);
     size_t block_end = start_pfn + block_size;
 
     if (block_end <= domain_start || start_pfn >= domain_end) {
@@ -94,7 +96,7 @@ static void domain_distribute_block(struct domain_buddy *dom, size_t start_pfn,
     }
 
     int half_order = order - 1;
-    size_t half_size = 1ULL << half_order;
+    size_t half_size = BIT(half_order);
 
     domain_distribute_block(dom, start_pfn, half_order, domain_start,
                             domain_end);
@@ -198,18 +200,12 @@ static void init_after_smp() {
 
 static size_t compute_arena_max(size_t domain_total_pages) {
     size_t scaled = (domain_total_pages * ARENA_SCALE_PERMILLE) / 1000;
-    if (scaled > MAX_ARENA_PAGES)
-        return MAX_ARENA_PAGES;
-
-    return scaled;
+    return MIN(scaled, MAX_ARENA_PAGES);
 }
 
 static size_t compute_freequeue_max(size_t system_total_pages) {
     size_t scaled = (system_total_pages * FREEQUEUE_SCALE_PERMILLE) / 1000;
-    if (scaled > MAX_FREEQUEUE_PAGES)
-        return MAX_FREEQUEUE_PAGES;
-
-    return scaled;
+    return MIN(scaled, MAX_FREEQUEUE_PAGES);
 }
 
 static void domain_spawn(struct domain_buddy *domain) {

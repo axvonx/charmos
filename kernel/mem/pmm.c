@@ -1,6 +1,7 @@
 #include <console/printf.h>
 #include <limine.h>
 #include <math/align.h>
+#include <math/units.h>
 #include <mem/alloc.h>
 #include <mem/bitmap.h>
 #include <mem/buddy.h>
@@ -39,7 +40,7 @@ void pmm_early_init(struct limine_memmap_request m) {
 
             for (uint64_t addr = start; addr < end; addr += PAGE_SIZE) {
                 uint64_t index = addr / PAGE_SIZE;
-                if (index < BOOT_BITMAP_SIZE * 8) {
+                if (index < to_bits(BOOT_BITMAP_SIZE)) {
                     clear_bit(index);
                 }
             }

@@ -1,10 +1,11 @@
 /* @title: Kernel Text Patching */
 #pragma once
 #include <asm.h>
+#include <math/bit.h>
 #include <stdbool.h>
 #include <stdint.h>
 
-#define CR0_WP (1UL << 16)
+#define CR0_WP BIT(16)
 
 struct text_patch_window {
     uint64_t cr0;

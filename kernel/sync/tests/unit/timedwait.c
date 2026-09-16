@@ -56,6 +56,9 @@ static void condvar_timeout_race_worker(void *arg) {
 }
 
 TEST_DECLARE_UNIT(condvar, timeout_no_lost_wake) {
+    static const time_ms_t progress_timeout_ms = 1000;
+    static const size_t stalled_progress_limit = 2;
+
     struct condvar_timeout_race race = {0};
     condvar_init(&race.cv, CONDVAR_INIT_NORMAL);
     spinlock_init(&race.lock);
@@ -64,10 +67,26 @@ TEST_DECLARE_UNIT(condvar, timeout_no_lost_wake) {
         "condvar_timeout_race", condvar_timeout_race_worker, &race);
     TEST_ASSERT_NONNULL(t);
 
-    bool joined = thread_join_timeout(t, 2500, NULL);
+    bool joined = false;
+    size_t last_completed = 0;
+    size_t stalled_progress = 0;
+
+    while (!(joined = thread_join_timeout(t, progress_timeout_ms, NULL))) {
+        size_t completed = atomic_load(&race.completed);
+        if (completed == last_completed) {
+            stalled_progress++;
+        } else {
+            last_completed = completed;
+            stalled_progress = 0;
+        }
+
+        if (stalled_progress == stalled_progress_limit)
+            break;
+    }
+
     if (!joined) {
-        test_info("condvar timeout wake lost after %zu completed waits",
-                  atomic_load(&race.completed));
+        test_info("condvar timeout worker stalled after %zu completed waits",
+                  last_completed);
         atomic_store(&race.stop, true);
         enum irql irql = spin_lock(&race.lock);
         condvar_signal(&race.cv);

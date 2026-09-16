@@ -8,8 +8,8 @@ TEST_GROUP_DECLARE(vtd_unit, .intensity_desc = {
 TEST_DECLARE_UNIT(vtd_unit, sl_iova_tiling, TEST_INTENSITY(1, 16, 4096)) {
     size_t count = ctx->intensity_val ? ctx->intensity_val : 16;
     for (size_t i = 0; i < count; i++) {
-        uint64_t iova = (0x00007FEDCBA98765ULL + (i * 0x1000000003ULL)) &
-                        ((1ULL << 48) - 1);
+        uint64_t iova =
+            (0x00007FEDCBA98765ULL + (i * 0x1000000003ULL)) & (BIT(48) - 1);
 
         uint64_t pml4 = SL_PML4_INDEX(iova);
         uint64_t pdpt = SL_PDPT_INDEX(iova);

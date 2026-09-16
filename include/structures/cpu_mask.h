@@ -12,7 +12,7 @@
 #endif
 
 #define CPU_MASK_WORD_BITS 64
-#define CPU_MASK_WORDS BITMAP_WORDS(CPU_MASK_BITS)
+#define CPU_MASK_WORDS BITMAP_WORDS_CONST(CPU_MASK_BITS)
 
 struct cpu_mask {
     bitmap_word_t bits[CPU_MASK_WORDS];

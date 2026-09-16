@@ -1,3 +1,4 @@
+#include <math/min_max.h>
 #include <mem/alloc_or_die.h>
 #include <mem/slab.h>
 #include <sch/sched.h>
@@ -160,9 +161,7 @@ static vaddr_t slab_percpu_refill_for_mag_and_cache(
         return slab_magazine_pop(mag);
 
     size_t can_insert = SLAB_MAG_ENTRIES - mag->count;
-    size_t to_insert = (got > 0) ? (got - 1) : 0;
-    if (to_insert > can_insert)
-        to_insert = can_insert;
+    size_t to_insert = got > 0 ? MIN(got - 1, can_insert) : 0;
 
     kassert(mag->obj_size == cache->obj_size);
     vaddr_t first = pc->shadow_objs[0];

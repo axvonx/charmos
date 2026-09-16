@@ -1,13 +1,25 @@
 /* @title: Range and Interval Operations */
 #pragma once
+#include <compiler.h>
 #include <kassert.h>
 #include <stdbool.h>
 #include <stdint.h>
 
 #define IN_RANGE(x, min, max)                                                  \
     ({                                                                         \
-        (void) kassert((min) <= (max));                                        \
-        (x) >= (min) && (x) <= (max);                                          \
+        __auto_type __ir_x = (x);                                              \
+        __auto_type __ir_lo = (min);                                           \
+        __auto_type __ir_hi = (max);                                           \
+        typedef __common_type_2(__ir_x, __ir_lo) __ir_t1;                      \
+        typedef __common_type_2((__ir_t1) 0, __ir_hi) __ir_t;                  \
+        typecheck_widenable_to((__ir_t) 0, x);                                 \
+        typecheck_widenable_to((__ir_t) 0, min);                               \
+        typecheck_widenable_to((__ir_t) 0, max);                               \
+        __ir_t __ir_v = (__ir_t) __ir_x;                                       \
+        __ir_t __ir_l = (__ir_t) __ir_lo;                                      \
+        __ir_t __ir_h = (__ir_t) __ir_hi;                                      \
+        (void) kassert(__ir_l <= __ir_h);                                      \
+        (__ir_v >= __ir_l) && (__ir_v <= __ir_h);                              \
     })
 
 struct range {
@@ -24,21 +36,5 @@ struct range {
         type hi;                                                               \
     } name
 
-#define RANGE_LEN(r) (((r).hi - (r).low) + 1)
 #define RANGE_CONTAINS(r, val) ((val) >= (r).low && (val) <= (r).hi)
-#define RANGE_OVERLAPS(r1, r2) ((r1).low <= (r2).hi && (r2).low <= (r1).hi)
 #define RANGE_VALID(r) ((r).low <= (r).hi)
-
-/* Cap r1's bounds to fit within r2, returning true if an intersection exists */
-#define RANGE_CLAMP(r1, r2, out_r)                                             \
-    ((r1).low <= (r2).hi && (r2).low <= (r1).hi                                \
-         ? ((out_r).low = ((r1).low > (r2).low) ? (r1).low : (r2).low,         \
-            (out_r).hi = ((r1).hi < (r2).hi) ? (r1).hi : (r2).hi, true)        \
-         : false)
-
-/* Merge r1 and r2 into out_r if they overlap or touch */
-#define RANGE_MERGE(r1, r2, out_r)                                             \
-    (((r1).low <= (r2).hi + 1) && ((r2).low <= (r1).hi + 1)                    \
-         ? ((out_r).low = ((r1).low < (r2).low) ? (r1).low : (r2).low,         \
-            (out_r).hi = ((r1).hi > (r2).hi) ? (r1).hi : (r2).hi, true)        \
-         : false)

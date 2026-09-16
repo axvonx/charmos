@@ -1,4 +1,5 @@
 #include <math/align.h>
+#include <math/min_max.h>
 #include <smp/domain.h>
 
 #include "internal.h"
@@ -106,10 +107,9 @@ static size_t compute_min_elements_to_free(struct domain_buddy *domain,
     }
 
     size_t target = atomic_load(&queue->num_elements) / 2;
-    if (target > total_slots_available)
-        target = total_slots_available;
-
-    return target > 0 ? target : 1;
+    size_t minimum = 1;
+    target = MIN(target, total_slots_available);
+    return MAX(target, minimum);
 }
 
 static void flush_free_queue_internal(struct domain_buddy *domain,

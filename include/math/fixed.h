@@ -1,6 +1,8 @@
 /* @title: Fixed Point Arithmetic */
 #pragma once
 #include <kassert.h>
+#include <math/align.h>
+#include <math/min_max.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <types/types.h>
@@ -84,11 +86,11 @@ static inline int64_t fx_to_int(fx32_32_t x) {
 }
 
 static inline fx32_32_t fx_min(fx32_32_t a, fx32_32_t b) {
-    return a < b ? a : b;
+    return MIN(a, b);
 }
 
 static inline fx32_32_t fx_max(fx32_32_t a, fx32_32_t b) {
-    return a > b ? a : b;
+    return MAX(a, b);
 }
 
 static inline fx32_32_t fx_clamp(fx32_32_t x, fx32_32_t lo, fx32_32_t hi) {
@@ -122,11 +124,11 @@ static inline fx32_32_t fx_sqrt(fx32_32_t x) {
 
 /* Use two's complement to branchlessly floor for both signs */
 static inline fx32_32_t fx_ceil(fx32_32_t x) {
-    return (x + FX_ONE - 1) & ~(FX_ONE - 1);
+    return ALIGN_UP(x, FX_ONE);
 }
 
 static inline fx32_32_t fx_floor(fx32_32_t x) {
-    return x & ~(FX_ONE - 1);
+    return ALIGN_DOWN(x, FX_ONE);
 }
 
 static inline fx32_32_t fx_map(fx32_32_t value, fx32_32_t from_low,

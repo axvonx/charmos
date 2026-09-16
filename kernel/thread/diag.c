@@ -1,4 +1,5 @@
 #include <log.h>
+#include <math/min_max.h>
 #include <thread/thread.h>
 #include <thread/thread_diag.h>
 
@@ -114,9 +115,8 @@ void thread_dump_wait_trace(struct thread *t, const char *role, size_t idx,
             idx, d->apc_deliver_entries, d->apc_deliver_max,
             d->apc_last_deliver_ra);
 
-    uint64_t depth =
-        max_arms < THREAD_WAIT_TRACE_DEPTH ? max_arms : THREAD_WAIT_TRACE_DEPTH;
-    uint64_t shown = count < depth ? count : depth;
+    uint64_t depth = MIN(max_arms, THREAD_WAIT_TRACE_DEPTH);
+    uint64_t shown = MIN(count, depth);
 
     for (uint64_t i = 0; i < shown; i++) {
         uint64_t seq = count - 1 - i;

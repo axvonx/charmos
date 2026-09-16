@@ -1,6 +1,7 @@
 #include <block/block.h>
 #include <console/printf.h>
 #include <fs/iso9660.h>
+#include <math/align.h>
 #include <mem/alloc.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -10,7 +11,7 @@
 
 bool iso9660_read_file(struct iso9660_fs *fs, uint32_t lba, uint32_t size,
                        void *out_buf) {
-    uint32_t num_blocks = (size + fs->block_size - 1) / fs->block_size;
+    uint32_t num_blocks = DIV_ROUND_UP(size, fs->block_size);
 
     if (!fs->disk->read_sector(fs->disk, lba + fs->partition->start_lba,
                                out_buf, num_blocks)) {
@@ -106,7 +107,7 @@ struct vfs_node *iso9660_mount(struct partition *p) {
 }
 
 void iso9660_ls(struct iso9660_fs *fs, uint32_t lba, uint32_t size) {
-    uint32_t num_blocks = (size + fs->block_size - 1) / fs->block_size;
+    uint32_t num_blocks = DIV_ROUND_UP(size, fs->block_size);
     uint8_t *dir_data = kmalloc(num_blocks * fs->block_size);
     if (!dir_data)
         return;
@@ -164,7 +165,7 @@ void iso9660_print(struct partition *disk) {
 struct iso9660_dir_record *iso9660_find(struct iso9660_fs *fs,
                                         const char *target_name, uint32_t lba,
                                         uint32_t size) {
-    uint32_t num_blocks = (size + fs->block_size - 1) / fs->block_size;
+    uint32_t num_blocks = DIV_ROUND_UP(size, fs->block_size);
     uint8_t *dir_data = kmalloc(num_blocks * fs->block_size);
     if (!dir_data)
         return NULL;

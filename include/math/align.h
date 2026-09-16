@@ -1,14 +1,81 @@
 /* @title: Alignment and Rounding */
 #pragma once
+#include <compiler.h>
+#include <kassert.h>
+#include <stdbool.h>
+#include <stdint.h>
 
-#define ALIGN_DOWN(x, align) ((x) & ~((align) - 1ULL))
-#define ALIGN_UP(x, align) (((x) + ((align) - 1ULL)) & ~((align) - 1ULL))
-#define IS_ALIGNED(x, align) (((x) & ((align) - 1)) == 0)
+/* Use UNCHECKED and WRAPPING when callers don't want to panic and want to
+ * validate input, whereas the defaults panic */
 
-#define DIV_ROUND_UP(n, d) (((n) + (d) - 1) / (d))
+#define _ALIGN_CAPTURE_UNCHECKED(x, align)                                     \
+    __auto_type __x = (x);                                                     \
+    __auto_type __source_align = (align);                                      \
+    typecheck_integer(__x);                                                    \
+    typecheck_widenable_to(__x, align);                                        \
+    __typeof__(__x) __align = (__typeof__(__x)) __source_align
 
-#define ROUND_UP(x, y) (((x) + (y) - 1) / (y))
-#define ROUND_DOWN(x, y) ((x) / (y))
-#define ROUND(x, y) (((x) + ((y) / 2)) / (y))
-#define ROUND_UP_TO_POWER_OF_2(x) (1 << (32 - __builtin_clz(x - 1)))
-#define ROUND_DOWN_TO_POWER_OF_2(x) (1 << (31 - __builtin_clz(x)))
+#define _ALIGN_CAPTURE(x, align)                                               \
+    _ALIGN_CAPTURE_UNCHECKED(x, align);                                        \
+    (void) kassert(__align > 0 && (__align & (__align - 1)) == 0)
+
+#define IS_POW2(x)                                                             \
+    ({                                                                         \
+        __auto_type __p2 = (x);                                                \
+        typecheck_integer(__p2);                                               \
+        __p2 > 0 && (__p2 & (__p2 - 1)) == 0;                                  \
+    })
+
+#define ALIGN_DOWN(x, align)                                                   \
+    ({                                                                         \
+        _ALIGN_CAPTURE(x, align);                                              \
+        __x & ~(__align - 1);                                                  \
+    })
+
+#define _ALIGN_UP_CAPTURE(x, align)                                            \
+    _ALIGN_CAPTURE_UNCHECKED(x, align);                                        \
+    __typeof__(__x) __mask = __align - 1;                                      \
+    __typeof__(__x) __sum;                                                     \
+    bool __overflow = __builtin_add_overflow(__x, __mask, &__sum)
+
+/* Rounds up without validating the alignment, wraps on overflow */
+#define ALIGN_UP_WRAPPING(x, align)                                            \
+    ({                                                                         \
+        _ALIGN_UP_CAPTURE(x, align);                                           \
+        (void) __overflow;                                                     \
+        __sum & ~__mask;                                                       \
+    })
+
+#define ALIGN_UP(x, align)                                                     \
+    ({                                                                         \
+        _ALIGN_UP_CAPTURE(x, align);                                           \
+        (void) kassert(__align > 0 && (__align & (__align - 1)) == 0 &&        \
+                       !__overflow);                                           \
+        __sum & ~__mask;                                                       \
+    })
+
+#define IS_ALIGNED(x, align)                                                   \
+    ({                                                                         \
+        _ALIGN_CAPTURE(x, align);                                              \
+        (__x & (__align - 1)) == 0;                                            \
+    })
+
+#define IS_ALIGNED_UNCHECKED(x, align)                                         \
+    ({                                                                         \
+        _ALIGN_CAPTURE_UNCHECKED(x, align);                                    \
+        __align > 0 && (__align & (__align - 1)) == 0 &&                       \
+            (__x & (__align - 1)) == 0;                                        \
+    })
+
+/* TODO: This only operates on unsigned values, I do want signed
+ * support, so I might need to write that out */
+#define DIV_ROUND_UP(n, d)                                                     \
+    ({                                                                         \
+        __auto_type __n = (n);                                                 \
+        __auto_type __source_d = (d);                                          \
+        typecheck_unsigned(__n);                                               \
+        typecheck_widenable_to(__n, d);                                        \
+        __typeof__(__n) __d = (__typeof__(__n)) __source_d;                    \
+        (void) kassert(__d > 0);                                               \
+        (__typeof__(__n)) (__n / __d + (__n % __d != 0));                      \
+    })

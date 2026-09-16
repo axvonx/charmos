@@ -6,6 +6,7 @@
 #include <irq/idt.h>
 #include <limine.h>
 #include <linker/symbols.h>
+#include <math/bit.h>
 #include <mem/address_range.h>
 #include <mem/asan.h>
 #include <mem/demand_page.h>
@@ -133,7 +134,7 @@ static inline struct page_table *pt_next_table(pte_t entry) {
  *
  * PML4 entries span 512GB, PDPT 1GB, PD 2MB, PT 4KB */
 static inline uint64_t pt_level_granule(int level) {
-    return 1ULL << (PT_SHIFT_L4 - level * PT_STRIDE);
+    return BIT(PT_SHIFT_L4 - level * PT_STRIDE);
 }
 
 static inline void pt_walk_enter(void) {
@@ -1075,7 +1076,7 @@ void *vmm_map(paddr_t paddr, vaddr_t vaddr, uint64_t len, uint64_t flags,
     uintptr_t offset = paddr - phys_start;
 
     uint64_t total_len = len + offset;
-    uint64_t total_pages = (total_len + PAGE_SIZE - 1) / PAGE_SIZE;
+    uint64_t total_pages = PAGES_NEEDED_FOR(total_len);
 
     enum errno e = ERR_OK;
     uint64_t mapped = 0;
@@ -1122,7 +1123,7 @@ void *vmm_map_bump_internal(uintptr_t addr, uint64_t len, uint64_t flags,
     uintptr_t offset = addr - phys_start;
 
     uint64_t total_len = len + offset;
-    uint64_t total_pages = (total_len + PAGE_SIZE - 1) / PAGE_SIZE;
+    uint64_t total_pages = PAGES_NEEDED_FOR(total_len);
 
     uint64_t span = total_pages * PAGE_SIZE;
     if (total_pages != 0 && span / PAGE_SIZE != total_pages)

@@ -1,4 +1,6 @@
 #include <log.h>
+#include <math/range.h>
+#include <math/units.h>
 #include <mem/address_range.h>
 #include <mem/page.h>
 #include <string.h>
@@ -19,10 +21,10 @@ LOG_HANDLE_DECLARE_PRINT(address_range);
 static struct rbt ar_tree;
 
 static void print_bytes(uint64_t bytes) {
-    const uint64_t kib = 1024ULL;
-    const uint64_t mib = 1024ULL * kib;
-    const uint64_t gib = 1024ULL * mib;
-    const uint64_t tib = 1024ULL * gib;
+    const uint64_t kib = KB(1);
+    const uint64_t mib = MB(1);
+    const uint64_t gib = GB(1);
+    const uint64_t tib = TB(1);
     const uint64_t pib = 1024ULL * tib;
     const uint64_t eib = 1024ULL * pib;
 
@@ -114,8 +116,10 @@ static void add_static_address_range(struct address_range *ar) {
 
 static bool gap_fits(vaddr_t need_align, size_t need_size, vaddr_t gap_base,
                      vaddr_t gap_end, vaddr_t *out_base) {
-    vaddr_t aligned = ALIGN_UP(gap_base, need_align);
-    vaddr_t end = aligned + need_size;
+    vaddr_t aligned = ALIGN_UP_WRAPPING(gap_base, need_align);
+    vaddr_t end;
+    if (aligned < gap_base || __builtin_add_overflow(aligned, need_size, &end))
+        return false;
     if (aligned < gap_end && end <= gap_end) {
         *out_base = aligned;
         return true;
@@ -186,25 +190,25 @@ void address_ranges_init() {
 }
 
 static void format_size(char *buf, size_t bufsz, size_t bytes) {
-    if (bytes >= (1ULL << 30)) {
-        size_t whole = bytes >> 30;
-        size_t frac = ((bytes & ((1ULL << 30) - 1)) * 100) >> 30;
+    if (bytes >= GB(1)) {
+        size_t whole = bytes / GB(1);
+        size_t frac = ((bytes & (GB(1) - 1)) * 100) / GB(1);
         if (frac == 0) {
             snprintf(buf, bufsz, "%zu GiB", whole);
         } else {
             snprintf(buf, bufsz, "%zu.%02zu GiB", whole, frac);
         }
-    } else if (bytes >= (1ULL << 20)) {
-        size_t whole = bytes >> 20;
-        size_t frac = ((bytes & ((1ULL << 20) - 1)) * 100) >> 20;
+    } else if (bytes >= MB(1)) {
+        size_t whole = bytes / MB(1);
+        size_t frac = ((bytes & (MB(1) - 1)) * 100) / MB(1);
         if (frac == 0) {
             snprintf(buf, bufsz, "%zu MiB", whole);
         } else {
             snprintf(buf, bufsz, "%zu.%02zu MiB", whole, frac);
         }
-    } else if (bytes >= (1ULL << 10)) {
-        size_t whole = bytes >> 10;
-        size_t frac = ((bytes & ((1ULL << 10) - 1)) * 100) >> 10;
+    } else if (bytes >= KB(1)) {
+        size_t whole = bytes / KB(1);
+        size_t frac = ((bytes & (KB(1) - 1)) * 100) / KB(1);
         if (frac == 0) {
             snprintf(buf, bufsz, "%zu KiB", whole);
         } else {
@@ -292,7 +296,7 @@ void address_ranges_print() {
 struct address_range *address_range_for_addr(vaddr_t vaddr) {
     for (struct address_range *ar = __skernel_address_ranges;
          ar < __ekernel_address_ranges; ar++) {
-        if (vaddr >= ar->base && vaddr <= ar_end(ar))
+        if (IN_RANGE(vaddr, ar->base, ar_end(ar)))
             return ar;
     }
 

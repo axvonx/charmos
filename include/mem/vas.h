@@ -1,5 +1,6 @@
 /* @title: Virtual address allocator */
 #pragma once
+#include <math/bit.h>
 #include <mem/page.h>
 #include <mem/vmm.h>
 #include <stdbool.h>
@@ -12,7 +13,7 @@ struct vas;
 struct vas_arena;
 
 #define VAS_CHUNK_SHIFT 26
-#define VAS_CHUNK_SIZE (1ULL << VAS_CHUNK_SHIFT)
+#define VAS_CHUNK_SIZE BIT(VAS_CHUNK_SHIFT)
 
 /* [base, limit) */
 struct vas *vas_bootstrap(vaddr_t base, vaddr_t limit);

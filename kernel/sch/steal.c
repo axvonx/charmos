@@ -138,7 +138,7 @@ struct thread *scheduler_steal_work(struct scheduler *new,
     uint8_t mask = atomic_load(&victim->queue_bitmap);
     while (mask) {
         int level = 31 - __builtin_clz((uint32_t) mask);
-        mask &= ~(1ULL << level); /* remove that bit from local copy */
+        mask = BIT_CLEAR(mask, level); /* remove that bit from local copy */
 
         if (level == THREAD_PRIO_CLASS_TIMESHARE) {
             stolen = steal_from_ts_threads(victim);

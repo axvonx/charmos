@@ -1,5 +1,7 @@
 #include <console/printf.h>
 #include <math/align.h>
+#include <math/bit.h>
+#include <math/units.h>
 #include <mem/alloc.h>
 #include <mem/bitmap.h>
 #include <mem/buddy.h>
@@ -31,11 +33,11 @@ static bool pfn_usable_from_memmap(uint64_t pfn) {
 }
 
 static bool is_block_free(uint64_t pfn, uint64_t order) {
-    uint64_t pages = 1ULL << order;
+    uint64_t pages = BIT(order);
 
     for (uint64_t i = 0; i < pages; i++) {
         uint64_t cur_pfn = pfn + i;
-        if (cur_pfn < BOOT_BITMAP_SIZE * 8) {
+        if (cur_pfn < to_bits(BOOT_BITMAP_SIZE)) {
             if (test_bit(cur_pfn))
                 return false;
         } else {
@@ -66,11 +68,11 @@ void buddy_add_entry(struct page *page_array, struct limine_memmap_entry *entry,
 
     while (region_size > 0) {
         int order = MIN(order_base_2(region_size), BUDDY_MAX_ORDER - 1);
-        size_t block_size = 1ULL << order;
+        size_t block_size = BIT(order);
 
-        while ((region_start & (block_size - 1)) != 0 && order > 0) {
+        while (!IS_ALIGNED(region_start, block_size) && order > 0) {
             order--;
-            block_size = 1ULL << order;
+            block_size = BIT(order);
         }
 
         if (block_size > region_size)
@@ -125,7 +127,7 @@ static void mid_init_buddy(size_t pages_needed) {
 
 void buddy_init(void) {
     size_t pages_needed =
-        (sizeof(struct page) * global.last_pfn + PAGE_SIZE - 1) / PAGE_SIZE;
+        DIV_ROUND_UP(sizeof(struct page) * global.last_pfn, PAGE_SIZE);
 
     mid_init_buddy(pages_needed);
 

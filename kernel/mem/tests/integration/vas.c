@@ -106,10 +106,12 @@ TEST_DECLARE_INTEGRATION(vas, concurrent_import_query_and_reclaim) {
     struct vas *vas =
         vas_create(SMP_VAS_BASE, SMP_VAS_BASE + 8 * VAS_CHUNK_SIZE);
 
-    TEST_ASSERT_NONNULL(vas);
     struct thread *threads[4] = {0};
     struct churn_worker workers[4] = {0};
-    size_t count = global.core_count < 4 ? global.core_count : 4;
+    size_t thread_capacity = sizeof(threads) / sizeof(*threads);
+    size_t count = MIN(global.core_count, thread_capacity);
+
+    TEST_ASSERT_NONNULL(vas);
     size_t started = 0;
 
     for (; started < count; started++) {

@@ -1,5 +1,6 @@
 #include <block/block.h>
 #include <drivers/ahci.h>
+#include <math/bit.h>
 #include <sch/sched.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -10,7 +11,7 @@
 
 static void ahci_set_lba_cmd(struct ahci_fis_reg_h2d *fis, uint64_t lba,
                              uint16_t sector_count) {
-    fis->device = 1 << 6;
+    fis->device = BIT(6);
 
     fis->lba0 = (uint8_t) (lba & 0xFF);
     fis->lba1 = (uint8_t) ((lba >> 8) & 0xFF);

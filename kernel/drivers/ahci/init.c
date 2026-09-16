@@ -3,6 +3,7 @@
 #include <drivers/ahci.h>
 #include <drivers/mmio.h>
 #include <irq/idt.h>
+#include <math/bit.h>
 #include <mem/alloc.h>
 #include <mem/pmm.h>
 #include <mem/vmm.h>
@@ -83,11 +84,11 @@ static struct ahci_disk *device_setup(struct ahci_device *dev,
                                       uint32_t *disk_count) {
     uint32_t pi = mmio_read_32(&ctrl->pi);
 
-    mmio_write_32(&dev->ctrl->ghc, 1 << 1);
+    mmio_write_32(&dev->ctrl->ghc, BIT(1));
     uint32_t total_disks = 0;
 
     for (uint32_t i = 0; i < 32; i++) {
-        if (!(pi & (1U << i)))
+        if (!BIT_TEST(pi, i))
             continue;
 
         struct ahci_port *port = ahci_get_port(dev, i);
@@ -129,7 +130,7 @@ static struct ahci_disk *device_setup(struct ahci_device *dev,
     uint32_t disks_ind = 0;
 
     for (uint32_t i = 0; i < 32; i++) {
-        if (!(pi & (1U << i)))
+        if (!BIT_TEST(pi, i))
             continue;
 
         struct ahci_port *port = ahci_get_port(dev, i);
@@ -166,7 +167,7 @@ static struct ahci_disk *device_setup(struct ahci_device *dev,
 
 struct ahci_disk *ahci_setup_controller(struct ahci_controller *ctrl,
                                         uint32_t *d_cnt) {
-    bool s64a = mmio_read_32(&ctrl->cap) & (1U << 31);
+    bool s64a = BIT_TEST(mmio_read_32(&ctrl->cap), 31);
     if (!s64a) {
         ahci_log(LOG_WARN, "controller does not support 64-bit addressing\n");
         return NULL;

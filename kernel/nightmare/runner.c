@@ -4,6 +4,7 @@
 #include <console/panic.h>
 #include <console/printf.h>
 #include <global.h>
+#include <math/units.h>
 #include <mem/alloc.h>
 #include <mem/pmm.h>
 #include <ndjson.h>
@@ -18,7 +19,7 @@
 #define CHARMOS_COMMIT "unknown"
 #endif
 
-#define NIGHTMARE_MIB (1024ULL * 1024ULL)
+#define NIGHTMARE_MIB MB(1)
 #define NIGHTMARE_DEFAULT_DURATION_MS 1000
 #define NIGHTMARE_DEFAULT_DRAIN_MS 20000
 #define NIGHTMARE_DEFAULT_STAT_MS 5000

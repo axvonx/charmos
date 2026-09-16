@@ -3,6 +3,7 @@
 #include <console/printf.h>
 #include <drivers/mmio.h>
 #include <log.h>
+#include <math/bit.h>
 #include <mem/page.h>
 #include <mem/vmm.h>
 #include <smp/core.h>
@@ -139,7 +140,7 @@ void hpet_init(void) {
     hpet_disable();
     hpet_write64(HPET_MAIN_COUNTER_OFFSET, 0);
     uint64_t config = hpet_read64(HPET_GEN_CONF_OFFSET);
-    config &= ~(1 << 1); // legacy replacement mode off
+    config = BIT_CLEAR(config, 1); // legacy replacement mode off
     hpet_write64(HPET_GEN_CONF_OFFSET, config);
 
     union hpet_timer_general_capabilities cap = {0};

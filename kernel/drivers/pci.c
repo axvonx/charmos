@@ -3,6 +3,9 @@
 #include <drivers/pci.h>
 #include <drivers/usb/xhci.h>
 #include <log.h>
+#include <math/align.h>
+#include <math/bit.h>
+#include <math/min_max.h>
 #include <mem/alloc.h>
 #include <mem/page.h>
 #include <mem/vmm.h>
@@ -212,9 +215,9 @@ void pci_program_msix_entry(uint8_t bus, uint8_t slot, uint8_t func,
     uint64_t table_base = bar_addr + table_offset; // physical
     uint64_t entry_phys = table_base + (uint64_t) table_index * entry_size;
 
-    uint64_t map_base = entry_phys & ~(PAGE_SIZE - 1);
-    size_t map_size = (entry_phys & (PAGE_SIZE - 1)) + entry_size;
-    map_size = (map_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+    uint64_t map_base = PAGE_ALIGN_DOWN(entry_phys);
+    size_t map_size =
+        PAGE_ALIGN_UP((entry_phys & (PAGE_SIZE - 1)) + entry_size);
 
     void *map = mmio_map(map_base, map_size);
     if (!map) {
@@ -261,9 +264,7 @@ void pci_enable_msix_on_core(uint8_t bus, uint8_t slot, uint8_t func,
 
     uint64_t map_size =
         (vector_index + 1) * sizeof(struct pci_msix_table_entry);
-    if (map_size < PAGE_SIZE) {
-        map_size = PAGE_SIZE;
-    }
+    map_size = MAX(map_size, PAGE_SIZE);
     void *msix_table = mmio_map(bar_addr + table_offset, map_size);
 
     struct pci_msix_table_entry *entry_addr =
@@ -289,14 +290,14 @@ void pci_enable_msix(uint8_t bus, uint8_t slot, uint8_t func) {
         if (cap_id == PCI_CAP_ID_MSIX) {
             uint16_t msg_ctl = pci_read_word(bus, slot, func, cap_ptr + 2);
 
-            msg_ctl |= (1 << 15);
-            msg_ctl &= ~(1 << 14);
+            msg_ctl |= BIT(15);
+            msg_ctl &= ~BIT(14);
 
             pci_write_word(bus, slot, func, cap_ptr + 2, msg_ctl);
 
             uint16_t verify = pci_read_word(bus, slot, func, cap_ptr + 2);
 
-            if ((verify & (1 << 15)) && !(verify & (1 << 14))) {
+            if (BIT_TEST(verify, 15) && !BIT_TEST(verify, 14)) {
                 pci_log(LOG_INFO, "MSI-X enabled");
             } else {
                 pci_log(LOG_ERROR, "Failed to enable MSI-X");

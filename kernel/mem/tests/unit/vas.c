@@ -87,7 +87,7 @@ static bool arena_valid(struct vas_arena *arena, vaddr_t base, vaddr_t limit,
                 (63U - __builtin_clzll(seg->length)) != bin ||
                 rbt_search(&arena->tree, seg->start) != &seg->node)
                 return false;
-            mask |= 1ULL << bin;
+            mask |= BIT(bin);
             if (++binned_tags > free_tags)
                 return false;
         }
@@ -365,12 +365,12 @@ TEST_DECLARE_UNIT(vas, alignment_and_partial_edge_buckets) {
     vaddr_t base = TEST_VAS_BASE + PAGE_SIZE;
     struct vas *vas = vas_create(base, TEST_VAS_BASE + 2 * PAGE_1GB);
     TEST_ASSERT_NONNULL(vas);
-    size_t aligns[] = {PAGE_SIZE, 64 * 1024, PAGE_2MB, PAGE_1GB};
+    size_t aligns[] = {PAGE_SIZE, KB(64), PAGE_2MB, PAGE_1GB};
     vaddr_t addresses[TEST_ARRAY_LEN(aligns)];
     for (size_t i = 0; i < TEST_ARRAY_LEN(aligns); i++) {
         addresses[i] = vas_alloc(vas, 3 * PAGE_SIZE, aligns[i]);
         TEST_ASSERT_NE(addresses[i], 0);
-        TEST_ASSERT_EQ(addresses[i] & (aligns[i] - 1), 0);
+        TEST_ASSERT(IS_ALIGNED(addresses[i], aligns[i]));
         for (size_t j = 0; j < i; j++)
             TEST_ASSERT(addresses[i] + 3 * PAGE_SIZE <= addresses[j] ||
                         addresses[j] + 3 * PAGE_SIZE <= addresses[i]);
@@ -427,7 +427,7 @@ TEST_DECLARE_UNIT(vas, invalid_requests_and_high_address_arithmetic) {
     TEST_ASSERT_EQ(vas_alloc(vas, 1, 0), 0);
     TEST_ASSERT_EQ(vas_alloc(vas, 1, 3), 0);
     TEST_ASSERT_EQ(vas_alloc(vas, SIZE_MAX, PAGE_SIZE), 0);
-    TEST_ASSERT_EQ(vas_alloc(vas, PAGE_SIZE, 1ULL << 63), 0);
+    TEST_ASSERT_EQ(vas_alloc(vas, PAGE_SIZE, BIT(63)), 0);
     TEST_ASSERT_FALSE(vas_vaddr_is_allocated(vas, base - 1));
     TEST_ASSERT_FALSE(vas_vaddr_is_allocated(vas, UINTPTR_MAX));
     size_t length = UINTPTR_MAX - base;
@@ -539,7 +539,7 @@ TEST_DECLARE_UNIT(vas, fragmented_small_arena_has_no_false_exhaustion) {
             slots[slot].addr = 0;
         } else {
             size_t size = 1 + prng_splitmix64_next(&random) % 127;
-            size_t align = 1ULL << (prng_splitmix64_next(&random) % 8);
+            size_t align = BIT(prng_splitmix64_next(&random) % 8);
             bool fits = false;
             for (size_t offset = 0; offset + size <= BYTES; offset += align) {
                 size_t n = 0;
@@ -605,12 +605,11 @@ TEST_DECLARE_UNIT(vas, seeded_churn_against_interval_oracle) {
             live -= slots[slot].size;
             slots[slot].addr = 0;
         } else {
-            size_t size =
-                1 + prng_splitmix64_next(&random) % (16 * 1024 * 1024);
-            size_t align = 1ULL << (prng_splitmix64_next(&random) % 25);
+            size_t size = 1 + prng_splitmix64_next(&random) % MB(16);
+            size_t align = BIT(prng_splitmix64_next(&random) % 25);
             vaddr_t addr = vas_alloc(vas, size, align);
             if (addr) {
-                TEST_ASSERT_EQ(addr & (align - 1), 0);
+                TEST_ASSERT(IS_ALIGNED(addr, align));
                 TEST_ASSERT(addr >= vas->base && size <= vas->limit - addr);
                 for (size_t j = 0; j < SLOTS; j++)
                     if (slots[j].addr)

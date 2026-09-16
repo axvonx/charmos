@@ -1,6 +1,7 @@
 #include <console/printf.h>
 #include <kassert.h>
 #include <math/align.h>
+#include <math/min_max.h>
 #include <mem/alloc.h>
 #include <mem/bitmap.h>
 #include <mem/buddy.h>
@@ -159,7 +160,7 @@ paddr_t buddy_alloc_pages(struct buddy_free_area *free_area, size_t count) {
 
         buddy_page_assert_tag(page, PAGE_TAG_BUDDY);
         uint64_t new_order = current_order - 1;
-        uint64_t buddy_pfn = buddy_page_get_pfn(page) + (1ULL << new_order);
+        uint64_t buddy_pfn = buddy_page_get_pfn(page) + BIT(new_order);
 
         /* Send the other half away */
         struct buddy_page *buddy = buddy_page_for_pfn(buddy_pfn);
@@ -206,7 +207,7 @@ void buddy_free_pages(paddr_t addr, size_t count,
     buddy_page_tag(page);
 
     while (order < BUDDY_MAX_ORDER - 1) {
-        uint64_t buddy_pfn = pfn ^ (1ULL << order);
+        uint64_t buddy_pfn = pfn ^ BIT(order);
 
         if (buddy_pfn >= total_pages)
             break;
@@ -219,7 +220,7 @@ void buddy_free_pages(paddr_t addr, size_t count,
         buddy_page_tag(buddy);
         buddy_fa_remove(&free_area[order], buddy);
 
-        pfn = (pfn < buddy_pfn) ? pfn : buddy_pfn;
+        pfn = MIN(pfn, buddy_pfn);
         page = buddy_page_for_pfn(pfn);
         buddy_page_set_next_pfn(page, 0);
         buddy_page_set_order(page, ++order);

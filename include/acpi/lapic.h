@@ -3,6 +3,7 @@
 #include <asm.h>
 #include <console/printf.h>
 #include <drivers/mmio.h>
+#include <math/bit.h>
 #include <smp/core.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -17,12 +18,12 @@
 #define LAPIC_DELIVERY_INIT (0x5 << 8)
 #define LAPIC_DELIVERY_STARTUP (0x6 << 8)
 
-#define LAPIC_LEVEL_ASSERT (1 << 14)
+#define LAPIC_LEVEL_ASSERT BIT(14)
 #define LAPIC_TRIGGER_EDGE (0 << 15)
-#define LAPIC_TRIGGER_LEVEL (1 << 15)
-#define LAPIC_IPI_IN_FLIGHT (1u << 12)
+#define LAPIC_TRIGGER_LEVEL BIT(15)
+#define LAPIC_IPI_IN_FLIGHT BIT(12)
 #define LAPIC_DEST_PHYSICAL (0 << 11)
-#define LAPIC_DEST_LOGICAL (1 << 11)
+#define LAPIC_DEST_LOGICAL BIT(11)
 
 #define LAPIC_DEST_SHIFT 24
 
@@ -34,7 +35,7 @@
 #define LAPIC_REG_TIMER_INIT 0x380
 #define LAPIC_REG_TIMER_CUR 0x390
 #define LAPIC_REG_TIMER_DIV 0x3E0
-#define LAPIC_LVT_MASK (1 << 16)
+#define LAPIC_LVT_MASK BIT(16)
 #define LAPIC_ENABLE 0x100
 #define LAPIC_SPURIOUS_REGISTER 0xF0
 
@@ -85,13 +86,13 @@ static inline uint32_t lapic_read(uint32_t reg) {
     }
 }
 
-#define TIMER_MODE_PERIODIC (1 << 17)
+#define TIMER_MODE_PERIODIC BIT(17)
 #define TIMER_MODE_ONESHOT (0 << 17)
 #define IA32_APIC_BASE 0x1B
-#define APIC_X2APIC_ENABLE (1 << 10)
+#define APIC_X2APIC_ENABLE BIT(10)
 
 #define IA32_X2APIC_ICR 0x830
-#define LAPIC_LEVEL_ASSERT (1 << 14)
+#define LAPIC_LEVEL_ASSERT BIT(14)
 
 void lapic_init();
 void lapic_timer_init(cpu_id_t core_id);
@@ -113,4 +114,4 @@ void lapic_clock_evdev_group_init(void);
 struct irq_chip *lapic_get_chip();
 #define IA32_APIC_BASE_MSR 0x1B
 #define IA32_APIC_BASE_MASK 0xFFFFF000UL
-#define IA32_APIC_BASE_ENABLE (1 << 11)
+#define IA32_APIC_BASE_ENABLE BIT(11)

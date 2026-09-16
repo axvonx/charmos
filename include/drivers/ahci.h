@@ -4,6 +4,7 @@
 #include <block/sched.h>
 #include <compiler.h>
 #include <log.h>
+#include <math/bit.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <thread/thread.h>
@@ -48,7 +49,7 @@
 
 #define AHCI_DEV_NULL 0
 #define AHCI_DEV_SATA 1
-#define AHCI_DEV_BUSY (1 << 30)
+#define AHCI_DEV_BUSY BIT(30)
 #define AHCI_DEV_DRDY 0x40
 #define AHCI_DEV_SATAPI 2
 #define AHCI_DEV_SEMB 3
@@ -58,8 +59,8 @@
 #define AHCI_CMD_TABLE_ATAPI_SIZE 16
 #define AHCI_MAX_PRDT_ENTRIES 65535
 
-#define AHCI_GHC_HR (1U << 0)
-#define AHCI_GHC_AE (1U << 31)
+#define AHCI_GHC_HR BIT(0)
+#define AHCI_GHC_AE BIT(31)
 
 #define AHCI_DET_NO_DEVICE 0x0
 #define AHCI_DET_PRESENT 0x3
@@ -71,17 +72,17 @@
 #define AHCI_CMD_WRITE_DMA_EXT 0x35
 
 #define AHCI_CMD_IDENTIFY 0xEC
-#define AHCI_CMD_ST (1U << 0)  // Start
-#define AHCI_CMD_SUD (1U << 1) // Spin-Up Device
-#define AHCI_CMD_FRE (1U << 4) // FIS Receive Enable
-#define AHCI_CMD_FR (1U << 14) // FIS Receive Running
-#define AHCI_CMD_CR (1U << 15) // Command List Running
-#define AHCI_CMD_CLO (1U << 3) // Command List Override
+#define AHCI_CMD_ST BIT(0)  // Start
+#define AHCI_CMD_SUD BIT(1) // Spin-Up Device
+#define AHCI_CMD_FRE BIT(4) // FIS Receive Enable
+#define AHCI_CMD_FR BIT(14) // FIS Receive Running
+#define AHCI_CMD_CR BIT(15) // Command List Running
+#define AHCI_CMD_CLO BIT(3) // Command List Override
 
 #define AHCI_PORT_IPM_ACTIVE 1
 #define AHCI_PORT_DET_PRESENT 3
 
-#define AHCI_CMD_FLAGS_WRITE (1 << 6)
+#define AHCI_CMD_FLAGS_WRITE BIT(6)
 #define AHCI_CMD_FLAGS_PRDTL 1
 
 #define FIS_TYPE_REG_H2D 0x27

@@ -1,4 +1,5 @@
 #include <math/bit.h>
+#include <math/min_max.h>
 #include <sch/sched.h>
 #include <stack_depot.h>
 
@@ -11,10 +12,7 @@ size_t slab_gc_derive_target_gc_slabs(struct slab_gc *gc,
     const size_t max = gc_agg_scan_max[aggressiveness];
     const size_t pct = gc_agg_scan_pct[aggressiveness];
     size_t target = atomic_load(&gc->num_elements) * pct / 100;
-    if (target > max)
-        target = max;
-
-    return target;
+    return MIN(target, max);
 }
 
 size_t slab_gc_score(struct slab *slab, enum slab_gc_flags flags) {
@@ -85,7 +83,7 @@ static int32_t slab_gc_get_inv_free(size_t total_free, uint32_t bias_bitmap,
     } else {
         size_t other_free_slabs = total_free - free_per_order[order];
         size_t scaled_bias = other_free_slabs * SLAB_GC_SCORE_SCALE;
-        if (bias_bitmap & (1ULL << order))
+        if (BIT_TEST(bias_bitmap, order))
             scaled_bias *= SLAB_GC_ORDER_BIAS_SCALE;
 
         inv_free = scaled_bias / (1 + total_free);

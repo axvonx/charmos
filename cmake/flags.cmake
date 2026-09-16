@@ -5,7 +5,18 @@ elseif (_BUILD_TYPE_UPPER MATCHES "^(RELEASE|MINSIZEREL|RELWITHDEBINFO)$")
     add_compile_definitions(BUILD_RELEASE)
 endif ()
 
-set(KERNEL_WARNINGS -Wall -Wextra -Wpointer-sign -Wenum-compare)
+set(KERNEL_WARNINGS
+    -Wall
+    -Wextra
+    -Werror=pointer-sign
+    -Werror=incompatible-pointer-types
+    -Werror=int-conversion
+    -Werror=enum-compare
+    -Werror=enum-conversion
+    -Werror=sign-compare
+    -Werror=shift-count-overflow
+    -Werror=shift-count-negative
+    -Werror=shift-negative-value)
 
 if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
     list(APPEND KERNEL_WARNINGS -Wno-initializer-overrides -Wthread-safety -Werror=thread-safety)

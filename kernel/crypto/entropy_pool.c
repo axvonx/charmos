@@ -41,7 +41,7 @@ uint64_t entropy_pool_extract(struct entropy_pool *pool, uint8_t *out,
     enum irql irql = spin_lock(&pool->lock);
 
     // Refuse to output if there's insufficient entropy
-    if (pool->entropy_bits < len * 8) {
+    if (pool->entropy_bits < to_bits(len)) {
         spin_unlock(&pool->lock, irql);
         return 0;
     }
@@ -49,8 +49,8 @@ uint64_t entropy_pool_extract(struct entropy_pool *pool, uint8_t *out,
     memcpy(seed, pool->buffer, 32);
 
     // Reduce entropy count
-    if (pool->entropy_bits >= len * 8)
-        pool->entropy_bits -= len * 8;
+    if (pool->entropy_bits >= to_bits(len))
+        pool->entropy_bits -= to_bits(len);
     else
         pool->entropy_bits = 0;
 

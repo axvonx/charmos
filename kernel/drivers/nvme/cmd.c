@@ -8,6 +8,7 @@
 #include <drivers/nvme.h>
 #include <irq/idt.h>
 #include <kassert.h>
+#include <math/bit.h>
 #include <mem/alloc.h>
 #include <mem/pmm.h>
 #include <mem/vmm.h>
@@ -291,7 +292,7 @@ uint8_t *nvme_identify_namespace(struct nvme_device *nvme, uint32_t nsid) {
     struct nvme_identify_namespace *ns = (void *) buffer;
     uint8_t flbas_index = ns->flbas & 0xF; // lower 4 bits = selected format
     uint8_t lbads = ns->lbaf[flbas_index].lbads;
-    uint32_t sector_size = 1U << lbads;
+    uint32_t sector_size = BIT(lbads);
     nvme_log(LOG_INFO, "Device sector size is %u bytes", sector_size);
 
     nvme->sector_size = sector_size;

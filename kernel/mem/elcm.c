@@ -3,6 +3,7 @@
 #include <math/arith.h>
 #include <math/bit.h>
 #include <math/fixed.h>
+#include <math/range.h>
 #include <math/sort.h>
 #include <math/units.h>
 #include <mem/alloc.h>
@@ -45,7 +46,7 @@ static fx32_32_t pow2_proximity(size_t n) {
  */
 static fx32_32_t log_clamped_scale_factor(size_t min, size_t max, size_t n) {
     kassert(max > min);
-    kassert(n >= min && n <= max);
+    kassert(IN_RANGE(n, min, max));
 
     fx32_32_t f_max = fx_from_int(max);
     fx32_32_t f_min = fx_from_int(min);
@@ -128,7 +129,7 @@ static bool candidate_valid(struct elcm_candidate *cand) {
 
 static inline size_t bitmap_bytes_for(size_t obj_count, size_t bits_per_obj) {
     size_t total_bits = obj_count * bits_per_obj;
-    return DIV_ROUND_UP(total_bits, 8);
+    return DIV_ROUND_UP(total_bits, sizeof(uint8_t) * 8);
 }
 
 size_t get_aligned_obj_size(size_t obj_size, size_t align) {

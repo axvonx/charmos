@@ -233,7 +233,7 @@ struct vtd_domain {
  * TTM = Translation Table Mode (bits 10-11).
  */
 #define RTADDR_TRANSLATION_MODE_LEGACY (0ULL << 10)
-#define RTADDR_TRANSLATION_MODE_SCALABLE (1ULL << 10)
+#define RTADDR_TRANSLATION_MODE_SCALABLE BIT(10)
 
 /*
  * FSTS - Fault Status Register (32-bit, offset 0x034)
@@ -278,7 +278,6 @@ _Static_assert(sizeof(struct vtd_root_entry) == 16, "root entry must be 16B");
 #define CTX_ENTRY_PRESENT BIT(0)
 #define CTX_ENTRY_FAULT_PROCESSING_DISABLE BIT(1)
 #define CTX_ENTRY_TRANSLATION_TYPE_SHIFT 2
-#define CTX_ENTRY_TRANSLATION_TYPE_MASK BIT_MASK(2, 3)
 #define CTX_ENTRY_TRANSLATION_TYPE_UNTRANSLATED (0ULL << 2)
 #define CTX_ENTRY_TRANSLATION_TYPE_PASSTHROUGH (2ULL << 2)
 #define CTX_ENTRY_SL_PTR_SHIFT 12
@@ -290,7 +289,6 @@ _Static_assert(sizeof(struct vtd_root_entry) == 16, "root entry must be 16B");
 #define CTX_ENTRY_ADDR_WIDTH_57BIT 3
 
 #define CTX_ENTRY_DOMAIN_ID_SHIFT 8
-#define CTX_ENTRY_DOMAIN_ID_MASK BIT_MASK(8, 23)
 
 #define CTX_ENTRY_SET_LO(slptptr, tt)                                          \
     (((slptptr) & CTX_ENTRY_SL_PTR_MASK) | (tt) | CTX_ENTRY_PRESENT)
@@ -322,7 +320,7 @@ _Static_assert(sizeof(struct vtd_context_entry) == 16, "ctx entry must be 16B");
 #define SL_PTE_IGNORE_PAT BIT(6) /* IPAT - Ignore Page Attribute Table */
 #define SL_PTE_LARGE_PAGE BIT(7) /* PS - Page Size */
 #define SL_PTE_SNOOP BIT(11)     /* SNP */
-#define SL_PTE_ADDR_MASK (~0xFFFULL & ((1ULL << 52) - 1))
+#define SL_PTE_ADDR_MASK (~0xFFFULL & (BIT(52) - 1))
 
 #define SL_PTE_ADDR(pte) ((pte) & SL_PTE_ADDR_MASK)
 #define SL_PTE_MEMORY_TYPE(pte) BIT_RANGE((pte), 3, 5)
@@ -379,7 +377,7 @@ _Static_assert(sizeof(struct vtd_context_entry) == 16, "ctx entry must be 16B");
 #define INVAL_DESC_GRANULARITY(lo) BIT_RANGE((lo), 4, 5)
 
 /* Context-cache invalidation descriptor */
-#define CTX_INVAL_GRANULARITY_GLOBAL (1ULL << 4)
+#define CTX_INVAL_GRANULARITY_GLOBAL BIT(4)
 #define CTX_INVAL_GRANULARITY_DOMAIN (2ULL << 4)
 #define CTX_INVAL_GRANULARITY_DEVICE (3ULL << 4)
 #define CTX_INVAL_DOMAIN_ID_SHIFT 48
@@ -395,7 +393,7 @@ _Static_assert(sizeof(struct vtd_context_entry) == 16, "ctx entry must be 16B");
         .hi = 0})
 
 /* IOTLB invalidation descriptor */
-#define IOTLB_INVAL_GRANULARITY_GLOBAL (1ULL << 4)
+#define IOTLB_INVAL_GRANULARITY_GLOBAL BIT(4)
 #define IOTLB_INVAL_GRANULARITY_DOMAIN (2ULL << 4)
 #define IOTLB_INVAL_GRANULARITY_PAGE (3ULL << 4)
 #define IOTLB_INVAL_DRAIN_READS BIT(7)  /* DR */
@@ -433,7 +431,7 @@ _Static_assert(sizeof(struct vtd_context_entry) == 16, "ctx entry must be 16B");
 #define IOTLB_REG_INVALIDATE BIT(63)   /* IVT - triggers invalidation */
 #define IOTLB_REG_DRAIN_READS BIT(49)  /* DR */
 #define IOTLB_REG_DRAIN_WRITES BIT(48) /* DW */
-#define IOTLB_REG_GLOBAL (1ULL << 60)  /* IIRG = 01 */
+#define IOTLB_REG_GLOBAL BIT(60)       /* IIRG = 01 */
 #define IOTLB_REG_DOMAIN (2ULL << 60)  /* IIRG = 10 */
 #define IOTLB_REG_PAGE (3ULL << 60)    /* IIRG = 11 */
 #define IOTLB_REG_DOMAIN_ID_SHIFT 32

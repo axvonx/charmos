@@ -75,7 +75,7 @@ static struct stack_depot_record *record_alloc() {
 }
 
 static void record_free(struct stack_depot_record *rec) {
-    if (fixed_size_page_of(rec)->domain == -1)
+    if (fixed_size_page_of(rec)->domain == DOMAIN_ID_NONE)
         return fixed_size_free(&boot_fsr, rec);
 
     FSR_PERDOMAIN_FREE(stack_depot, rec);

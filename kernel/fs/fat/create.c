@@ -12,8 +12,8 @@ static inline uint32_t fat12_16_root_dir_lba(struct fat_fs *fs) {
 }
 
 static inline uint32_t fat12_16_root_dir_sectors(struct fat_fs *fs) {
-    return ((fs->bpb->root_entry_count * 32) + fs->bpb->bytes_per_sector - 1) /
-           fs->bpb->bytes_per_sector;
+    uint32_t root_dir_bytes = fs->bpb->root_entry_count * UINT32_C(32);
+    return DIV_ROUND_UP(root_dir_bytes, fs->bpb->bytes_per_sector);
 }
 
 static bool fat_find_free_dirent_slot(struct fat_fs *fs, uint32_t dir_cluster,

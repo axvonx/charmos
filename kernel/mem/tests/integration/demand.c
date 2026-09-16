@@ -2,8 +2,8 @@
 
 #define DP_PAGES 16
 #define DP_STRIDE (PAGE_SIZE / sizeof(uint64_t))
-#define DP_MAX_BUFS 8
-#define DP_MAX_THREADS 64
+#define DP_MAX_BUFS ((size_t) 8)
+#define DP_MAX_THREADS ((size_t) 64)
 
 struct dp_worker {
     _Atomic uint64_t **bufs; /* nbuf demand buffers, counter at page head */
@@ -83,9 +83,8 @@ TEST_DECLARE_INTEGRATION(mem, demand_single_buf_smp,
 
     const size_t pages = DP_PAGES, nbuf = 1;
     size_t nthreads =
-        ctx->intensity_val ? ctx->intensity_val : global.core_count;
-    if (nthreads > DP_MAX_THREADS)
-        nthreads = DP_MAX_THREADS;
+        MIN(ctx->intensity_val ? ctx->intensity_val : global.core_count,
+            DP_MAX_THREADS);
 
     _Atomic uint64_t *bufs[1];
     TEST_ASSERT(dp_alloc_bufs(bufs, nbuf, pages));
@@ -114,13 +113,9 @@ TEST_DECLARE_INTEGRATION(mem, demand_multi_buf_smp,
     }
 
     const size_t pages = DP_PAGES;
-    size_t nbuf = global.core_count;
-    if (nbuf > DP_MAX_BUFS)
-        nbuf = DP_MAX_BUFS;
-    size_t nthreads =
-        ctx->intensity_val ? ctx->intensity_val : (2 * nbuf); /* M > N */
-    if (nthreads > DP_MAX_THREADS)
-        nthreads = DP_MAX_THREADS;
+    size_t nbuf = MIN(global.core_count, DP_MAX_BUFS);
+    size_t nthreads = MIN(ctx->intensity_val ? ctx->intensity_val : (2 * nbuf),
+                          DP_MAX_THREADS); /* M > N */
 
     _Atomic uint64_t *bufs[DP_MAX_BUFS];
     TEST_ASSERT(dp_alloc_bufs(bufs, nbuf, pages));

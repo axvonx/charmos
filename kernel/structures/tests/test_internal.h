@@ -3,6 +3,7 @@
 
 #include <crypto/prng.h>
 #include <math/fixed.h>
+#include <math/min_max.h>
 #include <mem/alloc.h>
 #include <structures/bitmap.h>
 #include <structures/minheap.h>

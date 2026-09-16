@@ -22,8 +22,11 @@ static bool link_callback(struct ext2_fs *fs, struct ext2_dir_entry *entry,
     (void) o;
     struct link_ctx *ctx = (struct link_ctx *) ctx_ptr;
 
-    uint32_t actual_size = 8 + ((entry->name_len + 3) & ~3); // alignment
-    uint32_t needed_size = 8 + ((strlen(ctx->name) + 3) & ~3U);
+    size_t current_name_len = entry->name_len;
+    size_t new_name_len = strlen(ctx->name);
+    size_t dirent_alignment = 4;
+    size_t actual_size = 8 + ALIGN_UP(current_name_len, dirent_alignment);
+    size_t needed_size = 8 + ALIGN_UP(new_name_len, dirent_alignment);
 
     if ((entry->rec_len - actual_size) >= needed_size) {
         uint8_t *entry_base = (uint8_t *) entry;

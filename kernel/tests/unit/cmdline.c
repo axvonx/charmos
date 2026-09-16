@@ -1,6 +1,7 @@
 #include "cmdline/internal.h"
 #include "tests/test_internal.h"
 #include <cmdline.h>
+#include <math/units.h>
 
 TEST_GROUP_DECLARE(cmdline);
 
@@ -91,8 +92,7 @@ TEST_DECLARE_UNIT(cmdline, polymorphic_parsing) {
                 vdur.duration == MS_TO_NS(250));
 
     struct cmdline_value vsz = cmdline_parse_value_for("64MiB", mask);
-    TEST_ASSERT(vsz.type == CMDLINE_TYPE_DATA_SIZE &&
-                vsz.u64 == 64ULL * 1024 * 1024);
+    TEST_ASSERT(vsz.type == CMDLINE_TYPE_DATA_SIZE && vsz.u64 == MB(64));
 
     struct cmdline_value vstr = cmdline_parse_value_for("hello_world", mask);
     TEST_ASSERT(vstr.type == CMDLINE_TYPE_STRING &&

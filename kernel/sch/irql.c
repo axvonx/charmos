@@ -1,4 +1,5 @@
 #include <bootstage_condition.h>
+#include <math/min_max.h>
 #include <sch/periodic_work.h>
 #include <sch/sched.h>
 #include <smp/core.h>
@@ -83,8 +84,7 @@ static void irql_lower_internal(enum irql new_level, bool allow_resched) {
     struct thread *curr = thread_get_current();
 
     if (old >= IRQL_HIGH_LEVEL && new_level < IRQL_HIGH_LEVEL) {
-        enum irql intermediate =
-            (new_level < IRQL_DISPATCH_LEVEL) ? IRQL_DISPATCH_LEVEL : new_level;
+        enum irql intermediate = MAX(new_level, IRQL_DISPATCH_LEVEL);
         irql_set(intermediate);
         if (in_thread)
             enable_interrupts();

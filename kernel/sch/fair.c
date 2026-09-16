@@ -2,6 +2,7 @@
 #include <bootstage.h>
 #include <crypto/prng.h>
 #include <irq/idt.h>
+#include <math/bit.h>
 #include <math/fixed.h>
 #include <math/min_max.h>
 #include <registry.h>
@@ -17,7 +18,7 @@
 static void derive_timeshare_prio_range(enum thread_activity_class cls,
                                         uint32_t *min, uint32_t *max);
 
-#define THREAD_DELTA_UNIT (1ULL << 3)
+#define THREAD_DELTA_UNIT BIT(3)
 
 #define THREAD_BOOST_WAKE_SMALL                                                \
     (4ULL * THREAD_DELTA_UNIT) /* provisional boost for wake */
@@ -28,7 +29,7 @@ static void derive_timeshare_prio_range(enum thread_activity_class cls,
 #define THREAD_PENALTY_CPU_RUN                                                 \
     (3ULL * THREAD_DELTA_UNIT) /* penalize heavy CPU usage per run period */
 
-#define THREAD_DELTA_MAX (1 << 9)
+#define THREAD_DELTA_MAX ((int64_t) BIT(9))
 
 #define THREAD_REINSERT_THRESHOLD                                              \
     (8ULL * THREAD_DELTA_UNIT) /* only reinsert if effective priority changes  \
@@ -43,9 +44,9 @@ static void derive_timeshare_prio_range(enum thread_activity_class cls,
 #define THREAD_MUL_SLEEPY 1ULL      /* No boost */
 
 /* Scheduling periods */
-#define MIN_PERIOD_MS 20ULL  /* don’t go too short */
-#define MAX_PERIOD_MS 300ULL /* don’t go too long */
-#define BASE_PERIOD_MS 50ULL /* baseline for small loads */
+#define MIN_PERIOD_MS UINT64_C(20)  /* don’t go too short */
+#define MAX_PERIOD_MS UINT64_C(300) /* don’t go too long */
+#define BASE_PERIOD_MS 50ULL        /* baseline for small loads */
 
 /* Timeslices */
 #define MIN_SLICE_MS 2  /* smallest slice granularity */
@@ -54,8 +55,9 @@ static void derive_timeshare_prio_range(enum thread_activity_class cls,
 #define WAKE_FREQ_MAX 20
 #define WAKE_FREQ_SCALE 5
 
-#define THREAD_SLICE_MIN 1
-#define THREAD_SLICE_MAX 16
+#define THREAD_SLICE_MIN INT64_C(1)
+#define THREAD_SLICE_MAX INT64_C(16)
+#define THREAD_WEIGHT_MIN UINT64_C(1)
 
 #define THREAD_BASE_WEIGHT 1024
 #define THREAD_WEIGHT_SCALING 100
@@ -242,7 +244,8 @@ void thread_apply_cpu_penalty(struct thread *t) {
     if (t->activity_class == THREAD_ACTIVITY_CLASS_CPU_BOUND) {
         /* Small penalty */
         int32_t penalty = compute_cpu_penalty(t, THREAD_PENALTY_CPU_RUN);
-        int64_t scaled_delta = penalty * t->weight / MAX(t->weight, 1ULL);
+        int64_t scaled_delta =
+            penalty * t->weight / MAX(t->weight, THREAD_WEIGHT_MIN);
 
         CLAMP(scaled_delta, -THREAD_DELTA_MAX, THREAD_DELTA_MAX);
         t->dynamic_delta -= scaled_delta;
@@ -279,7 +282,9 @@ void thread_update_effective_priority(struct thread *t) {
 
     int64_t avg = ((int64_t) min + (int64_t) max) / 2;
     int64_t eff = avg + t->dynamic_delta;
-    CLAMP(eff, min, max);
+    int64_t eff_min = min;
+    int64_t eff_max = max;
+    CLAMP(eff, eff_min, eff_max);
 
     t->activity_score = (thread_prio_t) eff;
     t->virtual_runtime_left = thread_virtual_runtime_left(t);

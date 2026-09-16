@@ -14,6 +14,8 @@
 #include <linker/symbols.h>
 #include <log.h>
 #include <logo.h>
+#include <math/align.h>
+#include <math/bit.h>
 #include <math/sort.h>
 #include <ndjson.h>
 #include <smp/core.h>
@@ -260,7 +262,7 @@ static void crash_rflags_decode(uint64_t f, char *out, size_t cap) {
     out[n] = '\0';
 
     for (size_t i = 0; i < sizeof(bits) / sizeof(*bits); i++) {
-        if (!(f & (1ull << bits[i].bit)))
+        if (!BIT_TEST(f, bits[i].bit))
             continue;
         if (n + 5 >= cap)
             break;
@@ -473,7 +475,7 @@ static void crash_other_cpus(struct report_panes *panes) {
             inner = room;
     }
 
-    per_col = (count + panes->n - 1) / panes->n;
+    per_col = DIV_ROUND_UP(count, panes->n);
     if (!per_col)
         per_col = 1;
 

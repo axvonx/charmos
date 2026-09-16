@@ -15,7 +15,7 @@
 /* TODO: Here, we have 32 bit masks per node, with 4 levels, since right now
  * CPU_MASK has a maximum of 128 CPUs, however, in the future, we might
  * want to come up with something smarter + maybe introduce NR_CPUS */
-#define RCU_FANOUT 32
+#define RCU_FANOUT 32UL
 #define RCU_MAX_LEVELS 4
 
 /* Frequency for workers to poke CPUs that are not quiesced */

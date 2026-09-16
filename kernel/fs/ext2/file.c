@@ -100,7 +100,7 @@ static void file_read_visitor(struct ext2_fs *fs, struct ext2_inode *inode,
 
     uint32_t remaining = ctx->length - ctx->bytes_read;
     uint32_t in_block = block_size - block_offset;
-    uint32_t to_copy = (remaining < in_block) ? remaining : in_block;
+    uint32_t to_copy = MIN(remaining, in_block);
 
     if ((ctx->bytes_read + ctx->offset + to_copy) > inode->size)
         to_copy = inode->size - (ctx->bytes_read + ctx->offset);

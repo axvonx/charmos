@@ -1,16 +1,17 @@
+#include <math/bit.h>
 #include <stdbool.h>
 #include <sync/rwlock.h>
 
 struct thread; /* forward def */
 
 enum rwlock_bits : uintptr_t {
-    RWLOCK_WRITER_HELD_BIT = 1ULL << 0,
-    RWLOCK_WAITER_BIT = 1ULL << 3ULL,
-    RWLOCK_WRITER_WANT_BIT = 1ULL << 4ULL,
+    RWLOCK_WRITER_HELD_BIT = BIT(0),
+    RWLOCK_WAITER_BIT = BIT(3),
+    RWLOCK_WRITER_WANT_BIT = BIT(4),
 };
 
 #define RWLOCK_BACKOFF_DEFAULT 8
-#define RWLOCK_BACKOFF_MAX 16384
+#define RWLOCK_BACKOFF_MAX ((size_t) 16384)
 #define RWLOCK_BACKOFF_SHIFT 1
 #define RWLOCK_BACKOFF_JITTER_PCT 10 /* 10% variation of base backoff */
 
@@ -19,7 +20,7 @@ enum rwlock_bits : uintptr_t {
     (((lword) & RWLOCK_PRIO_CEIL_MASK) >> RWLOCK_PRIO_CEIL_SHIFT)
 #define RWLOCK_READER_COUNT_MASK (~0ULL << 5)
 #define RWLOCK_OWNER_MASK (~0x1FULL)
-#define RWLOCK_READER_COUNT_ONE (1 << 5)
+#define RWLOCK_READER_COUNT_ONE BIT(5)
 
 #define RWLOCK_READ_LOCK_WORD(rw)                                              \
     (atomic_load_explicit(&rw->lock_word, memory_order_acquire))

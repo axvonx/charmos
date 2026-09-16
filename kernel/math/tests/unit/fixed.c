@@ -14,7 +14,7 @@ TEST_GROUP_DECLARE(fixed, .intensity_desc = {
 
 static bool fx_near(fx32_32_t a, fx32_32_t b, fx32_32_t tol) {
     fx32_32_t d = a - b;
-    return (d < 0 ? -d : d) <= tol;
+    return abs(d) <= tol;
 }
 
 TEST_DECLARE_UNIT(fixed, mul_identities) {

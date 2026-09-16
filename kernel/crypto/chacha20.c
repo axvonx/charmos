@@ -1,7 +1,9 @@
+#include <math/min_max.h>
 #include <stdint.h>
 #include <string.h>
 
 #define ROTL32(v, n) ((v << n) | (v >> (32 - n)))
+#define CHACHA20_BLOCK_SIZE UINT64_C(64)
 
 // quarter round
 #define QR(a, b, c, d)                                                         \
@@ -87,7 +89,7 @@ void chacha20_encrypt(const uint8_t key[32], const uint8_t nonce[12],
         chacha20_block(keystream, state);
         counter++;
 
-        uint64_t block_len = len > 64 ? 64 : len;
+        uint64_t block_len = MIN(len, CHACHA20_BLOCK_SIZE);
         for (uint64_t i = 0; i < block_len; i++) {
             out[offset + i] = in[offset + i] ^ keystream[i];
         }

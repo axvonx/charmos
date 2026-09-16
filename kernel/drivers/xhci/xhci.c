@@ -5,6 +5,8 @@
 #include <drivers/pci.h>
 #include <drivers/usb/xhci.h>
 #include <irq/idt.h>
+#include <math/bit.h>
+#include <math/min_max.h>
 #include <mem/alloc.h>
 #include <mem/alloc_or_die.h>
 #include <mem/page.h>
@@ -149,11 +151,10 @@ enum usb_error xhci_configure_device_endpoints(struct usb_device *usb) {
 
         uint8_t input_ctx_idx = xhci_ep_to_input_ctx_idx(ep);
 
-        max_ep_index =
-            (input_ctx_idx > max_ep_index) ? input_ctx_idx : max_ep_index;
+        max_ep_index = MAX(input_ctx_idx, max_ep_index);
 
         /* Add one, there is a slot that the add flags account for */
-        input_ctx->ctrl_ctx.add_flags |= (1 << (input_ctx_idx + 1));
+        input_ctx->ctrl_ctx.add_flags |= BIT(input_ctx_idx + 1);
 
         struct xhci_ep_ctx *ep_ctx = &input_ctx->ep_ctx[input_ctx_idx];
 

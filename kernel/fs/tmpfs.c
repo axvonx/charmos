@@ -3,6 +3,8 @@
 #include <console/printf.h>
 #include <fs/tmpfs.h>
 #include <fs/vfs.h>
+#include <math/align.h>
+#include <math/min_max.h>
 #include <mem/alloc.h>
 #include <mem/page.h>
 #include <stdbool.h>
@@ -61,9 +63,7 @@ static enum errno tmpfs_read(struct vfs_node *node, void *buf, uint64_t size,
     while (size > 0) {
         uint64_t page_idx = offset / PAGE_SIZE;
         uint64_t page_offset = offset & TMPFS_PAGE_MASK;
-        uint64_t to_copy = PAGE_SIZE - page_offset;
-        if (to_copy > size)
-            to_copy = size;
+        uint64_t to_copy = MIN(PAGE_SIZE - page_offset, size);
 
         if (page_idx >= tn->num_pages || !tn->pages[page_idx]) {
             memset(out, 0, to_copy);
@@ -100,7 +100,7 @@ static enum errno tmpfs_write(struct vfs_node *node, const void *buf,
         return ERR_IS_DIR;
 
     uint64_t end = offset + size;
-    size_t required_pages = (end + PAGE_SIZE - 1) / PAGE_SIZE;
+    size_t required_pages = (size_t) DIV_ROUND_UP(end, PAGE_SIZE);
 
     enum errno e = realloc_page_array(tn, required_pages);
     if (e != ERR_OK)
@@ -110,9 +110,7 @@ static enum errno tmpfs_write(struct vfs_node *node, const void *buf,
     while (size > 0) {
         uint64_t page_idx = offset / PAGE_SIZE;
         uint64_t page_offset = offset & TMPFS_PAGE_MASK;
-        uint64_t to_copy = PAGE_SIZE - page_offset;
-        if (to_copy > size)
-            to_copy = size;
+        uint64_t to_copy = MIN(PAGE_SIZE - page_offset, size);
 
         if (!tn->pages[page_idx]) {
             tn->pages[page_idx] = kmalloc_aligned(PAGE_SIZE, PAGE_SIZE);
@@ -330,7 +328,7 @@ static enum errno tmpfs_truncate(struct vfs_node *node, uint64_t length) {
         return ERR_IS_DIR;
 
     uint64_t old_size = tn->size;
-    uint64_t new_pages = (length + PAGE_SIZE - 1) / PAGE_SIZE;
+    uint64_t new_pages = DIV_ROUND_UP(length, PAGE_SIZE);
 
     if (new_pages < tn->num_pages) {
         for (uint64_t i = new_pages; i < tn->num_pages; i++) {

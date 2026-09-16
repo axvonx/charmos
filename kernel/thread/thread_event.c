@@ -1,3 +1,4 @@
+#include <math/min_max.h>
 #include <sch/sched.h>
 #include <string.h>
 #include <thread/apc.h>
@@ -323,8 +324,8 @@ static void update_bucket(struct thread_activity_stats *stats,
         time_ms_t bucket_end = bucket_start + THREAD_ACTIVITY_BUCKET_DURATION;
         size_t bucket_index = get_bucket_index(bucket_start);
 
-        time_ms_t effective_start = start > bucket_start ? start : bucket_start;
-        time_ms_t effective_end = end < bucket_end ? end : bucket_end;
+        time_ms_t effective_start = MAX(start, bucket_start);
+        time_ms_t effective_end = MIN(end, bucket_end);
         uint64_t overlap = find_overlap(effective_start, effective_end);
 
         struct thread_activity_bucket *bucket = &stats->buckets[bucket_index];
@@ -370,8 +371,7 @@ void thread_update_activity_stats(struct thread *t, time_ms_t time) {
         time_ms_t start = start_evt->timestamp;
         time_ms_t end = wake->timestamp;
 
-        if (start > end)
-            start = end;
+        start = MIN(start, end);
 
         update_bucket(stats, wake, start, end);
     }

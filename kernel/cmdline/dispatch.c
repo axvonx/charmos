@@ -349,13 +349,13 @@ static void dispatch_validate_range(const struct cmdline_entry *e,
     }
 
     if (cmdline_value_is_typed(&e->value) && e->value.write_to) {
-        if ((e->types & (1ULL << CMDLINE_TYPE_FX)) != 0) {
+        if (BIT_TEST(e->types, CMDLINE_TYPE_FX)) {
             fx32_32_t v = *(const fx32_32_t *) e->value.write_to;
             if (v < (fx32_32_t) e->range.low || v > (fx32_32_t) e->range.hi)
                 panic("cmdline entry '%s' value '%s' out of range", name, val);
             return;
         }
-        if ((e->types & (1ULL << CMDLINE_TYPE_DURATION)) != 0) {
+        if (BIT_TEST(e->types, CMDLINE_TYPE_DURATION)) {
             uint64_t v = *(const uint64_t *) e->value.write_to;
             if (!RANGE_CONTAINS(e->range, v))
                 panic("cmdline entry '%s' duration '%s' out of range", name,
@@ -379,15 +379,14 @@ static void schema_validate_range(const struct cmdline_schema_prop *p,
     if (!RANGE_VALID(p->range))
         return; /* Uninitialized / sentinel range */
 
-    if ((p->types & (1ULL << CMDLINE_TYPE_FX)) != 0 ||
-        p->parse == cmdline_parse_fx) {
+    if (BIT_TEST(p->types, CMDLINE_TYPE_FX) || p->parse == cmdline_parse_fx) {
         fx32_32_t v = *(const fx32_32_t *) ptr;
         if (v < (fx32_32_t) p->range.low || v > (fx32_32_t) p->range.hi)
             panic("cmdline entry '%s' value '%s' out of range", var, val);
         return;
     }
 
-    if ((p->types & (1ULL << CMDLINE_TYPE_DURATION)) != 0 ||
+    if (BIT_TEST(p->types, CMDLINE_TYPE_DURATION) ||
         p->parse == cmdline_parse_duration) {
         time_ns_t v = *(const time_ns_t *) ptr;
         if (!RANGE_CONTAINS(p->range, v))
@@ -467,26 +466,25 @@ static bool schema_dispatch(const char *var, const char *val,
         } else if (matched_prop->types != 0 ||
                    matched_prop->c_type != TYPE_NONE) {
             uint64_t mask = UINT64_MAX;
-            if (matched_prop->types >= (1ULL << CMDLINE_TYPE_OFFSET)) {
+            if (matched_prop->types >= BIT(CMDLINE_TYPE_OFFSET)) {
                 mask = matched_prop->types;
             } else if (matched_prop->types >= CMDLINE_TYPE_OFFSET &&
                        matched_prop->types < CMDLINE_TYPE_NONE) {
-                mask = (1ULL << matched_prop->types);
+                mask = BIT(matched_prop->types);
             } else if (matched_prop->c_type != TYPE_NONE) {
                 switch (matched_prop->c_type) {
-                case TYPE_BOOL: mask = (1ULL << CMDLINE_TYPE_BOOL); break;
+                case TYPE_BOOL: mask = BIT(CMDLINE_TYPE_BOOL); break;
                 case TYPE_INT8:
                 case TYPE_INT16:
                 case TYPE_INT32:
                 case TYPE_INT64:
-                    mask = (1ULL << CMDLINE_TYPE_INT) |
-                           (1ULL << CMDLINE_TYPE_UINT);
+                    mask = BIT(CMDLINE_TYPE_INT) | BIT(CMDLINE_TYPE_UINT);
                     break;
                 case TYPE_UINT8:
                 case TYPE_UINT16:
                 case TYPE_UINT32:
-                case TYPE_UINT64: mask = (1ULL << CMDLINE_TYPE_UINT); break;
-                case TYPE_POINTER: mask = (1ULL << CMDLINE_TYPE_STRING); break;
+                case TYPE_UINT64: mask = BIT(CMDLINE_TYPE_UINT); break;
+                case TYPE_POINTER: mask = BIT(CMDLINE_TYPE_STRING); break;
                 default: break;
                 }
             }

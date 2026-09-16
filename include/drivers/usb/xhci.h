@@ -22,16 +22,16 @@ struct pci_device;
 #define XHCI_PORT_COUNT 64
 #define XHCI_SLOT_COUNT 255
 
-#define XHCI_INPUT_CTX_ADD_FLAGS ((1 << 0) | (1 << 1))
+#define XHCI_INPUT_CTX_ADD_FLAGS (BIT(0) | BIT(1))
 
 #define XHCI_SETUP_TRANSFER_TYPE_NONE 0
 #define XHCI_SETUP_TRANSFER_TYPE_OUT 2
 #define XHCI_SETUP_TRANSFER_TYPE_IN 3
 
-#define XHCI_USBSTS_HCH 1        /* HC halted */
-#define XHCI_USBSTS_HSE (1 << 2) /* host system error */
-#define XHCI_USBSTS_EI (1 << 3)  /* event interrupt */
-#define XHCI_USBSTS_PCD (1 << 4) /* port change detect */
+#define XHCI_USBSTS_HCH 1      /* HC halted */
+#define XHCI_USBSTS_HSE BIT(2) /* host system error */
+#define XHCI_USBSTS_EI BIT(3)  /* event interrupt */
+#define XHCI_USBSTS_PCD BIT(4) /* port change detect */
 #define XHCI_IMAN_MASK 0x2
 #define XHCI_IMAN_INT_PENDING 0x1
 #define XHCI_IMAN_INT_ENABLE 0x2
@@ -103,41 +103,41 @@ struct pci_device;
 #define TRB_SET_CYCLE(val) (((val) & 1))
 #define TRB_SET_INTERRUPTER_TARGET(target) (((uint32_t) (target) & 0x3FF) << 22)
 
-#define TRB_CYCLE_BIT (1 << 0)
-#define TRB_ENT_BIT (1 << 1) // Evaluate Next TRB
-#define TRB_ISP_BIT (1 << 2) // Interrupt on Short Packet
-#define TRB_NS_BIT (1 << 3)  // No Snoop
-#define TRB_CH_BIT (1 << 4)  // Chain
-#define TRB_IOC_BIT (1 << 5) // Interrupt On Completion
-#define TRB_IDT_BIT (1 << 6) // Immediate Data
-#define TRB_BEI_BIT (1 << 9) // Block Event Interrupt (ISO)
-#define TRB_TOGGLE_CYCLE_BIT (1 << 1)
+#define TRB_CYCLE_BIT BIT(0)
+#define TRB_ENT_BIT BIT(1) // Evaluate Next TRB
+#define TRB_ISP_BIT BIT(2) // Interrupt on Short Packet
+#define TRB_NS_BIT BIT(3)  // No Snoop
+#define TRB_CH_BIT BIT(4)  // Chain
+#define TRB_IOC_BIT BIT(5) // Interrupt On Completion
+#define TRB_IDT_BIT BIT(6) // Immediate Data
+#define TRB_BEI_BIT BIT(9) // Block Event Interrupt (ISO)
+#define TRB_TOGGLE_CYCLE_BIT BIT(1)
 #define TRB_TYPE_SHIFT 10
 
 #define TRB_SET_SLOT_ID(id) (((id) & 0xFF) << 24)
 
 // Bit definitions for XHCI PORTSC register
-#define PORTSC_CCS (1 << 0)           // Current Connect Status
-#define PORTSC_PED (1 << 1)           // Port Enabled/Disabled
-#define PORTSC_OCA (1 << 3)           // Over-Current Active
-#define PORTSC_RESET (1 << 4)         // Port Reset
-#define PORTSC_PR (1 << 4)            // Port Reset
-#define PORTSC_PLSE (1 << 5)          // Port Link State Enable
-#define PORTSC_PRES (1 << 6)          // Port Resume
-#define PORTSC_PP (1 << 9)            // Port Power
+#define PORTSC_CCS BIT(0)             // Current Connect Status
+#define PORTSC_PED BIT(1)             // Port Enabled/Disabled
+#define PORTSC_OCA BIT(3)             // Over-Current Active
+#define PORTSC_RESET BIT(4)           // Port Reset
+#define PORTSC_PR BIT(4)              // Port Reset
+#define PORTSC_PLSE BIT(5)            // Port Link State Enable
+#define PORTSC_PRES BIT(6)            // Port Resume
+#define PORTSC_PP BIT(9)              // Port Power
 #define PORTSC_SPEED_MASK (0xF << 10) // Bits 10–13: Port Speed
 #define PORTSC_SPEED_SHIFT 10
 
 #define PORTSC_PLS_SHIFT 5
 #define PORTSC_PLS_MASK (0xF << 5)
-#define PORTSC_LWS (1 << 16) // Link Write Strobe
-#define PORTSC_CSC (1 << 17) // Connect Status Change
-#define PORTSC_PEC (1 << 18) // Port Enable/Disable Change
-#define PORTSC_WRC (1 << 19) // Warm Port Reset Change
-#define PORTSC_OCC (1 << 20) // Over-current Change
-#define PORTSC_PRC (1 << 21) // Port Reset Change
-#define PORTSC_PLC (1 << 22) // Port Link State Change
-#define PORTSC_CEC (1 << 23) // Port Config Error Change
+#define PORTSC_LWS BIT(16) // Link Write Strobe
+#define PORTSC_CSC BIT(17) // Connect Status Change
+#define PORTSC_PEC BIT(18) // Port Enable/Disable Change
+#define PORTSC_WRC BIT(19) // Warm Port Reset Change
+#define PORTSC_OCC BIT(20) // Over-current Change
+#define PORTSC_PRC BIT(21) // Port Reset Change
+#define PORTSC_PLC BIT(22) // Port Link State Change
+#define PORTSC_CEC BIT(23) // Port Config Error Change
 
 #define PORTSC_PLS_POLLING 7
 #define PORTSC_PLS_U0 0
@@ -145,10 +145,10 @@ struct pci_device;
 #define PORTSC_PLS_U3 3
 #define PORTSC_PLS_RXDETECT 5
 
-#define PORTSC_IND (1 << 24)     // Port Indicator Control
-#define PORTSC_LWS_BIT (1 << 16) // Link Write Strobe
-#define PORTSC_DR (1 << 30)      // Device Removable
-#define PORTSC_WPR (1u << 31)    // Warm Port Reset
+#define PORTSC_IND BIT(24)     // Port Indicator Control
+#define PORTSC_LWS_BIT BIT(16) // Link Write Strobe
+#define PORTSC_DR BIT(30)      // Device Removable
+#define PORTSC_WPR BIT(31)     // Warm Port Reset
 
 #define PORT_SPEED_FULL 1       // USB 1.1 Full Speed
 #define PORT_SPEED_LOW 2        // USB 1.1 Low Speed
@@ -540,7 +540,7 @@ struct xhci_erst_entry {
     uint32_t reserved;
 } __packed;
 
-#define XHCI_ERDP_EHB_BIT (1 << 3)
+#define XHCI_ERDP_EHB_BIT BIT(3)
 
 /* Page 424 */
 struct xhci_interrupter_regs {

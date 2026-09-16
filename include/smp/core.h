@@ -2,6 +2,7 @@
 #pragma once
 #include <compiler.h>
 #include <console/panic.h>
+#include <math/bit.h>
 #include <sch/irql.h>
 #include <smp/topology.h>
 #include <stdatomic.h>
@@ -11,10 +12,10 @@
 #include <thread/dpc.h>
 #include <types/types.h>
 
-#define CPU_FEAT_SSE2 (1ULL << 0)
-#define CPU_FEAT_AVX (1ULL << 1)
-#define CPU_FEAT_AVX2 (1ULL << 2)
-#define CPU_FEAT_AVX512F (1ULL << 3)
+#define CPU_FEAT_SSE2 BIT(0)
+#define CPU_FEAT_AVX BIT(1)
+#define CPU_FEAT_AVX2 BIT(2)
+#define CPU_FEAT_AVX512F BIT(3)
 
 enum cpu_class {
     CPU_CLASS_UNKNOWN,

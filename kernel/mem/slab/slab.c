@@ -125,6 +125,8 @@
 #include <math/align.h>
 #include <math/arith.h>
 #include <math/bit.h>
+#include <math/min_max.h>
+#include <math/range.h>
 #include <math/sort.h>
 #include <mem/address_range.h>
 #include <mem/alloc.h>
@@ -388,7 +390,7 @@ struct slab *slab_init(struct slab *slab, struct slab_cache *parent) {
     size_t total_bits = parent->bitmap_bytes * 8;
     for (size_t b = parent->objs_per_slab; b < total_bits; b++) {
         size_t byte_idx = b / 8;
-        slab->bitmap[byte_idx] |= (uint8_t) (1U << (b % 8));
+        slab->bitmap[byte_idx] = BIT_SET(slab->bitmap[byte_idx], b % 8);
     }
 
 #ifdef DEBUG_SLAB_DEEP
@@ -478,7 +480,7 @@ static void *slab_alloc_from(struct slab_cache *cache, stack_handle_t handle,
     kassert(slab->state != SLAB_FULL);
 
     uint64_t *bm = (uint64_t *) slab->bitmap;
-    size_t nwords = DIV_ROUND_UP(cache->objs_per_slab, 64);
+    size_t nwords = DIV_ROUND_UP(cache->objs_per_slab, sizeof(uint64_t) * 8);
 
     for (size_t w = 0; w < nwords; w++) {
         if (bm[w] != UINT64_MAX) {
@@ -489,7 +491,7 @@ static void *slab_alloc_from(struct slab_cache *cache, stack_handle_t handle,
             if (i >= cache->objs_per_slab)
                 break;
 
-            SLAB_BITMAP_SET(bm[w], 1ULL << bit);
+            SLAB_BITMAP_SET(bm[w], BIT(bit));
             slab->used++;
 
 #ifdef DEBUG_SLAB_DEEP
@@ -766,7 +768,7 @@ struct slab *slab_for_ptr(void *ptr) {
 
 bool kmalloc_ptr_in_slab_validate(void *ptr) {
     vaddr_t vaddr = (vaddr_t) ptr;
-    bool in_slab = vaddr >= SLAB_HEAP_START && vaddr <= SLAB_HEAP_END;
+    bool in_slab = IN_RANGE(vaddr, SLAB_HEAP_START, SLAB_HEAP_END);
     bool in_page_alloc = page_alloc_vaddr_in_vas(vaddr);
     kassert(in_slab || in_page_alloc, "invalid pointer");
 
@@ -1141,9 +1143,8 @@ out:
             for (size_t i = 0; i < cache->obj_size; i += 16) {
                 uint8_t r[16] = {0};
                 char ascii[17];
-                size_t n = cache->obj_size - i;
-                if (n > 16)
-                    n = 16;
+                size_t remaining = cache->obj_size - i;
+                size_t n = MIN(remaining, sizeof(r));
                 for (size_t j = 0; j < 16; j++) {
                     if (j < n) {
                         r[j] = bb[i + j];
@@ -1178,10 +1179,8 @@ void *slab_alloc_retry(struct slab_domain *domain, stack_handle_t handle,
     /* setup our flags */
     if (!kmalloc_size_fits_in_slab(size)) {
         gc_flags |= SLAB_GC_FLAG_FORCE_DESTROY;
-        size_t needed = PAGES_NEEDED_FOR(size);
-
-        if (needed > SLAB_GC_FLAG_DESTROY_TARGET_MAX)
-            needed = SLAB_GC_FLAG_DESTROY_TARGET_MAX;
+        size_t needed =
+            MIN(PAGES_NEEDED_FOR(size), SLAB_GC_FLAG_DESTROY_TARGET_MAX);
 
         SLAB_GC_FLAG_DESTROY_TARGET_SET(gc_flags, needed);
     } else {
@@ -1608,7 +1607,7 @@ void *krealloc_internal(void *ptr, size_t size, enum alloc_flags flags,
     if (!new_ptr)
         return NULL;
 
-    size_t to_copy = (old < size) ? old : size;
+    size_t to_copy = MIN(old, size);
     memcpy(new_ptr, ptr, to_copy);
     kfree(ptr);
     return new_ptr;

@@ -140,3 +140,78 @@
 
 #define __comptime_as_str(x) ((const char *) (uintptr_t) (x))
 #define __comptime_as_type(T, x) ((T) (uintptr_t) (x))
+
+/* Require expr to have the requested type, does not evaluate x */
+#define typecheck(type, x)                                                     \
+    ((void) sizeof(                                                            \
+        char[__builtin_types_compatible_p(type, __typeof__(x)) ? 1 : -1]))
+
+#define typecheck_same(x, y) typecheck(__typeof__(x), y)
+
+/* Must be integer, not boolean */
+#define typecheck_integer(x)                                                   \
+    ((void) sizeof(char[(__builtin_classify_type(x) == 1 &&                    \
+                         !__builtin_types_compatible_p(__typeof__(x), _Bool))  \
+                            ? 1                                                \
+                            : -1]))
+
+/* Require x to have a signed integer or enum type */
+#define typecheck_signed(x)                                                    \
+    (typecheck_integer(x),                                                     \
+     (void) sizeof(char[((__typeof__(x)) -1 < (__typeof__(x)) 0) ? 1 : -1]))
+
+/* Require x to have an unsigned integer or enum type */
+#define typecheck_unsigned(x)                                                  \
+    (typecheck_integer(x),                                                     \
+     (void) sizeof(char[((__typeof__(x)) -1 > (__typeof__(x)) 0) ? 1 : -1]))
+
+#define __type_is_signed(x) ((__typeof__(x)) -1 < (__typeof__(x)) 0)
+
+#define __typecheck_intmax_nonnegative(x)                                      \
+    (((__UINTMAX_TYPE__) (__INTMAX_TYPE__) (x) >>                              \
+      (sizeof(__INTMAX_TYPE__) * __CHAR_BIT__ - 1)) == 0)
+
+#define __typecheck_source_nonnegative(to, from)                               \
+    (!(__type_is_signed(from) && !__type_is_signed(to)) ||                     \
+     __typecheck_intmax_nonnegative(from))
+
+#define __typecheck_converted_nonnegative(to, from)                            \
+    (!(!__type_is_signed(from) && __type_is_signed(to)) ||                     \
+     __typecheck_intmax_nonnegative((__typeof__(to)) (from)))
+
+/* An integer constant expr only when `from` is too */
+#define __typecheck_value_fits(to, from)                                       \
+    (__typecheck_source_nonnegative(to, from) &&                               \
+     __typecheck_converted_nonnegative(to, from) &&                            \
+     (__typeof__(from)) ((__typeof__(to)) (from)) ==                           \
+         (__typeof__(from)) (from))
+
+/* Whole type widening from signedness and width,
+ * always an integer constant expr */
+#define __typecheck_structurally_widenable(to, from)                           \
+    (((__type_is_signed(to) == __type_is_signed(from)) &&                      \
+      sizeof(__typeof__(from)) <= sizeof(__typeof__(to))) ||                   \
+     (__type_is_signed(to) && !__type_is_signed(from) &&                       \
+      sizeof(__typeof__(from)) < sizeof(__typeof__(to))))
+
+/* We use __builtin_choose_expr here because it enforces the check at compile
+ * time instead of a runtime value, and thus it also enforces the check
+ * on both arms at compile time */
+#define __widenable_ok(to, from)                                               \
+    __builtin_choose_expr(__builtin_constant_p(from),                          \
+                          (__typecheck_structurally_widenable(to, from)) ||    \
+                              (__typecheck_value_fits(to, from)),              \
+                          (__typecheck_structurally_widenable(to, from)))
+
+/* Require every value of source to be representable by destination,
+ * or source to be a constant whose value is representable by
+ * the destination. Equal widths require equal signedness, and unsigned
+ * sources require wider signed destinations */
+#define typecheck_widenable_to(destination, source)                            \
+    (typecheck_integer(destination), typecheck_integer(source),                \
+     (void) sizeof(char[__widenable_ok(destination, source) ? 1 : -1]))
+
+/* Common/larger type to cast up to */
+#define __common_type_2(a, b)                                                  \
+    __typeof__(__builtin_choose_expr(                                          \
+        sizeof(__typeof__(a)) >= sizeof(__typeof__(b)), (a), (b)))

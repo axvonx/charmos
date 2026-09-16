@@ -8,6 +8,9 @@
 #define COUNTER_BITS 4
 #define COUNTER_MAX ((1u << COUNTER_BITS) - 1) /* 15 */
 #define COUNTERS_PER_BYTE (8 / COUNTER_BITS)   /* 2  */
+#define CBF_COUNTERS_MIN ((size_t) 8)
+#define CBF_HASHES_MIN ((size_t) 1)
+#define CBF_HASHES_MAX ((size_t) 20)
 
 struct counting_bloom_filter {
     uint8_t *counters;

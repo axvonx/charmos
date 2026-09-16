@@ -1,3 +1,4 @@
+#include <math/bit.h>
 #include <structures/bitmap.h>
 #include <structures/hlist.h>
 #include <structures/locked_list.h>
@@ -14,16 +15,16 @@ enum timer_base_type {
 
 #define TIMER_LEVELS 10
 #define TIMER_LEVEL_BITS 6
-#define TIMER_LEVEL_SIZE (1ULL << TIMER_LEVEL_BITS)
+#define TIMER_LEVEL_SIZE BIT(TIMER_LEVEL_BITS)
 #define TIMER_LEVEL_MASK (TIMER_LEVEL_SIZE - 1)
 #define TIMER_LEVEL_OFFSET(n) ((n) * TIMER_LEVEL_SIZE)
 
 #define TIMER_CLOCK_SHIFT 4
-#define TIMER_CLOCK_FACTOR (1ULL << TIMER_CLOCK_SHIFT)
+#define TIMER_CLOCK_FACTOR BIT(TIMER_CLOCK_SHIFT)
 #define TIMER_CLOCK_MASK (TIMER_CLOCK_FACTOR - 1)
 
 #define TIMER_LEVEL_SHIFT(n) ((n) * TIMER_CLOCK_SHIFT)
-#define TIMER_LEVEL_GRANULARITY(n) (1ULL << TIMER_LEVEL_SHIFT(n))
+#define TIMER_LEVEL_GRANULARITY(n) BIT(TIMER_LEVEL_SHIFT(n))
 #define TIMER_LEVEL_START(n)                                                   \
     ((TIMER_LEVEL_SIZE - 1) << (((n) - 1) * TIMER_CLOCK_SHIFT))
 #define TIMER_LEVEL_END(n) (TIMER_LEVEL_START(n + 1) - 1)

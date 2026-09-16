@@ -23,22 +23,22 @@ bool fat_is_eoc(struct fat_fs *fs, uint32_t cluster) {
 }
 
 void fat_format_filename_83(const char *name, char out[11]) {
+    static const size_t base_name_max = 8;
+    static const size_t extension_max = 3;
+
     memset(out, ' ', 11);
 
     const char *dot = strchr(name, '.');
-    int base_len = dot ? (dot - name) : (long int) strlen(name);
-    if (base_len > 8)
-        base_len = 8;
+    size_t base_len = dot ? (size_t) (dot - name) : strlen(name);
+    base_len = MIN(base_len, base_name_max);
 
-    for (int i = 0; i < base_len; i++) {
+    for (size_t i = 0; i < base_len; i++) {
         out[i] = toupper((unsigned char) name[i]);
     }
 
     if (dot) {
-        int ext_len = strlen(dot + 1);
-        if (ext_len > 3)
-            ext_len = 3;
-        for (int i = 0; i < ext_len; i++) {
+        size_t ext_len = MIN(strlen(dot + 1), extension_max);
+        for (size_t i = 0; i < ext_len; i++) {
             out[8 + i] = toupper((unsigned char) dot[1 + i]);
         }
     }

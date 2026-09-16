@@ -1,6 +1,7 @@
 /* @title: Command Line Macro Internals */
 #pragma once
 #include <compiler.h>
+#include <math/bit.h>
 #include <types/type_enum.h>
 
 struct cmdline_entry;
@@ -13,14 +14,14 @@ struct cpu_mask;
 
 #define CMDLINE_TYPE_OFFSET 6
 
-#define CMDLINE_IMPL_TYPE_BIT_1(t1) (1ULL << (t1))
-#define CMDLINE_IMPL_TYPE_BIT_2(t1, t2) ((1ULL << (t1)) | (1ULL << (t2)))
+#define CMDLINE_IMPL_TYPE_BIT_1(t1) BIT(t1)
+#define CMDLINE_IMPL_TYPE_BIT_2(t1, t2) (BIT(t1) | BIT(t2))
 #define CMDLINE_IMPL_TYPE_BIT_3(t1, t2, t3)                                    \
-    (CMDLINE_IMPL_TYPE_BIT_2(t1, t2) | (1ULL << (t3)))
+    (CMDLINE_IMPL_TYPE_BIT_2(t1, t2) | BIT(t3))
 #define CMDLINE_IMPL_TYPE_BIT_4(t1, t2, t3, t4)                                \
-    (CMDLINE_IMPL_TYPE_BIT_3(t1, t2, t3) | (1ULL << (t4)))
+    (CMDLINE_IMPL_TYPE_BIT_3(t1, t2, t3) | BIT(t4))
 #define CMDLINE_IMPL_TYPE_BIT_5(t1, t2, t3, t4, t5)                            \
-    (CMDLINE_IMPL_TYPE_BIT_4(t1, t2, t3, t4) | (1ULL << (t5)))
+    (CMDLINE_IMPL_TYPE_BIT_4(t1, t2, t3, t4) | BIT(t5))
 
 /* ========== Type Enum ========== */
 

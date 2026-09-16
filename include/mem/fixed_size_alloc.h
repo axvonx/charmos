@@ -30,7 +30,7 @@ struct fixed_size_node {
 static_assert(offsetof(struct fixed_size_node, list_node) == 0);
 
 struct fixed_size_page_hdr {
-    domain_id_t domain; /* -1 means it isn't perdomain */
+    domain_id_t domain; /* DOMAIN_ID_NONE means it isn't perdomain */
     size_t free_count;
     size_t total;
     struct list_head page_list;
@@ -96,5 +96,5 @@ void fixed_size_range_init(struct fixed_size_range *fsr,
     fixed_size_free(FSR_PERDOMAIN_THIS(name), (obj))
 
 static inline struct fixed_size_page_hdr *fixed_size_page_of(void *o) {
-    return (struct fixed_size_page_hdr *) ALIGN_DOWN((uintptr_t) o, PAGE_SIZE);
+    return (struct fixed_size_page_hdr *) PAGE_ALIGN_DOWN(o);
 }

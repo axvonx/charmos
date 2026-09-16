@@ -30,7 +30,7 @@ static int node_height(struct avl_tree_node *n) {
         return 0;
     int lh = node_height(n->left);
     int rh = node_height(n->right);
-    return (lh > rh ? lh : rh) + 1;
+    return MAX(lh, rh) + 1;
 }
 
 static bool verify_avl_invariants(struct avl_tree_node *n) {
@@ -43,7 +43,7 @@ static bool verify_avl_invariants(struct avl_tree_node *n) {
     if (diff < -1 || diff > 1)
         return false;
 
-    if (n->height != (lh > rh ? lh : rh) + 1)
+    if (n->height != MAX(lh, rh) + 1)
         return false;
 
     if (n->left && n->left->parent != n)

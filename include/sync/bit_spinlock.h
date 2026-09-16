@@ -3,6 +3,7 @@
 #include <asm.h>
 #include <compiler.h>
 #include <kassert.h>
+#include <math/bit.h>
 #include <sch/irql.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -12,7 +13,7 @@
  * single bit within a byte, word, dword, and qword with comptime bounds check
  */
 
-#define BIT_SPINLOCK_MASK(bit, ptr) ((typeof(*(ptr))) (1ULL << (bit)))
+#define BIT_SPINLOCK_MASK(bit, ptr) ((typeof(*(ptr))) BIT(bit))
 
 #define BIT_SPINLOCK_CHECK(bit, ptr)                                           \
     do {                                                                       \

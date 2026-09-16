@@ -2,6 +2,7 @@
 #include <block/block.h>
 #include <block/sched.h>
 #include <drivers/nvme.h>
+#include <math/min_max.h>
 #include <mem/alloc.h>
 #include <mem/hhdm.h>
 #include <mem/pmm.h>
@@ -189,11 +190,12 @@ static bool rw_sync(struct block_device *disk, uint64_t lba, uint8_t *buffer,
 static bool rw_wrapper(struct block_device *disk, uint64_t lba, uint8_t *buf,
                        uint64_t cnt, sync_fn function) {
     struct nvme_device *nvme = (struct nvme_device *) disk->driver_data;
-    uint16_t max_sectors = nvme->max_transfer_size / disk->sector_size;
+    uint64_t max_sectors = nvme->max_transfer_size / disk->sector_size;
+    kassert(max_sectors > 0 && max_sectors <= UINT16_MAX);
     struct io_wait_token iowt = IO_WAIT_TOKEN_EMPTY;
 
     while (cnt > 0) {
-        uint16_t chunk = (cnt > max_sectors) ? max_sectors : (uint16_t) cnt;
+        uint16_t chunk = (uint16_t) MIN(cnt, max_sectors);
         if (!function(disk, lba, buf, chunk, &iowt)) {
             io_wait_end(&iowt, IO_WAIT_END_YIELD);
             return false;
@@ -212,15 +214,15 @@ static bool rw_wrapper(struct block_device *disk, uint64_t lba, uint8_t *buf,
 static bool rw_async_wrapper(struct block_device *disk,
                              struct nvme_request *req, async_fn function) {
     struct nvme_device *nvme = (struct nvme_device *) disk->driver_data;
-    uint16_t max_sectors = nvme->max_transfer_size / disk->sector_size;
-    uint16_t chunk;
+    uint64_t max_sectors = nvme->max_transfer_size / disk->sector_size;
+    uint64_t chunk;
 
     uint64_t cnt = req->sector_count;
 
     int part_count = 0;
     uint64_t tmp_cnt = cnt;
     while (tmp_cnt > 0) {
-        chunk = (tmp_cnt > max_sectors) ? max_sectors : (uint16_t) tmp_cnt;
+        chunk = MIN(tmp_cnt, max_sectors);
         tmp_cnt -= chunk;
         part_count++;
     }
@@ -228,7 +230,7 @@ static bool rw_async_wrapper(struct block_device *disk,
     req->remaining_parts = part_count;
 
     while (cnt > 0) {
-        chunk = (cnt > max_sectors) ? max_sectors : (uint16_t) cnt;
+        chunk = MIN(cnt, max_sectors);
         cnt -= chunk;
 
         if (!function(disk, req))

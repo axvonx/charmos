@@ -27,6 +27,8 @@
 #include <irq/irq.h>
 #include <kassert.h>
 #include <log.h>
+#include <math/align.h>
+#include <math/min_max.h>
 #include <mem/alloc.h>
 #include <mem/alloc_or_die.h>
 #include <sch/sched.h>
@@ -562,7 +564,7 @@ static void rcu_build_tree(void) {
     kassert(n > 0);
 
     do {
-        n = (n + RCU_FANOUT - 1) / RCU_FANOUT;
+        n = DIV_ROUND_UP(n, RCU_FANOUT);
         kassert(levels < RCU_MAX_LEVELS, "RCU tree deeper than RCU_MAX_LEVELS");
         counts[levels++] = n;
     } while (n > 1);
@@ -611,8 +613,7 @@ static void rcu_build_tree(void) {
                 owned = counts[level - 1] - (j * RCU_FANOUT);
             }
 
-            if (owned > RCU_FANOUT)
-                owned = RCU_FANOUT;
+            owned = MIN(owned, RCU_FANOUT);
 
             if (node->is_leaf) {
                 cpu_mask_set_range(&node->full_cpus, node->cpu_base, owned);

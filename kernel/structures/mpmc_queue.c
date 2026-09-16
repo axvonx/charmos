@@ -1,6 +1,9 @@
 #include <math/bit.h>
+#include <math/min_max.h>
 #include <mem/alloc.h>
 #include <structures/mpmc_queue.h>
+
+#define MPMC_QUEUE_MIN_CAPACITY ((size_t) 2)
 
 void mpmc_queue_init_static(struct mpmc_queue *q, struct mpmc_slot *slots,
                             size_t capacity) {
@@ -18,10 +21,7 @@ void mpmc_queue_init_static(struct mpmc_queue *q, struct mpmc_slot *slots,
 }
 
 bool mpmc_queue_init(struct mpmc_queue *q, size_t capacity) {
-    size_t cap = next_pow2(capacity);
-    if (cap < 2) {
-        cap = 2;
-    }
+    size_t cap = MAX(next_pow2(capacity), MPMC_QUEUE_MIN_CAPACITY);
 
     struct mpmc_slot *slots =
         kmalloc(sizeof(struct mpmc_slot) * cap, ALLOC_FLAGS_ZERO);

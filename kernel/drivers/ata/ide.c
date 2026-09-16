@@ -7,6 +7,7 @@
 #include <console/printf.h>
 #include <drivers/ata.h>
 #include <irq/idt.h>
+#include <math/bit.h>
 #include <mem/alloc.h>
 #include <mem/alloc_or_die.h>
 #include <stddef.h>
@@ -77,7 +78,7 @@ void ide_identify(struct ata_drive *drive) {
     for (int i = 39; i >= 0 && drive->model[i] == ' '; i--)
         drive->model[i] = '\0';
 
-    drive->supports_lba48 = (buf[83] & (1 << 10)) ? 1 : 0;
+    drive->supports_lba48 = BIT_TEST(buf[83], 10) ? 1 : 0;
 
     if (drive->supports_lba48) {
         drive->total_sectors =
@@ -90,12 +91,12 @@ void ide_identify(struct ata_drive *drive) {
 
     drive->actually_exists = drive->total_sectors != 0;
 
-    drive->supports_dma = (buf[49] & (1 << 8)) ? 1 : 0;
+    drive->supports_dma = BIT_TEST(buf[49], 8) ? 1 : 0;
 
     drive->udma_mode = 0;
-    if (buf[88] & (1 << 13)) {
+    if (BIT_TEST(buf[88], 13)) {
         for (int i = 0; i < 8; i++) {
-            if (buf[88] & (1 << i)) {
+            if (BIT_TEST(buf[88], i)) {
                 drive->udma_mode = i;
             }
         }

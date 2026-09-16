@@ -5,6 +5,7 @@
 #include <console/printf.h>
 #include <console/report.h>
 #include <console/term.h>
+#include <math/min_max.h>
 #include <sch/irql.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -938,10 +939,7 @@ void report_panes_begin(struct report_panes *panes, uint32_t n,
     uint32_t sum = 0;
     uint16_t used = 0;
 
-    if (n < 1)
-        n = 1;
-    if (n > REPORT_PANES_MAX)
-        n = REPORT_PANES_MAX;
+    CLAMP(n, UINT32_C(1), REPORT_PANES_MAX);
 
     panes->n = (uint8_t) n;
     panes->stacked = false;

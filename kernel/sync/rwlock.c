@@ -1,4 +1,5 @@
 #include <console/panic.h>
+#include <math/min_max.h>
 #include <sch/sched.h>
 #include <sync/rcu.h>
 #include <sync/turnstile.h>
@@ -101,7 +102,7 @@ size_t rwlock_get_backoff(size_t current_backoff) {
         return RWLOCK_BACKOFF_MAX;
 
     size_t new_backoff = current_backoff << RWLOCK_BACKOFF_SHIFT;
-    return new_backoff > RWLOCK_BACKOFF_MAX ? RWLOCK_BACKOFF_MAX : new_backoff;
+    return MIN(new_backoff, RWLOCK_BACKOFF_MAX);
 }
 
 #ifdef DEBUG_LOCK_CHK

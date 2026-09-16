@@ -1,4 +1,5 @@
 #include <kassert.h>
+#include <math/bit.h>
 #include <sch/sched.h>
 #include <smp/core.h>
 #include <thread/apc.h>
@@ -32,7 +33,7 @@ static inline enum apc_state apc_state_load(struct apc *a) {
 }
 
 static inline size_t apc_type_bit(enum apc_type t) {
-    return (size_t) 1ULL << (size_t) t;
+    return pow2(t);
 }
 
 static inline bool apc_queue_empty(struct apc_queue *q) {

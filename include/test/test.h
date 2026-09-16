@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <log.h>
 #include <math/fixed.h>
+#include <math/units.h>
 #include <mem/alloc.h>
 #include <mem/pmm.h>
 #include <scaled_param.h>
@@ -292,7 +293,7 @@ struct test_globals {
 #include <test/assert.h>
 
 #define ABORT_IF_RAM_LOW()                                                     \
-    if (pmm_get_usable_ram() < 1024 * 1024 * 8) {                              \
+    if (pmm_get_usable_ram() < MB(8)) {                                        \
         test_info("RAM too low for test to continue!\n");                      \
         return TEST_SKIP(TEST_SKIP_RAM_LOW);                                   \
     }

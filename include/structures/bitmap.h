@@ -1,6 +1,8 @@
 /* @title: Bitmap */
 #pragma once
 #include <math/align.h>
+#include <math/bit.h>
+#include <math/min_max.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -10,12 +12,22 @@
 typedef uint64_t bitmap_word_t;
 
 #define BITMAP_BITS_PER_WORD 64
-#define BITMAP_WORDS(nbits) DIV_ROUND_UP(nbits, BITMAP_BITS_PER_WORD)
-#define BITMAP_DECLARE(name, nbits) bitmap_word_t name[BITMAP_WORDS(nbits)]
+#define BITMAP_WORDS(nbits)                                                    \
+    ({                                                                         \
+        __auto_type __nbits = (nbits);                                         \
+        typecheck_widenable_to((size_t) 0, nbits);                             \
+        DIV_ROUND_UP((size_t) __nbits, BITMAP_BITS_PER_WORD);                  \
+    })
+
+/* Integer constant expression variant */
+#define BITMAP_WORDS_CONST(nbits)                                              \
+    (((nbits) / BITMAP_BITS_PER_WORD) + !!((nbits) % BITMAP_BITS_PER_WORD))
+#define BITMAP_DECLARE(name, nbits)                                            \
+    bitmap_word_t name[BITMAP_WORDS_CONST(nbits)]
 
 #define BITMAP_WORD_INDEX(bit) ((bit) / BITMAP_BITS_PER_WORD)
 #define BITMAP_BIT_OFFSET(bit) ((bit) % BITMAP_BITS_PER_WORD)
-#define BITMAP_BIT_MASK(bit) ((bitmap_word_t) 1 << BITMAP_BIT_OFFSET(bit))
+#define BITMAP_BIT_MASK(bit) ((bitmap_word_t) BIT(BITMAP_BIT_OFFSET(bit)))
 
 #define bitmap_for_each_bit_set(bit, map, nbits)                               \
     for (size_t bit = 0; bit < (nbits); bit++)                                 \
@@ -253,7 +265,7 @@ static inline size_t bitmap_find_first_set(const bitmap_word_t *map,
         if (map[i]) {
             size_t bit =
                 i * BITMAP_BITS_PER_WORD + (size_t) __builtin_ctzll(map[i]);
-            return bit < nbits ? bit : nbits;
+            return MIN(bit, nbits);
         }
     }
     return nbits;
@@ -267,7 +279,7 @@ static inline size_t bitmap_find_first_zero(const bitmap_word_t *map,
         if (inv) {
             size_t bit =
                 i * BITMAP_BITS_PER_WORD + (size_t) __builtin_ctzll(inv);
-            return bit < nbits ? bit : nbits;
+            return MIN(bit, nbits);
         }
     }
     return nbits;
@@ -286,14 +298,14 @@ static inline size_t bitmap_find_next_bit(const bitmap_word_t *map,
     if (word) {
         size_t bit =
             word_index * BITMAP_BITS_PER_WORD + (size_t) __builtin_ctzll(word);
-        return bit < nbits ? bit : nbits;
+        return MIN(bit, nbits);
     }
 
     for (size_t i = word_index + 1; i < BITMAP_WORDS(nbits); i++) {
         if (map[i]) {
             size_t bit =
                 i * BITMAP_BITS_PER_WORD + (size_t) __builtin_ctzll(map[i]);
-            return bit < nbits ? bit : nbits;
+            return MIN(bit, nbits);
         }
     }
 
@@ -313,7 +325,7 @@ static inline size_t bitmap_find_next_zero_bit(const bitmap_word_t *map,
     if (inv) {
         size_t bit =
             word_index * BITMAP_BITS_PER_WORD + (size_t) __builtin_ctzll(inv);
-        return bit < nbits ? bit : nbits;
+        return MIN(bit, nbits);
     }
 
     for (size_t i = word_index + 1; i < BITMAP_WORDS(nbits); i++) {
@@ -321,7 +333,7 @@ static inline size_t bitmap_find_next_zero_bit(const bitmap_word_t *map,
         if (inv) {
             size_t bit =
                 i * BITMAP_BITS_PER_WORD + (size_t) __builtin_ctzll(inv);
-            return bit < nbits ? bit : nbits;
+            return MIN(bit, nbits);
         }
     }
 

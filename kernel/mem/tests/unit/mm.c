@@ -26,14 +26,13 @@ static vaddr_t brute_gap(struct mm *mm, size_t len, size_t align, vaddr_t low,
         if (vma_range_start(v) >= high)
             break;
         if (vma_range_start(v) > floor) {
-            vaddr_t a = ALIGN_UP(floor, align);
+            vaddr_t a = ALIGN_UP_WRAPPING(floor, align);
             if (a >= floor && a + len <= vma_range_start(v) && a + len <= high)
                 return a;
         }
-        if (vma_range_end(v) > floor)
-            floor = vma_range_end(v);
+        floor = MAX(floor, vma_range_end(v));
     }
-    vaddr_t a = ALIGN_UP(floor, align);
+    vaddr_t a = ALIGN_UP_WRAPPING(floor, align);
     if (a >= floor && a + len <= high)
         return a;
     return 0;
@@ -42,25 +41,13 @@ static vaddr_t brute_gap(struct mm *mm, size_t len, size_t align, vaddr_t low,
 static size_t bf_max_high(struct rbit_node *n) {
     if (!n)
         return 0;
-    size_t m = n->interval.high;
-    size_t l = bf_max_high(n->left), r = bf_max_high(n->right);
-    if (l > m)
-        m = l;
-    if (r > m)
-        m = r;
-    return m;
+    return MAX(n->interval.high, bf_max_high(n->left), bf_max_high(n->right));
 }
 
 static size_t bf_min_low(struct rbit_node *n) {
     if (!n)
         return SIZE_MAX;
-    size_t m = n->interval.low;
-    size_t l = bf_min_low(n->left), r = bf_min_low(n->right);
-    if (l < m)
-        m = l;
-    if (r < m)
-        m = r;
-    return m;
+    return MIN(n->interval.low, bf_min_low(n->left), bf_min_low(n->right));
 }
 
 static size_t collect_inorder(struct rbit_node *n, struct rbit_node **out,

@@ -2,6 +2,7 @@
 #pragma once
 #include <compiler.h>
 #include <kassert.h>
+#include <math/bit.h>
 #include <smp/core.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -19,14 +20,14 @@ struct percpu_rc;
 typedef void (*percpu_rc_release_fn)(struct percpu_rc *);
 
 enum percpu_rc_flags {
-    PERCPU_RC_INIT_ATOMIC = 1 << 0,
-    PERCPU_RC_ALLOW_REINIT = 1 << 1,
+    PERCPU_RC_INIT_ATOMIC = BIT(0),
+    PERCPU_RC_ALLOW_REINIT = BIT(1),
 };
 
 #define PERCPU_COUNT_BIAS (1LL << 30)
 
-#define PERCPU_RC_DEAD (1UL << 0)
-#define PERCPU_RC_ATOMIC (1UL << 1)
+#define PERCPU_RC_DEAD BIT(0)
+#define PERCPU_RC_ATOMIC BIT(1)
 #define PERCPU_RC_PTR_MASK (~(PERCPU_RC_DEAD | PERCPU_RC_ATOMIC))
 #define PERCPU_RC_PTR(m) (int64_t *) (m & PERCPU_RC_PTR_MASK)
 

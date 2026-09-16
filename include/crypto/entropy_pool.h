@@ -1,9 +1,11 @@
 /* @title: Entropy Pool */
+#pragma once
+#include <math/units.h>
 #include <stdint.h>
 #include <sync/spinlock.h>
-#pragma once
+
 #define ENTROPY_POOL_SIZE 64 // 512 bits
-#define ENTROPY_MAX_BITS (ENTROPY_POOL_SIZE * 8)
+#define ENTROPY_MAX_BITS to_bits(ENTROPY_POOL_SIZE)
 
 struct entropy_pool {
     uint8_t buffer[ENTROPY_POOL_SIZE]; // Raw pool data

@@ -8,6 +8,8 @@
 #include <drivers/nvme.h>
 #include <drivers/pci.h>
 #include <irq/idt.h>
+#include <math/bit.h>
+#include <math/min_max.h>
 #include <mem/alloc.h>
 #include <mem/vmm.h>
 #include <registry.h>
@@ -99,15 +101,17 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
 
     nvme_set_num_queues(nvme, total_sq, total_cq);
 
-    uint32_t sqs_to_make = core_count > total_sq ? total_sq : core_count;
+    uint64_t supported_sqs = total_sq;
+    uint64_t sqs_to_make_wide = MIN(core_count, supported_sqs);
+    kassert(sqs_to_make_wide <= UINT32_MAX);
+    uint32_t sqs_to_make = (uint32_t) sqs_to_make_wide;
 
-    nvme->max_transfer_size = (1 << c->mdts) * PAGE_SIZE;
+    nvme->max_transfer_size = BIT(c->mdts) * PAGE_SIZE;
 
     /* Commands describe one page via PRP1 and the rest through one
      * PRP List page, so we just cap the transfer at that */
-    uint32_t prp_limit = NVME_PRPS_PER_PAGE * PAGE_SIZE;
-    if (nvme->max_transfer_size > prp_limit)
-        nvme->max_transfer_size = prp_limit;
+    uint64_t prp_limit = NVME_PRPS_PER_PAGE * PAGE_SIZE;
+    nvme->max_transfer_size = MIN(nvme->max_transfer_size, prp_limit);
     nvme_log(LOG_INFO, "Controller max transfer size is %u bytes",
              nvme->max_transfer_size);
 

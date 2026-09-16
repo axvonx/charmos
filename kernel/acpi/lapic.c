@@ -4,6 +4,8 @@
 #include <global.h>
 #include <irq/idt.h>
 #include <log.h>
+#include <math/align.h>
+#include <math/bit.h>
 #include <mem/alloc.h>
 #include <mem/page.h>
 #include <mem/vmm.h>
@@ -61,7 +63,7 @@ void lapic_eoi(struct irq_desc *unused) {
 
 bool lapic_timer_is_enabled() {
     uint32_t lvt = lapic_read(LAPIC_REG_LVT_TIMER);
-    return !(lvt & (1 << 16));
+    return !BIT_TEST(lvt, 16);
 }
 
 /* HIGH_LEVEL so ICR_HIGH and ICR_LOW writes
@@ -272,6 +274,8 @@ static enum errno lapic_evdev_change_state(struct clock_evdev *ced,
 }
 
 static struct clock_evdev *lapic_clock_evdev_create(cpu_id_t core_id) {
+    static const freq_khz_t nanoseconds_per_khz_tick = 1000000;
+
     struct clock_evdev *ced = clock_evdev_create("lapic_timer_%zu", core_id);
 
     ced->set_next_event = lapic_evdev_set_next_event;
@@ -280,7 +284,7 @@ static struct clock_evdev *lapic_clock_evdev_create(cpu_id_t core_id) {
     /* bounds based on LAPIC frequency */
     freq_khz_t freq_khz = global.cores[core_id]->lapic_khz;
 
-    ced->min_delta_ns = (1000000ULL + freq_khz - 1) / freq_khz;
+    ced->min_delta_ns = DIV_ROUND_UP(nanoseconds_per_khz_tick, freq_khz);
     ced->max_delta_ns = (0xFFFFFFFFULL * 1000000ULL) / freq_khz;
 
     ced->min_delta_ticks = 1;

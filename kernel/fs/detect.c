@@ -7,6 +7,7 @@
 #include <fs/gpt.h>
 #include <fs/iso9660.h>
 #include <fs/mbr.h>
+#include <math/units.h>
 #include <mem/alloc.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -161,7 +162,7 @@ static enum fs_type detect_partition_fs(struct block_device *disk,
     if (memcmp(&sector[3], "NTFS    ", 8) == 0)
         return FS_NTFS;
 
-    uint64_t ext_sb_offset = 1024;
+    uint64_t ext_sb_offset = KB(1);
     uint64_t ext_sector_offset =
         part->start_lba + (ext_sb_offset / disk->sector_size);
     uint64_t ext_offset_within_sector = ext_sb_offset % disk->sector_size;

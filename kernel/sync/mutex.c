@@ -1,3 +1,4 @@
+#include <math/min_max.h>
 #include <sch/sched.h>
 #include <stddef.h>
 #include <sync/mutex.h>
@@ -162,7 +163,7 @@ size_t mutex_lock_get_backoff(size_t current_backoff) {
         return MUTEX_BACKOFF_MAX;
 
     size_t new_backoff = current_backoff << MUTEX_BACKOFF_SHIFT;
-    return new_backoff > MUTEX_BACKOFF_MAX ? MUTEX_BACKOFF_MAX : new_backoff;
+    return MIN(new_backoff, MUTEX_BACKOFF_MAX);
 }
 
 static bool mutex_owner_running(struct mutex *mutex) {

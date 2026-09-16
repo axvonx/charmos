@@ -1,6 +1,6 @@
 #include "mem/tests/test_internal.h"
 
-#define TLB_MAX_TEST_THREADS 64
+#define TLB_MAX_TEST_THREADS ((size_t) 64)
 
 static volatile uint64_t tlb_seen[TLB_MAX_TEST_THREADS];
 static atomic_bool tlb_go = false;
@@ -27,9 +27,8 @@ TEST_DECLARE_INTEGRATION(mem, tlb_shootdown_sync,
     }
 
     size_t nthreads =
-        ctx->intensity_val ? ctx->intensity_val : global.core_count;
-    if (nthreads > TLB_MAX_TEST_THREADS)
-        nthreads = TLB_MAX_TEST_THREADS;
+        MIN(ctx->intensity_val ? ctx->intensity_val : global.core_count,
+            TLB_MAX_TEST_THREADS);
 
     atomic_store(&tlb_go, false);
     atomic_store(&tlb_threads_done, 0);
@@ -132,7 +131,7 @@ TEST_DECLARE_INTEGRATION(mem, tlb_shootdown_flush_all,
     return TEST_SUCCESS;
 }
 
-#define TLB_CONTENTION_MAX_THREADS 64
+#define TLB_CONTENTION_MAX_THREADS ((size_t) 64)
 
 static void tlb_spammer(void *) {
     paddr_t p = pmm_alloc_page();
@@ -145,9 +144,8 @@ static void tlb_spammer(void *) {
 
 TEST_DECLARE_INTEGRATION(mem, tlb_shootdown_contention,
                          TEST_INTENSITY_CORES(1, 1, 2, "threads/core")) {
-    size_t nthreads = ctx->intensity_val ? ctx->intensity_val : 4;
-    if (nthreads > TLB_CONTENTION_MAX_THREADS)
-        nthreads = TLB_CONTENTION_MAX_THREADS;
+    size_t nthreads = MIN(ctx->intensity_val ? ctx->intensity_val : 4,
+                          TLB_CONTENTION_MAX_THREADS);
 
     struct thread *t[TLB_CONTENTION_MAX_THREADS];
     for (size_t i = 0; i < nthreads; i++) {

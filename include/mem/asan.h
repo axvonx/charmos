@@ -1,6 +1,7 @@
 /* @title: Address sanitization */
 #include <errno.h>
 #include <log.h>
+#include <math/bit.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -14,7 +15,7 @@
  * shadow = (addr >> scale) + offset */
 #define ASAN_SHADOW_ADDR(a)                                                    \
     ((uintptr_t) (((uintptr_t) (a) >> ASAN_SHADOW_SCALE) + ASAN_SHADOW_OFFSET))
-#define ASAN_GRANULE (1ULL << ASAN_SHADOW_SCALE)
+#define ASAN_GRANULE ((uintptr_t) BIT(ASAN_SHADOW_SCALE))
 #define ASAN_REDZONE 16 /* optional redzone per allocation */
 
 /* Shadow byte encoding, one per ASAN_GRANULE bytes of memory:

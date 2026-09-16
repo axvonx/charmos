@@ -3,6 +3,7 @@
 #include <dbg.h>
 #include <irq/exception_sync_cb.h>
 #include <irq/irq.h>
+#include <math/range.h>
 #include <mem/address_range.h>
 #include <mem/demand_page.h>
 #include <mem/hhdm.h>
@@ -259,7 +260,7 @@ static void __noreturn page_fault_report_crash(vaddr_t fault_addr,
 
     vaddr_t protector_base = (uintptr_t) curr->stack - PAGE_SIZE;
     vaddr_t protector_top = (uintptr_t) curr->stack;
-    if (fault_addr >= protector_base && fault_addr <= protector_top)
+    if (IN_RANGE(fault_addr, protector_base, protector_top))
         printf("Likely stack overflow!! Fault in protector page!!!\n");
 
     vaddr_t code = PAGE_ALIGN_DOWN(irqc->rip);

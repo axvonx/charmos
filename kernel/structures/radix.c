@@ -1,4 +1,5 @@
 #include <console/panic.h>
+#include <math/bit.h>
 #include <mem/alloc.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -36,7 +37,7 @@ int32_t radix_insert(struct radix_tree *tree, void *item) {
             }
             mid->parent = node;
             node->slots[idx] = mid;
-            node->present_mask |= (1ULL << idx);
+            node->present_mask |= BIT(idx);
         }
 
         node = node->slots[idx];
@@ -49,7 +50,7 @@ int32_t radix_insert(struct radix_tree *tree, void *item) {
     }
 
     node->slots[idx] = item;
-    node->present_mask |= (1ULL << idx);
+    node->present_mask |= BIT(idx);
     radix_verify_tree(tree);
 
     return 0;
@@ -85,7 +86,7 @@ static bool radix_verify_node(struct radix_tree *tree, struct radix_node *node,
     uint64_t expected_mask = 0;
     for (int i = 0; i < RADIX_SIZE; i++) {
         if (node->slots[i])
-            expected_mask |= (1ULL << i);
+            expected_mask |= BIT(i);
     }
 
     if (expected_mask != node->present_mask)
@@ -148,7 +149,7 @@ static void radix_prune_up(struct radix_node *node, struct radix_tree *tree) {
         for (uint64_t i = 0; i < RADIX_SIZE; i++) {
             if (parent->slots[i] == node) {
                 parent->slots[i] = NULL;
-                parent->present_mask &= ~(1ULL << i);
+                parent->present_mask &= ~BIT(i);
                 break;
             }
         }
@@ -178,7 +179,7 @@ void *radix_delete(struct radix_tree *tree, uint64_t key) {
         return NULL;
 
     node->slots[idx] = NULL;
-    node->present_mask &= ~(1ULL << idx);
+    node->present_mask &= ~BIT(idx);
 
     radix_prune_up(node, tree);
     radix_verify_tree(tree);

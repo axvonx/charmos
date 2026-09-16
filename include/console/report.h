@@ -170,7 +170,7 @@ __printf_like(3, 4) void report_field_full(struct report_fields *g,
 void report_fields_end(struct report_fields *g);
 
 /* Storage is MAX * LINES * BYTES */
-#define REPORT_PANES_MAX 3
+#define REPORT_PANES_MAX UINT32_C(3)
 
 /* Max rows for a pane */
 #define REPORT_PANE_ROWS 48

@@ -5,6 +5,8 @@
 #include <device.h>
 #include <linker/symbols.h>
 #include <log.h>
+#include <math/align.h>
+#include <math/bit.h>
 #include <stdint.h>
 
 #define PCI_CLASS_MASS_STORAGE 0x01
@@ -94,10 +96,9 @@ struct pci_msix_cap {
 
 static inline uint16_t pci_read_config16(uint8_t bus, uint8_t device,
                                          uint8_t function, uint8_t offset) {
-    uint32_t address = (1U << 31) // enable bit
+    uint32_t address = BIT(31) // enable bit
                        | ((uint32_t) bus << 16) | ((uint32_t) device << 11) |
-                       ((uint32_t) function << 8) |
-                       (offset & 0xFC); // aligned to 4 bytes
+                       ((uint32_t) function << 8) | ALIGN_DOWN(offset, 4);
     outl(PCI_CONFIG_ADDRESS, address);
     uint32_t data = inl(PCI_CONFIG_DATA);
 
@@ -109,9 +110,9 @@ static inline uint16_t pci_read_config16(uint8_t bus, uint8_t device,
 
 static inline uint8_t pci_read_config8(uint8_t bus, uint8_t device,
                                        uint8_t function, uint8_t offset) {
-    uint32_t address = (1U << 31) | ((uint32_t) bus << 16) |
+    uint32_t address = BIT(31) | ((uint32_t) bus << 16) |
                        ((uint32_t) device << 11) | ((uint32_t) function << 8) |
-                       (offset & 0xFC); // 4-byte aligned
+                       ALIGN_DOWN(offset, 4);
     outl(PCI_CONFIG_ADDRESS, address);
     uint32_t data = inl(PCI_CONFIG_DATA);
 
@@ -121,9 +122,9 @@ static inline uint8_t pci_read_config8(uint8_t bus, uint8_t device,
 static inline void pci_write_config16(uint8_t bus, uint8_t device,
                                       uint8_t function, uint8_t offset,
                                       uint16_t value) {
-    uint32_t address = (1U << 31) | ((uint32_t) bus << 16) |
+    uint32_t address = BIT(31) | ((uint32_t) bus << 16) |
                        ((uint32_t) device << 11) | ((uint32_t) function << 8) |
-                       (offset & 0xFC);
+                       ALIGN_DOWN(offset, 4);
     outl(PCI_CONFIG_ADDRESS, address);
     uint32_t old_data = inl(PCI_CONFIG_DATA);
 
@@ -139,8 +140,8 @@ static inline void pci_write_config16(uint8_t bus, uint8_t device,
 
 static inline uint32_t pci_config_address(uint8_t bus, uint8_t slot,
                                           uint8_t func, uint8_t offset) {
-    return (uint32_t) ((1U << 31) | (bus << 16) | (slot << 11) | (func << 8) |
-                       (offset & 0xFC));
+    return (uint32_t) (BIT(31) | (bus << 16) | (slot << 11) | (func << 8) |
+                       ALIGN_DOWN(offset, 4));
 }
 
 static inline uint32_t pci_read(uint8_t bus, uint8_t slot, uint8_t func,
@@ -151,13 +152,13 @@ static inline uint32_t pci_read(uint8_t bus, uint8_t slot, uint8_t func,
 
 static inline uint16_t pci_read_word(uint8_t bus, uint8_t slot, uint8_t func,
                                      uint8_t offset) {
-    uint32_t value = pci_read(bus, slot, func, offset & 0xFC);
+    uint32_t value = pci_read(bus, slot, func, ALIGN_DOWN(offset, 4));
     return (value >> ((offset & 2) * 8)) & 0xFFFF;
 }
 
 static inline uint8_t pci_read_byte(uint8_t bus, uint8_t slot, uint8_t func,
                                     uint8_t offset) {
-    uint32_t value = pci_read(bus, slot, func, offset & 0xFC);
+    uint32_t value = pci_read(bus, slot, func, ALIGN_DOWN(offset, 4));
     return (value >> ((offset & 3) * 8)) & 0xFF;
 }
 
@@ -169,18 +170,18 @@ static inline void pci_write(uint8_t bus, uint8_t slot, uint8_t func,
 
 static inline void pci_write_word(uint8_t bus, uint8_t slot, uint8_t func,
                                   uint8_t offset, uint16_t value) {
-    uint32_t tmp = pci_read(bus, slot, func, offset & 0xFCU);
+    uint32_t tmp = pci_read(bus, slot, func, ALIGN_DOWN(offset, 4));
     uint32_t shift = (offset & 2) * 8;
     tmp = (tmp & ~(0xFFFFU << shift)) | ((uint32_t) value << shift);
-    pci_write(bus, slot, func, offset & 0xFCU, tmp);
+    pci_write(bus, slot, func, ALIGN_DOWN(offset, 4), tmp);
 }
 
 static inline void pci_write_byte(uint8_t bus, uint8_t slot, uint8_t func,
                                   uint8_t offset, uint8_t value) {
-    uint32_t tmp = pci_read(bus, slot, func, offset & 0xFC);
+    uint32_t tmp = pci_read(bus, slot, func, ALIGN_DOWN(offset, 4));
     uint32_t shift = (offset & 3) * 8;
     tmp = (tmp & ~(0xFF << shift)) | ((uint32_t) value << shift);
-    pci_write(bus, slot, func, offset & 0xFC, tmp);
+    pci_write(bus, slot, func, ALIGN_DOWN(offset, 4), tmp);
 }
 
 LOG_HANDLE_EXTERN(pci);

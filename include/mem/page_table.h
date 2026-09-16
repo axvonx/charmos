@@ -2,6 +2,7 @@
 #pragma once
 #include <asm.h>
 #include <irq/irq.h>
+#include <math/bit.h>
 #include <mem/page.h>
 #include <sch/irql.h>
 #include <stdatomic.h>
@@ -18,15 +19,15 @@
 
 #define PTE_LOCK_SHIFT 9
 #define PTE_AVAIL2_SHIFT 10
-#define PTE_LOCK_BIT ((uint64_t) 1 << PTE_LOCK_SHIFT)
-#define PTE_AVAIL2_BIT ((uint64_t) 1 << PTE_AVAIL2_SHIFT)
+#define PTE_LOCK_BIT BIT(PTE_LOCK_SHIFT)
+#define PTE_AVAIL2_BIT BIT(PTE_AVAIL2_SHIFT)
 
 /* Mark an entry whose child table is shared with other entries, this is what
  * we use in aliasing. The subtree should never be freed through this entry,
  * since every other entry pointing at it would see the change too. This
  * should only ever be set on present entries */
 #define PTE_SHARED_SHIFT 11
-#define PTE_SHARED_BIT ((uint64_t) 1 << PTE_SHARED_SHIFT)
+#define PTE_SHARED_BIT BIT(PTE_SHARED_SHIFT)
 
 static inline bool pte_is_shared(uint64_t pte) {
     return (pte & PAGE_PRESENT) && (pte & PTE_SHARED_BIT);
@@ -52,7 +53,7 @@ static inline bool pte_is_shared(uint64_t pte) {
 #define PTE_TAGGED_PAYLOAD_HIGH_SHIFT                                          \
     11 /* packed position of the high chunk                                    \
         */
-#define PTE_TAGGED_PAYLOAD_LOW_MASK ((1ULL << PTE_TAGGED_PAYLOAD_LOW_BITS) - 1)
+#define PTE_TAGGED_PAYLOAD_LOW_MASK (BIT(PTE_TAGGED_PAYLOAD_LOW_BITS) - 1)
 #define PTE_TAGGED_PAYLOAD_BITS                                                \
     (PTE_TAGGED_PAYLOAD_LOW_BITS + (64 - PTE_TAGGED_PAYLOAD_HIGH_SHIFT))
 

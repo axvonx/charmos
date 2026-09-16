@@ -1,5 +1,7 @@
+#include <math/align.h>
 #include <math/fixed.h>
 #include <math/hash.h>
+#include <math/min_max.h>
 #include <mem/alloc.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -28,8 +30,7 @@ static uint32_t counter_get(const uint8_t *counters, size_t idx) {
 }
 
 static void counter_set(uint8_t *counters, size_t idx, uint32_t val) {
-    if (val > COUNTER_MAX)
-        val = COUNTER_MAX;
+    val = MIN(val, COUNTER_MAX);
     if (idx % 2 == 0)
         counters[idx / 2] =
             (counters[idx / 2] & 0xF0u) | (uint8_t) (val & 0x0Fu);
@@ -85,17 +86,9 @@ struct counting_bloom_filter *cbf_create(size_t capacity,
     size_t num_hashes = fx_to_int(fx_ceil(
         fx_mul(fx_div(fx_from_int(num_counters), fx_from_int(capacity)), ln2)));
 
-    if (num_counters < 8)
-        num_counters = 8;
-
-    if (num_hashes < 1)
-        num_hashes = 1;
-
-    if (num_hashes > 20)
-        num_hashes = 20;
-
-    if (num_counters % 2 != 0)
-        num_counters++;
+    num_counters = MAX(num_counters, CBF_COUNTERS_MIN);
+    CLAMP(num_hashes, CBF_HASHES_MIN, CBF_HASHES_MAX);
+    num_counters = ALIGN_UP(num_counters, 2);
 
     struct counting_bloom_filter *cbf =
         kmalloc(sizeof(struct counting_bloom_filter));
@@ -127,7 +120,7 @@ void cbf_add(struct counting_bloom_filter *cbf, const char *element) {
     if (!cbf || !element)
         return;
 
-    size_t positions[20];
+    size_t positions[CBF_HASHES_MAX];
     compute_positions(cbf, element, positions);
 
     for (size_t i = 0; i < cbf->num_hashes; i++)
@@ -141,7 +134,7 @@ bool cbf_contains(const struct counting_bloom_filter *cbf,
     if (!cbf || !element)
         return false;
 
-    size_t positions[20];
+    size_t positions[CBF_HASHES_MAX];
     compute_positions(cbf, element, positions);
 
     for (size_t i = 0; i < cbf->num_hashes; i++)
@@ -156,7 +149,7 @@ enum bloom_remove_result cbf_remove(struct counting_bloom_filter *cbf,
     if (!cbf || !element)
         return BLOOM_REMOVE_NOT_FOUND;
 
-    size_t positions[20];
+    size_t positions[CBF_HASHES_MAX];
     compute_positions(cbf, element, positions);
 
     /* all k counters must be in range (0, COUNTER_MAX) */

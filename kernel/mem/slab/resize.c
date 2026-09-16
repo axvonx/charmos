@@ -1,4 +1,5 @@
 #include <math/bit.h>
+#include <math/range.h>
 #include <mem/domain.h>
 #include <mem/pmm.h>
 
@@ -7,7 +8,7 @@
 bool slab_can_resize_to(struct slab *slab, size_t new_size_pages) {
     size_t cap = next_pow2(slab->page_count);
     size_t min = (cap >> 1) + 1;
-    return new_size_pages >= min && new_size_pages <= cap;
+    return IN_RANGE(new_size_pages, min, cap);
 }
 
 static void slab_shrink(struct slab *slab, size_t start, size_t end,

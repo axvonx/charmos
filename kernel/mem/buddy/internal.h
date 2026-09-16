@@ -1,5 +1,6 @@
 #pragma once
 #include <compiler.h>
+#include <math/bit.h>
 #include <math/min_max.h>
 #include <mem/bitmap.h>
 #include <mem/buddy.h>
@@ -21,19 +22,19 @@
  *   bits [12, 63] : next_pfn (52 bits)
  */
 #define BUDDY_IS_FREE_SHIFT 3
-#define BUDDY_IS_FREE_MASK (1ULL << BUDDY_IS_FREE_SHIFT)
+#define BUDDY_IS_FREE_MASK BIT(BUDDY_IS_FREE_SHIFT)
 
 #define BUDDY_IS_ZEROED_SHIFT 4
-#define BUDDY_IS_ZEROED_MASK (1ULL << BUDDY_IS_ZEROED_SHIFT)
+#define BUDDY_IS_ZEROED_MASK BIT(BUDDY_IS_ZEROED_SHIFT)
 
 #define BUDDY_ORDER_SHIFT 5
 #define BUDDY_ORDER_BITS 7
-#define BUDDY_ORDER_MASK (((1ULL << BUDDY_ORDER_BITS) - 1) << BUDDY_ORDER_SHIFT)
+#define BUDDY_ORDER_MASK ((BIT(BUDDY_ORDER_BITS) - 1) << BUDDY_ORDER_SHIFT)
 
 #define BUDDY_NEXT_PFN_SHIFT PAGE_4K_SHIFT
 #define BUDDY_NEXT_PFN_BITS (64 - PAGE_4K_SHIFT)
 #define BUDDY_NEXT_PFN_MASK                                                    \
-    (((1ULL << BUDDY_NEXT_PFN_BITS) - 1) << BUDDY_NEXT_PFN_SHIFT)
+    ((BIT(BUDDY_NEXT_PFN_BITS) - 1) << BUDDY_NEXT_PFN_SHIFT)
 
 struct buddy_page {
     uint64_t meta;

@@ -8,7 +8,7 @@
 
 struct thread;
 
-#define THREAD_WAIT_TRACE_DEPTH 16
+#define THREAD_WAIT_TRACE_DEPTH UINT64_C(16)
 
 struct thread_wait_arm {
     const char *site;     /* which arming path */

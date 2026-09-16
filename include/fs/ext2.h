@@ -4,6 +4,9 @@
 #include <compiler.h>
 #include <errno.h>
 #include <fs/vfs.h>
+#include <math/align.h>
+#include <math/min_max.h>
+#include <math/units.h>
 #include <mem/alloc.h>
 #include <stdint.h>
 #include <sync/spinlock.h>
@@ -94,8 +97,6 @@ extern uint64_t PTRS_PER_BLOCK;
 #define EXT2_FL_USER_VISIBLE 0x000BDFFF // User-visible flags
 #define EXT2_FL_USER_MODIFIABLE                                                \
     (EXT2_FL_USER_VISIBLE & ~(EXT2_SECRM_FL | EXT2_UNRM_FL))
-
-#define MIN(x, y) ((x > y) ? y : x)
 
 #define MAKE_NOP_CALLBACK                                                      \
     static bool nop_callback(struct ext2_fs *fs, struct ext2_dir_entry *entry, \

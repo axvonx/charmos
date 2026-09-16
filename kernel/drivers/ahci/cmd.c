@@ -5,6 +5,10 @@
 #include <drivers/ahci.h>
 #include <drivers/ata.h>
 #include <irq/idt.h>
+#include <math/align.h>
+#include <math/bit.h>
+#include <math/min_max.h>
+#include <math/units.h>
 #include <mem/alloc.h>
 #include <mem/vmm.h>
 #include <sch/sched.h>
@@ -15,7 +19,7 @@
 #include <thread/thread.h>
 #include <time/spin_sleep.h>
 
-#define MAX_PRDT_ENTRY_SIZE (4 * 1024 * 1024) // 4MB
+#define MAX_PRDT_ENTRY_SIZE MB(4)
 
 /* TODO: horrible code - bit-op spam */
 void ahci_process_completions(struct ahci_device *dev, uint32_t port) {
@@ -27,7 +31,7 @@ void ahci_process_completions(struct ahci_device *dev, uint32_t port) {
     uint32_t completed = ~(ci | sact);
 
     for (uint32_t slot = 0; slot < AHCI_MAX_SLOTS; slot++) {
-        uint32_t mask = 1U << slot;
+        uint32_t mask = BIT(slot);
         if (!(completed & mask))
             continue;
 
@@ -72,7 +76,7 @@ void ahci_send_command(struct ahci_disk *disk, struct ahci_full_port *port,
     disk->device->io_requests[disk->port][slot] = req;
 
     uint32_t command_issue = mmio_read_32(&port->port->ci);
-    command_issue |= (1U << slot);
+    command_issue |= BIT(slot);
     mmio_write_32(&port->port->ci, command_issue);
 }
 
@@ -80,7 +84,7 @@ static uint32_t try_find_slot(struct ahci_full_port *p) {
     while (true) {
         uint32_t old = atomic_load(&p->slot_bitmap);
         for (int slot = 0; slot < AHCI_MAX_SLOTS; slot++) {
-            uint32_t mask = 1U << slot;
+            uint32_t mask = BIT(slot);
             if (!(old & mask)) {
                 uint32_t new_bitmap = old | mask;
                 if (atomic_compare_exchange_weak(&p->slot_bitmap, &old,
@@ -115,8 +119,7 @@ void ahci_prepare_command(struct ahci_full_port *port, uint32_t slot,
     if (!hdr || !cmd_tbl || size == 0)
         return;
 
-    uint64_t prdt_count =
-        (size + MAX_PRDT_ENTRY_SIZE - 1) / MAX_PRDT_ENTRY_SIZE;
+    uint64_t prdt_count = DIV_ROUND_UP(size, MAX_PRDT_ENTRY_SIZE);
 
     if (prdt_count > 65535)
         return;
@@ -132,11 +135,10 @@ void ahci_prepare_command(struct ahci_full_port *port, uint32_t slot,
     uint64_t remaining = size;
     uint64_t offset = 0;
     uint64_t phys_base =
-        vmm_get_phys((uint64_t) buf, VMM_FLAG_NONE) & ~(PAGE_SIZE - 1);
+        PAGE_ALIGN_DOWN(vmm_get_phys((uint64_t) buf, VMM_FLAG_NONE));
 
     for (uint32_t i = 0; i < prdt_count; i++) {
-        uint64_t chunk =
-            (remaining > MAX_PRDT_ENTRY_SIZE) ? MAX_PRDT_ENTRY_SIZE : remaining;
+        uint64_t chunk = MIN(remaining, MAX_PRDT_ENTRY_SIZE);
 
         uint64_t phys_addr = phys_base + offset;
 
@@ -160,7 +162,7 @@ void ahci_setup_fis(struct ahci_cmd_table *cmd_tbl, uint8_t command,
     fis->command = command;
 
     if (is_atapi) {
-        fis->device = 1 << 6; // LBA bit
+        fis->device = BIT(6); // LBA bit
     }
 }
 

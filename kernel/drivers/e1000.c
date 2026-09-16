@@ -3,6 +3,7 @@
 #include <drivers/e1000.h>
 #include <drivers/mmio.h>
 #include <drivers/pci.h>
+#include <math/bit.h>
 #include <mem/alloc.h>
 #include <mem/alloc_or_die.h>
 #include <mem/page.h>
@@ -192,7 +193,7 @@ bool e1000_init(struct pci_device *pci, struct e1000_device *dev) {
     pci_write(dev->bus, dev->device, dev->function, PCI_BAR0, bar);
 
     uint64_t mmio_size = ~(bar_mask & ~0xF) + 1;
-    if (mmio_size == 0 || mmio_size > (1 << 24))
+    if (mmio_size == 0 || mmio_size > BIT(24))
         return false;
 
     dev->regs = mmio_map(phys_addr, mmio_size);

@@ -116,26 +116,25 @@ cmdline_type_enum_to_cmdline_type(enum type_enum t) {
 
 static inline uint64_t
 cmdline_entry_get_accepted_mask(const struct cmdline_entry *e) {
-    if (e->types >= (1ULL << CMDLINE_TYPE_OFFSET)) {
-        kassert((e->types & ((1ULL << CMDLINE_TYPE_OFFSET) - 1)) == 0);
+    if (e->types >= BIT(CMDLINE_TYPE_OFFSET)) {
+        kassert((e->types & (BIT(CMDLINE_TYPE_OFFSET) - 1)) == 0);
         return e->types;
     }
     if (e->types >= CMDLINE_TYPE_OFFSET && e->types < CMDLINE_TYPE_NONE) {
-        return (1ULL << e->types);
+        return BIT(e->types);
     }
     if (cmdline_value_is_typed(&e->value) && e->value.c_type != TYPE_NONE) {
         switch (e->value.c_type) {
-        case TYPE_BOOL: return (1ULL << CMDLINE_TYPE_BOOL);
+        case TYPE_BOOL: return BIT(CMDLINE_TYPE_BOOL);
         case TYPE_INT8:
         case TYPE_INT16:
         case TYPE_INT32:
-        case TYPE_INT64:
-            return (1ULL << CMDLINE_TYPE_INT) | (1ULL << CMDLINE_TYPE_UINT);
+        case TYPE_INT64: return BIT(CMDLINE_TYPE_INT) | BIT(CMDLINE_TYPE_UINT);
         case TYPE_UINT8:
         case TYPE_UINT16:
         case TYPE_UINT32:
-        case TYPE_UINT64: return (1ULL << CMDLINE_TYPE_UINT);
-        case TYPE_POINTER: return (1ULL << CMDLINE_TYPE_STRING);
+        case TYPE_UINT64: return BIT(CMDLINE_TYPE_UINT);
+        case TYPE_POINTER: return BIT(CMDLINE_TYPE_STRING);
         default: break;
         }
     }

@@ -1,5 +1,6 @@
 #include <math/align.h>
 #include <math/bit.h>
+#include <math/range.h>
 #include <math/units.h>
 #include <mem/asan.h>
 #include <mem/hhdm.h>
@@ -20,7 +21,7 @@ static void validate_ptr_in_chunk(struct slab_chunk *chunk, void *ptr) {
     vaddr_t vaddr = (vaddr_t) ptr;
     vaddr_t min = base_addr_to_vaddr(chunk->base_addr);
     vaddr_t max = base_addr_to_vaddr(chunk->base_addr) + SLAB_CHUNK_SIZE;
-    kassert(vaddr >= min && vaddr <= max);
+    kassert(IN_RANGE(vaddr, min, max));
 }
 
 static struct list_head *chunk_list_for(struct slab_chunks *sc,
@@ -104,7 +105,7 @@ static struct slab_chunk *alloc_chunk(struct slab_chunks *sc,
 static vaddr_t alloc_from(struct slab_chunks *chunks,
                           struct slab_chunk *chunk) {
     uint64_t *bm = (uint64_t *) chunk->bitmap;
-    size_t nwords = DIV_ROUND_UP(chunks->bitmap_bits, 64);
+    size_t nwords = DIV_ROUND_UP(chunks->bitmap_bits, sizeof(uint64_t) * 8);
 
     for (size_t w = 0; w < nwords; w++) {
         if (bm[w] != UINT64_MAX) {
@@ -115,7 +116,7 @@ static vaddr_t alloc_from(struct slab_chunks *chunks,
             if (i >= chunks->bitmap_bits)
                 break;
 
-            SLAB_BITMAP_SET(bm[w], 1ULL << bit);
+            SLAB_BITMAP_SET(bm[w], BIT(bit));
             chunk->used++;
 
             return base_addr_to_vaddr(chunk->base_addr) +
@@ -138,8 +139,8 @@ static void free_to(struct slab_chunks *chunks, struct slab_chunk *chunk,
 
     size_t w = i / 64;
     size_t b = i % 64;
-    kassert(SLAB_BITMAP_TEST(bm[w], 1ULL << b));
-    SLAB_BITMAP_UNSET(bm[w], 1ULL << b);
+    kassert(SLAB_BITMAP_TEST(bm[w], BIT(b)));
+    SLAB_BITMAP_UNSET(bm[w], BIT(b));
     chunk->used--;
 }
 
@@ -206,7 +207,7 @@ void slab_chunks_free(struct slab_chunks *sc, struct slab_chunk *chunk,
 void slab_chunks_init(struct slab_chunks *sc, struct slab_cache *parent) {
     sc->parent = parent;
     sc->page_stride = next_pow2(parent->pages_per_slab);
-    size_t page_count = 1 << (PAGE_2M_SHIFT - PAGE_4K_SHIFT);
+    size_t page_count = BIT(PAGE_2M_SHIFT - PAGE_4K_SHIFT);
 
     /* Bytes rounded up to whole 64 bit words since bitmap is that width,
      * bits stay the real slot count, because that is different */

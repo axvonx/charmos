@@ -3,6 +3,7 @@
 #include <kassert.h>
 #include <math/align.h>
 #include <math/bit.h>
+#include <math/range.h>
 #include <mem/alloc.h>
 #include <mem/fixed_size_alloc.h>
 #include <mem/page.h>
@@ -44,8 +45,8 @@ LOG_HANDLE_EXTERN(slab);
 #define SLAB_ALLOC_BEHAVIOR_FROM_ALLOC ALLOC_BEHAVIOR_AVAIL_BIT(0)
 #define SLAB_ELCM_DEFAULT_MAX_WASTAGE_PCT 5
 
-#define SLAB_HEAP_START 0xFFFFF00000000000ULL
-#define SLAB_HEAP_END 0xFFFFF10000000000ULL
+#define SLAB_HEAP_START ((vaddr_t) UINT64_C(0xFFFFF00000000000))
+#define SLAB_HEAP_END ((vaddr_t) UINT64_C(0xFFFFF10000000000))
 
 #define SLAB_MAG_ENTRIES 64
 #define SLAB_MAG_WATERMARK_PCT                                                 \
@@ -59,7 +60,13 @@ LOG_HANDLE_EXTERN(slab);
 #define SLAB_POW2_ORDER_EMPTY 0xE /* Sentinel value, "Nothing here" */
 
 /* Bitmap */
-#define SLAB_BITMAP_BYTES_FOR(x) (DIV_ROUND_UP((x), 64) * sizeof(uint64_t))
+#define SLAB_BITMAP_BYTES_FOR(x)                                               \
+    ({                                                                         \
+        __auto_type __bits = (x);                                              \
+        typecheck_widenable_to((size_t) 0, x);                                 \
+        DIV_ROUND_UP((size_t) __bits, sizeof(uint64_t) * 8) *                  \
+            sizeof(uint64_t);                                                  \
+    })
 #define SLAB_BITMAP_SET(bm, mask) (bm |= mask)
 #define SLAB_BITMAP_TEST(__bitmap, __idx) (__bitmap & __idx)
 #define SLAB_BITMAP_UNSET(bm, mask) (bm &= ~mask)
@@ -75,7 +82,7 @@ LOG_HANDLE_EXTERN(slab);
 
 #define SLAB_GC_FLAG_DESTROY_TARGET_SHIFT 10ull
 #define SLAB_GC_FLAG_DESTROY_TARGET_MASK 0xFFF
-#define SLAB_GC_FLAG_DESTROY_TARGET_MAX 63
+#define SLAB_GC_FLAG_DESTROY_TARGET_MAX ((size_t) 63)
 #define SLAB_GC_FLAG_DESTROY_TARGET_SET(flags, target)                         \
     (flags |= target << SLAB_GC_FLAG_DESTROY_TARGET_SHIFT)
 
@@ -729,8 +736,9 @@ static inline void slab_move(struct slab_cache *c, struct slab *slab,
 static inline void slab_byte_index_and_mask(uint64_t index,
                                             uint64_t *byte_idx_out,
                                             uint8_t *bitmask_out) {
+    uint8_t mask = 0;
     *byte_idx_out = index / 8ULL;
-    *bitmask_out = (uint8_t) (1ULL << (index % 8ULL));
+    *bitmask_out = BIT_SET(mask, index % 8ULL);
 }
 
 static inline void slab_index_and_mask(struct slab *slab, void *obj,
@@ -779,7 +787,7 @@ static inline uint64_t slab_page_flags(enum slab_type type) {
 
 static inline bool slab_ptr_in_slab(void *ptr) {
     vaddr_t vaddr = (vaddr_t) ptr;
-    return vaddr >= SLAB_HEAP_START && vaddr <= SLAB_HEAP_END;
+    return IN_RANGE(vaddr, SLAB_HEAP_START, SLAB_HEAP_END);
 }
 
 static inline size_t slab_cache_pow2_order(struct slab_cache *sc) {

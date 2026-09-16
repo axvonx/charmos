@@ -3,6 +3,7 @@
 #include <compiler.h>
 #include <global.h>
 #include <math/align.h>
+#include <math/bit.h>
 #include <math/units.h>
 #include <mem/hhdm.h>
 #include <stdint.h>
@@ -18,12 +19,12 @@ struct folio;
 #define PAGE_PRESENT (0x1UL)
 #define PAGE_WRITE (0x2UL)
 #define PAGE_USER_ALLOWED (0x4UL)
-#define PAGE_XD (1UL << 63) // E(x)ecute (D)isable
+#define PAGE_XD BIT(63) // E(x)ecute (D)isable
 #define PAGE_PHYS_MASK (0x00FFFFFFF000UL)
-#define PAGE_UNCACHABLE (1UL << 4) /* PCD */
+#define PAGE_UNCACHABLE BIT(4) /* PCD */
 #define PAGE_NO_FLAGS (0)
-#define PAGE_WRITETHROUGH (1UL << 3)
-#define PAGE_HUGE (1ULL << 7) /* PS: 2MB at the PD level, 1GB at the PDPT */
+#define PAGE_WRITETHROUGH BIT(3)
+#define PAGE_HUGE BIT(7) /* PS: 2MB at the PD level, 1GB at the PDPT */
 
 /* TODO: */
 #define PAGE_PAGEABLE (0)
@@ -33,6 +34,7 @@ struct folio;
 #define PAGE_1GB_PHYS_MASK (0x00FFC0000000UL)
 #define PAGE_ALIGN_DOWN(x) ALIGN_DOWN((uintptr_t) (x), PAGE_SIZE)
 #define PAGE_ALIGN_UP(x) ALIGN_UP((uintptr_t) (x), PAGE_SIZE)
+#define PAGE_ALIGN_UP_WRAPPING(x) ALIGN_UP_WRAPPING((uintptr_t) (x), PAGE_SIZE)
 #define IS_PAGE_ALIGNED(x) IS_ALIGNED((uintptr_t) (x), PAGE_SIZE)
 #define PAGE_2MB_ALIGN_DOWN(x) ALIGN_DOWN((uintptr_t) (x), PAGE_2MB)
 #define PAGE_2MB_ALIGN_UP(x) ALIGN_UP((uintptr_t) (x), PAGE_2MB)
@@ -42,7 +44,7 @@ struct folio;
 #define PAGE_TO_PFN(addr) ((addr) / PAGE_SIZE)
 #define PFN_TO_PAGE(pfn) ((pfn) * PAGE_SIZE)
 
-#define PAGES_NEEDED_FOR(bytes) (((bytes) + PAGE_SIZE - 1ULL) / PAGE_SIZE)
+#define PAGES_NEEDED_FOR(bytes) DIV_ROUND_UP((bytes), PAGE_SIZE)
 
 #define VMM_MAP_BASE 0xFFFFA00000200000
 #define VMM_MAP_LIMIT 0xFFFFA00010000000

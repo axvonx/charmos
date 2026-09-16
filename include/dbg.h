@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define STACK_TRACE_MAX_DEPTH 64
+#define STACK_TRACE_MAX_DEPTH ((size_t) 64)
 
 void debug_print_registers();
 

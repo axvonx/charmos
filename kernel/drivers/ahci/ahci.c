@@ -3,6 +3,7 @@
 #include <drivers/mmio.h>
 #include <drivers/pci.h>
 #include <irq/idt.h>
+#include <math/align.h>
 #include <mem/alloc.h>
 #include <mem/vmm.h>
 #include <registry.h>
@@ -30,7 +31,7 @@ struct ahci_disk *ahci_discover_device(uint8_t bus, uint8_t device,
     }
 
     uint64_t abar_size = ~(size_mask & ~0xFU) + 1;
-    uint64_t map_size = (abar_size + 0xFFFU) & ~0xFFFU;
+    uint64_t map_size = PAGE_ALIGN_UP(abar_size);
 
     void *abar_virt = mmio_map(abar_base, map_size);
     if (!abar_virt) {

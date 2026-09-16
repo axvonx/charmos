@@ -173,7 +173,7 @@ static void sd_mt_spawn(char *name, void (*fn)(void *), size_t n) {
     irql_lower(irql);
 }
 
-#define SD_MT_DEDUP_SAVES_MAX 256
+#define SD_MT_DEDUP_SAVES_MAX ((size_t) 256)
 #define SD_MT_DEDUP_ID 0x3000
 
 static stack_handle_t sd_dedup_handles[SD_MT_THREADS];
@@ -226,9 +226,8 @@ TEST_DECLARE_INTEGRATION(stack_depot, mt_dedup, TEST_INTENSITY(16, 64, 256)) {
     sd_make_trace(trace, SD_TRACE_LEN, SD_MT_DEDUP_ID);
     TEST_ASSERT_EQ(sd_chain_count(trace, SD_TRACE_LEN), 0);
 
-    sd_dedup_saves_count = ctx->intensity_val ? ctx->intensity_val : 64;
-    if (sd_dedup_saves_count > SD_MT_DEDUP_SAVES_MAX)
-        sd_dedup_saves_count = SD_MT_DEDUP_SAVES_MAX;
+    sd_dedup_saves_count = MIN(ctx->intensity_val ? ctx->intensity_val : 64,
+                               SD_MT_DEDUP_SAVES_MAX);
 
     sd_mt_reset(ctx, SD_MT_THREADS);
     atomic_store(&sd_dedup_saved, 0);
@@ -343,7 +342,7 @@ TEST_DECLARE_INTEGRATION(stack_depot, mt_shared_set,
     return TEST_SUCCESS;
 }
 
-#define SD_MT_DISJOINT_PER_THREAD_MAX 128
+#define SD_MT_DISJOINT_PER_THREAD_MAX ((size_t) 128)
 #define SD_MT_DISJOINT_ID 0x5000
 static size_t sd_mt_disjoint_per_thread = 32;
 
@@ -410,9 +409,9 @@ static void sd_disjoint_worker(void *arg) {
 }
 
 TEST_DECLARE_INTEGRATION(stack_depot, mt_disjoint, TEST_INTENSITY(8, 32, 128)) {
-    sd_mt_disjoint_per_thread = ctx->intensity_val ? ctx->intensity_val : 32;
-    if (sd_mt_disjoint_per_thread > SD_MT_DISJOINT_PER_THREAD_MAX)
-        sd_mt_disjoint_per_thread = SD_MT_DISJOINT_PER_THREAD_MAX;
+    sd_mt_disjoint_per_thread =
+        MIN(ctx->intensity_val ? ctx->intensity_val : 32,
+            SD_MT_DISJOINT_PER_THREAD_MAX);
 
     sd_mt_reset(ctx, SD_MT_THREADS);
     memset(sd_disjoint_handles, 0, sizeof(sd_disjoint_handles));

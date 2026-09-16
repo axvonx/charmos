@@ -1,3 +1,4 @@
+#include <math/units.h>
 #include <mem/elcm.h>
 #include <mem/slab.h>
 
@@ -18,7 +19,7 @@ struct slab_elcm_candidate slab_elcm(size_t obj_size, size_t obj_alignment) {
     struct elcm_params params = {
         .metadata_size_bytes = sizeof(struct slab),
 #ifdef DEBUG_SLAB_DEEP
-        .metadata_bits_per_obj = 1 + sizeof(stack_handle_t) * 8,
+        .metadata_bits_per_obj = 1 + to_bits(sizeof(stack_handle_t)),
 #else
         .metadata_bits_per_obj = 1,
 #endif

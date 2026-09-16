@@ -4,6 +4,8 @@
 #include <linker/symbol_table.h>
 #include <linker/symbols.h>
 #include <log.h>
+#include <math/min_max.h>
+#include <math/range.h>
 #include <mem/alloc.h>
 #include <mem/alloc_or_die.h>
 #include <mem/vmm.h>
@@ -542,7 +544,7 @@ void log_emit_internal(struct log_site *site, struct log_handle *handle,
         log_emit_ndjson_record(site, &rec);
     }
 
-    if ((ll & LOG_HANDLE_PANIC) && level >= LOG_ERROR) {
+    if ((handle->flags & LOG_HANDLE_PANIC) && level >= LOG_ERROR) {
         log_dump_all();
         debug_print_stack();
         panic("fatal log event");
@@ -680,9 +682,7 @@ static bool stack_addr_is_text(uint64_t addr) {
  * them all into `entries`, returning the number of entries found */
 size_t stack_unwind(uint64_t frame, uint64_t *entries, size_t max) {
     size_t nr = 0;
-
-    if (max > STACK_TRACE_MAX_DEPTH)
-        max = STACK_TRACE_MAX_DEPTH;
+    max = MIN(max, STACK_TRACE_MAX_DEPTH);
 
     while (nr < max) {
         if (!stack_frame_readable(frame))
@@ -799,7 +799,7 @@ void debug_print_stack_from(uint64_t *start, size_t max_scan) {
 
         uint64_t val = *(uint64_t *) addr;
 
-        if (val >= 0xffffffff80000000ULL && val <= 0xffffffffffffffffULL) {
+        if (IN_RANGE(val, UINT64_C(0xffffffff80000000), UINT64_MAX)) {
             uint64_t sym_addr;
             const char *sym = find_symbol(val, &sym_addr);
             if (sym) {

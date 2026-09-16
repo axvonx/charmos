@@ -40,8 +40,7 @@ static bool fat12_16_walk_cluster(struct fat_fs *fs, uint32_t cluster,
 
     uint32_t root_dir_size = bpb->root_entry_count * sizeof(struct fat_dirent);
 
-    uint32_t root_dir_sectors =
-        (root_dir_size + bytes_per_sector - 1) / bytes_per_sector;
+    uint32_t root_dir_sectors = DIV_ROUND_UP(root_dir_size, bytes_per_sector);
 
     uint32_t lba = fat_cluster_to_lba(fs, cluster);
     uint32_t sectors_to_read = is_root ? root_dir_sectors : sectors_per_cluster;

@@ -18,19 +18,19 @@ TEST_DECLARE_UNIT(ioapic, redirection_entry_layout) {
     TEST_ASSERT_EQ((entry.raw & 0xFFULL), 0x42);
 
     /* Delivery mode = bits 8-10 (1 << 8 = 0x100) */
-    TEST_ASSERT_EQ((entry.raw & (7ULL << 8)), (1ULL << 8));
+    TEST_ASSERT_EQ((entry.raw & (7ULL << 8)), BIT(8));
 
     /* Destination mode = bit 11 */
-    TEST_ASSERT_EQ((entry.raw & (1ULL << 11)), (1ULL << 11));
+    TEST_ASSERT_BIT_SET(entry.raw, 11);
 
     /* Polarity = bit 13 */
-    TEST_ASSERT_EQ((entry.raw & (1ULL << 13)), (1ULL << 13));
+    TEST_ASSERT_BIT_SET(entry.raw, 13);
 
     /* Trigger mode = bit 15 */
-    TEST_ASSERT_EQ((entry.raw & (1ULL << 15)), (1ULL << 15));
+    TEST_ASSERT_BIT_SET(entry.raw, 15);
 
     /* Mask = bit 16 */
-    TEST_ASSERT_EQ((entry.raw & (1ULL << 16)), (1ULL << 16));
+    TEST_ASSERT_BIT_SET(entry.raw, 16);
 
     /* Destination APIC ID = bits 56-63 */
     TEST_ASSERT_EQ((entry.raw >> 56), 0xA5);

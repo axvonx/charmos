@@ -1,5 +1,6 @@
 #include <console/panic.h>
 #include <kassert.h>
+#include <math/min_max.h>
 #include <mem/alloc.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -43,18 +44,13 @@ static void rbit_check_cycle(struct rbit_node *node, const char *caller) {
     }
 }
 
-static size_t max3(size_t a, size_t b, size_t c) {
-    size_t m = a > b ? a : b;
-    return m > c ? m : c;
-}
-
 static size_t node_max(struct rbit_node *n) {
     return n ? n->max : 0;
 }
 
 static bool default_augment(struct rbit_node *n) {
     size_t old = n->max;
-    n->max = max3(n->interval.high, node_max(n->left), node_max(n->right));
+    n->max = MAX(n->interval.high, node_max(n->left), node_max(n->right));
     return n->max != old;
 }
 
@@ -346,7 +342,7 @@ static size_t validate_rbit(struct rbit_node *node, size_t *black_height) {
     }
 
     size_t expected_max =
-        max3(node->interval.high, node_max(node->left), node_max(node->right));
+        MAX(node->interval.high, node_max(node->left), node_max(node->right));
     if (node->max != expected_max) {
         panic("Max-invariant violation at node [%d,%d]: stored=%d, expected=%d",
               node->interval.low, node->interval.high, node->max, expected_max);

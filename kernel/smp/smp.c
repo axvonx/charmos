@@ -3,6 +3,7 @@
 #include <crypto/prng.h>
 #include <irq/idt.h>
 #include <limine.h>
+#include <math/bit.h>
 #include <mem/alloc.h>
 #include <mem/alloc_or_die.h>
 #include <mem/domain.h>
@@ -34,17 +35,17 @@ static void detect_cpu_features(struct cpu_capability *cap) {
     /* CPUID.1 */
     cpuid_count(1, 0, &eax, &ebx, &ecx, &edx);
 
-    if (edx & (1 << 26))
+    if (BIT_TEST(edx, 26))
         cap->feature_bits |= CPU_FEAT_SSE2;
-    if (ecx & (1 << 28))
+    if (BIT_TEST(ecx, 28))
         cap->feature_bits |= CPU_FEAT_AVX;
 
     /* CPUID.7.0 */
     cpuid_count(7, 0, &eax, &ebx, &ecx, &edx);
 
-    if (ebx & (1 << 5))
+    if (BIT_TEST(ebx, 5))
         cap->feature_bits |= CPU_FEAT_AVX2;
-    if (ebx & (1 << 16))
+    if (BIT_TEST(ebx, 16))
         cap->feature_bits |= CPU_FEAT_AVX512F;
 }
 
@@ -214,9 +215,9 @@ static void init_smt_info(struct core *c) {
 
     apic_id = c->id;
     c->package_id = c->id >> core_width;
-    c->smt_mask = (1 << smt_width) - 1;
+    c->smt_mask = BIT(smt_width) - 1;
     c->smt_id = apic_id & c->smt_mask;
-    c->core_id = (apic_id >> smt_width) & ((1 << (core_width - smt_width)) - 1);
+    c->core_id = (apic_id >> smt_width) & (BIT(core_width - smt_width) - 1);
 }
 
 static void detect_cpu_capability(struct core *c) {

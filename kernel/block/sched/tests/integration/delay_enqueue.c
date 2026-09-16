@@ -25,7 +25,7 @@ static void bio_sch_callback(struct bio_request *req) {
     TEST_ASSERT_VOID(req->status == BIO_STATUS_OK);
 }
 
-#define BIO_SCHED_TEST_RUNS_MAX 4096
+#define BIO_SCHED_TEST_RUNS_MAX ((size_t) 4096)
 static uint64_t runs_per_lvl[BIO_SCHED_LEVELS] = {0};
 static struct bio_request *rqs[BIO_SCHED_TEST_RUNS_MAX] = {0};
 static uint8_t *buffers[BIO_SCHED_TEST_RUNS_MAX] = {0};
@@ -39,9 +39,8 @@ TEST_DECLARE_INTEGRATION(bio_sched, delay_enqueue,
     struct block_device *d = fs->drive;
     kassert(d);
 
-    size_t test_runs = ctx->intensity_val ? ctx->intensity_val : 1024;
-    if (test_runs > BIO_SCHED_TEST_RUNS_MAX)
-        test_runs = BIO_SCHED_TEST_RUNS_MAX;
+    size_t test_runs = MIN(ctx->intensity_val ? ctx->intensity_val : 1024,
+                           BIO_SCHED_TEST_RUNS_MAX);
 
     memset(runs_per_lvl, 0, sizeof(runs_per_lvl));
     memset(total_complete_time, 0, sizeof(total_complete_time));
@@ -56,7 +55,7 @@ TEST_DECLARE_INTEGRATION(bio_sched, delay_enqueue,
             kmalloc(sizeof(struct bio_request), ALLOC_FLAGS_ZERO);
         TEST_ASSERT_NONNULL(rq);
         TEST_ASSERT_NONNULL(buf);
-        TEST_ASSERT(IS_ALIGNED((vaddr_t) buf, PAGE_SIZE));
+        TEST_ASSERT(IS_PAGE_ALIGNED(buf));
 
         rq->disk = d;
         rq->lba = (i * 2) % 512;

@@ -1,16 +1,22 @@
 #include <kassert.h>
+#include <math/bit.h>
+#include <math/min_max.h>
 #include <sch/sched.h>
 #include <thread/apc.h>
 #include <thread/thread.h>
 
 static inline void scheduler_set_queue_bitmap(struct scheduler *sched,
                                               uint8_t prio) {
-    atomic_fetch_or(&sched->queue_bitmap, 1 << prio);
+    uint8_t mask = 0;
+    mask = BIT_SET(mask, prio);
+    atomic_fetch_or(&sched->queue_bitmap, mask);
 }
 
 static inline void scheduler_clear_queue_bitmap(struct scheduler *sched,
                                                 uint8_t prio) {
-    atomic_fetch_and(&sched->queue_bitmap, ~(1 << prio));
+    uint8_t mask = UINT8_MAX;
+    mask = BIT_CLEAR(mask, prio);
+    atomic_fetch_and(&sched->queue_bitmap, mask);
 }
 
 static inline uint8_t scheduler_get_bitmap(struct scheduler *sched) {
@@ -161,7 +167,7 @@ thread_activity_class_str(enum thread_activity_class c) {
 
 static inline int64_t thread_virtual_runtime_left(struct thread *t) {
     int64_t ret = t->virtual_budget - t->virtual_period_runtime;
-    return ret < 0 ? 0 : ret;
+    return MAX(ret, INT64_C(0));
 }
 
 static inline void thread_scale_back_delta(struct thread *thread) {

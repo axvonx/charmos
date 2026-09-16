@@ -12,7 +12,7 @@ enum mutex_bits : uintptr_t {
     (atomic_load_explicit(&((struct mutex *) (__mtx))->lock_word,              \
                           memory_order_acquire))
 #define MUTEX_BACKOFF_DEFAULT 4
-#define MUTEX_BACKOFF_MAX 32768
+#define MUTEX_BACKOFF_MAX ((size_t) 32768)
 #define MUTEX_BACKOFF_SHIFT 1
 #define MUTEX_BACKOFF_JITTER_PCT 15 /* 15% variation of base backoff */
 

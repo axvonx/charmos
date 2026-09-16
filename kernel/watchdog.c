@@ -1,6 +1,7 @@
 #include <acpi/lapic.h>
 #include <cmdline.h>
 #include <irq/irq.h>
+#include <math/min_max.h>
 #include <mem/alloc_or_die.h>
 #include <pit.h>
 #include <smp/percpu.h>
@@ -230,8 +231,7 @@ bool watchdog_count_heartbeats_at(const struct watchdog_buckets *buckets,
     if (snap.last_heartbeat_ms == 0)
         goto not_ready;
 
-    if (unlikely(now < snap.last_heartbeat_ms))
-        now = snap.last_heartbeat_ms;
+    now = MAX(now, snap.last_heartbeat_ms);
 
     size_t cursor = snap.curr_epoch * WATCHDOG_NUM_BUCKETS + snap.idx;
     size_t last_bucket = snap.last_heartbeat_ms / bucket_interval_ms;
@@ -239,9 +239,7 @@ bool watchdog_count_heartbeats_at(const struct watchdog_buckets *buckets,
     kassert(last_bucket >= cursor);
 
     size_t first_bucket = last_bucket - cursor;
-    size_t completed = now_bucket - first_bucket;
-    if (completed > window_buckets)
-        completed = window_buckets;
+    size_t completed = MIN(now_bucket - first_bucket, window_buckets);
     if (!completed)
         goto not_ready;
 

@@ -2,6 +2,7 @@
 #include <compiler.h>
 #include <drivers/pci.h>
 #include <log.h>
+#include <math/bit.h>
 #include <stdbool.h>
 #include <stdint.h>
 #pragma once
@@ -26,15 +27,15 @@
 #define E1000_REG_ICR 0x00C0
 
 // Transmit Control Register
-#define E1000_TCTL_EN (1 << 1)
-#define E1000_TCTL_PSP (1 << 3)
+#define E1000_TCTL_EN BIT(1)
+#define E1000_TCTL_PSP BIT(3)
 #define E1000_TCTL_CT_SHIFT 4
 #define E1000_TCTL_COLD_SHIFT 12
 
 // Receive Control Register
-#define E1000_RCTL_EN (1 << 1)
-#define E1000_RCTL_BAM (1 << 15)
-#define E1000_RCTL_SECRC (1 << 26)
+#define E1000_RCTL_EN BIT(1)
+#define E1000_RCTL_BAM BIT(15)
+#define E1000_RCTL_SECRC BIT(26)
 
 #define E1000_NUM_RX_DESC 64
 #define E1000_NUM_TX_DESC 64
@@ -135,14 +136,14 @@ struct icmp_hdr {
     uint16_t sequence;
 } __packed;
 
-#define E1000_TXD_CMD_EOP (1 << 0)
-#define E1000_TXD_CMD_IFCS (1 << 1)
-#define E1000_TXD_CMD_RS (1 << 3)
-#define E1000_TXD_STAT_DD (1 << 0)
+#define E1000_TXD_CMD_EOP BIT(0)
+#define E1000_TXD_CMD_IFCS BIT(1)
+#define E1000_TXD_CMD_RS BIT(3)
+#define E1000_TXD_STAT_DD BIT(0)
 
-#define E1000_RXD_STAT_DD (1 << 0)
-#define E1000_RXD_STAT_EOP (1 << 1)
-#define E1000_CTRL_RST (1 << 26) // Software reset
+#define E1000_RXD_STAT_DD BIT(0)
+#define E1000_RXD_STAT_EOP BIT(1)
+#define E1000_CTRL_RST BIT(26) // Software reset
 
 #define E1000_BAR_INDEX 0
 #define PCI_BAR0 0x10

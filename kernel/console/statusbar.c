@@ -5,6 +5,7 @@
 #include <console/report.h>
 #include <console/statusbar.h>
 #include <console/term.h>
+#include <math/min_max.h>
 #include <sch/irql.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -15,8 +16,8 @@
 #include <time/time.h>
 #include <time/timer.h>
 
-#define BAR_MIN_COLS 10
-#define BAR_MAX_COLS 40
+#define BAR_MIN_COLS ((size_t) 10)
+#define BAR_MAX_COLS ((size_t) 40)
 
 #define BAR_ESC(s) serial_write((s), sizeof(s) - 1)
 
@@ -168,17 +169,11 @@ static void bar_format_duration(time_ms_t elapsed, char *buf, size_t cap) {
 }
 
 static void bar_progress_render(struct bar_progress *progress) {
-    size_t done = progress->done;
+    size_t done = MIN(progress->done, progress->total);
     size_t total = progress->total;
 
-    if (done > total)
-        done = total;
-
     size_t width = term_size().cols / 3;
-    if (width < BAR_MIN_COLS)
-        width = BAR_MIN_COLS;
-    if (width > BAR_MAX_COLS)
-        width = BAR_MAX_COLS;
+    CLAMP(width, BAR_MIN_COLS, BAR_MAX_COLS);
 
     size_t filled = total ? (width * done) / total : width;
     size_t pct = total ? (100 * done) / total : 100;
