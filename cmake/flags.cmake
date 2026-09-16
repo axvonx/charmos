@@ -27,7 +27,8 @@ string(REPLACE ";" " " KERNEL_WARNINGS_DEBUG_STR "${KERNEL_WARNINGS_DEBUG}")
 
 set(KERNEL_FREESTANDING
     -ffreestanding
-    -fno-stack-protector
+    -fstack-protector-strong
+    -mstack-protector-guard=global
     -fno-stack-check
     -fno-PIC
     -fno-omit-frame-pointer
