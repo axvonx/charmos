@@ -63,7 +63,7 @@ static bool move_to(struct slab_chunks *sc, struct slab_chunk *c,
 }
 
 static struct slab_chunk *alloc_chunk(struct slab_chunks *sc,
-                                      enum irql *lirql) {
+                                      enum irql *lirql) TSA_NO_ANALYSIS {
     vaddr_t base = vas_alloc(slab_global.vas, PAGE_2MB, PAGE_2MB);
 
     if (!base)

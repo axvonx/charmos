@@ -46,14 +46,14 @@ bool ndjson_carrier_online(void) {
     return atomic_load_explicit(&carrier_up, memory_order_acquire);
 }
 
-void ndjson_enter_panic(void) {
+void ndjson_enter_panic(void) TSA_NO_ANALYSIS {
     atomic_store_explicit(&carrier_panicked, true, memory_order_release);
     raw_spin_unlock(&carrier_lock);
 }
 
 /* Raw spinlocks here, because if something IRQL related panics,
  * it would not be able to use ndjson to log */
-bool ndjson_carrier_begin(bool *irqs_were_on) {
+bool ndjson_carrier_begin(bool *irqs_were_on) TSA_NO_ANALYSIS {
     *irqs_were_on = false;
 
     if (!ndjson_carrier_online())
@@ -75,7 +75,7 @@ bool ndjson_carrier_begin(bool *irqs_were_on) {
     return true;
 }
 
-void ndjson_carrier_end(bool irqs_were_on) {
+void ndjson_carrier_end(bool irqs_were_on) TSA_NO_ANALYSIS {
     raw_spin_unlock(&carrier_lock);
 
     if (irqs_were_on)

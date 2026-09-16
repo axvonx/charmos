@@ -6,7 +6,8 @@
 
 #define work_from_worklist_node(node) container_of(node, struct work, list_node)
 
-static inline enum irql workqueue_lock(struct workqueue *workqueue) {
+static inline enum irql workqueue_lock(struct workqueue *workqueue)
+    TSA_ACQUIRES(&workqueue->lock) {
     if (workqueue->attrs.flags & WORKQUEUE_FLAG_ISR_SAFE) {
         return spin_lock_irq_disable(&workqueue->lock);
     } else {

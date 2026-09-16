@@ -66,7 +66,7 @@ struct turnstile *turnstile_init(struct turnstile *ts);
 struct turnstile *turnstile_block(struct turnstile *ts, size_t queue_num,
                                   void *lock_obj, enum irql lock_irql,
                                   struct thread *owner);
-struct turnstile *turnstile_lookup(void *obj, enum irql *irql_out);
+enum irql turnstile_lookup(void *obj, struct turnstile **out_ts);
 void turnstile_unlock(void *obj, enum irql irql);
 void turnstile_wake(struct turnstile *ts, size_t queue, size_t num_threads,
                     enum irql lock_irql);

@@ -285,23 +285,21 @@ static void climb_handle_act_self(struct thread *t, struct climb_handle *h,
         irql_lower(irql);
 }
 
+static void climb_handle_act_other_locked(struct thread *t,
+                                          struct climb_handle *ch,
+                                          void (*act)(struct thread *,
+                                                      struct climb_handle *)) {
+    act(t, ch);
+}
+
 static void climb_handle_act_other(struct thread *t, struct climb_handle *ch,
                                    void (*act)(struct thread *,
-                                               struct climb_handle *),
-                                   bool lock) {
-
+                                               struct climb_handle *)) {
     /* thread cannot disappear under us */
-    enum irql irql = IRQL_PASSIVE_LEVEL;
-
-    struct scheduler *sch = NULL;
-
-    if (!lock)
-        sch = thread_get_scheduler(t, &irql);
-
+    struct scheduler *sch;
+    enum irql irql = thread_lock_scheduler(t, &sch);
     act(t, ch);
-
-    if (!lock)
-        spin_unlock(&sch->lock, irql);
+    spin_unlock(&sch->lock, irql);
 }
 
 static bool climb_get_ref_not_curr(struct thread *t) {
@@ -319,61 +317,67 @@ static void climb_drop_ref_not_curr(struct thread *t) {
 
 static void climb_handle_act(struct thread *t, struct climb_handle *h,
                              void (*act)(struct thread *,
-                                         struct climb_handle *),
-                             bool lock) {
+                                         struct climb_handle *)) {
     if (t == thread_get_current()) {
         climb_handle_act_self(t, h, act);
     } else {
-        climb_handle_act_other(t, h, act, lock);
+        climb_handle_act_other(t, h, act);
     }
 }
 
-static void climb_handle_remove_internal(struct climb_handle *h, bool lock) {
-    /* We might not always have a ref to the thread here.
-     * If the handle we are given is completely unused, this is because
-     * the thread we are removing from is NOT a timesharing thread.
-     *
-     * This means we can safely leave and no-op */
+static void climb_handle_act_locked(struct thread *t, struct climb_handle *h,
+                                    void (*act)(struct thread *,
+                                                struct climb_handle *)) {
+    if (t == thread_get_current()) {
+        climb_handle_act_self(t, h, act);
+    } else {
+        climb_handle_act_other_locked(t, h, act);
+    }
+}
+
+void climb_handle_apply(struct thread *t, struct climb_handle *h) {
+    if (!climb_get_ref_not_curr(t))
+        return;
+
+    climb_handle_act(t, h, apply_handle);
+    h->given_to = t;
+}
+
+void climb_handle_apply_locked(struct thread *t, struct climb_handle *h) {
+    if (!climb_get_ref_not_curr(t))
+        return;
+
+    climb_handle_act_locked(t, h, apply_handle);
+    h->given_to = t;
+}
+
+void climb_handle_remove(struct climb_handle *h) {
     if (h->applied_pressure_internal == 0) {
         kassert(list_empty(&h->list));
         return;
     }
 
     struct thread *t = h->given_to;
-    climb_handle_act(t, h, remove_handle, lock);
+    climb_handle_act(t, h, remove_handle);
     h->given_to = NULL;
     climb_drop_ref_not_curr(t);
 }
 
-static void climb_handle_apply_internal(struct thread *t,
-                                        struct climb_handle *h, bool lock) {
-    if (!climb_get_ref_not_curr(t))
-        return;
-
-    climb_handle_act(t, h, apply_handle, lock);
-    h->given_to = t;
-}
-
-void climb_handle_apply(struct thread *t, struct climb_handle *h) {
-    climb_handle_apply_internal(t, h, false);
-}
-
-void climb_handle_apply_locked(struct thread *t, struct climb_handle *h) {
-    climb_handle_apply_internal(t, h, true);
-}
-
-void climb_handle_remove(struct climb_handle *h) {
-    climb_handle_remove_internal(h, false);
-}
-
 void climb_handle_remove_locked(struct climb_handle *h) {
-    climb_handle_remove_internal(h, true);
+    if (h->applied_pressure_internal == 0) {
+        kassert(list_empty(&h->list));
+        return;
+    }
+
+    struct thread *t = h->given_to;
+    climb_handle_act_locked(t, h, remove_handle);
+    h->given_to = NULL;
+    climb_drop_ref_not_curr(t);
 }
 
 void climb_thread_remove(struct thread *t) {
-
-    enum irql irql_out;
-    struct scheduler *sched = thread_get_scheduler(t, &irql_out);
+    struct scheduler *sched;
+    enum irql irql_out = thread_lock_scheduler(t, &sched);
 
     struct climb_thread_state *cts = &t->climb_state;
     struct rbt *tree = &sched->climb_threads;

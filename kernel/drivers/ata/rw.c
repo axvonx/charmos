@@ -7,11 +7,14 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <structures/sll.h>
+#include <sync/lock_chk_assert.h>
+#include <sync/lock_general.h>
 #include <thread/io_wait.h>
 #include <thread/thread.h>
 #include <time/spin_sleep.h>
 
-static void ide_start_next(struct ide_channel *chan, bool locked);
+static void ide_start_next_locked(struct ide_channel *chan)
+    TSA_MUST_HOLD(&chan->lock);
 typedef bool (*sync_fn)(struct ata_drive *, uint64_t, uint8_t *, uint8_t,
                         struct io_wait_token *);
 
@@ -84,7 +87,7 @@ enum irq_result ide_irq_handler(void *ctx, irq_t irq_num,
 next_request:
     chan->head = req->next;
     if (chan->head) {
-        ide_start_next(chan, true);
+        ide_start_next_locked(chan);
     } else {
         chan->busy = false;
     }
@@ -116,13 +119,9 @@ static void ide_wait_ready(struct ata_drive *d) {
         ;
 }
 
-static void ide_start_next(struct ide_channel *chan, bool locked) {
+static void ide_start_next_locked(struct ide_channel *chan) {
     struct ide_request *req = chan->head;
     struct ata_drive *d = chan->current_drive;
-
-    enum irql i;
-    if (!locked)
-        i = spin_lock(&chan->lock);
 
     chan->busy = true;
 
@@ -145,29 +144,19 @@ static void ide_start_next(struct ide_channel *chan, bool locked) {
         outsw(REG_DATA(d->io_base), buf, 256);
         req->current_sector = 1;
     }
-
-    if (!locked)
-        spin_unlock(&chan->lock, i);
 }
 
-static void enqueue_request(struct ide_channel *chan, struct ide_request *req,
-                            bool locked) {
-
-    enum irql i;
-    if (!locked)
-        i = spin_lock(&chan->lock);
-
+static void enqueue_request_locked(struct ide_channel *chan,
+                                   struct ide_request *req)
+    TSA_MUST_HOLD(&chan->lock) {
     sll_add(chan, req);
-
-    if (!locked)
-        spin_unlock(&chan->lock, i);
 }
 
 static void submit_async(struct ata_drive *d, struct ide_request *req) {
     enum irql irql = spin_lock(&d->channel.lock);
-    enqueue_request(&d->channel, req, true);
+    enqueue_request_locked(&d->channel, req);
     if (!d->channel.busy) {
-        ide_start_next(&d->channel, true);
+        ide_start_next_locked(&d->channel);
     }
     spin_unlock(&d->channel.lock, irql);
 }

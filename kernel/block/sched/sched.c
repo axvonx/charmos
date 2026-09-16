@@ -2,6 +2,7 @@
 #include <block/sched.h>
 #include <console/printf.h>
 #include <mem/alloc.h>
+#include <sync/lock_chk_assert.h>
 #include <sync/spinlock.h>
 #include <thread/workqueue.h>
 
@@ -72,16 +73,11 @@ void bio_sched_enqueue(struct block_device *disk, struct bio_request *req) {
     }
 }
 
-void bio_sched_dequeue(struct block_device *disk, struct bio_request *req,
-                       bool already_locked) {
+void bio_sched_dequeue(struct block_device *disk, struct bio_request *req) {
     struct bio_scheduler *sched = disk->scheduler;
-    if (!already_locked)
-        mutex_lock(&sched->lock);
-
+    mutex_lock(&sched->lock);
     bio_sched_dequeue_internal(sched, req);
-
-    if (!already_locked)
-        mutex_unlock(&sched->lock);
+    mutex_unlock(&sched->lock);
 }
 
 struct bio_scheduler *bio_sched_create(struct block_device *disk,

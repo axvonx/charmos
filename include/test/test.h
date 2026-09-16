@@ -10,6 +10,7 @@
 #include <mem/pmm.h>
 #include <scaled_param.h>
 #include <stdbool.h>
+#include <sync/lock_general.h>
 #include <test/test_api_internal.h>
 
 typedef void (*test_fn_t)(void);

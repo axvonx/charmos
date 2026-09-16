@@ -101,7 +101,7 @@ static inline bool thread_done_for_period(struct thread *thread) {
 }
 
 static inline void re_enqueue_thread(struct scheduler *sched,
-                                     struct thread *thread) {
+                                     struct thread *thread) TSA_NO_ANALYSIS {
     /* Scheduler is locked - called from `schedule()` */
     if (thread_done_for_period(thread)) {
         thread->virtual_runtime_left = thread->virtual_budget;
@@ -109,8 +109,7 @@ static inline void re_enqueue_thread(struct scheduler *sched,
         retire_thread(sched, thread);
         scheduler_increment_thread_count(sched, thread);
     } else {
-        bool locked = true;
-        scheduler_add_thread(sched, thread, locked);
+        scheduler_add_thread_locked(sched, thread);
     }
 }
 
@@ -125,7 +124,7 @@ static inline void update_min_steal_diff(void) {
 }
 
 static inline void save_thread(struct scheduler *sched, struct thread *curr,
-                               time_ms_t time) {
+                               time_ms_t time) TSA_NO_ANALYSIS {
     update_min_steal_diff();
 
     /* Only save a running thread that exists */
@@ -325,7 +324,7 @@ static inline void context_switch(struct thread *curr, struct thread *next) {
     }
 }
 
-void schedule(void) {
+void schedule(void) TSA_NO_ANALYSIS {
     time_ms_t time = time_get_ms();
 
     struct scheduler *sched = smp_core_scheduler();
@@ -380,7 +379,7 @@ void schedule(void) {
     context_switch(curr, next);
 }
 
-void scheduler_switch_in() {
+void scheduler_switch_in() TSA_NO_ANALYSIS {
     struct scheduler *us = smp_core_scheduler();
     struct scheduler *other = us->other_locked;
     us->other_locked = NULL;

@@ -43,8 +43,8 @@ static bool should_boost(struct bio_request *req) {
     return curr_timestamp > (req->enqueue_time + adjusted_wait);
 }
 
-static bool do_boost_prio(struct bio_scheduler *sched,
-                          struct bio_request *req) {
+static bool do_boost_prio(struct bio_scheduler *sched, struct bio_request *req)
+    TSA_MUST_HOLD(&sched->lock) {
     enum bio_request_priority new_prio = get_boosted_prio(req);
 
     struct bio_scheduler_ops *ops = sched->disk->ops;
@@ -72,7 +72,8 @@ static bool do_boost_prio(struct bio_scheduler *sched,
 }
 
 static inline bool try_boost(struct bio_scheduler *sched,
-                             struct bio_request *req) {
+                             struct bio_request *req)
+    TSA_MUST_HOLD(&sched->lock) {
     if (should_boost(req))
         return do_boost_prio(sched, req);
 

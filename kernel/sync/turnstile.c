@@ -66,13 +66,13 @@ void turnstiles_init(void) {
 #define TURNSTILE_URGENT_PRIO 100002
 
 static inline enum irql
-turnstile_hash_chain_lock(struct turnstile_hash_chain *chain) {
+turnstile_hash_chain_lock(struct turnstile_hash_chain *chain) TSA_NO_ANALYSIS {
     return spin_lock_irq_disable(&chain->lock);
 }
 
 static inline void
 turnstile_hash_chain_unlock(struct turnstile_hash_chain *chain,
-                            enum irql irql) {
+                            enum irql irql) TSA_NO_ANALYSIS {
     spin_unlock(&chain->lock, irql);
 }
 
@@ -178,12 +178,13 @@ static struct turnstile *turnstile_lookup_internal(void *obj) {
     return NULL;
 }
 
-struct turnstile *turnstile_lookup(void *obj, enum irql *irql_out) {
+enum irql turnstile_lookup(void *obj, struct turnstile **out_ts) {
     struct turnstile_hash_chain *chain = turnstile_chain_for(obj);
 
     enum irql irql = turnstile_hash_chain_lock(chain);
-    *irql_out = irql;
-    return turnstile_lookup_internal(obj);
+    if (out_ts)
+        *out_ts = turnstile_lookup_internal(obj);
+    return irql;
 }
 
 void turnstile_pi_remove(struct turnstile *ts) {

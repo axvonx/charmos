@@ -67,20 +67,24 @@ TEST_DECLARE_UNIT(lock_chk, death_abba_mutex, .enabled = TEST_STATE_DISABLED) {
 }
 
 /* Recursive acquire */
-TEST_DECLARE_UNIT(lock_chk, death_recursive_mutex,
-                  .enabled = TEST_STATE_DISABLED) {
+static void death_recursive_mutex_body(void) TSA_NO_ANALYSIS {
     struct mutex m;
     mutex_init_chk(&m, LOCK_CHK_CLASS(death_recurse_class), LOCK_CHKD_FULL);
     mutex_lock(&m);
     mutex_lock(&m);
     mutex_unlock(&m);
+}
+
+TEST_DECLARE_UNIT(lock_chk, death_recursive_mutex,
+                  .enabled = TEST_STATE_DISABLED) {
+    death_recursive_mutex_body();
     return TEST_SUCCESS;
 }
 
 /* Foreign unlock */
 static struct mutex death_foreign_m;
 
-static void death_foreign_worker(void *arg) {
+static void death_foreign_worker(void *arg) TSA_NO_ANALYSIS {
     unused(arg);
     mutex_unlock(&death_foreign_m);
 }
@@ -98,11 +102,15 @@ TEST_DECLARE_UNIT(lock_chk, death_foreign_unlock,
 }
 
 /* Unbalanced unlock */
-TEST_DECLARE_UNIT(lock_chk, death_unbalanced_unlock,
-                  .enabled = TEST_STATE_DISABLED) {
+static void death_unbalanced_unlock_body(void) TSA_NO_ANALYSIS {
     struct mutex m;
     mutex_init_chk(&m, LOCK_CHK_CLASS(death_unbalanced_class), LOCK_CHKD_FULL);
     mutex_unlock(&m);
+}
+
+TEST_DECLARE_UNIT(lock_chk, death_unbalanced_unlock,
+                  .enabled = TEST_STATE_DISABLED) {
+    death_unbalanced_unlock_body();
     return TEST_SUCCESS;
 }
 
@@ -165,7 +173,7 @@ TEST_DECLARE_UNIT(lock_chk, death_sleep_holding_spin,
 }
 
 /* Thread exit while holding a thread checked lock */
-static void death_exit_worker(void *arg) {
+static void death_exit_worker(void *arg) TSA_NO_ANALYSIS {
     unused(arg);
     static struct mutex exit_m;
     mutex_init_chk(&exit_m, LOCK_CHK_CLASS(death_exit_class), LOCK_CHKD_FULL);
@@ -184,7 +192,7 @@ TEST_DECLARE_UNIT(lock_chk, death_exit_holding_lock,
 /* Cross thread release on checked reader lock */
 static struct rwlock death_cross_rw;
 
-static void death_cross_rw_worker(void *arg) {
+static void death_cross_rw_worker(void *arg) TSA_NO_ANALYSIS {
     unused(arg);
     rw_unlock(&death_cross_rw);
 }
@@ -202,8 +210,7 @@ TEST_DECLARE_UNIT(lock_chk, death_rw_cross_thread_release,
 }
 
 /* RW lock invalid upgrade / recursive acquire */
-TEST_DECLARE_UNIT(lock_chk, death_rw_invalid_upgrade,
-                  .enabled = TEST_STATE_DISABLED) {
+static void death_rw_invalid_upgrade_body(void) TSA_NO_ANALYSIS {
     struct rwlock rw;
     rwlock_init_chk(&rw, THREAD_PRIO_CLASS_TIMESHARE,
                     LOCK_CHK_CLASS(death_upgrade_rw_class), LOCK_CHKD_FULL);
@@ -211,20 +218,28 @@ TEST_DECLARE_UNIT(lock_chk, death_rw_invalid_upgrade,
     rw_write_lock(&rw);
     rw_unlock(&rw);
     rw_unlock(&rw);
+}
+
+TEST_DECLARE_UNIT(lock_chk, death_rw_invalid_upgrade,
+                  .enabled = TEST_STATE_DISABLED) {
+    death_rw_invalid_upgrade_body();
     return TEST_SUCCESS;
 }
 
 /* Uninitialized zero-filled lock usage */
-TEST_DECLARE_UNIT(lock_chk, death_uninitialized,
-                  .enabled = TEST_STATE_DISABLED) {
+static void death_uninitialized_body(void) TSA_NO_ANALYSIS {
     struct mutex uninit_m = {0};
     mutex_lock(&uninit_m);
+}
+
+TEST_DECLARE_UNIT(lock_chk, death_uninitialized,
+                  .enabled = TEST_STATE_DISABLED) {
+    death_uninitialized_body();
     return TEST_SUCCESS;
 }
 
 /* Exceed held capacity */
-TEST_DECLARE_UNIT(lock_chk, death_exhaust_held_capacity,
-                  .enabled = TEST_STATE_DISABLED) {
+static void death_exhaust_held_capacity_body(void) TSA_NO_ANALYSIS {
     struct mutex m[33];
     for (int i = 0; i < 33; i++) {
         mutex_init_chk(&m[i], LOCK_CHK_CLASS(death_exhaust_class),
@@ -233,6 +248,11 @@ TEST_DECLARE_UNIT(lock_chk, death_exhaust_held_capacity,
     }
     for (int i = 32; i >= 0; i--)
         mutex_unlock(&m[i]);
+}
+
+TEST_DECLARE_UNIT(lock_chk, death_exhaust_held_capacity,
+                  .enabled = TEST_STATE_DISABLED) {
+    death_exhaust_held_capacity_body();
     return TEST_SUCCESS;
 }
 
@@ -289,7 +309,7 @@ TEST_DECLARE_UNIT(lock_chk, death_assert_held_rwlock_wrong_mode,
                     LOCK_CHK_CLASS(death_assert_held_rw_wrong_mode_class),
                     LOCK_CHKD_FULL);
     rw_read_lock(&rw);
-    LOCK_CHK_ASSERT_HELD(&rw, RWLOCK_ACQUIRE_WRITE);
+    LOCK_CHK_ASSERT_HELD(&rw, RWLOCK_WRITE);
     rw_unlock(&rw);
     return TEST_SUCCESS;
 }

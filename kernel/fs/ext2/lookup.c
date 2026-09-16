@@ -28,7 +28,7 @@ struct readdir_ctx {
 /* TODO: Figure out how to return errors here in the case of a failed read */
 static bool search_callback(struct ext2_fs *fs, struct ext2_dir_entry *entry,
                             void *ctx_ptr, uint32_t b, uint32_t e_num,
-                            uint32_t offset) {
+                            uint32_t offset) TSA_NO_ANALYSIS {
     (void) b;
     struct search_ctx *ctx = (struct search_ctx *) ctx_ptr;
 

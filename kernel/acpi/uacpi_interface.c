@@ -187,21 +187,23 @@ void uacpi_kernel_free_mutex(uacpi_handle a) {
     kfree(a);
 }
 
-uacpi_status uacpi_kernel_acquire_mutex(uacpi_handle m, uacpi_u16 b) {
+uacpi_status uacpi_kernel_acquire_mutex(uacpi_handle m,
+                                        uacpi_u16 b) TSA_NO_ANALYSIS {
     (void) b;
     mutex_simple_lock(m);
     return UACPI_STATUS_OK;
 }
 
-void uacpi_kernel_release_mutex(uacpi_handle m) {
+void uacpi_kernel_release_mutex(uacpi_handle m) TSA_NO_ANALYSIS {
     mutex_simple_unlock(m);
 }
 
-uacpi_cpu_flags uacpi_kernel_lock_spinlock(uacpi_handle a) {
+uacpi_cpu_flags uacpi_kernel_lock_spinlock(uacpi_handle a) TSA_NO_ANALYSIS {
     return spin_lock((struct spinlock *) a);
 }
 
-void uacpi_kernel_unlock_spinlock(uacpi_handle a, uacpi_cpu_flags b) {
+void uacpi_kernel_unlock_spinlock(uacpi_handle a,
+                                  uacpi_cpu_flags b) TSA_NO_ANALYSIS {
     spin_unlock((struct spinlock *) a, b);
 }
 

@@ -8,6 +8,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <structures/rbt.h>
+#include <sync/lock_general.h>
 #include <sync/spinlock.h>
 #include <thread/thread_types.h>
 #include <time/timer.h>
@@ -95,10 +96,15 @@ struct scheduler {
 void scheduler_init();
 
 struct scheduler *scheduler_select_best_for_thread(struct thread *t);
-void scheduler_add_thread(struct scheduler *sched, struct thread *thread,
-                          bool lock_held);
-void scheduler_remove_thread(struct scheduler *sched, struct thread *t,
-                             bool lock_held);
+void scheduler_add_thread_locked(struct scheduler *sched, struct thread *thread)
+    TSA_MUST_HOLD(&sched->lock);
+
+void scheduler_add_thread(struct scheduler *sched, struct thread *thread);
+
+void scheduler_remove_thread_locked(struct scheduler *sched, struct thread *t)
+    TSA_MUST_HOLD(&sched->lock);
+
+void scheduler_remove_thread(struct scheduler *sched, struct thread *t);
 void schedule(void);
 void k_sch_main(void *);
 void scheduler_idle_main(void *);
@@ -198,6 +204,9 @@ static inline void scheduler_force_resched(struct scheduler *sched) {
     scheduler_mark_core_needs_resched(global.cores[sched->core_id], true);
     (void) ipi_send_try(sched->core_id, IRQ_SCHEDULER);
 }
+
+enum irql thread_lock_scheduler(struct thread *t, struct scheduler **out_sched)
+    TSA_ACQUIRES(&(*out_sched)->lock);
 
 /* Uses the blocking ipi_send(), so no spinlock may be held. */
 static inline void scheduler_force_run_dpcs(cpu_id_t cpu) {

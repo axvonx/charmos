@@ -448,17 +448,20 @@ void thread_sleep_for_ms(uint64_t ms) {
     thread_sleep_for_us(MS_TO_US(ms));
 }
 
-struct scheduler *thread_get_scheduler(struct thread *t, enum irql *sirql_out) {
+enum irql thread_lock_scheduler(struct thread *t, struct scheduler **out_sched)
+    TSA_ACQUIRES(&(*out_sched)->lock) TSA_NO_ANALYSIS {
     do {
         size_t gen1 = thread_get_migration_generation(t);
         struct scheduler *sched = thread_get_scheduler_unsafe(t);
-        *sirql_out = spin_lock_irq_disable(&sched->lock);
+        enum irql sirql = spin_lock_irq_disable(&sched->lock);
         size_t gen2 = thread_get_migration_generation(t);
 
-        if (gen1 == gen2 && !(gen1 & 1))
-            return sched;
+        if (gen1 == gen2 && !(gen1 & 1)) {
+            *out_sched = sched;
+            return sirql;
+        }
 
-        spin_unlock(&sched->lock, *sirql_out);
+        spin_unlock(&sched->lock, sirql);
     } while (1);
 
     panic("unreachable");
@@ -467,7 +470,7 @@ struct scheduler *thread_get_scheduler(struct thread *t, enum irql *sirql_out) {
 void thread_lock_two_runqueues(struct thread *a, struct thread *b,
                                struct scheduler **out_rq_a,
                                struct scheduler **out_rq_b, enum irql *irq_a,
-                               enum irql *irq_b) {
+                               enum irql *irq_b) TSA_NO_ANALYSIS {
     size_t gen_a1 = 0;
     size_t gen_a2 = 0;
     size_t gen_b1 = 0;
@@ -528,7 +531,8 @@ retry:
 
 void thread_lock_thread_and_rq(struct thread *t, struct scheduler *other_rq,
                                struct scheduler **out_thread_rq,
-                               enum irql *irq_first, enum irql *irq_second) {
+                               enum irql *irq_first,
+                               enum irql *irq_second) TSA_NO_ANALYSIS {
     size_t gen1, gen2;
 
 retry:
@@ -578,7 +582,8 @@ retry:
 
 void thread_unlock_thread_and_rq(struct scheduler *thread_rq,
                                  struct scheduler *other_rq,
-                                 enum irql irq_first, enum irql irq_second) {
+                                 enum irql irq_first,
+                                 enum irql irq_second) TSA_NO_ANALYSIS {
     struct scheduler *first;
     struct scheduler *second;
 

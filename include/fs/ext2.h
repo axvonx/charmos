@@ -318,11 +318,13 @@ static inline uint32_t ext2_get_inode_group(struct ext2_fs *fs, inode_t inode) {
     return (inode - 1) / fs->inodes_per_group;
 }
 
-static inline enum irql ext2_fs_lock(struct ext2_fs *fs) {
+static inline enum irql ext2_fs_lock(struct ext2_fs *fs)
+    TSA_ACQUIRES(&fs->lock) {
     return spin_lock(&fs->lock);
 }
 
-static inline void ext2_fs_unlock(struct ext2_fs *fs, enum irql i) {
+static inline void ext2_fs_unlock(struct ext2_fs *fs, enum irql i)
+    TSA_RELEASES(&fs->lock) {
     spin_unlock(&fs->lock, i);
 }
 
@@ -332,11 +334,13 @@ static inline void ext2_prefetch_block(struct ext2_fs *fs, uint32_t block) {
                           fs->sectors_per_block);
 }
 
-static inline void ext2_inode_lock(struct ext2_full_inode *ino) {
+static inline void ext2_inode_lock(struct ext2_full_inode *ino)
+    TSA_ACQUIRES(&ino->ent->lock) {
     bcache_ent_lock(ino->ent);
 }
 
-static inline void ext2_inode_unlock(struct ext2_full_inode *ino) {
+static inline void ext2_inode_unlock(struct ext2_full_inode *ino)
+    TSA_RELEASES(&ino->ent->lock) {
     bcache_ent_unlock(ino->ent);
 }
 

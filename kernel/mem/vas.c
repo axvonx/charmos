@@ -552,8 +552,9 @@ out:
 
 /* Directory is never freed while operations are in flight, recheck
  * under the lock because reclamation could've moved the chunk */
-static struct vas_arena *lock_owner(struct vas *vas, vaddr_t addr,
-                                    enum irql *irql) {
+static enum irql vas_lock_owner(struct vas *vas, vaddr_t addr,
+                                struct vas_arena **out_arena)
+    TSA_ACQUIRES(&(*out_arena)->lock) TSA_NO_ANALYSIS {
     size_t index = owner_index(vas, addr);
     while (true) {
         cpu_id_t owner = atomic_load_explicit(&vas->chunk_owner[index],
@@ -561,11 +562,13 @@ static struct vas_arena *lock_owner(struct vas *vas, vaddr_t addr,
         kassert(owner == VAS_OWNER_GLOBAL || owner < global.core_count);
         struct vas_arena *arena =
             owner == VAS_OWNER_GLOBAL ? &vas->global : &vas->local[owner];
-        *irql = spin_lock(&arena->lock);
+        enum irql irql = spin_lock(&arena->lock);
         if (atomic_load_explicit(&vas->chunk_owner[index],
-                                 memory_order_acquire) == owner)
-            return arena;
-        spin_unlock(&arena->lock, *irql);
+                                 memory_order_acquire) == owner) {
+            *out_arena = arena;
+            return irql;
+        }
+        spin_unlock(&arena->lock, irql);
     }
 }
 
@@ -586,8 +589,8 @@ void vas_free(struct vas *vas, vaddr_t addr, size_t size) {
         return;
     }
 
-    enum irql irql;
-    struct vas_arena *arena = lock_owner(vas, addr, &irql);
+    struct vas_arena *arena;
+    enum irql irql = vas_lock_owner(vas, addr, &arena);
     struct vas_segment *seg = segment_find(arena, addr);
 
     if (!seg || seg->type != VAS_SEG_BUSY || seg->start != addr ||
@@ -617,8 +620,8 @@ bool vas_vaddr_is_allocated(struct vas *vas, vaddr_t addr) {
 
     enum irql outer = vas_enter();
 
-    enum irql irql;
-    struct vas_arena *arena = lock_owner(vas, addr, &irql);
+    struct vas_arena *arena;
+    enum irql irql = vas_lock_owner(vas, addr, &arena);
     struct vas_segment *seg = segment_find(arena, addr);
     bool allocated = seg && seg->type == VAS_SEG_BUSY;
     spin_unlock(&arena->lock, irql);

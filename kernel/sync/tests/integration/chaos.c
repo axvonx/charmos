@@ -139,12 +139,12 @@ static void chaos_sleeper(void *arg) {
 
         /* Exercise rwlock */
         if (prng_next() & 1) {
-            rw_lock(&chaos_fuzz_rw, RWLOCK_ACQUIRE_READ);
+            rw_lock(&chaos_fuzz_rw, RWLOCK_READ);
             for (volatile int j = 0; j < (int) (prng_next() & 0xF); j++)
                 cpu_relax();
             rw_unlock(&chaos_fuzz_rw);
         } else {
-            rw_lock(&chaos_fuzz_rw, RWLOCK_ACQUIRE_WRITE);
+            rw_lock(&chaos_fuzz_rw, RWLOCK_WRITE);
             for (volatile int j = 0; j < (int) (prng_next() & 0xF); j++)
                 cpu_relax();
             rw_unlock(&chaos_fuzz_rw);

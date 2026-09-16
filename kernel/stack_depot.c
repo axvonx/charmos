@@ -1,6 +1,8 @@
 #include <mem/fixed_size_alloc.h>
 #include <stack_depot.h>
 #include <string.h>
+#include <sync/lock_chk_assert.h>
+#include <sync/lock_general.h>
 
 struct stack_depot_globals stack_depot_global = {0};
 FIXED_SIZE_RANGE_PERDOMAIN_DECLARE(
@@ -25,14 +27,9 @@ void stack_depot_init() {
 }
 
 static struct stack_depot_record *
-record_chain_get(struct stack_depot_record_chain *this_chain,
-                 uintptr_t *entries, size_t num_entries, uint32_t hash,
-                 bool locked) {
-    enum irql irql = IRQL_PASSIVE_LEVEL;
-
-    if (!locked)
-        irql = spin_lock(&this_chain->lock);
-
+record_chain_get_locked(struct stack_depot_record_chain *this_chain,
+                        uintptr_t *entries, size_t num_entries, uint32_t hash)
+    TSA_MUST_HOLD(&this_chain->lock) {
     struct stack_depot_record *pos;
     list_for_each_entry(pos, &this_chain->list, hash_list) {
         if (pos->num_entries == num_entries && pos->hash == hash) {
@@ -44,19 +41,22 @@ record_chain_get(struct stack_depot_record_chain *this_chain,
                  * record's hash chain, and then if refcount_dec_and_test,
                  * we remove it from the list and free */
                 kassert(refcount_inc_not_zero(&pos->refcount));
-
-                if (!locked)
-                    spin_unlock(&this_chain->lock, irql);
-
                 return pos;
             }
         }
     }
 
-    if (!locked)
-        spin_unlock(&this_chain->lock, irql);
-
     return NULL;
+}
+
+static struct stack_depot_record *
+record_chain_get(struct stack_depot_record_chain *this_chain,
+                 uintptr_t *entries, size_t num_entries, uint32_t hash) {
+    enum irql irql = spin_lock(&this_chain->lock);
+    struct stack_depot_record *rec =
+        record_chain_get_locked(this_chain, entries, num_entries, hash);
+    spin_unlock(&this_chain->lock, irql);
+    return rec;
 }
 
 static stack_handle_t record_to_handle(struct stack_depot_record *rec) {
@@ -95,8 +95,7 @@ stack_handle_t stack_depot_save(uintptr_t *entries, size_t num_entries,
 
     struct stack_depot_record *rec = NULL;
 
-    if ((rec = record_chain_get(this_chain, entries, num_entries, hash,
-                                /*locked=*/false)))
+    if ((rec = record_chain_get(this_chain, entries, num_entries, hash)))
         goto out;
 
     if (!(rec = record_alloc()))
@@ -104,8 +103,8 @@ stack_handle_t stack_depot_save(uintptr_t *entries, size_t num_entries,
 
     enum irql irql = spin_lock(&this_chain->lock);
 
-    struct stack_depot_record *winner = record_chain_get(
-        this_chain, entries, num_entries, hash, /*locked=*/true);
+    struct stack_depot_record *winner =
+        record_chain_get_locked(this_chain, entries, num_entries, hash);
     if (winner) {
         spin_unlock(&this_chain->lock, irql);
         record_free(rec);

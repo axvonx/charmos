@@ -82,7 +82,7 @@ static inline bool rwlock_try_lock_write(struct rwlock *lock,
 
 static inline bool rwlock_try_lock(struct rwlock *lock, struct thread *thread,
                                    enum rwlock_acquire_type type) {
-    if (type == RWLOCK_ACQUIRE_READ)
+    if (type == RWLOCK_READ)
         return rwlock_try_lock_read(lock);
 
     return rwlock_try_lock_write(lock, thread);

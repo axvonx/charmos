@@ -182,7 +182,8 @@ static void timer_dpc(void *ctx) {
 /* Since we have two types of timers, DPC and IRQ ones, we have to construct
  * the DPC list in here, and make sure we don't invert anything */
 static void timer_expire_bucket(struct timer_base *base,
-                                struct hlist_head *head, enum irql *lirql) {
+                                struct hlist_head *head,
+                                enum irql *lirql) TSA_NO_ANALYSIS {
     while (!hlist_empty(head)) {
         struct timer *timer =
             hlist_entry(head->first, struct timer, hlist_node);
@@ -281,21 +282,25 @@ static void timer_recalc_next_expiration(struct timer_base *base) {
     base->next_expiration_recalc = false;
 }
 
-static struct timer_base *timer_lock_base(struct timer *timer,
-                                          enum irql *irql) {
+static enum irql timer_lock_base(struct timer *timer,
+                                 struct timer_base **out_base)
+    TSA_ACQUIRES(&(*out_base)->lock) TSA_NO_ANALYSIS {
     while (true) {
         cpu_id_t cpu = timer_cpu_get(timer);
         struct timer_base *base = timer_base_for_cpu(timer->flags, cpu);
 
-        *irql = spin_lock_irq_disable(&base->lock);
-        if (timer_cpu_get(timer) == cpu)
-            return base;
+        enum irql irql = spin_lock_irq_disable(&base->lock);
+        if (timer_cpu_get(timer) == cpu) {
+            *out_base = base;
+            return irql;
+        }
 
-        spin_unlock(&base->lock, *irql);
+        spin_unlock(&base->lock, irql);
     }
 }
 
-static void timer_base_run(struct timer_base *base, enum irql *irql) {
+static void timer_base_run(struct timer_base *base,
+                           enum irql *irql) TSA_NO_ANALYSIS {
     struct hlist_head heads[TIMER_LEVELS];
     SPINLOCK_ASSERT_HELD(&base->lock);
 
@@ -315,17 +320,14 @@ static void timer_base_run(struct timer_base *base, enum irql *irql) {
 void timer_add_on(struct timer *timer, cpu_id_t cpu) {
     enum irql irql;
 
-    /* Not pinned: set it to what's provided */
-    if (!(timer->flags & TIMER_FLAG_PINNED))
-        timer_cpu_set(timer, cpu);
-
-    cpu = timer_cpu_get(timer);
     struct timer_base *base = timer_base_for_cpu(timer->flags, cpu);
     irql = spin_lock_irq_disable(&base->lock);
 
+    timer_cpu_set(timer, cpu);
     timer_add_internal(base, timer);
 
     spin_unlock(&base->lock, irql);
+    timer_base_reprogram_hardware(cpu);
 }
 
 void timer_add(struct timer *timer) {
@@ -345,6 +347,7 @@ void timer_add_global(struct timer *timer) {
     timer_add(timer);
 }
 
+/* Call holding base->lock */
 static bool timer_detach_if_dpc_queued(struct timer_base *base,
                                        struct timer *timer) {
     struct timer_percpu *pcpu = base->percpu;
@@ -363,8 +366,8 @@ static bool timer_detach_if_dpc_queued(struct timer_base *base,
 }
 
 static bool timer_delete_internal(struct timer *timer, bool shutdown) {
-    enum irql irql;
-    struct timer_base *base = timer_lock_base(timer, &irql);
+    struct timer_base *base;
+    enum irql irql = timer_lock_base(timer, &base);
 
     bool dpc_queued = timer_detach_if_dpc_queued(base, timer);
 
@@ -417,13 +420,13 @@ static bool timer_dpc_is_dispatching(struct timer_base *base,
 }
 
 static bool timer_sync_wait(struct timer *timer) {
-    enum irql irql;
-    struct timer_base *base = timer_lock_base(timer, &irql);
+    struct timer_base *base;
+    enum irql irql = timer_lock_base(timer, &base);
 
     while (base->running == timer || timer_dpc_is_dispatching(base, timer)) {
         spin_unlock(&base->lock, irql);
         timer_sync_wait_spin();
-        base = timer_lock_base(timer, &irql);
+        irql = timer_lock_base(timer, &base);
     }
 
     spin_unlock(&base->lock, irql);
@@ -444,8 +447,8 @@ bool timer_shutdown_sync(struct timer *timer) {
 
 bool timer_modify(struct timer *timer, time_us_t new_exp) {
     enum irql outer = irql_raise(IRQL_HIGH_LEVEL);
-    enum irql irql;
-    struct timer_base *base = timer_lock_base(timer, &irql);
+    struct timer_base *base;
+    enum irql irql = timer_lock_base(timer, &base);
 
     bool dpc_queued = timer_detach_if_dpc_queued(base, timer);
 
@@ -462,7 +465,7 @@ bool timer_modify(struct timer *timer, time_us_t new_exp) {
                timer_cpu_get(timer) != smp_id(TOPC_IRQL)) {
         spin_unlock(&base->lock, irql);
         timer_cpu_set(timer, smp_id(TOPC_IRQL)); /* outer verifies this */
-        base = timer_lock_base(timer, &irql);
+        irql = timer_lock_base(timer, &base);
     }
 
     timer->expiration_us = new_exp;
@@ -477,8 +480,8 @@ bool timer_modify(struct timer *timer, time_us_t new_exp) {
 }
 
 bool timer_modify_pending(struct timer *timer, time_us_t new_exp) {
-    enum irql irql;
-    struct timer_base *base = timer_lock_base(timer, &irql);
+    struct timer_base *base;
+    enum irql irql = timer_lock_base(timer, &base);
 
     bool dpc_queued = timer_detach_if_dpc_queued(base, timer);
 
@@ -506,8 +509,8 @@ bool timer_modify_pending(struct timer *timer, time_us_t new_exp) {
 
 bool timer_modify_reduce(struct timer *timer, time_us_t new_exp) {
     enum irql outer = irql_raise(IRQL_HIGH_LEVEL);
-    enum irql irql;
-    struct timer_base *base = timer_lock_base(timer, &irql);
+    struct timer_base *base;
+    enum irql irql = timer_lock_base(timer, &base);
 
     bool dpc_queued = timer_detach_if_dpc_queued(base, timer);
 
@@ -515,6 +518,7 @@ bool timer_modify_reduce(struct timer *timer, time_us_t new_exp) {
     if (pending && !dpc_queued) {
         if (new_exp >= timer->expiration_us) {
             spin_unlock(&base->lock, irql);
+            irql_lower(outer);
             return true;
         }
 
@@ -527,7 +531,7 @@ bool timer_modify_reduce(struct timer *timer, time_us_t new_exp) {
                timer_cpu_get(timer) != smp_id(TOPC_IRQL)) {
         spin_unlock(&base->lock, irql);
         timer_cpu_set(timer, smp_id(TOPC_IRQL)); /* outer */
-        base = timer_lock_base(timer, &irql);
+        irql = timer_lock_base(timer, &base);
     }
 
     timer->expiration_us = new_exp;

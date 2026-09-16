@@ -348,7 +348,7 @@ locks_run_mutex_simple(struct locks_storm_state *state, size_t worker) {
 
 static enum locks_storm_op_result
 locks_run_rw_read(struct locks_storm_state *state, size_t worker) {
-    rw_lock(&state->rwlock, RWLOCK_ACQUIRE_READ);
+    rw_lock(&state->rwlock, RWLOCK_READ);
     uint32_t prior = atomic_fetch_add_explicit(&state->rw_occupancy, 1,
                                                memory_order_acq_rel);
     bool valid = (prior & LOCKS_STORM_RW_WRITER_BIT) == 0;
@@ -365,7 +365,7 @@ locks_run_rw_read(struct locks_storm_state *state, size_t worker) {
 
 static enum locks_storm_op_result
 locks_run_rw_write(struct locks_storm_state *state, size_t worker) {
-    rw_lock(&state->rwlock, RWLOCK_ACQUIRE_WRITE);
+    rw_lock(&state->rwlock, RWLOCK_WRITE);
     uint32_t prior = atomic_fetch_or_explicit(
         &state->rw_occupancy, LOCKS_STORM_RW_WRITER_BIT, memory_order_acq_rel);
     bool valid = prior == 0;
@@ -463,7 +463,7 @@ locks_run_nested(struct locks_storm_state *state, size_t worker) {
                                LOCKS_OP_NESTED, worker))
         valid = false;
 
-    rw_lock(&state->rwlock, RWLOCK_ACQUIRE_WRITE);
+    rw_lock(&state->rwlock, RWLOCK_WRITE);
     uint32_t rw_prior = atomic_fetch_or_explicit(
         &state->rw_occupancy, LOCKS_STORM_RW_WRITER_BIT, memory_order_acq_rel);
     if (rw_prior != 0) {

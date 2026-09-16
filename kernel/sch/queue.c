@@ -6,17 +6,13 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <sync/lock_chk_assert.h>
 #include <sync/spinlock.h>
 
 #include "internal.h"
 
-void scheduler_add_thread(struct scheduler *sched, struct thread *task,
-                          bool lock_held) {
+void scheduler_add_thread_locked(struct scheduler *sched, struct thread *task) {
     kassert(task->state != THREAD_STATE_IDLE_THREAD);
-
-    enum irql irql = IRQL_NONE;
-    if (!lock_held)
-        irql = spin_lock_irq_disable(&sched->lock);
 
     enum thread_prio_class prio = task->perceived_prio_class;
 
@@ -43,19 +39,15 @@ void scheduler_add_thread(struct scheduler *sched, struct thread *task,
         sched->period_enabled = true;
         scheduler_period_start(sched, time_get_ms());
     }
-
-    if (!lock_held)
-        spin_unlock(&sched->lock, irql);
 }
 
-void scheduler_remove_thread(struct scheduler *sched, struct thread *t,
-                             bool lock_held) {
-    enum irql irql = IRQL_NONE;
-    if (!lock_held)
-        irql = spin_lock_irq_disable(&sched->lock);
-    else
-        SPINLOCK_ASSERT_HELD(&sched->lock);
+void scheduler_add_thread(struct scheduler *sched, struct thread *task) {
+    enum irql irql = spin_lock_irq_disable(&sched->lock);
+    scheduler_add_thread_locked(sched, task);
+    spin_unlock(&sched->lock, irql);
+}
 
+void scheduler_remove_thread_locked(struct scheduler *sched, struct thread *t) {
     kassert(thread_get_state(t) == THREAD_STATE_READY);
 
     if (t->perceived_prio_class == THREAD_PRIO_CLASS_TIMESHARE) {
@@ -65,8 +57,12 @@ void scheduler_remove_thread(struct scheduler *sched, struct thread *t,
     }
 
     scheduler_decrement_thread_count(sched, t);
-    if (!lock_held)
-        spin_unlock(&sched->lock, irql);
+}
+
+void scheduler_remove_thread(struct scheduler *sched, struct thread *t) {
+    enum irql irql = spin_lock_irq_disable(&sched->lock);
+    scheduler_remove_thread_locked(sched, t);
+    spin_unlock(&sched->lock, irql);
 }
 
 void thread_enqueue(struct thread *t) {
@@ -78,7 +74,7 @@ void thread_enqueue(struct thread *t) {
      * while we are going to signal the other core */
     enum irql irql = spin_lock_irq_disable(&s->lock);
 
-    scheduler_add_thread(s, t, /* lock_held = */ true);
+    scheduler_add_thread_locked(s, t);
     scheduler_force_resched(s);
 
     spin_unlock(&s->lock, irql);
@@ -87,7 +83,7 @@ void thread_enqueue(struct thread *t) {
 void thread_enqueue_on_core(struct thread *t, uint64_t core_id) {
     struct scheduler *s = global.schedulers[core_id];
     enum irql irql = spin_lock_irq_disable(&s->lock);
-    scheduler_add_thread(s, t, /* lock_held = */ true);
+    scheduler_add_thread_locked(s, t);
     scheduler_force_resched(s);
     spin_unlock(&s->lock, irql);
 }

@@ -182,7 +182,8 @@ static void mutex_sanity_check() {
 }
 
 void mutex_lock_subclass_internal(struct mutex *mutex, uint8_t subclass,
-                                  const struct lock_chk_site *site) {
+                                  const struct lock_chk_site *site)
+    TSA_NO_ANALYSIS {
     kassert(subclass < LOCK_CHK_MAX_SUBCLASSES);
     mutex_sanity_check();
 
@@ -245,8 +246,8 @@ void mutex_lock_subclass_internal(struct mutex *mutex, uint8_t subclass,
 
         /* owner is now no longer running, might be in a ready queue
          * or something. regardless, this is turnstile time */
-        enum irql ts_lock_irql;
-        struct turnstile *ts = turnstile_lookup(mutex, &ts_lock_irql);
+        struct turnstile *ts;
+        enum irql ts_lock_irql = turnstile_lookup(mutex, &ts);
 
         /* just kidding, the owner went back to running, we spin again :^) */
         if (mutex_owner_running(mutex)) {
@@ -284,12 +285,12 @@ void mutex_lock_subclass_internal(struct mutex *mutex, uint8_t subclass,
 }
 
 void mutex_lock_internal(struct mutex *mutex,
-                         const struct lock_chk_site *site) {
+                         const struct lock_chk_site *site) TSA_NO_ANALYSIS {
     mutex_lock_subclass_internal(mutex, 0, site);
 }
 
 void mutex_unlock_internal(struct mutex *mutex,
-                           const struct lock_chk_site *site) {
+                           const struct lock_chk_site *site) TSA_NO_ANALYSIS {
     mutex_sanity_check();
 
     struct thread *current_thread = thread_get_current();
@@ -299,8 +300,8 @@ void mutex_unlock_internal(struct mutex *mutex,
               "current thread is %p",
               mutex_get_owner(mutex), current_thread);
 
-    enum irql ts_lock_irql;
-    struct turnstile *ts = turnstile_lookup(mutex, &ts_lock_irql);
+    struct turnstile *ts;
+    enum irql ts_lock_irql = turnstile_lookup(mutex, &ts);
 
     struct mutex_chk_rel_state chk_state;
     mutex_chk_before_unlock(&chk_state, mutex, site);

@@ -167,12 +167,12 @@ static void wake_storm_contend(struct wake_storm_state *state,
     mutex_unlock(&state->mtx);
 
     if (nightmare_rand(&self->rng) & 1) {
-        rw_lock(&state->rw, RWLOCK_ACQUIRE_READ);
+        rw_lock(&state->rw, RWLOCK_READ);
         for (volatile int i = 0; i < 4; i++)
             cpu_relax();
         rw_unlock(&state->rw);
     } else {
-        rw_lock(&state->rw, RWLOCK_ACQUIRE_WRITE);
+        rw_lock(&state->rw, RWLOCK_WRITE);
         for (volatile int i = 0; i < 4; i++)
             cpu_relax();
         rw_unlock(&state->rw);

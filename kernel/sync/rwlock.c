@@ -43,11 +43,11 @@ static inline bool rwlock_locked_with_type(struct rwlock *lock,
                                            enum rwlock_acquire_type type) {
     uintptr_t word = RWLOCK_READ_LOCK_WORD(lock);
 
-    if (type == RWLOCK_ACQUIRE_WRITE)
+    if (type == RWLOCK_WRITE)
         return RWLOCK_GET_OWNER_FROM_WORD(word) ==
                (uintptr_t) thread_get_current();
 
-    if (type == RWLOCK_ACQUIRE_READ)
+    if (type == RWLOCK_READ)
         return ((word & RWLOCK_READER_COUNT_MASK) &&
                 !(word & RWLOCK_WRITER_HELD_BIT));
 
@@ -71,7 +71,7 @@ static struct thread *rwlock_get_owner_ref(struct rwlock *lock) {
 
 /* get the mask to mask the lock to determine if we should try and acquire */
 static inline uintptr_t rwlock_get_busy_mask(enum rwlock_acquire_type t) {
-    if (t == RWLOCK_ACQUIRE_READ)
+    if (t == RWLOCK_READ)
         return RWLOCK_WRITER_HELD_BIT | RWLOCK_WRITER_WANT_BIT;
 
     /* we just need the reader here because if there is a writer it will
@@ -80,14 +80,14 @@ static inline uintptr_t rwlock_get_busy_mask(enum rwlock_acquire_type t) {
 }
 
 static inline uintptr_t rwlock_get_wait_bits(enum rwlock_acquire_type t) {
-    if (t == RWLOCK_ACQUIRE_READ)
+    if (t == RWLOCK_READ)
         return RWLOCK_WAITER_BIT;
 
     return RWLOCK_WAITER_BIT | RWLOCK_WRITER_WANT_BIT;
 }
 
 static inline size_t rwlock_get_wait_queue(enum rwlock_acquire_type t) {
-    if (t == RWLOCK_ACQUIRE_READ)
+    if (t == RWLOCK_READ)
         return TURNSTILE_READER_QUEUE;
 
     return TURNSTILE_WRITER_QUEUE;
@@ -172,16 +172,16 @@ void rwlock_init_chk_internal(struct rwlock *lock,
 }
 
 void rw_lock_internal(struct rwlock *lock, enum rwlock_acquire_type acq_type,
-                      uint8_t subclass, const struct lock_chk_site *site) {
+                      uint8_t subclass,
+                      const struct lock_chk_site *site) TSA_NO_ANALYSIS {
     kassert(subclass < LOCK_CHK_MAX_SUBCLASSES);
-    kassert(acq_type == RWLOCK_ACQUIRE_READ ||
-            acq_type == RWLOCK_ACQUIRE_WRITE);
+    kassert(acq_type == RWLOCK_READ || acq_type == RWLOCK_WRITE);
 
     kassert(irq_not_in_interrupt());
     kassert(irql_get() <= IRQL_APC_LEVEL);
 
 #ifdef DEBUG_LOCK_CHK
-    enum lock_chk_mode chk_mode = acq_type == RWLOCK_ACQUIRE_READ
+    enum lock_chk_mode chk_mode = acq_type == RWLOCK_READ
                                       ? LOCK_CHK_MODE_SHARED
                                       : LOCK_CHK_MODE_EXCLUSIVE;
     struct lock_chk_acq_req req;
@@ -252,8 +252,8 @@ void rw_lock_internal(struct rwlock *lock, enum rwlock_acquire_type acq_type,
         if (RWLOCK_GET_OWNER_FROM_WORD(old) == (uintptr_t) curr)
             rwlock_panic("recursive lock", lock);
 
-        enum irql irql_out;
-        struct turnstile *ts = turnstile_lookup(lock, &irql_out);
+        struct turnstile *ts;
+        enum irql irql_out = turnstile_lookup(lock, &ts);
 
         /* try to set our wait bits, stop if lock becomes available */
         while (true) {
@@ -366,7 +366,8 @@ static uintptr_t rwlock_unlock_get_val_to_sub(struct rwlock *lock) {
     }
 }
 
-void rw_unlock_internal(struct rwlock *lock, const struct lock_chk_site *site) {
+void rw_unlock_internal(struct rwlock *lock,
+                        const struct lock_chk_site *site) TSA_NO_ANALYSIS {
     kassert(irq_not_in_interrupt());
     kassert(irql_get() <= IRQL_APC_LEVEL);
 
@@ -422,8 +423,8 @@ void rw_unlock_internal(struct rwlock *lock, const struct lock_chk_site *site) {
         }
 
         /* we are the last reader of a lock with waiters */
-        enum irql irql_out;
-        struct turnstile *ts = turnstile_lookup(lock, &irql_out);
+        struct turnstile *ts;
+        enum irql irql_out = turnstile_lookup(lock, &ts);
 
         struct rbt_node *wnode = rbt_last(&ts->queues[TURNSTILE_WRITER_QUEUE]);
 
@@ -480,9 +481,8 @@ void rwlock_assert_held_internal(struct rwlock *lock,
                                  const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
     rwlock_chk_stamp(lock);
-    enum lock_chk_mode chk_mode = type == RWLOCK_ACQUIRE_READ
-                                      ? LOCK_CHK_MODE_SHARED
-                                      : LOCK_CHK_MODE_EXCLUSIVE;
+    enum lock_chk_mode chk_mode =
+        type == RWLOCK_READ ? LOCK_CHK_MODE_SHARED : LOCK_CHK_MODE_EXCLUSIVE;
     if (lock->chk.flags != LOCK_UNCHKD &&
         lock_chk_assert_held_deep(&lock->chk, chk_mode, /*want_held=*/true,
                                   site))
@@ -511,6 +511,6 @@ void rwlock_assert_not_held_internal(struct rwlock *lock,
      * Not reporting anything at all here is better than
      * a false positive, since it keeps the checker
      * honest instead of spreading misinformation */
-    kassert(!rwlock_locked(lock, RWLOCK_ACQUIRE_WRITE),
+    kassert(!rwlock_locked(lock, RWLOCK_WRITE),
             "rwlock unexpectedly held (write) by current thread");
 }

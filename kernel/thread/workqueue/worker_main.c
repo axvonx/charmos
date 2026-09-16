@@ -6,7 +6,8 @@
 #include <mem/alloc.h>
 
 static enum wake_reason worker_wait(struct workqueue *wq, struct worker *w,
-                                    enum irql irql, enum irql *out) {
+                                    enum irql irql, enum irql *out)
+    TSA_MUST_HOLD(&wq->lock) {
     enum wake_reason sig;
 
     atomic_fetch_add(&wq->idle_workers, 1);
@@ -83,7 +84,7 @@ static void worker_destroy(struct workqueue *queue, struct worker *worker) {
 }
 
 static void worker_exit(struct workqueue *queue, struct worker *worker,
-                        enum irql irql) {
+                        enum irql irql) TSA_RELEASES(&queue->lock) {
     worker->present = false;
     worker->idle = false;
     worker->should_exit = true;
@@ -102,7 +103,7 @@ static void worker_exit(struct workqueue *queue, struct worker *worker,
     thread_exit();
 }
 
-void worker_main(void *unused) {
+void worker_main(void *unused) TSA_NO_ANALYSIS {
     (void) unused;
 
     struct worker *w = thread_get_current()->private;

@@ -22,20 +22,21 @@ void completion_init(struct completion *c, bool irq_disable) {
     condvar_init(&c->cv, irq_disable);
 }
 
-static enum irql completion_lock_internal(struct completion *c) {
+static enum irql
+completion_lock_internal(struct completion *c) TSA_NO_ANALYSIS {
     if (c->irq_disable)
         return spin_lock_irq_disable(&c->lock);
 
     return spin_lock(&c->lock);
 }
 
-void completion_reinit(struct completion *c) {
+void completion_reinit(struct completion *c) TSA_NO_ANALYSIS {
     enum irql irql = completion_lock_internal(c);
     c->done = 0;
     spin_unlock(&c->lock, irql);
 }
 
-void complete(struct completion *c) {
+void complete(struct completion *c) TSA_NO_ANALYSIS {
     enum irql irql = completion_lock_internal(c);
 
     if (c->done < UINT32_MAX)
@@ -46,7 +47,7 @@ void complete(struct completion *c) {
     spin_unlock(&c->lock, irql);
 }
 
-void complete_all(struct completion *c) {
+void complete_all(struct completion *c) TSA_NO_ANALYSIS {
     enum irql irql = completion_lock_internal(c);
 
     c->done = COMPLETION_ALL;
@@ -56,7 +57,7 @@ void complete_all(struct completion *c) {
     spin_unlock(&c->lock, irql);
 }
 
-void completion_wait(struct completion *c) {
+void completion_wait(struct completion *c) TSA_NO_ANALYSIS {
     enum irql irql = completion_lock_internal(c);
 
     while (c->done == 0)
@@ -68,7 +69,8 @@ void completion_wait(struct completion *c) {
     spin_unlock(&c->lock, irql);
 }
 
-bool completion_wait_timeout(struct completion *c, time_ms_t timeout_ms) {
+bool completion_wait_timeout(struct completion *c,
+                             time_ms_t timeout_ms) TSA_NO_ANALYSIS {
     enum irql irql = completion_lock_internal(c);
 
     while (c->done == 0) {
@@ -87,7 +89,7 @@ bool completion_wait_timeout(struct completion *c, time_ms_t timeout_ms) {
     return true;
 }
 
-bool completion_try_wait(struct completion *c) {
+bool completion_try_wait(struct completion *c) TSA_NO_ANALYSIS {
     enum irql irql = completion_lock_internal(c);
 
     if (c->done == 0) {

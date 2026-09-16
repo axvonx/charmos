@@ -1,6 +1,8 @@
 #include <kassert.h>
 #include <mem/alloc.h>
 #include <stat_series.h>
+#include <sync/lock_chk_assert.h>
+#include <sync/lock_general.h>
 #include <time/time.h>
 
 void stat_series_init(struct stat_series *s, struct stat_bucket *buckets,
@@ -54,33 +56,13 @@ void stat_series_reset(struct stat_series *s) {
     spin_unlock(&s->lock, irql);
 }
 
-void stat_series_advance_internal(struct stat_series *s, time_us_t now_us,
-                                  bool already_locked) {
-    enum irql irql = IRQL_NONE;
-
-    if (!already_locked) {
-        /* Fast-path: check without taking lock */
-        time_us_t last = atomic_load(&s->last_update_us);
-        size_t delta = now_us - last;
-        uint32_t steps = delta / s->bucket_us;
-        if (steps == 0)
-            return; /* no rotation required, avoid locking */
-    } else {
-        SPINLOCK_ASSERT_HELD(&s->lock);
-    }
-
-    /* Take lock and re-check/recompute using the protected fields */
-    if (!already_locked) {
-        irql = spin_lock(&s->lock);
-    } else {
-        SPINLOCK_ASSERT_HELD(&s->lock);
-    }
-
+static void stat_series_advance_locked(struct stat_series *s, time_us_t now_us)
+    TSA_MUST_HOLD(&s->lock) {
     /* re-evaluate based on locked state (canonical update) */
     size_t delta = now_us - s->last_update_us;
     uint32_t steps = delta / s->bucket_us;
     if (steps == 0)
-        goto out;
+        return;
 
     if (steps > s->nbuckets)
         steps = s->nbuckets;
@@ -100,14 +82,20 @@ void stat_series_advance_internal(struct stat_series *s, time_us_t now_us,
 
     /* publish last_update_us atomically for lockless readers/writers */
     atomic_store(&s->last_update_us, s->last_update_us + steps * s->bucket_us);
-
-out:
-    if (!already_locked)
-        spin_unlock(&s->lock, irql);
 }
 
 void stat_series_advance(struct stat_series *s, time_us_t now_us) {
-    stat_series_advance_internal(s, now_us, /* already_locked = */ false);
+    /* Fast-path: check without taking lock */
+    time_us_t last = atomic_load(&s->last_update_us);
+    size_t delta = now_us - last;
+    uint32_t steps = delta / s->bucket_us;
+    if (steps == 0)
+        return; /* no rotation required, avoid locking */
+
+    /* Take lock and re-check/recompute using the protected fields */
+    enum irql irql = spin_lock(&s->lock);
+    stat_series_advance_locked(s, now_us);
+    spin_unlock(&s->lock, irql);
 }
 
 void stat_series_record(struct stat_series *s, size_t value,
@@ -115,7 +103,7 @@ void stat_series_record(struct stat_series *s, size_t value,
     time_us_t now_us = time_get_us();
 
     /* attempt to advance if needed */
-    stat_series_advance_internal(s, now_us, /* already_locked = */ false);
+    stat_series_advance(s, now_us);
 
     /* read canonical current published by advance (atomic load) */
     uint32_t cur = atomic_load(&s->current); /* acquire ordering */

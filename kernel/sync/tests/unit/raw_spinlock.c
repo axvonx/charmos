@@ -5,15 +5,23 @@
 
 TEST_GROUP_DECLARE(raw_spinlock);
 
-TEST_DECLARE_UNIT(raw_spinlock, physical_operations) {
+static void raw_spin_test_body(bool *rejected_out,
+                               bool *acquired_out) TSA_NO_ANALYSIS {
     struct raw_spinlock lock = RAW_SPINLOCK_INIT;
 
     raw_spin_lock(&lock);
-    bool rejected_while_held = !raw_spin_trylock(&lock);
+    *rejected_out = !raw_spin_trylock(&lock);
     raw_spin_unlock(&lock);
 
-    bool acquired_after_release = raw_spin_trylock(&lock);
-    raw_spin_unlock(&lock);
+    *acquired_out = raw_spin_trylock(&lock);
+    if (*acquired_out)
+        raw_spin_unlock(&lock);
+}
+
+TEST_DECLARE_UNIT(raw_spinlock, physical_operations) {
+    bool rejected_while_held = false;
+    bool acquired_after_release = false;
+    raw_spin_test_body(&rejected_while_held, &acquired_after_release);
 
     TEST_ASSERT(rejected_while_held);
     TEST_ASSERT(acquired_after_release);

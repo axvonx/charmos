@@ -412,7 +412,7 @@ void thread_free(struct thread *t);
 void thread_init_thread_ids(void);
 void thread_sleep_for_ms(uint64_t ms);
 void thread_sleep_for_us(uint64_t us);
-void thread_exit(void);
+__noreturn void thread_exit(void);
 void thread_print(const struct thread *t);
 
 void thread_update_activity_stats(struct thread *t, time_ms_t time);
@@ -433,7 +433,6 @@ void thread_set_background(struct thread *t);
 void thread_migrate(struct thread *t, size_t dest_core);
 enum thread_prio_class thread_unboost_self();
 enum thread_prio_class thread_boost_self(enum thread_prio_class new);
-struct scheduler *thread_get_scheduler(struct thread *t, enum irql *sirql_out);
 
 void thread_enqueue(struct thread *t);
 void thread_enqueue_on_core(struct thread *t, uint64_t core_id);
@@ -444,7 +443,7 @@ bool thread_inherit_priority(struct thread *boosted, struct thread *from,
 void thread_uninherit_priority(enum thread_prio_class class);
 void thread_remove_boost();
 
-void thread_exit_with_status(int status);
+__noreturn void thread_exit_with_status(int status);
 
 int thread_join(struct thread *t);
 bool thread_join_timeout(struct thread *t, time_ms_t timeout_ms,
@@ -611,8 +610,10 @@ static inline bool thread_get_rcu(struct thread *t) {
     return true;
 }
 
-static inline enum irql thread_acquire(struct thread *t, bool *success) {
-    if (!thread_get(t)) {
+static inline enum irql thread_acquire_internal(struct thread *t,
+                                                bool (*fn)(struct thread *),
+                                                bool *success) TSA_NO_ANALYSIS {
+    if (!fn(t)) {
         if (success)
             *success = false;
         return IRQL_NONE;
@@ -623,7 +624,18 @@ static inline enum irql thread_acquire(struct thread *t, bool *success) {
     return spin_lock_irq_disable(&t->lock);
 }
 
-static inline void thread_release(struct thread *t, enum irql irql) {
+static inline enum irql thread_acquire(struct thread *t,
+                                       bool *success) TSA_NO_ANALYSIS {
+    return thread_acquire_internal(t, thread_get, success);
+}
+
+static inline enum irql thread_acquire_rcu(struct thread *t,
+                                           bool *success) TSA_NO_ANALYSIS {
+    return thread_acquire_internal(t, thread_get_rcu, success);
+}
+
+static inline void thread_release(struct thread *t,
+                                  enum irql irql) TSA_NO_ANALYSIS {
     spin_unlock(&t->lock, irql);
     thread_put(t);
 }

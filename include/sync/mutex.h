@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <sync/lock_chk_types.h>
+#include <sync/lock_general.h>
 
 /* mutex: pointer sized mutex
  *
@@ -19,7 +20,7 @@
  *
  */
 
-struct mutex {
+struct TSA_CAPABILITY("mutex") mutex {
     _Atomic(uintptr_t) lock_word;
 
 #ifdef DEBUG_LOCK_CHK
@@ -34,14 +35,22 @@ void mutex_set_chk_flags(struct mutex *mtx, enum lock_chk_flags flags);
 void mutex_reinit_chk(struct mutex *mtx, const struct lock_chk_class *class,
                       enum lock_chk_flags flags);
 void mutex_unlock_internal(struct mutex *mutex,
-                           const struct lock_chk_site *site);
-void mutex_lock_internal(struct mutex *mutex, const struct lock_chk_site *site);
+                           const struct lock_chk_site *site)
+    TSA_RELEASES(mutex);
+
+void mutex_lock_internal(struct mutex *mutex, const struct lock_chk_site *site)
+    TSA_ACQUIRES(mutex);
+
 void mutex_lock_subclass_internal(struct mutex *mutex, uint8_t subclass,
-                                  const struct lock_chk_site *site);
+                                  const struct lock_chk_site *site)
+    TSA_ACQUIRES(mutex);
+
 bool mutex_locked(struct mutex *mtx);
 struct thread *mutex_get_owner(struct mutex *mtx);
 void mutex_assert_held_internal(struct mutex *mtx,
-                                const struct lock_chk_site *site);
+                                const struct lock_chk_site *site)
+    TSA_ASSERT_CAPABILITY(mtx);
+
 void mutex_assert_not_held_internal(struct mutex *mtx,
                                     const struct lock_chk_site *site);
 

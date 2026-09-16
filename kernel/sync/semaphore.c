@@ -20,14 +20,15 @@ void semaphore_init(struct semaphore *s, int value, bool irq_disable) {
     condvar_init(&s->cv, irq_disable);
 }
 
-static enum irql semaphore_lock_internal(struct semaphore *sem) {
+static enum irql
+semaphore_lock_internal(struct semaphore *sem) TSA_NO_ANALYSIS {
     if (sem->irq_disable)
         return spin_lock_irq_disable(&sem->lock);
 
     return spin_lock(&sem->lock);
 }
 
-void semaphore_wait(struct semaphore *s) {
+void semaphore_wait(struct semaphore *s) TSA_NO_ANALYSIS {
     enum irql irql = semaphore_lock_internal(s);
 
     while (atomic_load(&s->count) == 0)
@@ -37,7 +38,8 @@ void semaphore_wait(struct semaphore *s) {
     spin_unlock(&s->lock, irql);
 }
 
-bool semaphore_timedwait(struct semaphore *s, time_ms_t timeout_ms) {
+bool semaphore_timedwait(struct semaphore *s,
+                         time_ms_t timeout_ms) TSA_NO_ANALYSIS {
     enum irql irql = semaphore_lock_internal(s);
 
     while (atomic_load(&s->count) == 0) {
@@ -55,7 +57,7 @@ bool semaphore_timedwait(struct semaphore *s, time_ms_t timeout_ms) {
     return true;
 }
 
-void semaphore_post(struct semaphore *s) {
+void semaphore_post(struct semaphore *s) TSA_NO_ANALYSIS {
     enum irql irql = semaphore_lock_internal(s);
 
     atomic_fetch_add(&s->count, 1);
@@ -65,7 +67,7 @@ void semaphore_post(struct semaphore *s) {
     spin_unlock(&s->lock, irql);
 }
 
-void semaphore_postn(struct semaphore *s, int n) {
+void semaphore_postn(struct semaphore *s, int n) TSA_NO_ANALYSIS {
     enum irql irql = semaphore_lock_internal(s);
 
     atomic_fetch_add(&s->count, n);

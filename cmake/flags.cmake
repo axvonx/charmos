@@ -8,7 +8,7 @@ endif ()
 set(KERNEL_WARNINGS -Wall -Wextra -Wpointer-sign -Wenum-compare)
 
 if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
-    list(APPEND KERNEL_WARNINGS -Wno-initializer-overrides)
+    list(APPEND KERNEL_WARNINGS -Wno-initializer-overrides -Wthread-safety -Werror=thread-safety)
 else ()
     list(APPEND KERNEL_WARNINGS -Wno-override-init)
 endif ()

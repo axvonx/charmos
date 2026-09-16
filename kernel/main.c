@@ -49,6 +49,7 @@
 #include <stdint.h>
 #include <sync/lock_chk.h>
 #include <sync/rcu.h>
+#include <sync/spinlock.h>
 #include <sync/turnstile.h>
 #include <syscall.h>
 #include <test/test.h>

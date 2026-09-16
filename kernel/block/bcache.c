@@ -8,12 +8,18 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <sync/lock_chk_assert.h>
+#include <sync/lock_general.h>
 #include <thread/workqueue.h>
 
 static bool remove(struct bcache *cache, uint64_t key, uint64_t spb);
 
+static bool insert_locked(struct bcache *cache, uint64_t key,
+                          struct bcache_entry *value)
+    TSA_MUST_HOLD(&cache->lock);
+
 static bool insert(struct bcache *cache, uint64_t key,
-                   struct bcache_entry *value, bool already_locked);
+                   struct bcache_entry *value);
 
 static struct bcache_entry *get(struct bcache *cache, uint64_t key);
 static bool write(struct block_device *d, struct bcache *cache,
@@ -24,12 +30,8 @@ static enum errno prefetch(struct block_device *disk, struct bcache *cache,
                            uint64_t lba, uint64_t block_size, uint64_t spb);
 
 /* eviction must be explicitly and separately called */
-static bool insert(struct bcache *cache, uint64_t key,
-                   struct bcache_entry *value, bool already_locked) {
-    enum irql irql;
-    if (!already_locked)
-        irql = spin_lock(&cache->lock);
-
+static bool insert_locked(struct bcache *cache, uint64_t key,
+                          struct bcache_entry *value) {
     uint64_t index = bcache_hash(key, cache->capacity);
     struct bcache_wrapper *head = cache->entries[index];
 
@@ -38,8 +40,6 @@ static bool insert(struct bcache *cache, uint64_t key,
         if (node->key == key) {
             node->value = value;
             node->value->access_time = bcache_get_ticks(cache);
-            if (!already_locked)
-                spin_unlock(&cache->lock, irql);
             return true;
         }
     }
@@ -47,8 +47,6 @@ static bool insert(struct bcache *cache, uint64_t key,
     /* New head */
     struct bcache_wrapper *new_node = kmalloc(sizeof(struct bcache_wrapper));
     if (!new_node) {
-        if (!already_locked)
-            spin_unlock(&cache->lock, irql);
         return false;
     }
 
@@ -60,9 +58,15 @@ static bool insert(struct bcache *cache, uint64_t key,
     cache->entries[index] = new_node;
     cache->count++;
 
-    if (!already_locked)
-        spin_unlock(&cache->lock, irql);
     return true;
+}
+
+static bool insert(struct bcache *cache, uint64_t key,
+                   struct bcache_entry *value) {
+    enum irql irql = spin_lock(&cache->lock);
+    bool ret = insert_locked(cache, key, value);
+    spin_unlock(&cache->lock, irql);
+    return ret;
 }
 
 static struct bcache_entry *get(struct bcache *cache, uint64_t key) {
@@ -160,7 +164,7 @@ struct bcache_pf_data {
 
 static void prefetch_callback(struct bio_request *bio) {
     struct bcache_pf_data *data = bio->user_data;
-    insert(data->cache, bio->lba, data->new_entry, false);
+    insert(data->cache, bio->lba, data->new_entry);
 
     kfree(data);
     kfree(bio);
@@ -340,11 +344,11 @@ void *bcache_get(struct block_device *disk, uint64_t lba, uint64_t block_size,
 
 bool bcache_insert(struct block_device *disk, uint64_t lba,
                    struct bcache_entry *ent, uint64_t spb) {
-    if (insert(disk->cache, lba, ent, false)) {
+    if (insert(disk->cache, lba, ent)) {
         return true;
     } else {
         evict(disk->cache, spb);
-        return insert(disk->cache, lba, ent, false);
+        return insert(disk->cache, lba, ent);
     }
 }
 

@@ -198,9 +198,9 @@ void mutex_simple_init_chk_internal(struct mutex_simple *m,
     mutex_simple_chk_state_init(m, class, flags);
 }
 
-void mutex_simple_lock_subclass_internal(struct mutex_simple *m,
-                                         uint8_t subclass,
-                                         const struct lock_chk_site *site) {
+void mutex_simple_lock_subclass_internal(
+    struct mutex_simple *m, uint8_t subclass,
+    const struct lock_chk_site *site) TSA_NO_ANALYSIS {
     mutex_simple_sanity_check();
 
     struct mutex_simple_chk_acquire_state chk_state;
@@ -223,13 +223,13 @@ void mutex_simple_lock_subclass_internal(struct mutex_simple *m,
     mutex_simple_chk_locked(&chk_state);
 }
 
-void mutex_simple_lock_internal(struct mutex_simple *m,
-                                const struct lock_chk_site *site) {
+void mutex_simple_lock_internal(
+    struct mutex_simple *m, const struct lock_chk_site *site) TSA_NO_ANALYSIS {
     mutex_simple_lock_subclass_internal(m, 0, site);
 }
 
-void mutex_simple_unlock_internal(struct mutex_simple *m,
-                                  const struct lock_chk_site *site) {
+void mutex_simple_unlock_internal(
+    struct mutex_simple *m, const struct lock_chk_site *site) TSA_NO_ANALYSIS {
     mutex_simple_sanity_check();
 
     struct thread *curr = thread_get_current();

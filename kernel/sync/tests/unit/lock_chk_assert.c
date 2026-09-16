@@ -86,13 +86,13 @@ TEST_DECLARE_UNIT(lock_chk, assert_held_roundtrip_rwlock) {
 
     rw_read_lock(&rw);
     RWLOCK_ASSERT_READ(&rw);
-    LOCK_CHK_ASSERT_HELD(&rw, RWLOCK_ACQUIRE_READ);
+    LOCK_CHK_ASSERT_HELD(&rw, RWLOCK_READ);
     rw_unlock(&rw);
     RWLOCK_ASSERT_NOT_HELD(&rw);
 
     rw_write_lock(&rw);
     RWLOCK_ASSERT_WRITE(&rw);
-    LOCK_CHK_ASSERT_HELD(&rw, RWLOCK_ACQUIRE_WRITE);
+    LOCK_CHK_ASSERT_HELD(&rw, RWLOCK_WRITE);
     rw_unlock(&rw);
     RWLOCK_ASSERT_NOT_HELD(&rw);
     LOCK_CHK_ASSERT_NOT_HELD(&rw);

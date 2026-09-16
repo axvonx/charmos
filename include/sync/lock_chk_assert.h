@@ -1,6 +1,7 @@
 /* @title: Lock Validator Assertions */
 #pragma once
 #include <compiler.h>
+#include <sync/lock_general.h>
 #include <sync/mutex.h>
 #include <sync/mutex_simple.h>
 #include <sync/qspinlock.h>
@@ -11,7 +12,7 @@
  * is on and the lock is checked, this actually gets to use
  * the provable engine. But otherwise, it falls back to a naive
  * read of the lock word. RWLOCK needs
- * RWLOCK_ACQUIRE_READ/RWLOCK_ACQUIRE_WRITE, which is why we have
+ * RWLOCK_READ/RWLOCK_WRITE, which is why we have
  * _1 and _2, so all locks regardless of type can funnel through
  * this callsite */
 
@@ -39,3 +40,14 @@
         struct mutex_simple *: mutex_simple_assert_not_held_internal,          \
         struct rwlock *: rwlock_assert_not_held_internal)(                     \
         (l), LOCK_CHK_SITE_HERE())
+
+#define LOCK_CHK_ASSERT_HELD_STATE(l, m)                                       \
+    do {                                                                       \
+        if ((m) == LOCK_HELD) {                                                \
+            LOCK_CHK_ASSERT_HELD((l));                                         \
+        } else if ((m) == LOCK_NOT_HELD) {                                     \
+            LOCK_CHK_ASSERT_NOT_HELD((l));                                     \
+        } else {                                                               \
+            panic("impossible mode %d", (m));                                  \
+        }                                                                      \
+    } while (0)

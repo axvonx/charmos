@@ -487,11 +487,11 @@ void vprintf(struct printf_cursor *csr, const char *format, va_list args) {
     }
 }
 
-enum irql printf_lock() {
+enum irql printf_lock() TSA_ACQUIRES(&k_printf_lock) {
     return spin_lock_irq_disable(&k_printf_lock);
 }
 
-void printf_unlock(enum irql i) {
+void printf_unlock(enum irql i) TSA_RELEASES(&k_printf_lock) {
     spin_unlock(&k_printf_lock, i);
 }
 
@@ -502,7 +502,7 @@ void printf_unlocked(const char *format, ...) {
     va_end(args);
 }
 
-void printf(const char *format, ...) {
+void printf(const char *format, ...) TSA_NO_ANALYSIS {
     bool i = are_interrupts_enabled();
     disable_interrupts();
 

@@ -63,7 +63,7 @@ static inline bool rcu_node_pending(const struct rcu_node *node) {
  * no readers for this GP, and completed_seq keeps this idempotent
  */
 static void rcu_propagate_done(struct rcu_node *node, uint64_t seq,
-                               enum irql irql) {
+                               enum irql irql) TSA_NO_ANALYSIS {
     SPINLOCK_ASSERT_HELD(&node->lock);
     while (true) {
         if (node->gp_seq != seq || node->completed_seq == seq ||
@@ -99,7 +99,8 @@ static void rcu_propagate_done(struct rcu_node *node, uint64_t seq,
 
 /* cpu has passed through a quiescent state */
 static void rcu_report_cpu_locked(struct rcu_node *leaf, cpu_id_t cpu,
-                                  uint64_t gp_seq_seen, enum irql irql) {
+                                  uint64_t gp_seq_seen,
+                                  enum irql irql) TSA_NO_ANALYSIS {
     SPINLOCK_ASSERT_HELD(&leaf->lock);
     if (leaf->gp_seq != gp_seq_seen || leaf->completed_seq == gp_seq_seen) {
         spin_unlock(&leaf->lock, irql);
@@ -138,7 +139,7 @@ void rcu_read_lock(void) {
 
 /* Remove a reader off the leaf, and this can run on whatever CPU
  * the reader happens to wake on */
-static void rcu_unregister_reader(struct thread *t) {
+static void rcu_unregister_reader(struct thread *t) TSA_NO_ANALYSIS {
     enum irql outer = irql_raise(IRQL_HIGH_LEVEL);
 
     struct rcu_node *leaf = t->rcu_leaf;
@@ -190,7 +191,8 @@ void rcu_read_unlock(void) {
 /* We might want to change next_is_idle to a thread pointer...
  *
  * Lock ordering here is scheduler -> leaf -> parents */
-void rcu_note_context_switch(struct thread *outgoing, struct thread *incoming) {
+void rcu_note_context_switch(struct thread *outgoing,
+                             struct thread *incoming) TSA_NO_ANALYSIS {
     if (!unlikely(rcu.ready))
         return;
 
@@ -236,7 +238,7 @@ void rcu_note_context_switch(struct thread *outgoing, struct thread *incoming) {
 }
 
 /* This just lets the CPU answer IRQ_NOP */
-void rcu_note_irq_exit(void) {
+void rcu_note_irq_exit(void) TSA_NO_ANALYSIS {
     if (!rcu.ready)
         return;
 
@@ -415,7 +417,7 @@ static void rcu_report_stall(uint64_t seq, time_ms_t elapsed) {
                  blockers[i].read_seq);
 }
 
-static uint64_t rcu_gp_start(struct list_head *batch) {
+static uint64_t rcu_gp_start(struct list_head *batch) TSA_NO_ANALYSIS {
     enum irql outer = irql_raise(IRQL_DISPATCH_LEVEL);
     rcu_detach_callbacks(batch);
     atomic_store_explicit(&rcu.gp_requests, 0, memory_order_relaxed);

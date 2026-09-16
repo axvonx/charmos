@@ -4,7 +4,7 @@
 #include <thread/workqueue.h>
 
 static enum irql condvar_lock_internal(struct condvar *cv,
-                                       struct spinlock *lock) {
+                                       struct spinlock *lock) TSA_NO_ANALYSIS {
     if (cv->irq_disable)
         return spin_lock_irq_disable(lock);
 
@@ -18,7 +18,8 @@ static void condvar_prepare_wait(struct condvar *cv) {
 
 static enum wake_reason condvar_finish_wait(struct condvar *cv,
                                             struct spinlock *lock,
-                                            enum irql irql, enum irql *out) {
+                                            enum irql irql,
+                                            enum irql *out) TSA_NO_ANALYSIS {
     spin_unlock(lock, irql);
     struct thread_wait_result result = thread_wait_complete();
     enum wake_reason reason = result.reason == THREAD_WAKE_REASON_SLEEP_TIMEOUT
@@ -29,7 +30,7 @@ static enum wake_reason condvar_finish_wait(struct condvar *cv,
 }
 
 enum wake_reason condvar_wait(struct condvar *cv, struct spinlock *lock,
-                              enum irql irql, enum irql *out) {
+                              enum irql irql, enum irql *out) TSA_NO_ANALYSIS {
     condvar_prepare_wait(cv);
     return condvar_finish_wait(cv, lock, irql, out);
 }
@@ -79,7 +80,7 @@ static void condvar_timeout_wakeup(struct timer *timer) {
 
 enum wake_reason condvar_wait_timeout(struct condvar *cv, struct spinlock *lock,
                                       time_ms_t timeout_ms, enum irql irql,
-                                      enum irql *out) {
+                                      enum irql *out) TSA_NO_ANALYSIS {
     struct thread *curr = thread_get_current();
 
     struct condvar_with_cb *cwcb = &curr->cv_cb_object;

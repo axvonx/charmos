@@ -809,7 +809,7 @@ static void crash_report_raw_serial(const struct crash_context *ctx,
     }
 }
 
-__noreturn void crash_full(const struct crash_context *ctx) {
+__noreturn void crash_full(const struct crash_context *ctx) TSA_NO_ANALYSIS {
     disable_interrupts();
 
     uint32_t depth =
@@ -1024,19 +1024,19 @@ static void unwind_rcu(struct crash_unwind_node_data *d) {
         rcu_read_unlock();
 }
 
-static void unwind_mutex(struct crash_unwind_node_data *d) {
+static void unwind_mutex(struct crash_unwind_node_data *d) TSA_NO_ANALYSIS {
     mutex_unlock(d->ptr);
 }
 
-static void unwind_rwlock(struct crash_unwind_node_data *d) {
+static void unwind_rwlock(struct crash_unwind_node_data *d) TSA_NO_ANALYSIS {
     rw_unlock(d->ptr);
 }
 
-static void unwind_spinlock(struct crash_unwind_node_data *d) {
+static void unwind_spinlock(struct crash_unwind_node_data *d) TSA_NO_ANALYSIS {
     spin_unlock(d->ptr, d->arg);
 }
 
-static void unwind_qspinlock(struct crash_unwind_node_data *d) {
+static void unwind_qspinlock(struct crash_unwind_node_data *d) TSA_NO_ANALYSIS {
     qspin_unlock(d->ptr, d->arg);
 }
 

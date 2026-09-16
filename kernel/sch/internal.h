@@ -168,10 +168,10 @@ static inline void thread_scale_back_delta(struct thread *thread) {
     thread->dynamic_delta = (thread->dynamic_delta * 1000) / 1100;
 }
 
-static inline void scheduler_acquire_two_locks(struct scheduler *a,
-                                               struct scheduler *b,
-                                               enum irql *a_irql_out,
-                                               enum irql *b_irql_out) {
+static inline void
+scheduler_acquire_two_locks(struct scheduler *a, struct scheduler *b,
+                            enum irql *a_irql_out,
+                            enum irql *b_irql_out) TSA_NO_ANALYSIS {
     kassert(a != b);
     if (a < b) {
         *a_irql_out = spin_lock_irq_disable(&a->lock);
@@ -182,10 +182,10 @@ static inline void scheduler_acquire_two_locks(struct scheduler *a,
     }
 }
 
-static inline void scheduler_release_two_locks(struct scheduler *a,
-                                               struct scheduler *b,
-                                               enum irql a_irql,
-                                               enum irql b_irql) {
+static inline void
+scheduler_release_two_locks(struct scheduler *a, struct scheduler *b,
+                            enum irql a_irql,
+                            enum irql b_irql) TSA_NO_ANALYSIS {
     if (a == b)
         return spin_unlock(&a->lock, a_irql);
 
@@ -200,8 +200,9 @@ static inline void scheduler_release_two_locks(struct scheduler *a,
 
 /* this function and the other release_two_raw_locks is only to be used
  * from inside of scheduler_yield() and friends. nowhere else! */
-static inline void scheduler_acquire_two_raw_locks(struct scheduler *a,
-                                                   struct scheduler *b) {
+static inline void
+scheduler_acquire_two_raw_locks(struct scheduler *a,
+                                struct scheduler *b) TSA_NO_ANALYSIS {
     kassert(a != b);
     if (a < b) {
         spin_lock_raw(&a->lock);
@@ -212,8 +213,9 @@ static inline void scheduler_acquire_two_raw_locks(struct scheduler *a,
     }
 }
 
-static inline void scheduler_release_two_raw_locks(struct scheduler *a,
-                                                   struct scheduler *b) {
+static inline void
+scheduler_release_two_raw_locks(struct scheduler *a,
+                                struct scheduler *b) TSA_NO_ANALYSIS {
     kassert(a != b);
     if (a > b) {
         spin_unlock_raw(&a->lock);

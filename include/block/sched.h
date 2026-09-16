@@ -8,6 +8,7 @@
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <sync/lock_general.h>
 #include <sync/mutex.h>
 #include <thread/workqueue.h>
 
@@ -184,23 +185,27 @@ void noop_reorder(struct block_device *disk);
 
 void bio_sched_enqueue(struct block_device *disk, struct bio_request *req);
 
-void bio_sched_dequeue(struct block_device *disk, struct bio_request *req,
-                       bool already_locked);
+void bio_sched_dequeue(struct block_device *disk, struct bio_request *req);
 
 void bio_sched_enqueue_internal(struct bio_scheduler *sched,
-                                struct bio_request *req);
+                                struct bio_request *req)
+    TSA_MUST_HOLD(&sched->lock);
 void bio_sched_dequeue_internal(struct bio_scheduler *sched,
-                                struct bio_request *req);
+                                struct bio_request *req)
+    TSA_MUST_HOLD(&sched->lock);
 
 void bio_sched_dispatch_partial(struct block_device *disk,
                                 enum bio_request_priority prio);
 
 void bio_sched_dispatch_all(struct block_device *disk);
 
-void bio_sched_try_early_dispatch(struct bio_scheduler *sched);
+void bio_sched_try_early_dispatch(struct bio_scheduler *sched)
+    TSA_MUST_HOLD(&sched->lock);
 
-bool bio_sched_try_coalesce(struct bio_scheduler *sched);
-bool bio_sched_boost_starved(struct bio_scheduler *sched);
+bool bio_sched_try_coalesce(struct bio_scheduler *sched)
+    TSA_MUST_HOLD(&sched->lock);
+bool bio_sched_boost_starved(struct bio_scheduler *sched)
+    TSA_MUST_HOLD(&sched->lock);
 
 struct bio_scheduler *bio_sched_create(struct block_device *disk,
                                        struct bio_scheduler_ops *ops);

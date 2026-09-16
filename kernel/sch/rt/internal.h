@@ -21,10 +21,9 @@ rt_slots_init_for_scheduler(struct rt_scheduler_static *rts);
 void rt_slots_dealloc_for_scheduler(struct rt_scheduler_static *rts);
 size_t rt_slot_get_num_available(void);
 
-static inline void
-rt_scheduler_acquire_two_mappings(struct rt_scheduler_mapping *a,
-                                  struct rt_scheduler_mapping *b,
-                                  enum irql *out_a, enum irql *out_b) {
+static inline void rt_scheduler_acquire_two_mappings(
+    struct rt_scheduler_mapping *a, struct rt_scheduler_mapping *b,
+    enum irql *out_a, enum irql *out_b) TSA_NO_ANALYSIS {
     if (a < b) {
         *out_a = spin_lock_irq_disable(&a->lock);
         *out_b = spin_lock_irq_disable(&b->lock);
@@ -36,10 +35,9 @@ rt_scheduler_acquire_two_mappings(struct rt_scheduler_mapping *a,
     }
 }
 
-static inline void
-rt_scheduler_release_two_mappings(struct rt_scheduler_mapping *a,
-                                  struct rt_scheduler_mapping *b,
-                                  enum irql out_a, enum irql out_b) {
+static inline void rt_scheduler_release_two_mappings(
+    struct rt_scheduler_mapping *a, struct rt_scheduler_mapping *b,
+    enum irql out_a, enum irql out_b) TSA_NO_ANALYSIS {
     if (a < b) {
         spin_unlock(&b->lock, out_b);
         spin_unlock(&a->lock, out_a);
@@ -51,10 +49,9 @@ rt_scheduler_release_two_mappings(struct rt_scheduler_mapping *a,
     }
 }
 
-static inline void rt_scheduler_acquire_two_locks(struct rt_scheduler *a,
-                                                  struct rt_scheduler *b,
-                                                  enum irql *oa,
-                                                  enum irql *ob) {
+static inline void
+rt_scheduler_acquire_two_locks(struct rt_scheduler *a, struct rt_scheduler *b,
+                               enum irql *oa, enum irql *ob) TSA_NO_ANALYSIS {
     if (a == b) {
         *oa = spin_lock_irq_disable(&a->lock);
         return;
@@ -69,9 +66,9 @@ static inline void rt_scheduler_acquire_two_locks(struct rt_scheduler *a,
     }
 }
 
-static inline void rt_scheduler_release_two_locks(struct rt_scheduler *a,
-                                                  struct rt_scheduler *b,
-                                                  enum irql oa, enum irql ob) {
+static inline void
+rt_scheduler_release_two_locks(struct rt_scheduler *a, struct rt_scheduler *b,
+                               enum irql oa, enum irql ob) TSA_NO_ANALYSIS {
     if (a == b) {
         spin_unlock(&a->lock, oa);
         return;

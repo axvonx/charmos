@@ -28,15 +28,18 @@ void anon_vma_free(struct anon_vma *av); /* refcount==0 only */
 enum errno anon_vma_fork(struct vma_range *child, struct vma_range *parent);
 
 /* root->lock */
-static inline void anon_vma_read_lock(struct anon_vma *av) {
+static inline void anon_vma_read_lock(struct anon_vma *av)
+    TSA_ACQUIRES(&av->root->lock) {
     rw_read_lock(&av->root->lock);
 }
 
-static inline void anon_vma_unlock(struct anon_vma *av) {
+static inline void anon_vma_unlock(struct anon_vma *av)
+    TSA_RELEASES(&av->root->lock) {
     rw_unlock(&av->root->lock);
 }
 
-static inline void anon_vma_write_lock(struct anon_vma *av) {
+static inline void anon_vma_write_lock(struct anon_vma *av)
+    TSA_ACQUIRES(&av->root->lock) {
     rw_write_lock(&av->root->lock);
 }
 

@@ -25,7 +25,7 @@ struct scheduler *scheduler_select_best_for_thread(struct thread *t) {
 
 /* Only scheduler entries are object completion and APC execution */
 static void resume_thread(struct thread *t, enum thread_resume_reason reason,
-                          bool completion) {
+                          bool completion) TSA_NO_ANALYSIS {
     enum irql birql, lirql;
 
     struct scheduler *best = scheduler_select_best_for_thread(t);
@@ -54,7 +54,7 @@ static void resume_thread(struct thread *t, enum thread_resume_reason reason,
      * to remove the old queue entry and then change class for completion */
     bool requeue = completion && state == THREAD_STATE_READY;
     if (requeue)
-        scheduler_remove_thread(last, t, true);
+        scheduler_remove_thread_locked(last, t);
 
     enum thread_state to_state =
         yielded ? THREAD_STATE_READY : THREAD_STATE_RUNNING;
@@ -75,7 +75,7 @@ static void resume_thread(struct thread *t, enum thread_resume_reason reason,
         state != THREAD_STATE_RUNNING && state != THREAD_STATE_READY;
 
     if (requeue || (yielded && queuable)) {
-        scheduler_add_thread(best, t, true);
+        scheduler_add_thread_locked(best, t);
 
         if (last != best)
             thread_post_migrate(t, last->core_id, best->core_id);

@@ -306,7 +306,7 @@ struct report_guard {
     bool locked;
 };
 
-static struct report_guard report_lock(void) {
+static struct report_guard report_lock(void) TSA_NO_ANALYSIS {
     struct report_guard g = {.irql = 0, .locked = false};
 
     if (term_in_panic())
@@ -317,7 +317,7 @@ static struct report_guard report_lock(void) {
     return g;
 }
 
-static void report_unlock(struct report_guard g) {
+static void report_unlock(struct report_guard g) TSA_NO_ANALYSIS {
     if (g.locked)
         printf_unlock(g.irql);
 }

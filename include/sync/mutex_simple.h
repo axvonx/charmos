@@ -2,10 +2,11 @@
 #pragma once
 #include <stdbool.h>
 #include <sync/lock_chk_types.h>
+#include <sync/lock_general.h>
 #include <sync/spinlock.h>
 #include <thread/wait.h>
 
-struct mutex_simple {
+struct TSA_CAPABILITY("mutex") mutex_simple {
     struct thread *owner;
     struct thread_wait_header waiters;
     struct spinlock lock;
@@ -24,16 +25,25 @@ void mutex_simple_reinit_chk(struct mutex_simple *m,
                              const struct lock_chk_class *class,
                              enum lock_chk_flags flags);
 void mutex_simple_lock_internal(struct mutex_simple *m,
-                                const struct lock_chk_site *site);
+                                const struct lock_chk_site *site)
+    TSA_ACQUIRES(m);
+
 void mutex_simple_unlock_internal(struct mutex_simple *m,
-                                  const struct lock_chk_site *site);
+                                  const struct lock_chk_site *site)
+    TSA_RELEASES(m);
+
 void mutex_simple_lock_subclass_internal(struct mutex_simple *m,
                                          uint8_t subclass,
-                                         const struct lock_chk_site *site);
+                                         const struct lock_chk_site *site)
+    TSA_ACQUIRES(m);
+
 bool mutex_simple_locked(struct mutex_simple *m);
 struct thread *mutex_simple_get_owner(struct mutex_simple *m);
+
 void mutex_simple_assert_held_internal(struct mutex_simple *m,
-                                       const struct lock_chk_site *site);
+                                       const struct lock_chk_site *site)
+    TSA_ASSERT_CAPABILITY(m);
+
 void mutex_simple_assert_not_held_internal(struct mutex_simple *m,
                                            const struct lock_chk_site *site);
 

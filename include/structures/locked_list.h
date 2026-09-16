@@ -13,7 +13,8 @@ struct locked_list {
     bool lock_irq_disable : 1;
 };
 
-static inline enum irql locked_list_lock(struct locked_list *ll) {
+static inline enum irql locked_list_lock(struct locked_list *ll)
+    TSA_ACQUIRES(&ll->lock) {
     if (ll->lock_irq_disable) {
         return spin_lock_irq_disable(&ll->lock);
     } else {
@@ -21,7 +22,8 @@ static inline enum irql locked_list_lock(struct locked_list *ll) {
     }
 }
 
-static inline void locked_list_unlock(struct locked_list *ll, enum irql irql) {
+static inline void locked_list_unlock(struct locked_list *ll, enum irql irql)
+    TSA_RELEASES(&ll->lock) {
     spin_unlock(&ll->lock, irql);
 }
 

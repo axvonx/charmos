@@ -37,7 +37,8 @@ ok:
 }
 
 bool thread_inherit_priority(struct thread *boosted, struct thread *from,
-                             enum thread_prio_class *old_class) {
+                             enum thread_prio_class *old_class)
+    TSA_NO_ANALYSIS {
     struct scheduler *sched, *sched2;
     enum irql irql, irql2;
 
@@ -47,9 +48,9 @@ bool thread_inherit_priority(struct thread *boosted, struct thread *from,
     if (thread_get_state(boosted) == THREAD_STATE_READY) {
         /* thread is READY - we remove it from the runqueue and then we
          * re-insert it */
-        scheduler_remove_thread(sched, boosted, /* lock_held = */ true);
+        scheduler_remove_thread_locked(sched, boosted);
         did_boost = scheduler_boost_thread_internal(boosted, from, old_class);
-        scheduler_add_thread(sched, boosted, /* lock_held = */ true);
+        scheduler_add_thread_locked(sched, boosted);
     } else {
         /* if the thread is off doing anything else (maybe it's blocking, maybe
          * it's running), we go ahead and just boost it. when it is saved those

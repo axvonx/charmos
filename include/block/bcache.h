@@ -97,11 +97,13 @@ static inline uint64_t bcache_get_ticks(struct bcache *cache) {
     return atomic_load(&cache->ticks);
 }
 
-static inline void bcache_ent_lock(struct bcache_entry *ent) {
+static inline void bcache_ent_lock(struct bcache_entry *ent)
+    TSA_ACQUIRES(&ent->lock) {
     mutex_lock(&ent->lock);
 }
 
-static inline void bcache_ent_unlock(struct bcache_entry *ent) {
+static inline void bcache_ent_unlock(struct bcache_entry *ent)
+    TSA_RELEASES(&ent->lock) {
     mutex_unlock(&ent->lock);
 }
 
@@ -113,12 +115,14 @@ static inline void bcache_ent_unpin(struct bcache_entry *ent) {
     refcount_dec_and_test(&ent->refcount);
 }
 
-static inline void bcache_ent_acquire(struct bcache_entry *ent) {
+static inline void
+bcache_ent_acquire(struct bcache_entry *ent) TSA_NO_ANALYSIS {
     bcache_ent_pin(ent);
     bcache_ent_lock(ent);
 }
 
-static inline void bcache_ent_release(struct bcache_entry *ent) {
+static inline void
+bcache_ent_release(struct bcache_entry *ent) TSA_NO_ANALYSIS {
     bcache_ent_unpin(ent);
     bcache_ent_unlock(ent);
 }

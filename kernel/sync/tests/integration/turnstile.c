@@ -36,14 +36,15 @@ TEST_DECLARE_INTEGRATION(turnstile, lookup_collision_miss) {
     while (!atomic_load(&waiter->blocked_ts) && time_get_ms() < deadline)
         thread_sleep_for_ms(1);
 
-    enum irql irql;
-    struct turnstile *found = turnstile_lookup(occupied, &irql);
+    struct turnstile *found;
+    enum irql irql = turnstile_lookup(occupied, &found);
     bool blocked = found && found->lock_obj == occupied && found->waiters == 1;
     size_t occupied_count = turnstile_get_waiter_count(occupied);
     size_t missing_count = turnstile_get_waiter_count(missing);
     turnstile_unlock(occupied, irql);
 
-    struct turnstile *miss = turnstile_lookup(missing, &irql);
+    struct turnstile *miss;
+    irql = turnstile_lookup(missing, &miss);
     bool missed = miss == NULL;
     turnstile_unlock(missing, irql);
 
@@ -66,30 +67,40 @@ TEST_DECLARE_INTEGRATION(turnstile, lookup_collision_chain) {
     TEST_ASSERT_EQ(TURNSTILE_OBJECT_HASH(&collision_locks[0].lock),
                    TURNSTILE_OBJECT_HASH(&collision_locks[1].lock));
 
+    struct mutex *lock0 = &collision_locks[0].lock;
+    struct mutex *lock1 = &collision_locks[1].lock;
+    mutex_init(lock0);
+    mutex_init(lock1);
+
+    mutex_lock_subclass(lock0, 0);
+    waiters[0] = thread_spawn_joinable("ts_chain", collision_waiter, lock0);
+
+    time_ms_t deadline = time_get_ms() + 1000;
+    while (!atomic_load(&waiters[0]->blocked_ts) && time_get_ms() < deadline)
+        thread_sleep_for_ms(1);
+    blocked[0] = atomic_load(&waiters[0]->blocked_ts) != NULL;
+
+    mutex_lock_subclass(lock1, 1);
+    waiters[1] = thread_spawn_joinable("ts_chain", collision_waiter, lock1);
+
+    deadline = time_get_ms() + 1000;
+    while (!atomic_load(&waiters[1]->blocked_ts) && time_get_ms() < deadline)
+        thread_sleep_for_ms(1);
+    blocked[1] = atomic_load(&waiters[1]->blocked_ts) != NULL;
+
     for (size_t i = 0; i < 2; i++) {
         struct mutex *lock = &collision_locks[i].lock;
-        mutex_init(lock);
-        mutex_lock_subclass(lock, i);
-        waiters[i] = thread_spawn_joinable("ts_chain", collision_waiter, lock);
-        TEST_ASSERT_NONNULL(waiters[i]);
-
-        time_ms_t deadline = time_get_ms() + 1000;
-        while (!atomic_load(&waiters[i]->blocked_ts) &&
-               time_get_ms() < deadline)
-            thread_sleep_for_ms(1);
-        blocked[i] = atomic_load(&waiters[i]->blocked_ts) != NULL;
-    }
-
-    for (size_t i = 0; i < 2; i++) {
-        struct mutex *lock = &collision_locks[i].lock;
-        enum irql irql;
-        struct turnstile *ts = turnstile_lookup(lock, &irql);
+        struct turnstile *ts;
+        enum irql irql = turnstile_lookup(lock, &ts);
         found[i] = ts && ts->lock_obj == lock && ts->waiters == 1;
         turnstile_unlock(lock, irql);
     }
 
-    for (size_t i = 2; i-- > 0;)
-        mutex_unlock(&collision_locks[i].lock);
+    mutex_unlock(lock1);
+    mutex_unlock(lock0);
+
+    TEST_ASSERT_NONNULL(waiters[0]);
+    TEST_ASSERT_NONNULL(waiters[1]);
 
     for (size_t i = 0; i < 2; i++) {
         joined[i] = thread_join_timeout(waiters[i], 1000, NULL);

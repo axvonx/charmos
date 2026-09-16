@@ -55,7 +55,7 @@ void thread_post_migrate(struct thread *t, size_t old_cpu, size_t new_cpu) {
     climb_post_migrate_hook(t, old_cpu, new_cpu);
 }
 
-void thread_migrate(struct thread *t, size_t dest_core) {
+void thread_migrate(struct thread *t, size_t dest_core) TSA_NO_ANALYSIS {
     /* first acquire both the lock of the thread's scheduler
      * and the destination core's scheduler */
 
@@ -92,8 +92,8 @@ void thread_migrate(struct thread *t, size_t dest_core) {
         thread_set_migration_target(t, dest_core);
         scheduler_force_resched(dst);
     } else if (thread_get_state(t) == THREAD_STATE_READY) {
-        scheduler_remove_thread(src, t, /* lock_held = */ true);
-        scheduler_add_thread(dst, t, /* lock_held = */ true);
+        scheduler_remove_thread_locked(src, t);
+        scheduler_add_thread_locked(dst, t);
     }
 
     thread_set_runqueue(t, dst);

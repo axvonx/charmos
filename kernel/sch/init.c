@@ -78,7 +78,7 @@ void scheduler_init(void) {
         if (!i) {
             struct thread *t = thread_create("main_thread", k_sch_main, NULL);
             t->flags |= THREAD_FLAG_PINNED;
-            scheduler_add_thread(s, t, false);
+            scheduler_add_thread(s, t);
         }
 
         global.schedulers[i] = s;
