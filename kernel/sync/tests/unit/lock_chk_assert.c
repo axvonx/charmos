@@ -105,7 +105,7 @@ static _Atomic bool assert_cross_thread_held = false;
 static _Atomic bool assert_cross_thread_release = false;
 
 static void assert_cross_thread_worker(void *arg) {
-    unused(arg);
+    cc_var_unused(arg);
     mutex_lock(&assert_cross_thread_mutex);
     atomic_store_explicit(&assert_cross_thread_held, true,
                           memory_order_release);

@@ -298,6 +298,7 @@ struct cc_aligned(8) cmdline_schema {
         .path_hint = (path_hint_str),                                          \
         .desc = (desc_str),                                                    \
         .resolve = (resolver_fn),                                              \
+        .props = __cmdline_schema_props_##n,                                   \
         .prop_count = ct_array_size(__cmdline_schema_props_##n),               \
     }
 

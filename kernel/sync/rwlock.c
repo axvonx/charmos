@@ -146,11 +146,11 @@ void rwlock_reinit_chk(struct rwlock *lock, enum thread_prio_class ceiling,
 static void rwlock_chk_state_init(struct rwlock *lock,
                                   const struct lock_chk_class *class,
                                   enum lock_chk_flags flags) {
-    unused(lock, class, flags);
+    cc_var_unused(lock, class, flags);
 }
 
 void rwlock_set_chk_flags(struct rwlock *lock, enum lock_chk_flags flags) {
-    unused(lock, flags);
+    cc_var_unused(lock, flags);
 }
 
 void rwlock_reinit_chk(struct rwlock *lock, enum thread_prio_class ceiling,
@@ -489,7 +489,7 @@ void rwlock_assert_held_internal(struct rwlock *lock,
                                   site))
         return;
 #else
-    unused(site);
+    cc_var_unused(site);
 #endif
     kassert(rwlock_locked(lock, type), "rwlock not held");
 }
@@ -503,7 +503,7 @@ void rwlock_assert_not_held_internal(struct rwlock *lock,
                                   /*want_held=*/false, site))
         return;
 #else
-    unused(site);
+    cc_var_unused(site);
 #endif
     /* Raw fallback can only check write mode ownership, which is
      * a small caveat of the system here, as reads can be

@@ -7,7 +7,7 @@ static void delayed_work_timer_cb(struct timer *t) {
         workqueue_enqueue(dwork->wq, &dwork->work);
     } else {
         enum workqueue_error err = workqueue_add(&dwork->work);
-        unused(err);
+        cc_var_unused(err);
     }
 }
 

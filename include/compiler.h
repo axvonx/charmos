@@ -85,22 +85,23 @@
 #define PP_EXPAND(...) __VA_ARGS__
 
 /* Unused argument discarders */
-#define PP_UNUSED_1(a) ((void) (a))
-#define PP_UNUSED_2(a, b) ((void) (a), (void) (b))
-#define PP_UNUSED_3(a, b, c) ((void) (a), (void) (b), (void) (c))
-#define PP_UNUSED_4(a, b, c, d) ((void) (a), (void) (b), (void) (c), (void) (d))
-#define PP_UNUSED_5(a, b, c, d, e)                                             \
+#define PP_CC_VAR_UNUSED_1(a) ((void) (a))
+#define PP_CC_VAR_UNUSED_2(a, b) ((void) (a), (void) (b))
+#define PP_CC_VAR_UNUSED_3(a, b, c) ((void) (a), (void) (b), (void) (c))
+#define PP_CC_VAR_UNUSED_4(a, b, c, d)                                         \
+    ((void) (a), (void) (b), (void) (c), (void) (d))
+#define PP_CC_VAR_UNUSED_5(a, b, c, d, e)                                      \
     ((void) (a), (void) (b), (void) (c), (void) (d), (void) (e))
-#define PP_UNUSED_6(a, b, c, d, e, f)                                          \
+#define PP_CC_VAR_UNUSED_6(a, b, c, d, e, f)                                   \
     ((void) (a), (void) (b), (void) (c), (void) (d), (void) (e), (void) (f))
-#define PP_UNUSED_7(a, b, c, d, e, f, g)                                       \
+#define PP_CC_VAR_UNUSED_7(a, b, c, d, e, f, g)                                \
     ((void) (a), (void) (b), (void) (c), (void) (d), (void) (e), (void) (f),   \
      (void) (g))
-#define PP_UNUSED_8(a, b, c, d, e, f, g, h)                                    \
+#define PP_CC_VAR_UNUSED_8(a, b, c, d, e, f, g, h)                             \
     ((void) (a), (void) (b), (void) (c), (void) (d), (void) (e), (void) (f),   \
      (void) (g), (void) (h))
 
-#define unused(...) PP_CALL(PP_UNUSED, __VA_ARGS__)
+#define cc_var_unused(...) PP_CALL(PP_CC_VAR_UNUSED, __VA_ARGS__)
 
 /* Compile-Time & Static Assertions */
 

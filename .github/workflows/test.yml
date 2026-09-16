@@ -50,12 +50,20 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Install clang toolchain
+      - name: Verify clang toolchain
         if: matrix.compiler == 'clang'
         run: |
-          if ! command -v clang >/dev/null 2>&1 || ! command -v ld.lld >/dev/null 2>&1; then
-            apt-get update && apt-get install -y clang lld llvm
+          set -euo pipefail
+          for t in clang ld.lld; do
+            command -v "$t" >/dev/null 2>&1 || {
+              echo "::error::$t missing from the runner image"; exit 1; }
+          done
+          major="$(clang -dumpversion | cut -d. -f1)"
+          if [ "$major" -lt 19 ]; then
+            echo "::error::clang $major is too old: charmOS needs clang >= 19"
+            exit 1
           fi
+          clang --version | head -1
 
       - name: Compile
         run: ./scripts/build.sh -t RelWithDebInfo --compiler ${{ matrix.compiler }} -C

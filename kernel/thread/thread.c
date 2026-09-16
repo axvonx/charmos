@@ -38,11 +38,11 @@ static void thread_lock_chk_exit(struct thread *thread) {
 #else
 
 static void thread_lock_chk_init(struct thread *thread) {
-    unused(thread);
+    cc_var_unused(thread);
 }
 
 static void thread_lock_chk_exit(struct thread *thread) {
-    unused(thread);
+    cc_var_unused(thread);
 }
 
 #endif
@@ -369,7 +369,7 @@ void thread_free(struct thread *t) {
 }
 
 static void thread_reap_rcu(struct rcu_cb *cb, void *arg) {
-    unused(cb);
+    cc_var_unused(cb);
     reaper_enqueue(arg);
 }
 

@@ -103,7 +103,7 @@ enum irq_result panic_nmi_isr(void *ctx, uint8_t vector,
 
 enum irq_result hw_error_nmi_isr(void *ctx, uint8_t vector,
                                  struct irq_context *ictx) {
-    unused(ctx, vector, ictx);
+    cc_var_unused(ctx, vector, ictx);
     uint8_t port61 = inb(0x61);
     if (port61 & 0xC0) {
         char msg[CRASH_MSG_MAX];
@@ -125,13 +125,13 @@ enum irq_result hw_error_nmi_isr(void *ctx, uint8_t vector,
 
 enum irq_result nop_handler(void *ctx, uint8_t vector,
                             struct irq_context *rsp) {
-    unused(ctx, vector, rsp);
+    cc_var_unused(ctx, vector, rsp);
     return IRQ_HANDLED;
 }
 
 enum irq_result dpc_handler(void *ctx, uint8_t vector,
                             struct irq_context *rsp) {
     scheduler_mark_self_needs_run_dpcs(true);
-    unused(ctx, vector, rsp);
+    cc_var_unused(ctx, vector, rsp);
     return IRQ_HANDLED;
 }

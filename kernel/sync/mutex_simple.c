@@ -102,35 +102,35 @@ static inline void
 mutex_simple_chk_before_lock(struct mutex_simple_chk_acquire_state *state,
                              struct mutex_simple *m, uint8_t subclass,
                              const struct lock_chk_site *site) {
-    unused(state, m, subclass, site);
+    cc_var_unused(state, m, subclass, site);
 }
 
 static inline void
 mutex_simple_chk_locked(struct mutex_simple_chk_acquire_state *state) {
-    unused(state);
+    cc_var_unused(state);
 }
 
 static inline void
 mutex_simple_chk_before_unlock(struct mutex_simple_chk_release_state *state,
                                struct mutex_simple *m,
                                const struct lock_chk_site *site) {
-    unused(state, m, site);
+    cc_var_unused(state, m, site);
 }
 
 static inline void
 mutex_simple_chk_unlocked(struct mutex_simple_chk_release_state *state) {
-    unused(state);
+    cc_var_unused(state);
 }
 
 static void mutex_simple_chk_state_init(struct mutex_simple *m,
                                         const struct lock_chk_class *class,
                                         enum lock_chk_flags flags) {
-    unused(m, class, flags);
+    cc_var_unused(m, class, flags);
 }
 
 void mutex_simple_set_chk_flags(struct mutex_simple *m,
                                 enum lock_chk_flags flags) {
-    unused(m, flags);
+    cc_var_unused(m, flags);
 }
 
 void mutex_simple_reinit_chk(struct mutex_simple *m,
@@ -275,7 +275,7 @@ void mutex_simple_assert_held_internal(struct mutex_simple *m,
                                   /*want_held=*/true, site))
         return;
 #else
-    unused(site);
+    cc_var_unused(site);
 #endif
     kassert(mutex_simple_get_owner(m) == thread_get_current(),
             "mutex_simple not held by current thread");
@@ -290,7 +290,7 @@ void mutex_simple_assert_not_held_internal(struct mutex_simple *m,
                                   /*want_held=*/false, site))
         return;
 #else
-    unused(site);
+    cc_var_unused(site);
 #endif
     kassert(mutex_simple_get_owner(m) != thread_get_current(),
             "mutex_simple unexpectedly held by current thread");

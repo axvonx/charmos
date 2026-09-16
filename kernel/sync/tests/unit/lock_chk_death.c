@@ -42,7 +42,7 @@ static struct mutex death_abba_m2;
 static _Atomic bool death_abba_ready = false;
 
 static void death_abba_worker(void *arg) {
-    unused(arg);
+    cc_var_unused(arg);
     mutex_lock(&death_abba_m2);
     atomic_store_explicit(&death_abba_ready, true, memory_order_release);
     sleep_spin_ms(10);
@@ -85,7 +85,7 @@ TEST_DECLARE_UNIT(lock_chk, death_recursive_mutex,
 static struct mutex death_foreign_m;
 
 static void death_foreign_worker(void *arg) TSA_NO_ANALYSIS {
-    unused(arg);
+    cc_var_unused(arg);
     mutex_unlock(&death_foreign_m);
 }
 
@@ -174,7 +174,7 @@ TEST_DECLARE_UNIT(lock_chk, death_sleep_holding_spin,
 
 /* Thread exit while holding a thread checked lock */
 static void death_exit_worker(void *arg) TSA_NO_ANALYSIS {
-    unused(arg);
+    cc_var_unused(arg);
     static struct mutex exit_m;
     mutex_init_chk(&exit_m, LOCK_CHK_CLASS(death_exit_class), LOCK_CHKD_FULL);
     mutex_lock(&exit_m);
@@ -193,7 +193,7 @@ TEST_DECLARE_UNIT(lock_chk, death_exit_holding_lock,
 static struct rwlock death_cross_rw;
 
 static void death_cross_rw_worker(void *arg) TSA_NO_ANALYSIS {
-    unused(arg);
+    cc_var_unused(arg);
     rw_unlock(&death_cross_rw);
 }
 
@@ -280,7 +280,7 @@ static struct qspinlock death_foreign_qspin;
 static _Atomic bool death_foreign_qspin_held = false;
 
 static void death_foreign_qspin_worker(void *arg) {
-    unused(arg);
+    cc_var_unused(arg);
     enum irql old = qspin_lock(&death_foreign_qspin);
     atomic_store_explicit(&death_foreign_qspin_held, true,
                           memory_order_release);
