@@ -309,7 +309,7 @@ static inline void context_switch(struct thread *curr, struct thread *next) {
     if (curr && curr->state == THREAD_STATE_IDLE_THREAD)
         just_load = true;
 
-    if (unlikely(curr && curr->state == THREAD_STATE_ZOMBIE)) {
+    if (cc_unlikely(curr && curr->state == THREAD_STATE_ZOMBIE)) {
         just_load = true;
         kassert(!smp_core_scheduler()->drop_last_ref);
         smp_core_scheduler()->drop_last_ref = curr;
@@ -443,7 +443,7 @@ void scheduler_yield(void) {
     uint32_t entry_depth = smp_ctx_preempt_count(c->ctx);
     cpu_id_t entry_cpu = c->id;
 
-    if (likely(entry_cpu == smp_core(TOPC_NONE)->id)) {
+    if (cc_likely(entry_cpu == smp_core(TOPC_NONE)->id)) {
         kassert(!entry_in_resched,
                 "yielding while already in resched on cpu %zu",
                 (size_t) entry_cpu);

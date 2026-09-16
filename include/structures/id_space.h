@@ -14,10 +14,10 @@ struct id_range {
 };
 
 struct id_space {
-    struct rbt tree;
     struct spinlock lock;
-    struct id_range reserve_pool[ID_RANGE_RESERVE_COUNT];
-    struct id_range *reserve_free;
+    struct rbt tree TSA_GUARDED_BY(&lock);
+    struct id_range reserve_pool[ID_RANGE_RESERVE_COUNT] TSA_GUARDED_BY(&lock);
+    struct id_range *reserve_free TSA_GUARDED_BY(&lock);
 };
 
 #define ID_SPACE_INIT                                                          \

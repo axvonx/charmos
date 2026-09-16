@@ -170,7 +170,7 @@ struct ext2_sblock {
         };
         uint32_t reserved[204];
     };
-} __packed;
+} cc_packed;
 
 struct ext2_group_desc {
     uint32_t block_bitmap;
@@ -181,7 +181,7 @@ struct ext2_group_desc {
     uint16_t used_dirs_count;
     uint16_t pad;
     uint32_t reserved[3];
-} __attribute__((__packed__));
+} cc_packed;
 
 struct ext2_inode {
     mode_t mode;
@@ -218,7 +218,7 @@ struct ext2_dir_entry {
     uint8_t name_len;
     uint8_t file_type;
     char name[EXT2_NAME_LEN + 1];
-} __packed;
+} cc_packed;
 
 struct ext2_fs {
     struct partition *partition;

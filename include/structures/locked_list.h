@@ -7,8 +7,8 @@
 /* Doubly linked list with a lock and counter for elements */
 
 struct locked_list {
-    struct list_head list;
     struct spinlock lock;
+    struct list_head list TSA_GUARDED_BY(&lock);
     size_t num_elems : 63;
     bool lock_irq_disable : 1;
 };

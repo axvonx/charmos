@@ -108,7 +108,7 @@ void thread_exit_with_status(int status) {
     scheduler_yield();
 }
 
-void thread_entry_wrapper(void) {
+void thread_entry_wrapper(void) TSA_NO_ANALYSIS {
     /* TODO: We might want to consider refactoring
      * the switch_in so as to not gradually bloat up
      * both places where the "gopher pops out of the ground",
@@ -265,28 +265,29 @@ struct thread *thread_create_internal(char *name, void (*entry_point)(void *),
     kassert(name);
     struct thread *new_thread =
         kmalloc(sizeof(struct thread), ALLOC_FLAGS_ZERO);
-    if (unlikely(!new_thread))
+    if (cc_unlikely(!new_thread))
         goto err;
 
     void *stack = thread_allocate_stack(stack_size / PAGE_SIZE);
-    if (unlikely(!stack))
+    if (cc_unlikely(!stack))
         goto err;
 
     new_thread->activity_data =
         kmalloc(sizeof(struct thread_activity_data), ALLOC_FLAGS_ZERO);
-    if (unlikely(!new_thread->activity_data))
+    if (cc_unlikely(!new_thread->activity_data))
         goto err;
 
     new_thread->turnstile = turnstile_create();
-    if (unlikely(!new_thread->turnstile))
+    if (cc_unlikely(!new_thread->turnstile))
         goto err;
 
     new_thread->activity_stats =
         kmalloc(sizeof(struct thread_activity_stats), ALLOC_FLAGS_ZERO);
-    if (unlikely(!new_thread->activity_stats))
+    if (cc_unlikely(!new_thread->activity_stats))
         goto err;
 
-    if (unlikely(!cpu_mask_init(&new_thread->allowed_cpus, global.core_count)))
+    if (cc_unlikely(
+            !cpu_mask_init(&new_thread->allowed_cpus, global.core_count)))
         goto err;
 
     cpu_mask_set_all(&new_thread->allowed_cpus);

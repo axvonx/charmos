@@ -22,7 +22,7 @@ struct pernode_descriptor {
 LINKER_SECTION_DEFINE(struct pernode_descriptor, pernode_desc);
 
 #define PERNODE_DECLARE(__n, __type, __ctor)                                   \
-    static typeof(__type) __pernode_##__n __unused;                            \
+    static typeof(__type) __pernode_##__n cc_unused;                           \
     static struct pernode_descriptor __pernode_desc_##__n;                     \
     static void __pernode_ctor_##__n(void *inst, size_t node) {                \
         void (*const __typed_ctor)(typeof(__type) *, size_t) = (__ctor);       \
@@ -41,19 +41,19 @@ LINKER_SECTION_DEFINE(struct pernode_descriptor, pernode_desc);
             .ready = false,                                                    \
     };                                                                         \
     static struct pernode_descriptor *const __pernode_desc_ref_##__n           \
-        __unused = &__pernode_desc_##__n
+        cc_unused = &__pernode_desc_##__n
 
 #define PERNODE_EXPORT_AS(sym_name, name)                                      \
-    extern struct pernode_descriptor __pernode_desc_sym_##sym_name             \
-        __attribute__((alias("__pernode_desc_" #name), used))
+    extern struct pernode_descriptor __pernode_desc_sym_##sym_name cc_alias(   \
+        __pernode_desc_##name) cc_used
 
 #define PERNODE_EXPORT(name) PERNODE_EXPORT_AS(name, name)
 
 #define PERNODE_DEFINE_AS(name, sym_name, type)                                \
     extern struct pernode_descriptor __pernode_desc_sym_##sym_name;            \
-    static typeof(type) __pernode_##name __unused;                             \
+    static typeof(type) __pernode_##name cc_unused;                            \
     static struct pernode_descriptor *const __pernode_desc_ref_##name          \
-        __unused = &__pernode_desc_sym_##sym_name
+        cc_unused = &__pernode_desc_sym_##sym_name
 
 #define PERNODE_DEFINE(name, type) PERNODE_DEFINE_AS(name, name, type)
 
@@ -88,5 +88,4 @@ void pernode_obj_init(void);
 #define pernode_for_each_internal_2(name, var)                                 \
     pernode_for_each_internal(name, var, __node)
 
-#define pernode_for_each(...)                                                  \
-    _DISPATCH(pernode_for_each_internal, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
+#define pernode_for_each(...) PP_CALL(pernode_for_each_internal, __VA_ARGS__)

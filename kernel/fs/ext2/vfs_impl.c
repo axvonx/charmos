@@ -451,7 +451,7 @@ enum errno ext2_vfs_readdir(struct vfs_node *node, struct vfs_dirent *out,
 
     struct ext2_dir_entry *ext2_out =
         kmalloc(sizeof(struct ext2_dir_entry), ALLOC_FLAGS_ZERO);
-    if (unlikely(!ext2_out))
+    if (cc_unlikely(!ext2_out))
         return ERR_NO_MEM;
 
     enum errno e = ext2_readdir(fs, full_inode, ext2_out, index);

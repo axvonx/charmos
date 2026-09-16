@@ -134,6 +134,13 @@
  */
 
 #pragma once
+#include <sync/lock_general.h>
+
+/* Raised-IRQL context modelled as a TSA capability: irql_raise() acquires it
+ * and irql_lower() releases it, so clang checks raise/lower balance and
+ * rejects calls to TSA_EXCLUDED(IRQL_RAISED) functions inside the region. */
+struct TSA_CAPABILITY("irql") irql_raised_ctx {};
+extern struct irql_raised_ctx IRQL_RAISED;
 
 enum irql {
     IRQL_PASSIVE_LEVEL = 0,  /* Normal execution */
@@ -156,10 +163,10 @@ static inline const char *irql_to_str(enum irql level) {
     return "UNKNOWN";
 }
 
-enum irql irql_raise(enum irql new_level);
-void irql_lower(enum irql old_level);
+enum irql irql_raise(enum irql new_level) TSA_ACQUIRES(IRQL_RAISED);
+void irql_lower(enum irql old_level) TSA_RELEASES(IRQL_RAISED);
 
 /* Similar to irql_lower() but with no reschedule check,
  * preventing recursing into the scheduler in scheduler_yield() */
-void irql_lower_no_resched(enum irql old_level);
+void irql_lower_no_resched(enum irql old_level) TSA_RELEASES(IRQL_RAISED);
 enum irql irql_get();

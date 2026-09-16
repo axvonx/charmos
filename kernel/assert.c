@@ -3,10 +3,10 @@
 #include <stdarg.h>
 #include <string.h>
 
-static __noreturn void impl_default(struct crash_payload pluh, const char *file,
-                                    int line, const char *func,
-                                    const char *prefix, const char *fmt,
-                                    va_list args) {
+static cc_noreturn void impl_default(struct crash_payload pluh,
+                                     const char *file, int line,
+                                     const char *func, const char *prefix,
+                                     const char *fmt, va_list args) {
     unused(pluh);
     static char msg[CRASH_MSG_MAX];
 
@@ -33,11 +33,11 @@ static __noreturn void impl_default(struct crash_payload pluh, const char *file,
     });
 }
 
-static __noreturn void impl_assertion(struct crash_payload pluh,
-                                      const char *file, int line,
-                                      const char *func, const char *prefix,
-                                      const char *assertion, const char *fmt,
-                                      va_list args) {
+static cc_noreturn void impl_assertion(struct crash_payload pluh,
+                                       const char *file, int line,
+                                       const char *func, const char *prefix,
+                                       const char *assertion, const char *fmt,
+                                       va_list args) {
     unused(pluh);
     static char msg[CRASH_MSG_MAX];
 
@@ -68,10 +68,11 @@ static __noreturn void impl_assertion(struct crash_payload pluh,
     });
 }
 
-__noreturn void assert_impl_default(struct crash_payload pluh, const char *file,
-                                    int line, const char *func,
-                                    const char *prefix, const char *assertion,
-                                    const char *fmt, ...) {
+cc_noreturn void assert_impl_default(struct crash_payload pluh,
+                                     const char *file, int line,
+                                     const char *func, const char *prefix,
+                                     const char *assertion, const char *fmt,
+                                     ...) {
     va_list args;
     va_start(args, fmt);
 

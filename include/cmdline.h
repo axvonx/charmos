@@ -52,8 +52,7 @@ enum cmdline_type {
     CMDLINE_TYPE_NONE,
 };
 
-#define CMDLINE_TYPES(...)                                                     \
-    _DISPATCH(CMDLINE_IMPL_TYPE_BIT, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
+#define CMDLINE_TYPES(...) PP_CALL(CMDLINE_IMPL_TYPE_BIT, __VA_ARGS__)
 
 struct cmdline_range {
     uint64_t start;
@@ -101,7 +100,7 @@ struct cmdline_value {
  * the "functional name" of apple is
  *
  * pineapple.orange.apple */
-struct __attribute__((aligned(8))) cmdline_entry {
+struct cc_aligned(8) cmdline_entry {
     const char *name;
     const char *desc; /* human readable description */
     const char *arg;  /* value format hint e.g. "<hex bytes>", "<device>" */
@@ -191,8 +190,7 @@ struct cmdline_flag {
     (_CMDLINE_CHILD_KIND_VAR, n, var, ##__VA_ARGS__)
 
 #define CMDLINE_CHILDREN_DECLARE(parent_n, ...)                                \
-    _DISPATCH(_CMDLINE_CHILDREN_MAP, PP_NARG(__VA_ARGS__))(parent_n,           \
-                                                           __VA_ARGS__)
+    PP_OVERLOAD(_CMDLINE_CHILDREN_MAP, __VA_ARGS__)(parent_n, __VA_ARGS__)
 
 #define CMDLINE_EXTRACT(val, var)                                              \
     _Generic(&(var),                                                           \
@@ -232,11 +230,10 @@ struct cmdline_flag {
 #define CMDLINE_NODE_2(a, b) a##_##b
 #define CMDLINE_NODE_3(a, b, c) a##_##b##_##c
 #define CMDLINE_NODE_4(a, b, c, d) a##_##b##_##c##_##d
-#define CMDLINE_NODE(...)                                                      \
-    _DISPATCH(CMDLINE_NODE, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
+#define CMDLINE_NODE(...) PP_CALL(CMDLINE_NODE, __VA_ARGS__)
 
-#define CMDLINE_DEFINE(n) extern struct cmdline_entry CONCAT(__cmdline_, n)
-#define CMDLINE(n) (&CONCAT(__cmdline_, n))
+#define CMDLINE_DEFINE(n) extern struct cmdline_entry PP_CONCAT(__cmdline_, n)
+#define CMDLINE(n) (&PP_CONCAT(__cmdline_, n))
 #define CMDLINE_VALUE(n) cmdline_entry_value_u64(CMDLINE(n))
 
 #define CMDLINE_CHILD_DEFINE(...) CMDLINE_DEFINE(CMDLINE_NODE(__VA_ARGS__))
@@ -268,7 +265,7 @@ struct cmdline_schema_prop {
 
 typedef void *(*cmdline_instance_resolver_t)(const char *path, size_t path_len);
 
-struct __attribute__((aligned(8))) cmdline_schema {
+struct cc_aligned(8) cmdline_schema {
     const char *prefix;
     const char *path_hint;
     const char *desc;
@@ -301,9 +298,7 @@ struct __attribute__((aligned(8))) cmdline_schema {
         .path_hint = (path_hint_str),                                          \
         .desc = (desc_str),                                                    \
         .resolve = (resolver_fn),                                              \
-        .props = __cmdline_schema_props_##n,                                   \
-        .prop_count = sizeof(__cmdline_schema_props_##n) /                     \
-                      sizeof(__cmdline_schema_props_##n[0]),                   \
+        .prop_count = ct_array_size(__cmdline_schema_props_##n),               \
     }
 
 #define CMDLINE_GET(key, type, fallback)                                       \
@@ -332,7 +327,7 @@ struct __attribute__((aligned(8))) cmdline_schema {
 
 void cmdline_parse(const char *input);
 bool cmdline_wants_help(const char *input);
-__noreturn void cmdline_dump_help(void);
+cc_noreturn void cmdline_dump_help(void);
 void cmdline_debug_hook(void);
 
 struct cmdline_entry *cmdline_lookup(const char *key);

@@ -23,7 +23,7 @@ struct percpu_descriptor {
 LINKER_SECTION_DEFINE(struct percpu_descriptor, percpu_desc);
 
 #define PERCPU_DECLARE(__n, __type, __ctor)                                    \
-    static typeof(__type) __percpu_##__n __unused;                             \
+    static typeof(__type) __percpu_##__n cc_unused;                            \
     static struct percpu_descriptor __percpu_desc_##__n;                       \
     static void __percpu_ctor_##__n(void *inst, size_t cpu) {                  \
         void (*const __typed_ctor)(typeof(__type) *, size_t) = (__ctor);       \
@@ -41,20 +41,20 @@ LINKER_SECTION_DEFINE(struct percpu_descriptor, percpu_desc);
             .constructor = __percpu_ctor_##__n,                                \
             .ready = false,                                                    \
     };                                                                         \
-    static struct percpu_descriptor *const __percpu_desc_ref_##__n __unused =  \
+    static struct percpu_descriptor *const __percpu_desc_ref_##__n cc_unused = \
         &__percpu_desc_##__n
 
 #define PERCPU_EXPORT_AS(sym_name, name)                                       \
-    extern struct percpu_descriptor __percpu_desc_sym_##sym_name               \
-        __attribute__((alias("__percpu_desc_" #name), used))
+    extern struct percpu_descriptor __percpu_desc_sym_##sym_name cc_alias(     \
+        __percpu_desc_##name) cc_used
 
 #define PERCPU_EXPORT(name) PERCPU_EXPORT_AS(name, name)
 
 #define PERCPU_DEFINE_AS(name, sym_name, type)                                 \
     extern struct percpu_descriptor __percpu_desc_sym_##sym_name;              \
-    static typeof(type) __percpu_##name __unused;                              \
-    static struct percpu_descriptor *const __percpu_desc_ref_##name __unused = \
-        &__percpu_desc_sym_##sym_name
+    static typeof(type) __percpu_##name cc_unused;                             \
+    static struct percpu_descriptor *const __percpu_desc_ref_##name            \
+        cc_unused = &__percpu_desc_sym_##sym_name
 
 #define PERCPU_DEFINE(name, type) PERCPU_DEFINE_AS(name, name, type)
 
@@ -86,7 +86,6 @@ LINKER_SECTION_DEFINE(struct percpu_descriptor, percpu_desc);
 #define percpu_for_each_internal_2(name, var)                                  \
     percpu_for_each_internal(name, var, __cpu)
 
-#define percpu_for_each(...)                                                   \
-    _DISPATCH(percpu_for_each_internal, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
+#define percpu_for_each(...) PP_CALL(percpu_for_each_internal, __VA_ARGS__)
 
 void percpu_obj_init(void);

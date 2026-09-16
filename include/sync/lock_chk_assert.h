@@ -28,8 +28,7 @@
     _Generic((l), struct rwlock *: rwlock_assert_held_internal)(               \
         (l), (mode), LOCK_CHK_SITE_HERE())
 
-#define LOCK_CHK_ASSERT_HELD(...)                                              \
-    _DISPATCH(LOCK_CHK_ASSERT_HELD, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
+#define LOCK_CHK_ASSERT_HELD(...) PP_CALL(LOCK_CHK_ASSERT_HELD, __VA_ARGS__)
 
 /* Inverse of above */
 #define LOCK_CHK_ASSERT_NOT_HELD(l)                                            \

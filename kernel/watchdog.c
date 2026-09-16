@@ -88,7 +88,7 @@ static void watchdog_percpu_ctor(struct watchdog_percpu *pcpu, cpu_id_t cpu) {
 
 static inline size_t time_to_bucket(time_ms_t time) {
     /* TODO: Decide if this condition is not permitted? */
-    if (unlikely(watchdog_global.bucket_interval_ms == 0))
+    if (cc_unlikely(watchdog_global.bucket_interval_ms == 0))
         return 0;
 
     return time / watchdog_global.bucket_interval_ms;
@@ -115,7 +115,7 @@ static void watchdog_buckets_advance_internal(struct watchdog_buckets *buckets,
         return;
     }
 
-    if (unlikely(new_time < buckets->last_heartbeat_ms))
+    if (cc_unlikely(new_time < buckets->last_heartbeat_ms))
         return;
 
     size_t old_bucket = time_to_bucket(buckets->last_heartbeat_ms);
@@ -200,7 +200,7 @@ static bool watchdog_buckets_snapshot(const struct watchdog_buckets *b,
      * we may want to track and handle via bail and panic() */
     do {
         seq = seqcount_begin_read_raw(&b->seq);
-        if (unlikely((seq & 1) != 0))
+        if (cc_unlikely((seq & 1) != 0))
             return false;
 
         out->idx = b->idx;

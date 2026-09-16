@@ -25,7 +25,7 @@ struct nvme_command {
     uint32_t cdw13;
     uint32_t cdw14;
     uint32_t cdw15;
-} __packed;
+} cc_packed;
 
 struct nvme_completion {
     uint32_t result;
@@ -34,7 +34,7 @@ struct nvme_completion {
     uint16_t sq_id;
     uint16_t cid;
     uint16_t status;
-} __packed;
+} cc_packed;
 
 struct nvme_cc {
     union {
@@ -51,8 +51,8 @@ struct nvme_cc {
             uint32_t __reserved1 : 8;
         };
     };
-} __packed;
-static_assert_struct_size_eq(nvme_cc, sizeof(uint32_t));
+} cc_packed;
+ct_assert_struct_size_eq(nvme_cc, sizeof(uint32_t));
 
 struct nvme_regs {
     uint32_t cap_lo;
@@ -178,7 +178,7 @@ struct nvme_lbaf {
     uint8_t lbads;  // LBA data size (log2 of sector size)
     uint8_t rp : 2; // Relative performance
     uint8_t reserved : 6;
-} __packed;
+} cc_packed;
 
 struct nvme_identify_namespace {
     uint64_t nsze;  // Namespace Size
@@ -220,8 +220,8 @@ struct nvme_identify_namespace {
     uint64_t eui64;
     struct nvme_lbaf lbaf[64]; // LBA format descriptions
     uint8_t vendor_specific[3712];
-} __packed;
-static_assert_struct_size_eq(nvme_identify_namespace, 0x1000);
+} cc_packed;
+ct_assert_struct_size_eq(nvme_identify_namespace, 0x1000);
 
 struct nvme_identify_controller {
     uint16_t vid;    // PCI Vendor ID
@@ -269,7 +269,7 @@ struct nvme_identify_controller {
     uint8_t sqes; // Submission Queue Entry Size
     uint8_t cqes; // Completion Queue Entry Size
     // TODO: there is more but me lazy and dont need it
-} __packed;
+} cc_packed;
 
 uint16_t nvme_submit_admin_cmd(struct nvme_device *nvme,
                                struct nvme_command *cmd, uint32_t *);

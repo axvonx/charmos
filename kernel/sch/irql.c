@@ -33,7 +33,7 @@ static inline uint32_t scheduler_preemption_enable(void) {
         smp_ctx_sub(TOPC_NONE, SMP_CTX_PREEMPT_ONE, SMP_CTX_PREEMPT_MASK));
 }
 
-enum irql irql_raise(enum irql new_level) {
+enum irql irql_raise(enum irql new_level) TSA_NO_ANALYSIS {
     BOOTSTAGE_IF_LT(BOOTSTAGE_LATE) {
         return IRQL_NONE;
     }
@@ -113,10 +113,10 @@ static void irql_lower_internal(enum irql new_level, bool allow_resched) {
     }
 }
 
-void irql_lower(enum irql new_level) {
+void irql_lower(enum irql new_level) TSA_NO_ANALYSIS {
     irql_lower_internal(new_level, /* allow_resched = */ true);
 }
 
-void irql_lower_no_resched(enum irql new_level) {
+void irql_lower_no_resched(enum irql new_level) TSA_NO_ANALYSIS {
     irql_lower_internal(new_level, /* allow_resched = */ false);
 }

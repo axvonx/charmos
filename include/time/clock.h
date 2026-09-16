@@ -68,7 +68,7 @@ void clock_resume_all(void);
 void clocks_init(void);
 
 static inline uint64_t clock_frequency_to_mult(struct clock *clock) {
-    if (unlikely(clock->frequency_khz == 0))
+    if (cc_unlikely(clock->frequency_khz == 0))
         return 0;
     return ((1000000ULL << 32) + (clock->frequency_khz / 2)) /
            clock->frequency_khz;

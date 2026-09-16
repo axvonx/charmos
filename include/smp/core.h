@@ -152,8 +152,7 @@ void smp_caller_verify(enum topology_caller caller);
         case 8: _raw = smp_read64(offsetof(struct core, member)); break;       \
         default: __builtin_unreachable();                                      \
         }                                                                      \
-        (typeof(__comptime_decay(                                              \
-            ((struct core *) 0)->member))) (uintptr_t) _raw;                   \
+        (typeof(ct_decay(((struct core *) 0)->member))) (uintptr_t) _raw;      \
     })
 
 #define smp_write8(off, v)                                                     \
@@ -274,7 +273,7 @@ static inline uint32_t smp_ctx_nmi_count(uint32_t smp_ctx) {
 static inline uint32_t smp_ctx_add(enum topology_caller c, uint32_t one,
                                    uint32_t mask) {
     struct core *cpu = smp_core(c);
-    if (unlikely((cpu->ctx & mask) == mask))
+    if (cc_unlikely((cpu->ctx & mask) == mask))
         panic("smp_ctx field overflow, mask %#x, smp_ctx %#x", mask, cpu->ctx);
 
     cpu->ctx += one;
@@ -284,7 +283,7 @@ static inline uint32_t smp_ctx_add(enum topology_caller c, uint32_t one,
 static inline uint32_t smp_ctx_sub(enum topology_caller c, uint32_t one,
                                    uint32_t mask) {
     struct core *cpu = smp_core(c);
-    if (unlikely((cpu->ctx & mask) == 0))
+    if (cc_unlikely((cpu->ctx & mask) == 0))
         panic("smp_ctx field underflow, mask %#x, smp_ctx %#x", mask, cpu->ctx);
 
     cpu->ctx -= one;

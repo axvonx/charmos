@@ -158,14 +158,14 @@ struct ahci_prdt_entry {
     uint32_t dbc : 22; // Byte count (0-based)
     uint32_t reserved2 : 9;
     uint32_t i : 1; // Interrupt on completion
-} __packed;
+} cc_packed;
 
 struct ahci_cmd_table {
     uint8_t cfis[AHCI_CMD_TABLE_FIS_SIZE];   // Command FIS (host to device)
     uint8_t acmd[AHCI_CMD_TABLE_ATAPI_SIZE]; // ATAPI command
     uint8_t reserved[48];
     struct ahci_prdt_entry prdt_entry[]; // up to 65535
-} __packed;
+} cc_packed;
 
 struct ahci_full_port {
     struct ahci_port *port;
@@ -264,8 +264,8 @@ struct ahci_cmd_header {
 
     // DW4 - 7
     uint32_t rsv1[4]; // Reserved
-} __packed;
-static_assert_struct_size_eq(ahci_cmd_header, 32);
+} cc_packed;
+ct_assert_struct_size_eq(ahci_cmd_header, 32);
 
 LOG_HANDLE_EXTERN(ahci);
 LOG_SITE_EXTERN(ahci);

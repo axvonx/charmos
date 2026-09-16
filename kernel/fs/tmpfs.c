@@ -174,7 +174,7 @@ static enum errno tmpfs_create_common(struct vfs_node *parent, const char *name,
         return ERR_EXIST;
 
     struct tmpfs_node *node = kmalloc(sizeof(*node), ALLOC_FLAGS_ZERO);
-    if (unlikely(!node))
+    if (cc_unlikely(!node))
         return ERR_NO_MEM;
 
     node->type = type;

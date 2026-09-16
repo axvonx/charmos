@@ -37,7 +37,7 @@ struct percpu_rc {
     percpu_rc_release_fn release;
     bool allow_reinit;
     struct rcu_cb rcu;
-} __cache_aligned;
+} cc_cache_aligned;
 
 int percpu_rc_init(struct percpu_rc *ref, percpu_rc_release_fn release,
                    enum percpu_rc_flags flags);
@@ -70,7 +70,7 @@ static inline void percpu_rc_get(struct percpu_rc *ref) {
     uintptr_t pcpu =
         atomic_load_explicit(&ref->percpu_count_ptr, memory_order_relaxed);
 
-    if (likely(percpu_rc_is_percpu(pcpu))) {
+    if (cc_likely(percpu_rc_is_percpu(pcpu))) {
         int64_t *counters = PERCPU_RC_PTR(pcpu);
         counters[smp_id(TOPC_NONE)]++;
     } else {
@@ -84,7 +84,7 @@ static inline void percpu_rc_put(struct percpu_rc *ref) {
     uintptr_t pcpu =
         atomic_load_explicit(&ref->percpu_count_ptr, memory_order_relaxed);
 
-    if (likely(percpu_rc_is_percpu(pcpu))) {
+    if (cc_likely(percpu_rc_is_percpu(pcpu))) {
         int64_t *counters = PERCPU_RC_PTR(pcpu);
         counters[smp_id(TOPC_NONE)]--;
         rcu_read_unlock();
@@ -103,7 +103,7 @@ static inline bool percpu_rc_tryget(struct percpu_rc *ref) {
     uintptr_t pcpu =
         atomic_load_explicit(&ref->percpu_count_ptr, memory_order_relaxed);
 
-    if (likely(percpu_rc_is_percpu(pcpu))) {
+    if (cc_likely(percpu_rc_is_percpu(pcpu))) {
         int64_t *counters = PERCPU_RC_PTR(pcpu);
         counters[smp_id(TOPC_NONE)]++;
         rcu_read_unlock();
@@ -125,7 +125,7 @@ static inline bool percpu_rc_tryget_live(struct percpu_rc *ref) {
     uintptr_t pcpu =
         atomic_load_explicit(&ref->percpu_count_ptr, memory_order_relaxed);
 
-    if (likely(percpu_rc_is_percpu(pcpu))) {
+    if (cc_likely(percpu_rc_is_percpu(pcpu))) {
         int64_t *counters = PERCPU_RC_PTR(pcpu);
         counters[smp_id(TOPC_NONE)]++;
         rcu_read_unlock();

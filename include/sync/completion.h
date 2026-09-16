@@ -30,8 +30,9 @@ struct completion {
 
 void completion_init(struct completion *c, bool irq_disable);
 void completion_reinit(struct completion *c);
-void completion_wait(struct completion *c);
-bool completion_wait_timeout(struct completion *c, time_ms_t timeout_ms);
+void completion_wait(struct completion *c) TSA_EXCLUDED(IRQL_RAISED);
+bool completion_wait_timeout(struct completion *c, time_ms_t timeout_ms)
+    TSA_EXCLUDED(IRQL_RAISED);
 bool completion_try_wait(struct completion *c);
 void complete(struct completion *c);
 void complete_all(struct completion *c);

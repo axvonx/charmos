@@ -12,8 +12,7 @@ extern uint64_t __sbss, __ebss;
 extern uint64_t __slimine_requests, __elimine_requests;
 extern uint64_t __kernel_virt_end;
 
-#define LINKER_SECTION_ATTRIBUTE(n)                                            \
-    __attribute__((section(".kernel_" #n), used))
+#define LINKER_SECTION_ATTRIBUTE(n) cc_section(".kernel_" #n) cc_used
 
 #define LINKER_SECTION_OBJECT(type, section)                                   \
     LINKER_SECTION_ATTRIBUTE(section) type

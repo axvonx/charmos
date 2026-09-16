@@ -177,7 +177,7 @@ static void print_help_metadata(const struct cmdline_entry *e) {
     }
 }
 
-__noreturn void cmdline_dump_help(void) {
+cc_noreturn void cmdline_dump_help(void) {
     printf("charmos kernel command-line options:\n\n");
     for (struct cmdline_entry *e = __skernel_cmdline_entries;
          e < __ekernel_cmdline_entries; e++) {

@@ -63,7 +63,7 @@ LOG_HANDLE_EXTERN(slab);
 #define SLAB_BITMAP_BYTES_FOR(x)                                               \
     ({                                                                         \
         __auto_type __bits = (x);                                              \
-        typecheck_widenable_to((size_t) 0, x);                                 \
+        ct_typecheck_widenable_to((size_t) 0, x);                              \
         DIV_ROUND_UP((size_t) __bits, sizeof(uint64_t) * 8) *                  \
             sizeof(uint64_t);                                                  \
     })
@@ -811,7 +811,7 @@ static inline bool slab_cache_is_pageable(struct slab_cache *c) {
     return c->type == SLAB_TYPE_PAGEABLE || c->type == SLAB_TYPE_PAGEABLE_ZERO;
 }
 
-__no_sanitize_address static inline bool
+cc_no_sanitize_address static inline bool
 is_buffer_uniform(const void *ptr, size_t len, uint8_t value) {
     const uint8_t *byte_ptr = (const uint8_t *) ptr;
 

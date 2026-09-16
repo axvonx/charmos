@@ -91,7 +91,7 @@ void slab_debug_assert_not_already_free(vaddr_t v, int32_t class) {
     }
 }
 
-__no_sanitize_address void
+cc_no_sanitize_address void
 slab_dump_corruption(void *obj, struct slab_magazine *popped_mag,
                      size_t obj_size) {
     crash_broadcast_nmi(); /* Get everyone to stop yapping

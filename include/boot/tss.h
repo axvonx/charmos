@@ -18,4 +18,4 @@ struct __attribute__((aligned)) tss {
     uint64_t reserved2;
     uint16_t reserved3;
     uint16_t io_map_base; // Offset to I/O permission bitmap
-} __packed;
+} cc_packed;

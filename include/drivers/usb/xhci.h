@@ -219,7 +219,7 @@ struct xhci_cap_regs {
     uint32_t dboff;
     uint32_t rtsoff;
     uint32_t hcc_params2;
-} __packed;
+} cc_packed;
 
 struct xhci_port_regs {
     uint32_t portsc;   // Port Status and Control (offset 0x00)
@@ -255,8 +255,8 @@ struct xhci_usbcmd {
             uint32_t reserved2 : 15;
         };
     };
-} __packed;
-static_assert_struct_size_eq(xhci_usbcmd, sizeof(uint32_t));
+} cc_packed;
+ct_assert_struct_size_eq(xhci_usbcmd, sizeof(uint32_t));
 
 /* Page 444 */
 struct xhci_slot_ctx {
@@ -310,8 +310,8 @@ struct xhci_slot_ctx {
     uint32_t slot_state : 5; /* 0 - disabled/enabled, 1 - default, 2 -
                               * addressed, 3 - configured, rest reserved*/
     uint32_t reserved3[4];
-} __packed;
-static_assert_struct_size_eq(xhci_slot_ctx, 0x20);
+} cc_packed;
+ct_assert_struct_size_eq(xhci_slot_ctx, 0x20);
 
 struct xhci_ep_ctx { // Refer to page 450 of the XHCI specification
 
@@ -431,8 +431,8 @@ struct xhci_ep_ctx { // Refer to page 450 of the XHCI specification
                                         * transfer during an ESIT
                                         */
     uint32_t reserved5[3];
-} __packed;
-static_assert_struct_size_eq(xhci_ep_ctx, 0x20);
+} cc_packed;
+ct_assert_struct_size_eq(xhci_ep_ctx, 0x20);
 
 struct xhci_input_ctrl_ctx { // Refer to page 461 of the XHCI specification
 
@@ -488,20 +488,20 @@ struct xhci_input_ctrl_ctx { // Refer to page 461 of the XHCI specification
                                      */
 
     uint32_t reserved1 : 8;
-} __packed;
-static_assert_struct_size_eq(xhci_input_ctrl_ctx, 0x20);
+} cc_packed;
+ct_assert_struct_size_eq(xhci_input_ctrl_ctx, 0x20);
 
 struct xhci_input_ctx { // Refer to page 460 of the XHCI Spec
     struct xhci_input_ctrl_ctx ctrl_ctx;
     struct xhci_slot_ctx slot_ctx;
     struct xhci_ep_ctx ep_ctx[31];
-} __packed;
-static_assert_struct_size_eq(xhci_input_ctx, 0x420);
+} cc_packed;
+ct_assert_struct_size_eq(xhci_input_ctx, 0x420);
 
 struct xhci_device_ctx {
     struct xhci_slot_ctx slot_ctx;
     struct xhci_ep_ctx ep_ctx[32]; // Endpoint 1–31 (ep0 separate)
-} __packed;
+} cc_packed;
 
 struct xhci_op_regs {
     struct xhci_usbcmd usbcmd;
@@ -521,8 +521,8 @@ struct xhci_trb {
     uint64_t parameter;
     uint32_t status;
     uint32_t control;
-} __packed;
-static_assert_struct_size_eq(xhci_trb, 0x10);
+} cc_packed;
+ct_assert_struct_size_eq(xhci_trb, 0x10);
 
 struct xhci_ring {
     struct xhci_trb *trbs;  /* Virtual mapped TRB buffer */
@@ -538,7 +538,7 @@ struct xhci_erst_entry {
     uint64_t ring_segment_base;
     uint32_t ring_segment_size;
     uint32_t reserved;
-} __packed;
+} cc_packed;
 
 #define XHCI_ERDP_EHB_BIT BIT(3)
 
@@ -551,11 +551,11 @@ struct xhci_interrupter_regs {
     uint64_t erstba; /* Event Ring Segment Table Base Address */
     uint64_t erdp;
 
-} __packed;
+} cc_packed;
 
 struct xhci_dcbaa { // Device context base address array - check page 441
     uint64_t ptrs[256];
-} __attribute__((aligned(64)));
+} cc_aligned(64);
 
 struct xhci_ext_cap {
     uint8_t cap_id;

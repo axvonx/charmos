@@ -147,13 +147,14 @@ static inline void pte_lock_internal(pte_atomic_t *pte) {
     }
 }
 
-static inline enum irql pte_lock_irql(pte_atomic_t *pte) {
+static inline enum irql pte_lock_irql(pte_atomic_t *pte) TSA_NO_ANALYSIS {
     enum irql old_irql = irql_raise(IRQL_DISPATCH_LEVEL);
     pte_lock_internal(pte);
     return old_irql;
 }
 
-static inline void pte_unlock_irql(pte_atomic_t *pte, enum irql old_irql) {
+static inline void pte_unlock_irql(pte_atomic_t *pte,
+                                   enum irql old_irql) TSA_NO_ANALYSIS {
     pte_unlock_internal(pte);
     irql_lower(old_irql);
 }

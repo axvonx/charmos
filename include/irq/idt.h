@@ -14,7 +14,7 @@ struct idt_entry {
     uint16_t base_mid;
     uint32_t base_high;
     uint32_t reserved;
-} __packed;
+} cc_packed;
 
 struct idt_table {
     struct idt_entry entries[IDT_ENTRIES];
@@ -23,7 +23,7 @@ struct idt_table {
 struct idt_ptr {
     uint16_t limit;
     uint64_t base;
-} __packed;
+} cc_packed;
 
 void irq_init();
 void irq_load();

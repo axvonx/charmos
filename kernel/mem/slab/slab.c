@@ -195,7 +195,7 @@ static void *slab_map_new(struct slab_cache *cache,
             } else {
                 phys_out[i] = pmm_alloc_page();
             }
-            if (unlikely(!phys_out[i]))
+            if (cc_unlikely(!phys_out[i]))
                 goto err;
         }
     } else {
@@ -205,12 +205,12 @@ static void *slab_map_new(struct slab_cache *cache,
             phys_out[0] = pmm_alloc_page();
         }
 
-        if (unlikely(!phys_out[0]))
+        if (cc_unlikely(!phys_out[0]))
             goto err;
     }
 
     virt_base = slab_chunks_alloc(&cache->chunks, out);
-    if (unlikely(!virt_base))
+    if (cc_unlikely(!virt_base))
         goto err;
 
     uint64_t pflags = slab_page_flags(type);
@@ -219,16 +219,16 @@ static void *slab_map_new(struct slab_cache *cache,
         vaddr_t virt = virt_base + pages_mapped * PAGE_SIZE;
         if (cache->type != SLAB_TYPE_PAGEABLE_ZERO) {
             paddr_t phys = phys_out[pages_mapped];
-            if (unlikely(vmm_map_page(virt, phys, pflags) < 0))
+            if (cc_unlikely(vmm_map_page(virt, phys, pflags) < 0))
                 goto err;
         } else {
             if (pages_mapped == 0) {
-                if (unlikely(vmm_map_page(virt, phys_out[0], pflags) < 0))
+                if (cc_unlikely(vmm_map_page(virt, phys_out[0], pflags) < 0))
                     goto err;
             } else {
-                if (unlikely(vmm_mark_demand_page(
-                                 virt, DEMAND_PAGE_FLAG_ZERO_MEMORY |
-                                           DEMAND_PAGE_FLAG_WRITABLE) < 0))
+                if (cc_unlikely(vmm_mark_demand_page(
+                                    virt, DEMAND_PAGE_FLAG_ZERO_MEMORY |
+                                              DEMAND_PAGE_FLAG_WRITABLE) < 0))
                     goto err;
             }
         }
@@ -1276,13 +1276,13 @@ void *kmalloc_new(size_t size, enum alloc_flags flags,
 
     /* uh oh... we found NOTHING...
      * try one last time - this will run emergency GC */
-    if (unlikely(!ret) && !alloc_behavior_is_fast(behavior))
+    if (cc_unlikely(!ret) && !alloc_behavior_is_fast(behavior))
         ret = slab_alloc_retry(selected_dom, handle, size, flags, behavior);
 
 exit:
 
     /* only hit if there is truly nothing left */
-    if (unlikely(!ret))
+    if (cc_unlikely(!ret))
         slab_stat_alloc_failure(local_dom);
 
     if (ret)
@@ -1556,7 +1556,7 @@ void *kmalloc_internal(size_t size, enum alloc_flags flags,
 }
 
 void kfree_internal(void *p, enum alloc_behavior behavior) {
-    if (unlikely(!p))
+    if (cc_unlikely(!p))
         return;
 
     if ((uint16_t) behavior == (uint16_t) ALLOC_FLAGS_DEFAULT) {

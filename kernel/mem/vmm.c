@@ -106,11 +106,11 @@ static enum errno pte_init(pte_t *entry, uint64_t flags) {
     return ERR_OK;
 }
 
-enum irql pte_lock(pte_t *pt) {
+enum irql pte_lock(pte_t *pt) TSA_NO_ANALYSIS {
     return pte_lock_irql((void *) pt);
 }
 
-void pte_unlock(pte_t *pt, enum irql irql) {
+void pte_unlock(pte_t *pt, enum irql irql) TSA_NO_ANALYSIS {
     pte_unlock_irql((void *) pt, irql);
 }
 
@@ -862,9 +862,9 @@ out:
 }
 
 enum errno vmm_map_page_full(struct vmm_map_request *rq) {
-    if (unlikely(text_phys_end && (rq->page_flags & PAGE_WRITE) &&
-                 rq->phys < text_phys_end &&
-                 rq->phys + map_page_bytes(rq->page_size) > text_phys_start))
+    if (cc_unlikely(text_phys_end && (rq->page_flags & PAGE_WRITE) &&
+                    rq->phys < text_phys_end &&
+                    rq->phys + map_page_bytes(rq->page_size) > text_phys_start))
         panic(
             "writable alias of kernel text: virt 0x%lx phys 0x%lx flags 0x%lx",
             (uint64_t) rq->virt, (uint64_t) rq->phys,

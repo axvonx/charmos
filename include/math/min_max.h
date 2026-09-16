@@ -7,7 +7,7 @@
 #define abs(N)                                                                 \
     ({                                                                         \
         __auto_type __n = (N);                                                 \
-        typecheck_signed(__n);                                                 \
+        ct_typecheck_signed(__n);                                              \
         __typeof__(__n) __result = __n;                                        \
         if (__n < 0) {                                                         \
             bool __overflow =                                                  \
@@ -22,11 +22,11 @@
         __auto_type __cl_p = &(__var);                                         \
         __auto_type __cl_lo = (__min);                                         \
         __auto_type __cl_hi = (__max);                                         \
-        typedef __common_type_2(*__cl_p, __cl_lo) __cl_t1;                     \
-        typedef __common_type_2((__cl_t1) 0, __cl_hi) __cl_t;                  \
-        typecheck_widenable_to((__cl_t) 0, *__cl_p);                           \
-        typecheck_widenable_to((__cl_t) 0, __min);                             \
-        typecheck_widenable_to((__cl_t) 0, __max);                             \
+        typedef ct_common_type_2(*__cl_p, __cl_lo) __cl_t1;                    \
+        typedef ct_common_type_2((__cl_t1) 0, __cl_hi) __cl_t;                 \
+        ct_typecheck_widenable_to((__cl_t) 0, *__cl_p);                        \
+        ct_typecheck_widenable_to((__cl_t) 0, __min);                          \
+        ct_typecheck_widenable_to((__cl_t) 0, __max);                          \
         __cl_t __cl_v = (__cl_t) * __cl_p;                                     \
         __cl_t __cl_l = (__cl_t) __cl_lo;                                      \
         __cl_t __cl_h = (__cl_t) __cl_hi;                                      \
@@ -45,10 +45,10 @@
     ({                                                                         \
         __auto_type __mm_1 = (a);                                              \
         __auto_type __mm_2 = (b);                                              \
-        typedef __common_type_2(__mm_1, __mm_2) __mm_t2;                       \
+        typedef ct_common_type_2(__mm_1, __mm_2) __mm_t2;                      \
         typedef __mm_t2 __mm_t;                                                \
-        typecheck_widenable_to((__mm_t) 0, a);                                 \
-        typecheck_widenable_to((__mm_t) 0, b);                                 \
+        ct_typecheck_widenable_to((__mm_t) 0, a);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, b);                              \
         __mm_t __mm_r = (__mm_t) __mm_1;                                       \
         __mm_t __mm_c2 = (__mm_t) __mm_2;                                      \
         __mm_r = __mm_c2 < __mm_r ? __mm_c2 : __mm_r;                          \
@@ -60,12 +60,12 @@
         __auto_type __mm_1 = (a);                                              \
         __auto_type __mm_2 = (b);                                              \
         __auto_type __mm_3 = (c);                                              \
-        typedef __common_type_2(__mm_1, __mm_2) __mm_t2;                       \
-        typedef __common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                  \
+        typedef ct_common_type_2(__mm_1, __mm_2) __mm_t2;                      \
+        typedef ct_common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                 \
         typedef __mm_t3 __mm_t;                                                \
-        typecheck_widenable_to((__mm_t) 0, a);                                 \
-        typecheck_widenable_to((__mm_t) 0, b);                                 \
-        typecheck_widenable_to((__mm_t) 0, c);                                 \
+        ct_typecheck_widenable_to((__mm_t) 0, a);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, b);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, c);                              \
         __mm_t __mm_r = (__mm_t) __mm_1;                                       \
         __mm_t __mm_c2 = (__mm_t) __mm_2;                                      \
         __mm_r = __mm_c2 < __mm_r ? __mm_c2 : __mm_r;                          \
@@ -80,14 +80,14 @@
         __auto_type __mm_2 = (b);                                              \
         __auto_type __mm_3 = (c);                                              \
         __auto_type __mm_4 = (d);                                              \
-        typedef __common_type_2(__mm_1, __mm_2) __mm_t2;                       \
-        typedef __common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                  \
-        typedef __common_type_2((__mm_t3) 0, __mm_4) __mm_t4;                  \
+        typedef ct_common_type_2(__mm_1, __mm_2) __mm_t2;                      \
+        typedef ct_common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                 \
+        typedef ct_common_type_2((__mm_t3) 0, __mm_4) __mm_t4;                 \
         typedef __mm_t4 __mm_t;                                                \
-        typecheck_widenable_to((__mm_t) 0, a);                                 \
-        typecheck_widenable_to((__mm_t) 0, b);                                 \
-        typecheck_widenable_to((__mm_t) 0, c);                                 \
-        typecheck_widenable_to((__mm_t) 0, d);                                 \
+        ct_typecheck_widenable_to((__mm_t) 0, a);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, b);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, c);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, d);                              \
         __mm_t __mm_r = (__mm_t) __mm_1;                                       \
         __mm_t __mm_c2 = (__mm_t) __mm_2;                                      \
         __mm_r = __mm_c2 < __mm_r ? __mm_c2 : __mm_r;                          \
@@ -105,16 +105,16 @@
         __auto_type __mm_3 = (c);                                              \
         __auto_type __mm_4 = (d);                                              \
         __auto_type __mm_5 = (e);                                              \
-        typedef __common_type_2(__mm_1, __mm_2) __mm_t2;                       \
-        typedef __common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                  \
-        typedef __common_type_2((__mm_t3) 0, __mm_4) __mm_t4;                  \
-        typedef __common_type_2((__mm_t4) 0, __mm_5) __mm_t5;                  \
+        typedef ct_common_type_2(__mm_1, __mm_2) __mm_t2;                      \
+        typedef ct_common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                 \
+        typedef ct_common_type_2((__mm_t3) 0, __mm_4) __mm_t4;                 \
+        typedef ct_common_type_2((__mm_t4) 0, __mm_5) __mm_t5;                 \
         typedef __mm_t5 __mm_t;                                                \
-        typecheck_widenable_to((__mm_t) 0, a);                                 \
-        typecheck_widenable_to((__mm_t) 0, b);                                 \
-        typecheck_widenable_to((__mm_t) 0, c);                                 \
-        typecheck_widenable_to((__mm_t) 0, d);                                 \
-        typecheck_widenable_to((__mm_t) 0, e);                                 \
+        ct_typecheck_widenable_to((__mm_t) 0, a);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, b);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, c);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, d);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, e);                              \
         __mm_t __mm_r = (__mm_t) __mm_1;                                       \
         __mm_t __mm_c2 = (__mm_t) __mm_2;                                      \
         __mm_r = __mm_c2 < __mm_r ? __mm_c2 : __mm_r;                          \
@@ -135,18 +135,18 @@
         __auto_type __mm_4 = (d);                                              \
         __auto_type __mm_5 = (e);                                              \
         __auto_type __mm_6 = (f);                                              \
-        typedef __common_type_2(__mm_1, __mm_2) __mm_t2;                       \
-        typedef __common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                  \
-        typedef __common_type_2((__mm_t3) 0, __mm_4) __mm_t4;                  \
-        typedef __common_type_2((__mm_t4) 0, __mm_5) __mm_t5;                  \
-        typedef __common_type_2((__mm_t5) 0, __mm_6) __mm_t6;                  \
+        typedef ct_common_type_2(__mm_1, __mm_2) __mm_t2;                      \
+        typedef ct_common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                 \
+        typedef ct_common_type_2((__mm_t3) 0, __mm_4) __mm_t4;                 \
+        typedef ct_common_type_2((__mm_t4) 0, __mm_5) __mm_t5;                 \
+        typedef ct_common_type_2((__mm_t5) 0, __mm_6) __mm_t6;                 \
         typedef __mm_t6 __mm_t;                                                \
-        typecheck_widenable_to((__mm_t) 0, a);                                 \
-        typecheck_widenable_to((__mm_t) 0, b);                                 \
-        typecheck_widenable_to((__mm_t) 0, c);                                 \
-        typecheck_widenable_to((__mm_t) 0, d);                                 \
-        typecheck_widenable_to((__mm_t) 0, e);                                 \
-        typecheck_widenable_to((__mm_t) 0, f);                                 \
+        ct_typecheck_widenable_to((__mm_t) 0, a);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, b);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, c);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, d);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, e);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, f);                              \
         __mm_t __mm_r = (__mm_t) __mm_1;                                       \
         __mm_t __mm_c2 = (__mm_t) __mm_2;                                      \
         __mm_r = __mm_c2 < __mm_r ? __mm_c2 : __mm_r;                          \
@@ -170,20 +170,20 @@
         __auto_type __mm_5 = (e);                                              \
         __auto_type __mm_6 = (f);                                              \
         __auto_type __mm_7 = (g);                                              \
-        typedef __common_type_2(__mm_1, __mm_2) __mm_t2;                       \
-        typedef __common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                  \
-        typedef __common_type_2((__mm_t3) 0, __mm_4) __mm_t4;                  \
-        typedef __common_type_2((__mm_t4) 0, __mm_5) __mm_t5;                  \
-        typedef __common_type_2((__mm_t5) 0, __mm_6) __mm_t6;                  \
-        typedef __common_type_2((__mm_t6) 0, __mm_7) __mm_t7;                  \
+        typedef ct_common_type_2(__mm_1, __mm_2) __mm_t2;                      \
+        typedef ct_common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                 \
+        typedef ct_common_type_2((__mm_t3) 0, __mm_4) __mm_t4;                 \
+        typedef ct_common_type_2((__mm_t4) 0, __mm_5) __mm_t5;                 \
+        typedef ct_common_type_2((__mm_t5) 0, __mm_6) __mm_t6;                 \
+        typedef ct_common_type_2((__mm_t6) 0, __mm_7) __mm_t7;                 \
         typedef __mm_t7 __mm_t;                                                \
-        typecheck_widenable_to((__mm_t) 0, a);                                 \
-        typecheck_widenable_to((__mm_t) 0, b);                                 \
-        typecheck_widenable_to((__mm_t) 0, c);                                 \
-        typecheck_widenable_to((__mm_t) 0, d);                                 \
-        typecheck_widenable_to((__mm_t) 0, e);                                 \
-        typecheck_widenable_to((__mm_t) 0, f);                                 \
-        typecheck_widenable_to((__mm_t) 0, g);                                 \
+        ct_typecheck_widenable_to((__mm_t) 0, a);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, b);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, c);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, d);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, e);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, f);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, g);                              \
         __mm_t __mm_r = (__mm_t) __mm_1;                                       \
         __mm_t __mm_c2 = (__mm_t) __mm_2;                                      \
         __mm_r = __mm_c2 < __mm_r ? __mm_c2 : __mm_r;                          \
@@ -210,22 +210,22 @@
         __auto_type __mm_6 = (f);                                              \
         __auto_type __mm_7 = (g);                                              \
         __auto_type __mm_8 = (h);                                              \
-        typedef __common_type_2(__mm_1, __mm_2) __mm_t2;                       \
-        typedef __common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                  \
-        typedef __common_type_2((__mm_t3) 0, __mm_4) __mm_t4;                  \
-        typedef __common_type_2((__mm_t4) 0, __mm_5) __mm_t5;                  \
-        typedef __common_type_2((__mm_t5) 0, __mm_6) __mm_t6;                  \
-        typedef __common_type_2((__mm_t6) 0, __mm_7) __mm_t7;                  \
-        typedef __common_type_2((__mm_t7) 0, __mm_8) __mm_t8;                  \
+        typedef ct_common_type_2(__mm_1, __mm_2) __mm_t2;                      \
+        typedef ct_common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                 \
+        typedef ct_common_type_2((__mm_t3) 0, __mm_4) __mm_t4;                 \
+        typedef ct_common_type_2((__mm_t4) 0, __mm_5) __mm_t5;                 \
+        typedef ct_common_type_2((__mm_t5) 0, __mm_6) __mm_t6;                 \
+        typedef ct_common_type_2((__mm_t6) 0, __mm_7) __mm_t7;                 \
+        typedef ct_common_type_2((__mm_t7) 0, __mm_8) __mm_t8;                 \
         typedef __mm_t8 __mm_t;                                                \
-        typecheck_widenable_to((__mm_t) 0, a);                                 \
-        typecheck_widenable_to((__mm_t) 0, b);                                 \
-        typecheck_widenable_to((__mm_t) 0, c);                                 \
-        typecheck_widenable_to((__mm_t) 0, d);                                 \
-        typecheck_widenable_to((__mm_t) 0, e);                                 \
-        typecheck_widenable_to((__mm_t) 0, f);                                 \
-        typecheck_widenable_to((__mm_t) 0, g);                                 \
-        typecheck_widenable_to((__mm_t) 0, h);                                 \
+        ct_typecheck_widenable_to((__mm_t) 0, a);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, b);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, c);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, d);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, e);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, f);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, g);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, h);                              \
         __mm_t __mm_r = (__mm_t) __mm_1;                                       \
         __mm_t __mm_c2 = (__mm_t) __mm_2;                                      \
         __mm_r = __mm_c2 < __mm_r ? __mm_c2 : __mm_r;                          \
@@ -244,7 +244,7 @@
         (__mm_t) __mm_r;                                                       \
     })
 
-#define MIN(...) _DISPATCH(_MIN, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
+#define MIN(...) PP_CALL(_MIN, __VA_ARGS__)
 
 #define _MAX_1(a) (a)
 
@@ -252,10 +252,10 @@
     ({                                                                         \
         __auto_type __mm_1 = (a);                                              \
         __auto_type __mm_2 = (b);                                              \
-        typedef __common_type_2(__mm_1, __mm_2) __mm_t2;                       \
+        typedef ct_common_type_2(__mm_1, __mm_2) __mm_t2;                      \
         typedef __mm_t2 __mm_t;                                                \
-        typecheck_widenable_to((__mm_t) 0, a);                                 \
-        typecheck_widenable_to((__mm_t) 0, b);                                 \
+        ct_typecheck_widenable_to((__mm_t) 0, a);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, b);                              \
         __mm_t __mm_r = (__mm_t) __mm_1;                                       \
         __mm_t __mm_c2 = (__mm_t) __mm_2;                                      \
         __mm_r = __mm_c2 > __mm_r ? __mm_c2 : __mm_r;                          \
@@ -267,12 +267,12 @@
         __auto_type __mm_1 = (a);                                              \
         __auto_type __mm_2 = (b);                                              \
         __auto_type __mm_3 = (c);                                              \
-        typedef __common_type_2(__mm_1, __mm_2) __mm_t2;                       \
-        typedef __common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                  \
+        typedef ct_common_type_2(__mm_1, __mm_2) __mm_t2;                      \
+        typedef ct_common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                 \
         typedef __mm_t3 __mm_t;                                                \
-        typecheck_widenable_to((__mm_t) 0, a);                                 \
-        typecheck_widenable_to((__mm_t) 0, b);                                 \
-        typecheck_widenable_to((__mm_t) 0, c);                                 \
+        ct_typecheck_widenable_to((__mm_t) 0, a);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, b);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, c);                              \
         __mm_t __mm_r = (__mm_t) __mm_1;                                       \
         __mm_t __mm_c2 = (__mm_t) __mm_2;                                      \
         __mm_r = __mm_c2 > __mm_r ? __mm_c2 : __mm_r;                          \
@@ -287,14 +287,14 @@
         __auto_type __mm_2 = (b);                                              \
         __auto_type __mm_3 = (c);                                              \
         __auto_type __mm_4 = (d);                                              \
-        typedef __common_type_2(__mm_1, __mm_2) __mm_t2;                       \
-        typedef __common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                  \
-        typedef __common_type_2((__mm_t3) 0, __mm_4) __mm_t4;                  \
+        typedef ct_common_type_2(__mm_1, __mm_2) __mm_t2;                      \
+        typedef ct_common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                 \
+        typedef ct_common_type_2((__mm_t3) 0, __mm_4) __mm_t4;                 \
         typedef __mm_t4 __mm_t;                                                \
-        typecheck_widenable_to((__mm_t) 0, a);                                 \
-        typecheck_widenable_to((__mm_t) 0, b);                                 \
-        typecheck_widenable_to((__mm_t) 0, c);                                 \
-        typecheck_widenable_to((__mm_t) 0, d);                                 \
+        ct_typecheck_widenable_to((__mm_t) 0, a);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, b);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, c);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, d);                              \
         __mm_t __mm_r = (__mm_t) __mm_1;                                       \
         __mm_t __mm_c2 = (__mm_t) __mm_2;                                      \
         __mm_r = __mm_c2 > __mm_r ? __mm_c2 : __mm_r;                          \
@@ -312,16 +312,16 @@
         __auto_type __mm_3 = (c);                                              \
         __auto_type __mm_4 = (d);                                              \
         __auto_type __mm_5 = (e);                                              \
-        typedef __common_type_2(__mm_1, __mm_2) __mm_t2;                       \
-        typedef __common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                  \
-        typedef __common_type_2((__mm_t3) 0, __mm_4) __mm_t4;                  \
-        typedef __common_type_2((__mm_t4) 0, __mm_5) __mm_t5;                  \
+        typedef ct_common_type_2(__mm_1, __mm_2) __mm_t2;                      \
+        typedef ct_common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                 \
+        typedef ct_common_type_2((__mm_t3) 0, __mm_4) __mm_t4;                 \
+        typedef ct_common_type_2((__mm_t4) 0, __mm_5) __mm_t5;                 \
         typedef __mm_t5 __mm_t;                                                \
-        typecheck_widenable_to((__mm_t) 0, a);                                 \
-        typecheck_widenable_to((__mm_t) 0, b);                                 \
-        typecheck_widenable_to((__mm_t) 0, c);                                 \
-        typecheck_widenable_to((__mm_t) 0, d);                                 \
-        typecheck_widenable_to((__mm_t) 0, e);                                 \
+        ct_typecheck_widenable_to((__mm_t) 0, a);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, b);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, c);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, d);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, e);                              \
         __mm_t __mm_r = (__mm_t) __mm_1;                                       \
         __mm_t __mm_c2 = (__mm_t) __mm_2;                                      \
         __mm_r = __mm_c2 > __mm_r ? __mm_c2 : __mm_r;                          \
@@ -342,18 +342,18 @@
         __auto_type __mm_4 = (d);                                              \
         __auto_type __mm_5 = (e);                                              \
         __auto_type __mm_6 = (f);                                              \
-        typedef __common_type_2(__mm_1, __mm_2) __mm_t2;                       \
-        typedef __common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                  \
-        typedef __common_type_2((__mm_t3) 0, __mm_4) __mm_t4;                  \
-        typedef __common_type_2((__mm_t4) 0, __mm_5) __mm_t5;                  \
-        typedef __common_type_2((__mm_t5) 0, __mm_6) __mm_t6;                  \
+        typedef ct_common_type_2(__mm_1, __mm_2) __mm_t2;                      \
+        typedef ct_common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                 \
+        typedef ct_common_type_2((__mm_t3) 0, __mm_4) __mm_t4;                 \
+        typedef ct_common_type_2((__mm_t4) 0, __mm_5) __mm_t5;                 \
+        typedef ct_common_type_2((__mm_t5) 0, __mm_6) __mm_t6;                 \
         typedef __mm_t6 __mm_t;                                                \
-        typecheck_widenable_to((__mm_t) 0, a);                                 \
-        typecheck_widenable_to((__mm_t) 0, b);                                 \
-        typecheck_widenable_to((__mm_t) 0, c);                                 \
-        typecheck_widenable_to((__mm_t) 0, d);                                 \
-        typecheck_widenable_to((__mm_t) 0, e);                                 \
-        typecheck_widenable_to((__mm_t) 0, f);                                 \
+        ct_typecheck_widenable_to((__mm_t) 0, a);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, b);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, c);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, d);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, e);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, f);                              \
         __mm_t __mm_r = (__mm_t) __mm_1;                                       \
         __mm_t __mm_c2 = (__mm_t) __mm_2;                                      \
         __mm_r = __mm_c2 > __mm_r ? __mm_c2 : __mm_r;                          \
@@ -377,20 +377,20 @@
         __auto_type __mm_5 = (e);                                              \
         __auto_type __mm_6 = (f);                                              \
         __auto_type __mm_7 = (g);                                              \
-        typedef __common_type_2(__mm_1, __mm_2) __mm_t2;                       \
-        typedef __common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                  \
-        typedef __common_type_2((__mm_t3) 0, __mm_4) __mm_t4;                  \
-        typedef __common_type_2((__mm_t4) 0, __mm_5) __mm_t5;                  \
-        typedef __common_type_2((__mm_t5) 0, __mm_6) __mm_t6;                  \
-        typedef __common_type_2((__mm_t6) 0, __mm_7) __mm_t7;                  \
+        typedef ct_common_type_2(__mm_1, __mm_2) __mm_t2;                      \
+        typedef ct_common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                 \
+        typedef ct_common_type_2((__mm_t3) 0, __mm_4) __mm_t4;                 \
+        typedef ct_common_type_2((__mm_t4) 0, __mm_5) __mm_t5;                 \
+        typedef ct_common_type_2((__mm_t5) 0, __mm_6) __mm_t6;                 \
+        typedef ct_common_type_2((__mm_t6) 0, __mm_7) __mm_t7;                 \
         typedef __mm_t7 __mm_t;                                                \
-        typecheck_widenable_to((__mm_t) 0, a);                                 \
-        typecheck_widenable_to((__mm_t) 0, b);                                 \
-        typecheck_widenable_to((__mm_t) 0, c);                                 \
-        typecheck_widenable_to((__mm_t) 0, d);                                 \
-        typecheck_widenable_to((__mm_t) 0, e);                                 \
-        typecheck_widenable_to((__mm_t) 0, f);                                 \
-        typecheck_widenable_to((__mm_t) 0, g);                                 \
+        ct_typecheck_widenable_to((__mm_t) 0, a);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, b);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, c);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, d);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, e);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, f);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, g);                              \
         __mm_t __mm_r = (__mm_t) __mm_1;                                       \
         __mm_t __mm_c2 = (__mm_t) __mm_2;                                      \
         __mm_r = __mm_c2 > __mm_r ? __mm_c2 : __mm_r;                          \
@@ -417,22 +417,22 @@
         __auto_type __mm_6 = (f);                                              \
         __auto_type __mm_7 = (g);                                              \
         __auto_type __mm_8 = (h);                                              \
-        typedef __common_type_2(__mm_1, __mm_2) __mm_t2;                       \
-        typedef __common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                  \
-        typedef __common_type_2((__mm_t3) 0, __mm_4) __mm_t4;                  \
-        typedef __common_type_2((__mm_t4) 0, __mm_5) __mm_t5;                  \
-        typedef __common_type_2((__mm_t5) 0, __mm_6) __mm_t6;                  \
-        typedef __common_type_2((__mm_t6) 0, __mm_7) __mm_t7;                  \
-        typedef __common_type_2((__mm_t7) 0, __mm_8) __mm_t8;                  \
+        typedef ct_common_type_2(__mm_1, __mm_2) __mm_t2;                      \
+        typedef ct_common_type_2((__mm_t2) 0, __mm_3) __mm_t3;                 \
+        typedef ct_common_type_2((__mm_t3) 0, __mm_4) __mm_t4;                 \
+        typedef ct_common_type_2((__mm_t4) 0, __mm_5) __mm_t5;                 \
+        typedef ct_common_type_2((__mm_t5) 0, __mm_6) __mm_t6;                 \
+        typedef ct_common_type_2((__mm_t6) 0, __mm_7) __mm_t7;                 \
+        typedef ct_common_type_2((__mm_t7) 0, __mm_8) __mm_t8;                 \
         typedef __mm_t8 __mm_t;                                                \
-        typecheck_widenable_to((__mm_t) 0, a);                                 \
-        typecheck_widenable_to((__mm_t) 0, b);                                 \
-        typecheck_widenable_to((__mm_t) 0, c);                                 \
-        typecheck_widenable_to((__mm_t) 0, d);                                 \
-        typecheck_widenable_to((__mm_t) 0, e);                                 \
-        typecheck_widenable_to((__mm_t) 0, f);                                 \
-        typecheck_widenable_to((__mm_t) 0, g);                                 \
-        typecheck_widenable_to((__mm_t) 0, h);                                 \
+        ct_typecheck_widenable_to((__mm_t) 0, a);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, b);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, c);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, d);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, e);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, f);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, g);                              \
+        ct_typecheck_widenable_to((__mm_t) 0, h);                              \
         __mm_t __mm_r = (__mm_t) __mm_1;                                       \
         __mm_t __mm_c2 = (__mm_t) __mm_2;                                      \
         __mm_r = __mm_c2 > __mm_r ? __mm_c2 : __mm_r;                          \
@@ -451,4 +451,4 @@
         (__mm_t) __mm_r;                                                       \
     })
 
-#define MAX(...) _DISPATCH(_MAX, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
+#define MAX(...) PP_CALL(_MAX, __VA_ARGS__)

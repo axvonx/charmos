@@ -136,7 +136,7 @@ paddr_t buddy_alloc_pages(struct buddy_free_area *free_area, size_t count) {
         size <<= 1;
     }
 
-    if (unlikely(order >= BUDDY_MAX_ORDER)) {
+    if (cc_unlikely(order >= BUDDY_MAX_ORDER)) {
         panic("Attempted to allocate too many pages (outside max order)");
         return 0x0;
     }
@@ -146,7 +146,7 @@ paddr_t buddy_alloc_pages(struct buddy_free_area *free_area, size_t count) {
            free_area[current_order].nr_free == 0)
         current_order++;
 
-    if (unlikely(current_order >= BUDDY_MAX_ORDER)) {
+    if (cc_unlikely(current_order >= BUDDY_MAX_ORDER)) {
         panic("Attempted to allocate too many pages (outside max order)");
         return 0x0;
     }

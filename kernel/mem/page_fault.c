@@ -20,9 +20,9 @@ static enum exception_sync_cb_result
 page_fault_sync_cb(struct exception_sync_cb *this, struct irq_context *irqc,
                    uint8_t buf[EXCEPTION_SYNC_CB_SCRATCH_BUFFER_SIZE]);
 
-static void __noreturn page_fault_report_crash(vaddr_t fault_addr,
-                                               uint64_t error_code,
-                                               struct irq_context *irqc);
+static void cc_noreturn page_fault_report_crash(vaddr_t fault_addr,
+                                                uint64_t error_code,
+                                                struct irq_context *irqc);
 
 EXCEPTION_SYNC_CB_REGISTER(page_fault, IRQ_PAGE_FAULT, page_fault_sync_cb,
                            NULL);
@@ -227,9 +227,9 @@ static void dump_slab_exec_fault(struct thread *curr, struct irq_context *ctx) {
     printf("  scheduler = %p\n", (uint64_t) atomic_load(&curr->scheduler));
 }
 
-static void __noreturn page_fault_report_crash(vaddr_t fault_addr,
-                                               uint64_t error_code,
-                                               struct irq_context *ctx) {
+static void cc_noreturn page_fault_report_crash(vaddr_t fault_addr,
+                                                uint64_t error_code,
+                                                struct irq_context *ctx) {
 
     struct thread *curr = thread_get_current();
 

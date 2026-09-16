@@ -143,7 +143,8 @@ static bool vas_valid(struct vas *vas, size_t expected_live) {
            enrolled <= VAS_MAG_BYTE_LIMIT;
 }
 
-TEST_DECLARE_UNIT(vas, magazine_hits_preserve_query_and_exact_free) {
+TEST_DECLARE_UNIT(vas, magazine_hits_preserve_query_and_exact_free)
+TSA_NO_ANALYSIS {
     const size_t sizes[] = {PAGE_SIZE, 5 * PAGE_SIZE, 17 * PAGE_SIZE, PAGE_2MB};
     for (uint32_t cls = 0; cls < VAS_MAG_CLASSES; cls++) {
         struct vas *vas =
@@ -183,7 +184,8 @@ TEST_DECLARE_UNIT(vas, magazine_hits_preserve_query_and_exact_free) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(vas, magazine_alignment_overflow_and_drain) {
+TEST_DECLARE_UNIT(vas, magazine_alignment_overflow_and_drain)
+TSA_NO_ANALYSIS {
     struct vas *vas = vas_create(TEST_VAS_BASE, TEST_VAS_BASE + VAS_CHUNK_SIZE);
     TEST_ASSERT_NONNULL(vas);
     enum irql old = irql_raise(IRQL_DISPATCH_LEVEL);
@@ -222,7 +224,8 @@ TEST_DECLARE_UNIT(vas, magazine_alignment_overflow_and_drain) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(vas, magazine_refill_failure_keeps_primary_allocation) {
+TEST_DECLARE_UNIT(vas, magazine_refill_failure_keeps_primary_allocation)
+TSA_NO_ANALYSIS {
     struct vas *vas = vas_create(TEST_VAS_BASE, TEST_VAS_BASE + VAS_CHUNK_SIZE);
     TEST_ASSERT_NONNULL(vas);
     enum irql old = irql_raise(IRQL_DISPATCH_LEVEL);
@@ -240,7 +243,8 @@ TEST_DECLARE_UNIT(vas, magazine_refill_failure_keeps_primary_allocation) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(vas, magazine_claim_pins_tag_during_drain) {
+TEST_DECLARE_UNIT(vas, magazine_claim_pins_tag_during_drain)
+TSA_NO_ANALYSIS {
     struct vas *vas = vas_create(TEST_VAS_BASE, TEST_VAS_BASE + VAS_CHUNK_SIZE);
     TEST_ASSERT_NONNULL(vas);
     enum irql old = irql_raise(IRQL_DISPATCH_LEVEL);
@@ -271,7 +275,8 @@ TEST_DECLARE_UNIT(vas, magazine_claim_pins_tag_during_drain) {
 }
 
 TEST_DECLARE_UNIT(vas, magazine_benchmark, .enabled = TEST_STATE_DISABLED,
-                  .print_logs = true) {
+                  .print_logs = true)
+TSA_NO_ANALYSIS {
     const size_t sizes[] = {PAGE_SIZE, 5 * PAGE_SIZE, 17 * PAGE_SIZE, PAGE_2MB};
     const uint32_t iterations = 10000;
     for (uint32_t cls = 0; cls < TEST_ARRAY_LEN(sizes); cls++) {
@@ -312,8 +317,8 @@ TEST_DECLARE_UNIT(vas, magazine_benchmark, .enabled = TEST_STATE_DISABLED,
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(vas, death_cached_double_free,
-                  .enabled = TEST_STATE_DISABLED) {
+TEST_DECLARE_UNIT(vas, death_cached_double_free, .enabled = TEST_STATE_DISABLED)
+TSA_NO_ANALYSIS {
     struct vas *vas = vas_create(TEST_VAS_BASE, TEST_VAS_BASE + VAS_CHUNK_SIZE);
     TEST_ASSERT_NONNULL(vas);
     enum irql old = irql_raise(IRQL_DISPATCH_LEVEL);

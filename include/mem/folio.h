@@ -265,5 +265,4 @@ folio_mapcount_dec(struct folio *f) { /* true if dropped to 0 */
 #define folio_alloc_2(sz, fl)                                                  \
     folio_alloc_internal((sz), (fl), ALLOC_BEHAVIOR_DEFAULT)
 #define folio_alloc_3(sz, fl, bh) folio_alloc_internal((sz), (fl), (bh))
-#define folio_alloc(...)                                                       \
-    _DISPATCH(folio_alloc, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
+#define folio_alloc(...) PP_CALL(folio_alloc, __VA_ARGS__)

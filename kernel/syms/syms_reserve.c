@@ -8,7 +8,8 @@
  *
  * The initialiser also keeps the section PROGBITS, an all zero array would be
  * moved to .bss, and there would be nothing on disk for objcopy to replace */
+#include <compiler.h>
 #include <linker/symbol_table.h>
 
-__attribute__((section(".kernel_syms"), used, aligned(16)))
-const char kernel_syms_blob[KERNEL_SYMS_RESERVE] = "NOSYMS";
+cc_section(".kernel_syms") cc_used cc_aligned(16) const
+    char kernel_syms_blob[KERNEL_SYMS_RESERVE] = "NOSYMS";

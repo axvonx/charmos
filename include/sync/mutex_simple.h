@@ -103,8 +103,7 @@ void mutex_simple_assert_not_held_internal(struct mutex_simple *m,
     mutex_simple_init_auto_internal((mtx_), LOCK_CHKD_FULL)
 #define mutex_simple_init_2(mtx_, flags_)                                      \
     mutex_simple_init_auto_internal((mtx_), (flags_))
-#define mutex_simple_init(...)                                                 \
-    _DISPATCH(mutex_simple_init, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
+#define mutex_simple_init(...) PP_CALL(mutex_simple_init, __VA_ARGS__)
 
 #define mutex_simple_lock(m_)                                                  \
     mutex_simple_lock_internal((m_), LOCK_CHK_SITE_HERE())

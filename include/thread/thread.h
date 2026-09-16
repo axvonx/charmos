@@ -410,9 +410,9 @@ struct thread *thread_create_custom_stack(char *name,
 void thread_free(struct thread *t);
 
 void thread_init_thread_ids(void);
-void thread_sleep_for_ms(uint64_t ms);
-void thread_sleep_for_us(uint64_t us);
-__noreturn void thread_exit(void);
+void thread_sleep_for_ms(uint64_t ms) TSA_EXCLUDED(IRQL_RAISED);
+void thread_sleep_for_us(uint64_t us) TSA_EXCLUDED(IRQL_RAISED);
+cc_noreturn void thread_exit(void);
 void thread_print(const struct thread *t);
 
 void thread_update_activity_stats(struct thread *t, time_ms_t time);
@@ -443,7 +443,7 @@ bool thread_inherit_priority(struct thread *boosted, struct thread *from,
 void thread_uninherit_priority(enum thread_prio_class class);
 void thread_remove_boost();
 
-__noreturn void thread_exit_with_status(int status);
+cc_noreturn void thread_exit_with_status(int status);
 
 int thread_join(struct thread *t);
 bool thread_join_timeout(struct thread *t, time_ms_t timeout_ms,
@@ -704,7 +704,7 @@ thread_spawn_joinable(char *name, void (*entry)(void *), void *arg, ...) {
         thread_create_internal(name, entry, arg, THREAD_STACK_SIZE, args);
     va_end(args);
 
-    if (unlikely(!t))
+    if (cc_unlikely(!t))
         return NULL;
 
     thread_set_joinable(t);
@@ -721,7 +721,7 @@ thread_spawn_joinable_custom_stack(char *name, void (*entry)(void *), void *arg,
         thread_create_internal(name, entry, arg, stack_size, args);
     va_end(args);
 
-    if (unlikely(!t))
+    if (cc_unlikely(!t))
         return NULL;
 
     thread_set_joinable(t);
@@ -738,7 +738,7 @@ thread_spawn_joinable_on_core(char *name, void (*entry)(void *), void *arg,
         thread_create_internal(name, entry, arg, THREAD_STACK_SIZE, args);
     va_end(args);
 
-    if (unlikely(!t))
+    if (cc_unlikely(!t))
         return NULL;
 
     thread_set_joinable(t);

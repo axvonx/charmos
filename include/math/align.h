@@ -11,8 +11,8 @@
 #define _ALIGN_CAPTURE_UNCHECKED(x, align)                                     \
     __auto_type __x = (x);                                                     \
     __auto_type __source_align = (align);                                      \
-    typecheck_integer(__x);                                                    \
-    typecheck_widenable_to(__x, align);                                        \
+    ct_typecheck_integer(__x);                                                 \
+    ct_typecheck_widenable_to(__x, align);                                     \
     __typeof__(__x) __align = (__typeof__(__x)) __source_align
 
 #define _ALIGN_CAPTURE(x, align)                                               \
@@ -22,7 +22,7 @@
 #define IS_POW2(x)                                                             \
     ({                                                                         \
         __auto_type __p2 = (x);                                                \
-        typecheck_integer(__p2);                                               \
+        ct_typecheck_integer(__p2);                                            \
         __p2 > 0 && (__p2 & (__p2 - 1)) == 0;                                  \
     })
 
@@ -73,8 +73,8 @@
     ({                                                                         \
         __auto_type __n = (n);                                                 \
         __auto_type __source_d = (d);                                          \
-        typecheck_unsigned(__n);                                               \
-        typecheck_widenable_to(__n, d);                                        \
+        ct_typecheck_unsigned(__n);                                            \
+        ct_typecheck_widenable_to(__n, d);                                     \
         __typeof__(__n) __d = (__typeof__(__n)) __source_d;                    \
         (void) kassert(__d > 0);                                               \
         (__typeof__(__n)) (__n / __d + (__n % __d != 0));                      \

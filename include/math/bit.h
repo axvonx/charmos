@@ -17,8 +17,8 @@
 #define _BIT_CAPTURE(val, n)                                                   \
     __auto_type __bit_v = (val);                                               \
     __auto_type __bit_n = (n);                                                 \
-    typecheck_integer(__bit_v);                                                \
-    typecheck_integer(__bit_n);                                                \
+    ct_typecheck_integer(__bit_v);                                             \
+    ct_typecheck_integer(__bit_n);                                             \
     (void) kassert(__bit_index_ok(__bit_n, sizeof(__bit_v) * __CHAR_BIT__))
 
 #define BIT_SET(val, n)                                                        \
@@ -52,8 +52,8 @@
     ({                                                                         \
         __auto_type __msk_lo = (lo);                                           \
         __auto_type __msk_hi = (hi);                                           \
-        typecheck_integer(__msk_lo);                                           \
-        typecheck_integer(__msk_hi);                                           \
+        ct_typecheck_integer(__msk_lo);                                        \
+        ct_typecheck_integer(__msk_hi);                                        \
         (void) kassert(__bit_index_ok(__msk_hi, 64) &&                         \
                        (__UINTMAX_TYPE__) (__INTMAX_TYPE__) __msk_lo <=        \
                            (__UINTMAX_TYPE__) (__INTMAX_TYPE__) __msk_hi);     \
@@ -67,7 +67,7 @@
         __auto_type __fld_v = (val);                                           \
         uint32_t __fld_l = (uint32_t) (lo);                                    \
         uint32_t __fld_h = (uint32_t) (hi);                                    \
-        typecheck_integer(__fld_v);                                            \
+        ct_typecheck_integer(__fld_v);                                         \
         (void) kassert(__fld_l <= __fld_h &&                                   \
                        __fld_h < (sizeof(__fld_v) * __CHAR_BIT__));            \
         (__typeof__(__fld_v)) (((uint64_t) __fld_v >> __fld_l) &               \
@@ -80,7 +80,7 @@
         uint64_t __fld_fv = (uint64_t) (field_val);                            \
         uint32_t __fld_l = (uint32_t) (lo);                                    \
         uint32_t __fld_h = (uint32_t) (hi);                                    \
-        typecheck_integer(__fld_v);                                            \
+        ct_typecheck_integer(__fld_v);                                         \
         (void) kassert(__fld_l <= __fld_h &&                                   \
                        __fld_h < (sizeof(__fld_v) * __CHAR_BIT__));            \
         uint64_t __fld_mask = (~UINT64_C(0) >> (63u - (__fld_h - __fld_l)))    \
@@ -97,9 +97,9 @@
     ({                                                                         \
         __auto_type __any_v = (val);                                           \
         __auto_type __any_m = (mask);                                          \
-        typedef __common_type_2(__any_v, __any_m) __any_t;                     \
-        typecheck_widenable_to((__any_t) 0, val);                              \
-        typecheck_widenable_to((__any_t) 0, mask);                             \
+        typedef ct_common_type_2(__any_v, __any_m) __any_t;                    \
+        ct_typecheck_widenable_to((__any_t) 0, val);                           \
+        ct_typecheck_widenable_to((__any_t) 0, mask);                          \
         (bool) (((__any_t) __any_v & (__any_t) __any_m) != 0);                 \
     })
 
@@ -107,9 +107,9 @@
     ({                                                                         \
         __auto_type __all_v = (val);                                           \
         __auto_type __all_m = (mask);                                          \
-        typedef __common_type_2(__all_v, __all_m) __all_t;                     \
-        typecheck_widenable_to((__all_t) 0, val);                              \
-        typecheck_widenable_to((__all_t) 0, mask);                             \
+        typedef ct_common_type_2(__all_v, __all_m) __all_t;                    \
+        ct_typecheck_widenable_to((__all_t) 0, val);                           \
+        ct_typecheck_widenable_to((__all_t) 0, mask);                          \
         (bool) (((__all_t) __all_v & (__all_t) __all_m) == (__all_t) __all_m); \
     })
 

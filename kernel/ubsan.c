@@ -330,14 +330,13 @@ void __ubsan_handle_pointer_overflow(data_only_location_t *data, void *,
            data->location.line, data->location.column);
     HALT
 }
-__attribute__((noreturn)) void
+cc_noreturn void
 __ubsan_handle_builtin_unreachable(data_only_location_t *data) {
     printf("UBSAN: builtin_unreachable @ %s:%u:%u\n", data->location.filename,
            data->location.line, data->location.column);
     ubsan_panic(&data->location, "UBSAN: reached __builtin_unreachable()");
 }
-__attribute__((noreturn)) void
-__ubsan_handle_missing_return(data_only_location_t *data) {
+cc_noreturn void __ubsan_handle_missing_return(data_only_location_t *data) {
     printf("UBSAN: missing_return @ %s:%u:%u\n", data->location.filename,
            data->location.line, data->location.column);
     ubsan_panic(&data->location,

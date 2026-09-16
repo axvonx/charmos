@@ -130,9 +130,9 @@ void syscall_setup(void *syscall_entry) {
     wrmsr(0xC0000081, star);
 }
 
-__attribute__((noreturn)) void
-enter_userspace(uintptr_t entry_point, uintptr_t user_stack_top,
-                uint16_t user_cs, uint16_t user_ss, uintptr_t user_pml4_phys) {
+cc_noreturn void enter_userspace(uintptr_t entry_point,
+                                 uintptr_t user_stack_top, uint16_t user_cs,
+                                 uint16_t user_ss, uintptr_t user_pml4_phys) {
     asm volatile("mov %0, %%cr3" : : "r"(user_pml4_phys) : "memory");
 
     uint64_t rflags;

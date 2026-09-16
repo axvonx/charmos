@@ -118,7 +118,7 @@ static void rcu_report_cpu_locked(struct rcu_node *leaf, cpu_id_t cpu,
 
 void rcu_read_lock(void) {
     struct thread *t = thread_get_current();
-    if (unlikely(!t))
+    if (cc_unlikely(!t))
         return;
 
     kassert_debug(!irq_in_nmi(), "RCU read section in NMI context");
@@ -168,7 +168,7 @@ static void rcu_unregister_reader(struct thread *t) TSA_NO_ANALYSIS {
 
 void rcu_read_unlock(void) {
     struct thread *t = thread_get_current();
-    if (unlikely(!t))
+    if (cc_unlikely(!t))
         return;
 
     uint32_t old =
@@ -179,7 +179,7 @@ void rcu_read_unlock(void) {
      *
      * We do this AFTER decrement so if we get preempted in this window,
      * the scheduler just sees an idle reader and moves on */
-    if (unlikely(old == 1 && t->rcu_leaf))
+    if (cc_unlikely(old == 1 && t->rcu_leaf))
         rcu_unregister_reader(t); /* NOTE: This can potentially result in cross
                                    * node traffic and cache unhappiness, but
                                    * this is also the "very slow path"....
@@ -195,7 +195,7 @@ void rcu_read_unlock(void) {
  * Lock ordering here is scheduler -> leaf -> parents */
 void rcu_note_context_switch(struct thread *outgoing,
                              struct thread *incoming) TSA_NO_ANALYSIS {
-    if (!unlikely(rcu.ready))
+    if (!cc_unlikely(rcu.ready))
         return;
 
     enum irql outer = irql_raise(IRQL_HIGH_LEVEL);
@@ -288,7 +288,7 @@ void rcu_defer(struct rcu_cb *cb, rcu_fn func, void *arg) {
 
     cb->enqueued_waiting_on_gen = atomic_load(&rcu.gp_seq);
 
-    if (unlikely(!rcu.ready)) {
+    if (cc_unlikely(!rcu.ready)) {
         /* Before rcu_init(), we have nothing, and the boot CPU
          * is the only thing running RCU operations, so we can just do this */
         irql_lower(outer);

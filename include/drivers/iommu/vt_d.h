@@ -66,7 +66,7 @@ struct vtd_regs {
                                                Addr */
     uint64_t invalidation_queue_error_record; /* 0x0B0 - IQ Error Record */
     uint64_t interrupt_remapping_table_addr; /* 0x0B8 - IR Table Address      */
-} __packed;
+} cc_packed;
 
 _Static_assert(offsetof(struct vtd_regs, invalidation_queue_head) == 0x080,
                "vtd_regs layout mismatch");
@@ -262,7 +262,7 @@ struct vtd_domain {
 struct vtd_root_entry {
     uint64_t lo;
     uint64_t hi; /* must be zero */
-} __packed;
+} cc_packed;
 
 _Static_assert(sizeof(struct vtd_root_entry) == 16, "root entry must be 16B");
 
@@ -303,7 +303,7 @@ _Static_assert(sizeof(struct vtd_root_entry) == 16, "root entry must be 16B");
 struct vtd_context_entry {
     uint64_t lo;
     uint64_t hi;
-} __packed;
+} cc_packed;
 
 _Static_assert(sizeof(struct vtd_context_entry) == 16, "ctx entry must be 16B");
 
@@ -456,7 +456,7 @@ _Static_assert(sizeof(struct vtd_context_entry) == 16, "ctx entry must be 16B");
 struct vtd_inv_desc {
     uint64_t lo;
     uint64_t hi;
-} __packed;
+} cc_packed;
 
 _Static_assert(sizeof(struct vtd_inv_desc) == 16, "inv desc must be 16B");
 

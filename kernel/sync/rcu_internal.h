@@ -63,7 +63,7 @@ struct rcu_cpu {
     struct spinlock lock;
     struct list_head list;
     _Atomic uint64_t reported_seq;
-} __cache_aligned;
+} cc_cache_aligned;
 
 struct rcu_state {
     bool ready;

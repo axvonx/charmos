@@ -13,7 +13,7 @@ struct iso9660_datetime {
     uint8_t minute;    // 0–59
     uint8_t second;    // 0–59
     int8_t gmt_offset; // in 15-minute intervals from GMT (-48 to +52)
-} __packed;
+} cc_packed;
 
 // Directory record (variable size, packed)
 struct iso9660_dir_record {
@@ -31,7 +31,7 @@ struct iso9660_dir_record {
     uint16_t vol_seq_num_be;
     uint8_t name_len;
     char name[];
-} __packed;
+} cc_packed;
 
 // Primary Volume Descriptor (fixed size, 2048 bytes)
 struct iso9660_pvd {
@@ -59,7 +59,7 @@ struct iso9660_pvd {
     uint32_t opt_m_path_table_loc;
     struct iso9660_dir_record root_dir_record;
     // couple more things - idrc about em so i'm leavin em out
-} __packed;
+} cc_packed;
 
 struct iso9660_fs {
     struct partition *partition;

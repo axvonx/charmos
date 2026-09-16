@@ -119,7 +119,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
         kmalloc(sizeof(uint8_t) * (sqs_to_make + 1), ALLOC_FLAGS_ZERO);
     nvme->io_queues = kmalloc(sizeof(struct nvme_queue *) * (sqs_to_make + 1),
                               ALLOC_FLAGS_ZERO);
-    if (unlikely(!nvme->isr_index || !nvme->io_queues))
+    if (cc_unlikely(!nvme->isr_index || !nvme->io_queues))
         panic("Could not allocate space for NVMe structures");
 
     nvme->queue_count = sqs_to_make;
@@ -215,7 +215,7 @@ struct block_device *nvme_create_generic(struct nvme_device *nvme) {
     d->submit_bio_async = nvme_submit_bio_request;
     d->flags = BDEV_FLAG_NO_REORDER | BDEV_FLAG_NO_COALESCE;
     d->cache = kmalloc(sizeof(struct bcache), ALLOC_FLAGS_ZERO);
-    if (unlikely(!d->cache))
+    if (cc_unlikely(!d->cache))
         panic("Could not allocate space for NVMe block cache");
 
     d->scheduler = bio_sched_create(d, &nvme_bio_sched_ops);

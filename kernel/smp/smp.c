@@ -329,7 +329,7 @@ void smp_setup_bsp(void) {
     global.cores =
         kmalloc(sizeof(struct core *) * global.core_count, ALLOC_FLAGS_ZERO);
 
-    if (unlikely(!global.cores))
+    if (cc_unlikely(!global.cores))
         panic("Could not allocate space for global core structures");
 
     global.shootdown_data = kmalloc(

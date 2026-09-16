@@ -317,7 +317,7 @@ void *xhci_map_mmio(uint8_t bus, uint8_t slot, uint8_t func) {
 struct xhci_device *xhci_device_create(void *mmio) {
     struct xhci_device *dev =
         kmalloc(sizeof(struct xhci_device), ALLOC_FLAGS_ZERO);
-    if (unlikely(!dev))
+    if (cc_unlikely(!dev))
         panic("Could not allocate space for XHCI device");
 
     struct xhci_cap_regs *cap = mmio;

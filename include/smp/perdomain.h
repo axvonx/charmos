@@ -22,7 +22,7 @@ struct perdomain_descriptor {
 LINKER_SECTION_DEFINE(struct perdomain_descriptor, perdomain_desc);
 
 #define PERDOMAIN_DECLARE(__n, __type, __ctor)                                 \
-    static typeof(__type) __perdomain_##__n __unused;                          \
+    static typeof(__type) __perdomain_##__n cc_unused;                         \
     static struct perdomain_descriptor __perdomain_desc_##__n;                 \
     static void __perdomain_ctor_##__n(void *inst, size_t domain) {            \
         void (*const __typed_ctor)(typeof(__type) *, size_t) = (__ctor);       \
@@ -41,19 +41,19 @@ LINKER_SECTION_DEFINE(struct perdomain_descriptor, perdomain_desc);
             .ready = false,                                                    \
     };                                                                         \
     static struct perdomain_descriptor *const __perdomain_desc_ref_##__n       \
-        __unused = &__perdomain_desc_##__n
+        cc_unused = &__perdomain_desc_##__n
 
 #define PERDOMAIN_EXPORT_AS(sym_name, name)                                    \
     extern struct perdomain_descriptor __perdomain_desc_sym_##sym_name         \
-        __attribute__((alias("__perdomain_desc_" #name), used))
+    cc_alias(__perdomain_desc_##name) cc_used
 
 #define PERDOMAIN_EXPORT(name) PERDOMAIN_EXPORT_AS(name, name)
 
 #define PERDOMAIN_DEFINE_AS(name, sym_name, type)                              \
     extern struct perdomain_descriptor __perdomain_desc_sym_##sym_name;        \
-    static typeof(type) __perdomain_##name __unused;                           \
+    static typeof(type) __perdomain_##name cc_unused;                          \
     static struct perdomain_descriptor *const __perdomain_desc_ref_##name      \
-        __unused = &__perdomain_desc_sym_##sym_name
+        cc_unused = &__perdomain_desc_sym_##sym_name
 
 #define PERDOMAIN_DEFINE(name, type) PERDOMAIN_DEFINE_AS(name, name, type)
 
@@ -89,6 +89,6 @@ LINKER_SECTION_DEFINE(struct perdomain_descriptor, perdomain_desc);
     perdomain_for_each_internal(name, var, __domain)
 
 #define perdomain_for_each(...)                                                \
-    _DISPATCH(perdomain_for_each_internal, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
+    PP_CALL(perdomain_for_each_internal, __VA_ARGS__)
 
 void perdomain_obj_init(void);

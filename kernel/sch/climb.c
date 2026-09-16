@@ -267,9 +267,9 @@ static void remove_handle(struct thread *t, struct climb_handle *ch) {
     }
 }
 
-static void climb_handle_act_self(struct thread *t, struct climb_handle *h,
-                                  void (*act)(struct thread *,
-                                              struct climb_handle *h)) {
+static void climb_handle_act_self(
+    struct thread *t, struct climb_handle *h,
+    void (*act)(struct thread *, struct climb_handle *h)) TSA_NO_ANALYSIS {
     enum irql irql = IRQL_PASSIVE_LEVEL;
     bool irql_change = false;
     if (irql_get() < IRQL_DISPATCH_LEVEL) {

@@ -811,7 +811,7 @@ static void crash_report_raw_serial(const struct crash_context *ctx,
     }
 }
 
-__noreturn void crash_full(const struct crash_context *ctx) TSA_NO_ANALYSIS {
+cc_noreturn void crash_full(const struct crash_context *ctx) TSA_NO_ANALYSIS {
     disable_interrupts();
 
     uint32_t depth =
@@ -1064,7 +1064,7 @@ crash_unwind_type_to_str(enum crash_unwind_type type) {
 
 /* The idea here: we first traverse backwards and unwind
  * one by one, detaching as we go */
-void crash_unwind(void) {
+void crash_unwind(void) TSA_NO_ANALYSIS {
     struct thread *t = thread_get_current();
     struct crash_perthread *pt = &t->crash_data;
     pt->unwinding = true;

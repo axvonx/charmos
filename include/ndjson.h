@@ -134,7 +134,7 @@ LINKER_SECTION_DEFINE(struct ndjson_record, ndjson_records);
 #define NDJSON_MAP_16(f, a, x, ...) f(a, x) NDJSON_MAP_15(f, a, __VA_ARGS__)
 
 #define NDJSON_MAP(f, a, ...)                                                  \
-    _DISPATCH(NDJSON_MAP, PP_NARG(__VA_ARGS__))(f, a, __VA_ARGS__)
+    PP_OVERLOAD(NDJSON_MAP, __VA_ARGS__)(f, a, __VA_ARGS__)
 
 #define NDJSON_MAX_FIELDS 16
 

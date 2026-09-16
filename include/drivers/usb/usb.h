@@ -218,8 +218,8 @@ struct usb_setup_packet {        /* Refer to page 276 */
 
     uint16_t length; /* Number of bytes if there is a data stage */
 
-} __packed;
-static_assert_struct_size_eq(usb_setup_packet, 8);
+} cc_packed;
+ct_assert_struct_size_eq(usb_setup_packet, 8);
 
 struct usb_device_descriptor { /* Refer to page 290 */
     uint8_t length;
@@ -241,8 +241,8 @@ struct usb_device_descriptor { /* Refer to page 290 */
     uint8_t serial_num;   /* Index of string desc. describing serial number */
 
     uint8_t num_configs; /* Number of possible configurations */
-} __packed;
-static_assert_struct_size_eq(usb_device_descriptor, 18);
+} cc_packed;
+ct_assert_struct_size_eq(usb_device_descriptor, 18);
 
 struct usb_interface_descriptor { /* Page 296 */
     uint8_t length;
@@ -262,8 +262,8 @@ struct usb_interface_descriptor { /* Page 296 */
 
     uint8_t interface; /* Index of string desc. describing this interface */
 
-} __packed;
-static_assert_struct_size_eq(usb_interface_descriptor, 9);
+} cc_packed;
+ct_assert_struct_size_eq(usb_interface_descriptor, 9);
 
 struct usb_config_descriptor { /* Page 293 */
     uint8_t length;
@@ -277,8 +277,8 @@ struct usb_config_descriptor { /* Page 293 */
     uint8_t bitmap_attributes; /* Bits 7 and 0..4 are reserved */
 
     uint8_t max_power; /* Max power of USB device in milliamps */
-} __packed;
-static_assert_struct_size_eq(usb_config_descriptor, 9);
+} cc_packed;
+ct_assert_struct_size_eq(usb_config_descriptor, 9);
 
 struct usb_endpoint_descriptor { /* Page 297 */
     uint8_t length;
@@ -289,8 +289,8 @@ struct usb_endpoint_descriptor { /* Page 297 */
     uint16_t max_packet_size; /* Max packet size as a bitmap */
 
     uint8_t interval; /* Interval for polling this EP for data transfer */
-} __packed;
-static_assert_struct_size_eq(usb_endpoint_descriptor, 7);
+} cc_packed;
+ct_assert_struct_size_eq(usb_endpoint_descriptor, 7);
 
 struct usb_endpoint {
     struct usb_endpoint_descriptor *desc;

@@ -39,8 +39,8 @@ void report_line_init(struct report_line *l, char *buf, size_t cap,
 void report_line_reset(struct report_line *l);
 
 void report_line_puts(struct report_line *l, const char *s);
-__printf_like(2, 3) void report_line_printf(struct report_line *l,
-                                            const char *fmt, ...);
+cc_printf_like(2, 3) void report_line_printf(struct report_line *l,
+                                             const char *fmt, ...);
 void report_line_vprintf(struct report_line *l, const char *fmt, va_list ap);
 
 /* Spaces out to a display column */
@@ -88,8 +88,8 @@ static inline uint16_t report_target_width(const struct report_target *tgt) {
 
 /* Emit a line, don't pass '\n' */
 void report_puts(struct report_target *tgt, const char *s);
-__printf_like(2, 3) void report_printf(struct report_target *tgt,
-                                       const char *fmt, ...);
+cc_printf_like(2, 3) void report_printf(struct report_target *tgt,
+                                        const char *fmt, ...);
 void report_blank(struct report_target *tgt);
 
 void report_line_emit(struct report_target *tgt, struct report_line *l);
@@ -103,8 +103,8 @@ void report_rule_sev(struct report_target *tgt, enum term_sev sev,
  *
  * Break at spaces, honor newlines, count display columns */
 void report_wrap(struct report_target *tgt, const char *text);
-__printf_like(2, 3) void report_wrap_printf(struct report_target *tgt,
-                                            const char *fmt, ...);
+cc_printf_like(2, 3) void report_wrap_printf(struct report_target *tgt,
+                                             const char *fmt, ...);
 
 /* A box, such as
  *
@@ -125,8 +125,8 @@ void report_box_open(struct report_box *b, struct report_target target,
                      const char *title, uint16_t inner);
 
 /* This wraps, different from all the other _printf functions here */
-__printf_like(2, 3) void report_box_printf(struct report_box *b,
-                                           const char *fmt, ...);
+cc_printf_like(2, 3) void report_box_printf(struct report_box *b,
+                                            const char *fmt, ...);
 
 /* A target whose lines get bordered, so anything that draws
  * to a target works in a box, its width is the box's inner width */
@@ -160,13 +160,13 @@ struct report_fields {
 
 void report_fields_begin(struct report_fields *g, struct report_target target,
                          uint32_t keyw, uint32_t valw);
-__printf_like(3, 4) void report_field(struct report_fields *g, const char *key,
-                                      const char *fmt, ...);
+cc_printf_like(3, 4) void report_field(struct report_fields *g, const char *key,
+                                       const char *fmt, ...);
 
 /* End row and take the full line, for values carrying annotations too long */
-__printf_like(3, 4) void report_field_full(struct report_fields *g,
-                                           const char *key, const char *fmt,
-                                           ...);
+cc_printf_like(3, 4) void report_field_full(struct report_fields *g,
+                                            const char *key, const char *fmt,
+                                            ...);
 void report_fields_end(struct report_fields *g);
 
 /* Storage is MAX * LINES * BYTES */

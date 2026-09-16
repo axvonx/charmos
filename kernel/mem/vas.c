@@ -17,7 +17,7 @@ static cpu_id_t vas_cpu_id(void) {
     return smp_id(TOPC_IRQL);
 }
 
-static enum irql vas_enter(void) {
+static enum irql vas_enter(void) TSA_ACQUIRES(IRQL_RAISED) TSA_NO_ANALYSIS {
     if (global.current_bootstage >= BOOTSTAGE_MID_MP &&
         (irq_in_interrupt() || irq_in_nmi()))
         panic("vas: hardware interrupt context");

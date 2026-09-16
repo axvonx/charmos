@@ -15,7 +15,7 @@ typedef uint64_t bitmap_word_t;
 #define BITMAP_WORDS(nbits)                                                    \
     ({                                                                         \
         __auto_type __nbits = (nbits);                                         \
-        typecheck_widenable_to((size_t) 0, nbits);                             \
+        ct_typecheck_widenable_to((size_t) 0, nbits);                          \
         DIV_ROUND_UP((size_t) __nbits, BITMAP_BITS_PER_WORD);                  \
     })
 

@@ -20,7 +20,7 @@ static int32_t id_space_cmp(const struct rbt_node *a,
     return 0;
 }
 
-struct id_space *id_space_init(uint64_t max_id) {
+struct id_space *id_space_init(uint64_t max_id) TSA_NO_ANALYSIS {
     struct id_space *is = kmalloc(sizeof(*is), ALLOC_FLAGS_ZERO);
     if (!is) {
         return NULL;

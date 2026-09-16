@@ -1,6 +1,6 @@
 #include "tests/test_internal.h"
 
-static __noinline void sd_save_n(stack_handle_t *out, size_t n) {
+static cc_noinline void sd_save_n(stack_handle_t *out, size_t n) {
     for (size_t i = 0; i < n; i++)
         out[i] = stack_depot_save_current();
 }
@@ -493,7 +493,7 @@ static stack_handle_t sd_cur_handles[SD_MT_THREADS];
 static uintptr_t sd_cur_traces[SD_MT_THREADS][STACK_TRACE_MAX_DEPTH];
 static size_t sd_cur_lens[SD_MT_THREADS];
 
-static __noinline bool sd_cur_body(size_t tid) {
+static cc_noinline bool sd_cur_body(size_t tid) {
     /* Both saves have to come from a single calls site, that's why we
      * need to loop in sd_save_n(), otherwise it would be two different */
     stack_handle_t h[2] = {0};

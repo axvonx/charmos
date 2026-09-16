@@ -44,7 +44,7 @@ struct cpu_mask;
 
 #define _CMDLINE_UNPACK(...) __VA_ARGS__
 #define _CMDLINE_CHILD_SYM(parent_n, n)                                        \
-    CONCAT(__cmdline_, CONCAT(parent_n, _##n))
+    PP_CONCAT(__cmdline_, PP_CONCAT(parent_n, _##n))
 
 #define _CMDLINE_CHILD_DECL_1(parent_n, n, _var, ...)                          \
     LINKER_SECTION_OBJECT(struct cmdline_entry, cmdline_entries)               \

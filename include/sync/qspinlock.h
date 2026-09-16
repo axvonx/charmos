@@ -391,12 +391,11 @@ qspinlock_init_chk_internal(struct qspinlock *lock,
     qspinlock_init_auto_internal((lock_), LOCK_CHKD_FULL)
 #define qspinlock_init_2(lock_, flags_)                                        \
     qspinlock_init_auto_internal((lock_), (flags_))
-#define qspinlock_init(...)                                                    \
-    _DISPATCH(qspinlock_init, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
+#define qspinlock_init(...) PP_CALL(qspinlock_init, __VA_ARGS__)
 #define qspin_init(...) qspinlock_init(__VA_ARGS__)
 #define qspin_init_chk(...) qspinlock_init_chk(__VA_ARGS__)
 
-static inline bool __warn_unused_result
+static inline bool cc_warn_unused_result
 qspin_trylock_physical(struct qspinlock *lock) TSA_NO_ANALYSIS {
     uint32_t expected = 0;
     return atomic_compare_exchange_strong_explicit(
@@ -408,7 +407,7 @@ void qspin_lock_slowpath(struct qspinlock *lock, uint32_t val);
 
 static inline void qspin_lock_physical(struct qspinlock *lock) TSA_NO_ANALYSIS {
     uint32_t val = 0;
-    if (likely(atomic_compare_exchange_strong_explicit(
+    if (cc_likely(atomic_compare_exchange_strong_explicit(
             &lock->val, &val, Q_SPIN_LOCKED_VAL, memory_order_acquire,
             memory_order_relaxed)))
         return;
@@ -433,7 +432,7 @@ static inline bool qspin_is_locked(const struct qspinlock *lock) {
 #define QSPINLOCK_ASSERT_LOCKED(l)                                             \
     kassert(qspin_is_locked(l), "qspinlock not locked")
 
-static inline bool __warn_unused_result qspin_trylock_raw_internal(
+static inline bool cc_warn_unused_result qspin_trylock_raw_internal(
     struct qspinlock *lock, const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
     enum lock_op_flags flags =
@@ -509,7 +508,7 @@ static inline void qspin_unlock_internal(struct qspinlock *lock,
     irql_lower(old_irql);
 }
 
-static inline enum irql __warn_unused_result qspin_lock_subclass_internal(
+static inline enum irql cc_warn_unused_result qspin_lock_subclass_internal(
     struct qspinlock *lock, uint8_t subclass, const struct lock_chk_site *site)
     TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
     kassert(subclass < LOCK_CHK_MAX_SUBCLASSES);
@@ -543,13 +542,13 @@ static inline enum irql __warn_unused_result qspin_lock_subclass_internal(
     return irql;
 }
 
-static inline enum irql __warn_unused_result
+static inline enum irql cc_warn_unused_result
 qspin_lock_internal(struct qspinlock *lock, const struct lock_chk_site *site)
     TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
     return qspin_lock_subclass_internal(lock, 0, site);
 }
 
-static inline enum irql __warn_unused_result qspin_lock_irq_disable_internal(
+static inline enum irql cc_warn_unused_result qspin_lock_irq_disable_internal(
     struct qspinlock *lock, const struct lock_chk_site *site)
     TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())
@@ -576,7 +575,7 @@ static inline enum irql __warn_unused_result qspin_lock_irq_disable_internal(
     return irql;
 }
 
-static inline bool __warn_unused_result qspin_trylock_internal(
+static inline bool cc_warn_unused_result qspin_trylock_internal(
     struct qspinlock *lock, enum irql *out, const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP &&
@@ -611,7 +610,7 @@ static inline bool __warn_unused_result qspin_trylock_internal(
     return false;
 }
 
-static inline bool __warn_unused_result qspin_trylock_irq_disable_internal(
+static inline bool cc_warn_unused_result qspin_trylock_irq_disable_internal(
     struct qspinlock *lock, enum irql *out, const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())

@@ -26,8 +26,8 @@
 #define ERR_GUARD(val, ...)                                                    \
     ({                                                                         \
         __auto_type _v = (val);                                                \
-        if (unlikely(_v < 0 && !_DISPATCH(ERR_IS_MATCH, PP_NARG(__VA_ARGS__))( \
-                                   _v, __VA_ARGS__)))                          \
+        if (cc_unlikely(_v < 0 && !PP_OVERLOAD(ERR_IS_MATCH,                   \
+                                               __VA_ARGS__)(_v, __VA_ARGS__))) \
             panic("unhandled error: %s", errno_to_str(_v));                    \
         _v;                                                                    \
     })

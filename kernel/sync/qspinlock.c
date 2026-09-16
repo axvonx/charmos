@@ -7,7 +7,7 @@
 struct qnode {
     _Atomic(struct qnode *) next;
     _Atomic uint8_t locked;
-} __cache_aligned;
+} cc_cache_aligned;
 
 PERCPU_DECLARE(qnodes, struct qnode[QSPINLOCK_LEVEL_MAX], NULL);
 
@@ -67,7 +67,7 @@ void qspin_lock_slowpath(struct qspinlock *lock, uint32_t val) {
     cpu_id_t cpu = smp_id(TOPC_IRQL);
 
     /* Fallback if not ready */
-    if (unlikely(!PERCPU_READY(qnodes))) {
+    if (cc_unlikely(!PERCPU_READY(qnodes))) {
         while (!qspin_trylock_physical(lock))
             cpu_relax();
         return;

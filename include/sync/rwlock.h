@@ -115,8 +115,7 @@ void rwlock_assert_not_held_internal(struct rwlock *lock,
     rwlock_init_auto_internal((lock_), (ceil_), LOCK_CHKD_FULL)
 #define rwlock_init_3(lock_, ceil_, flags_)                                    \
     rwlock_init_auto_internal((lock_), (ceil_), (flags_))
-#define rwlock_init(...)                                                       \
-    _DISPATCH(rwlock_init, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
+#define rwlock_init(...) PP_CALL(rwlock_init, __VA_ARGS__)
 
 #define rw_lock(lock_, type_)                                                  \
     rw_lock_internal((lock_), (type_), 0, LOCK_CHK_SITE_HERE())

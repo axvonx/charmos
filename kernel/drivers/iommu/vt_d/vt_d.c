@@ -84,7 +84,7 @@ void vtd_iq_submit(struct vtd_unit *u, struct vtd_inv_desc desc) {
 }
 
 void vtd_iq_flush(struct vtd_unit *u) {
-    static volatile uint32_t wait_token __attribute__((aligned(4)));
+    static volatile uint32_t wait_token cc_aligned(4);
     paddr_t token_phys = vmm_get_phys((vaddr_t) &wait_token, VMM_FLAG_NONE);
 
     wait_token = 0;

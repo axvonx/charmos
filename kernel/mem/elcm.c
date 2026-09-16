@@ -272,7 +272,7 @@ enum errno elcm(struct elcm_params *params) {
     size_t aligned_obj_size = get_aligned_obj_size(obj_size, obj_alignment);
 
     for (size_t i = 1; i <= max_pages; i++) {
-        if (unlikely(i == best_possible))
+        if (cc_unlikely(i == best_possible))
             break;
 
         size_t mdata_bytes = metadata_size_bytes + metadata_bytes_per_page * i;

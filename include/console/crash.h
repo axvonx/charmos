@@ -42,7 +42,7 @@ struct crash_regs {
     };
 };
 
-static_assert_struct_size_eq(crash_regs, CRASH_REG_COUNT * 8);
+ct_assert_struct_size_eq(crash_regs, CRASH_REG_COUNT * 8);
 
 enum crash_code {
     CRASH_CODE_GENERIC,
@@ -269,13 +269,13 @@ struct crash_context {
 
 LINKER_SECTION_DEFINE(struct crash_facility, crash_facilities);
 
-__noreturn void assert_impl_default(struct crash_payload payload,
-                                    const char *file, int line,
-                                    const char *func, const char *prefix,
-                                    const char *assertion, const char *fmt,
-                                    ...);
+cc_noreturn void assert_impl_default(struct crash_payload payload,
+                                     const char *file, int line,
+                                     const char *func, const char *prefix,
+                                     const char *assertion, const char *fmt,
+                                     ...);
 
-__noreturn void crash_full(const struct crash_context *ctx);
+cc_noreturn void crash_full(const struct crash_context *ctx);
 
 bool crash_cpu_is_owner(uint64_t id);
 void crash_broadcast_nmi(void);

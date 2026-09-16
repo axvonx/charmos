@@ -87,7 +87,7 @@ struct e1000_tx_desc {
     };
     uint8_t css;
     uint16_t special;
-} __packed;
+} cc_packed;
 
 struct e1000_rx_desc {
     uint64_t addr;
@@ -105,14 +105,14 @@ struct e1000_rx_desc {
     };
     uint8_t errors;
     uint16_t special;
-} __packed;
+} cc_packed;
 
 // Ethernet header (14 bytes)
 struct eth_hdr {
     uint8_t dest[6];
     uint8_t src[6];
     uint16_t ethertype;
-} __packed;
+} cc_packed;
 
 // IPv4 header (20 bytes)
 struct ipv4_hdr {
@@ -126,7 +126,7 @@ struct ipv4_hdr {
     uint16_t checksum;
     uint32_t src_ip;
     uint32_t dest_ip;
-} __packed;
+} cc_packed;
 
 struct icmp_hdr {
     uint8_t type;
@@ -134,7 +134,7 @@ struct icmp_hdr {
     uint16_t checksum;
     uint16_t identifier;
     uint16_t sequence;
-} __packed;
+} cc_packed;
 
 #define E1000_TXD_CMD_EOP BIT(0)
 #define E1000_TXD_CMD_IFCS BIT(1)

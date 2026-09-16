@@ -254,7 +254,7 @@ struct test_globals {
                            ##__VA_ARGS__};                                     \
                                                                                \
     static struct test_verdict __test_fn_##grp##_##id(                         \
-        struct test_context *ctx __unused)
+        struct test_context *ctx cc_unused)
 
 #define TEST_GROUP_DECLARE(n, ...)                                             \
     extern struct test_group __test_group_##n;                                 \
@@ -278,7 +278,7 @@ struct test_globals {
 #define TEST_SKIP(r)                                                           \
     ((struct test_verdict) {.result = TEST_RESULT_SKIPPED, .skip_reason = (r)})
 
-#define TEST_ARRAY_LEN(a) (sizeof(a) / sizeof((a)[0]))
+#define TEST_ARRAY_LEN(a) ct_array_size(a)
 
 #define test_log(lvl, fmt, ...)                                                \
     log(test_global.current_test->site, &test_global.current_test->handle,     \

@@ -35,7 +35,7 @@ struct acpi_power_reg {
     uint8_t bit_offset;
     uint8_t access_size;
     uint64_t addr;
-} __packed;
+} cc_packed;
 
 struct acpi_cpu_context {
     bool valid;
@@ -75,7 +75,7 @@ struct acpi_psd_pkg {
     uint64_t domain;
     uint64_t coord_type;
     uint64_t num_cpus;
-} __packed;
+} cc_packed;
 
 struct acpi_pct_reg {
     uint8_t desc;
@@ -85,7 +85,7 @@ struct acpi_pct_reg {
     uint8_t bit_offset;
     uint8_t reserved0;
     uint64_t addr;
-} __packed;
+} cc_packed;
 
 struct acpi_cpu_px {
     uint64_t frequency; /* megahertz */
@@ -113,7 +113,7 @@ struct acpi_tsd_pkg {
     uint64_t domain;
     uint64_t coord_type;
     uint64_t num_cpus;
-} __packed;
+} cc_packed;
 
 struct acpi_ptc_reg {
     uint8_t desc;
@@ -123,7 +123,7 @@ struct acpi_ptc_reg {
     uint8_t bit_offset;
     uint8_t reserved0;
     uint64_t addr;
-} __packed;
+} cc_packed;
 
 struct acpi_cpu_tx_tss {
     uint64_t freq_pct;

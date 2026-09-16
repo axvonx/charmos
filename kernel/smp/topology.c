@@ -103,7 +103,7 @@ void topology_dump(void) {
 
 #define PANIC_IF_CPU_MASK_FAILED(op)                                           \
     do {                                                                       \
-        if (unlikely(!op))                                                     \
+        if (cc_unlikely(!op))                                                  \
             panic("CPU mask allocation failed!");                              \
                                                                                \
     } while (0);

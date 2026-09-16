@@ -7,7 +7,7 @@
 #ifdef TEST_ENABLED
 
 #define TEST_EXPORT_AS(sym_name, fn)                                           \
-    extern typeof(fn) __test_sym_##sym_name __attribute__((alias(#fn), used)); \
+    extern typeof(fn) __test_sym_##sym_name cc_alias(fn) cc_used;              \
     static LINKER_SECTION_OBJECT(const struct test_export_entry, test_exports) \
         __test_exp_##sym_name = {                                              \
             .name = #sym_name,                                                 \

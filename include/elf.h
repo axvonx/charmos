@@ -11,7 +11,7 @@ struct elf64_ident {
     uint8_t os_abi;
     uint8_t abi_version;
     uint8_t pad[7];
-} __packed;
+} cc_packed;
 
 struct elf64_ehdr {
     struct elf64_ident ident;
@@ -28,7 +28,7 @@ struct elf64_ehdr {
     uint16_t shentsize;
     uint16_t shnum;
     uint16_t shstrndx;
-} __packed;
+} cc_packed;
 
 struct elf64_phdr {
     uint32_t type;
@@ -39,14 +39,14 @@ struct elf64_phdr {
     uint64_t filesz;
     uint64_t memsz;
     uint64_t align;
-} __packed;
+} cc_packed;
 
 /* returns entry point */
 uint64_t elf_load(const void *elf_data);
 
-__attribute__((noreturn)) void
-enter_userspace(uintptr_t entry_point, uintptr_t user_stack_top,
-                uint16_t user_cs, uint16_t user_ss, uintptr_t user_pml4_phys);
+cc_noreturn void enter_userspace(uintptr_t entry_point,
+                                 uintptr_t user_stack_top, uint16_t user_cs,
+                                 uint16_t user_ss, uintptr_t user_pml4_phys);
 
 void syscall_setup(void *syscall_entry);
 

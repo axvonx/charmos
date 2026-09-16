@@ -10,11 +10,11 @@
         __auto_type __ir_x = (x);                                              \
         __auto_type __ir_lo = (min);                                           \
         __auto_type __ir_hi = (max);                                           \
-        typedef __common_type_2(__ir_x, __ir_lo) __ir_t1;                      \
-        typedef __common_type_2((__ir_t1) 0, __ir_hi) __ir_t;                  \
-        typecheck_widenable_to((__ir_t) 0, x);                                 \
-        typecheck_widenable_to((__ir_t) 0, min);                               \
-        typecheck_widenable_to((__ir_t) 0, max);                               \
+        typedef ct_common_type_2(__ir_x, __ir_lo) __ir_t1;                     \
+        typedef ct_common_type_2((__ir_t1) 0, __ir_hi) __ir_t;                 \
+        ct_typecheck_widenable_to((__ir_t) 0, x);                              \
+        ct_typecheck_widenable_to((__ir_t) 0, min);                            \
+        ct_typecheck_widenable_to((__ir_t) 0, max);                            \
         __ir_t __ir_v = (__ir_t) __ir_x;                                       \
         __ir_t __ir_l = (__ir_t) __ir_lo;                                      \
         __ir_t __ir_h = (__ir_t) __ir_hi;                                      \

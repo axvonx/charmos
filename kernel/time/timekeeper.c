@@ -77,7 +77,7 @@ time_ns_t timekeeper_get_ns(void) {
     do {
         seq = seq_begin_read(&timekeeper.lock);
         clk = timekeeper.clock;
-        if (unlikely(!clk)) {
+        if (cc_unlikely(!clk)) {
             seq_read_retry(&timekeeper.lock, seq);
             return 0;
         }
@@ -100,11 +100,11 @@ bool timekeeper_try_get_ns(time_ns_t *out) {
 
     do {
         seq = seq_begin_read_raw(&timekeeper.lock);
-        if (unlikely((seq & 1) != 0))
+        if (cc_unlikely((seq & 1) != 0))
             continue;
 
         clk = timekeeper.clock;
-        if (unlikely(!clk))
+        if (cc_unlikely(!clk))
             return false;
 
         cycles = clk->read(clk);

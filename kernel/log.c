@@ -585,7 +585,7 @@ void log_dump_all(void) {
     spin_unlock(&log_global.list.lock, irql);
 }
 
-void log_dump_panic(void) {
+void log_dump_panic(void) TSA_NO_ANALYSIS {
 
     struct log_site *site;
     list_for_each_entry(site, &log_global.list.list, list) {

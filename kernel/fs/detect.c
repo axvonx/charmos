@@ -78,7 +78,7 @@ static enum errno detect_mbr_partitions(struct block_device *disk,
     disk->partition_count = count;
     disk->partitions =
         kmalloc(sizeof(struct partition) * count, ALLOC_FLAGS_ZERO);
-    if (unlikely(!disk->partitions))
+    if (cc_unlikely(!disk->partitions))
         return ERR_NO_MEM;
 
     int idx = 0;

@@ -742,15 +742,15 @@ void __asan_allocas_unpoison(void *addr, size_t size) {
     __asan_unpoison_memory_region(addr, size);
 }
 
-__attribute__((weak)) void __asan_alloca_poison_0(void *addr, size_t size) {
+cc_weak void __asan_alloca_poison_0(void *addr, size_t size) {
     __asan_alloca_poison(addr, size);
 }
 
-__attribute__((weak)) void __asan_allocas_unpoison_0(void *addr, size_t size) {
+cc_weak void __asan_allocas_unpoison_0(void *addr, size_t size) {
     __asan_allocas_unpoison(addr, size);
 }
 
-#define ASAN_ALIAS(name, target) __attribute__((alias(#target))) void name
+#define ASAN_ALIAS(name, target) cc_alias(target) void name
 
 /* Outline callbacks (forced via -asan-instrumentation-with-call-threshold=0).
  */

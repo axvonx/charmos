@@ -39,7 +39,7 @@
 struct buddy_page {
     uint64_t meta;
 };
-static_assert_struct_size_eq(buddy_page, 8);
+ct_assert_struct_size_eq(buddy_page, 8);
 
 static inline uint64_t buddy_page_get_order(const struct buddy_page *bp) {
     return (bp->meta & BUDDY_ORDER_MASK) >> BUDDY_ORDER_SHIFT;

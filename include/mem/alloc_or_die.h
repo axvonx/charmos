@@ -9,7 +9,7 @@
         if (global.current_bootstage >= BOOTSTAGE_COMPLETE)                    \
             log_warn_once("alloc_or_die invoked after boot");                  \
         __typeof__(expr) _p_ = (expr);                                         \
-        if (unlikely(!_p_))                                                    \
+        if (cc_unlikely(!_p_))                                                 \
             panic("OOM: %s == NULL, bootstage: %s", #expr,                     \
                   bootstage_str[global.current_bootstage]);                    \
         _p_;                                                                   \

@@ -147,7 +147,7 @@ struct nightmare {
     struct scaled_param intensity_desc;
     time_ms_t default_duration_ms;
     size_t min_mem_mib;
-} __aligned(8);
+} cc_aligned(8);
 
 LINKER_SECTION_DEFINE(struct nightmare, nightmares);
 
@@ -245,7 +245,7 @@ static inline uint64_t nightmare_rand(struct nightmare_rng *rng) {
 uint64_t nightmare_progress_sum_irq(void);
 void nightmare_finding_at(const struct nightmare_finding_site *site,
                           uint64_t discriminator, const char *fmt, ...)
-    __printf_like(3, 4);
+    cc_printf_like(3, 4);
 void nightmare_request_external_fail(const char *kind, uint64_t discriminator,
-                                     const char *fmt, ...) __printf_like(3, 4);
+                                     const char *fmt, ...) cc_printf_like(3, 4);
 void nightmare_report_stall(const struct nightmare_stall_evidence *evidence);

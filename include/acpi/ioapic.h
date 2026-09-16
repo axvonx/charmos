@@ -52,7 +52,7 @@ struct ioapic_info {
 
 union ioapic_redirection_entry {
     uint64_t raw;
-    struct __attribute__((packed)) {
+    struct cc_packed {
         uint8_t vector;              // bits 0-7
         uint8_t delivery_mode : 3;   // bits 8-10
         uint8_t dest_mode : 1;       // bit 11

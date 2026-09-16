@@ -24,9 +24,7 @@ struct inject_site {
 
 LINKER_SECTION_DEFINE(struct inject_site, inject_sites);
 
-/* Have to do this as it is not static */
-#define INJECT_SITE_ATTRIBUTE                                                  \
-    __attribute__((section(".kernel_inject_sites"), used))
+#define INJECT_SITE_ATTRIBUTE cc_section(".kernel_inject_sites") cc_used
 
 #define INJECT_SITE_DECLARE(id, injkind, description)                          \
     INJECT_SITE_ATTRIBUTE struct inject_site __inject_site_##id = {            \
@@ -49,18 +47,18 @@ static inline void inject_disarm(struct inject_site *s) {
 
 #ifdef INJECT_ENABLED
 void inject_delay_impl(struct inject_site *s);
-bool inject_fail_impl(struct inject_site *s) __warn_unused_result;
+bool inject_fail_impl(struct inject_site *s) cc_warn_unused_result;
 
 #define INJECT_DELAY(id)                                                       \
     do {                                                                       \
-        if (unlikely(atomic_load_explicit(&INJECT_SITE(id)->armed,             \
-                                          memory_order_relaxed)))              \
+        if (cc_unlikely(atomic_load_explicit(&INJECT_SITE(id)->armed,          \
+                                             memory_order_relaxed)))           \
             inject_delay_impl(INJECT_SITE(id));                                \
     } while (0)
 
 #define INJECT_FAIL(id)                                                        \
-    (unlikely(atomic_load_explicit(&INJECT_SITE(id)->armed,                    \
-                                   memory_order_relaxed)) &&                   \
+    (cc_unlikely(atomic_load_explicit(&INJECT_SITE(id)->armed,                 \
+                                      memory_order_relaxed)) &&                \
      inject_fail_impl(INJECT_SITE(id)))
 #else
 #define INJECT_DELAY(id) ((void) 0)

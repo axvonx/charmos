@@ -31,8 +31,7 @@ struct TSA_CAPABILITY("spinlock") spinlock {
     spinlock_init_auto_internal((lock_), LOCK_CHKD_FULL)
 #define spinlock_init_2(lock_, flags_)                                         \
     spinlock_init_auto_internal((lock_), (flags_))
-#define spinlock_init(...)                                                     \
-    _DISPATCH(spinlock_init, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
+#define spinlock_init(...) PP_CALL(spinlock_init, __VA_ARGS__)
 
 static inline void
 spinlock_init_chk_internal(struct spinlock *lock,
@@ -327,7 +326,7 @@ static inline void spinlock_policy_set_internal(struct spinlock *lock,
 
 #endif /* DEBUG_LOCK_CHK */
 
-static inline bool __warn_unused_result
+static inline bool cc_warn_unused_result
 spin_trylock_physical(struct spinlock *lock) TSA_NO_ANALYSIS {
     return raw_spin_trylock(&lock->raw);
 }
@@ -355,7 +354,7 @@ static inline void spinlock_restore_interrupts(bool enabled) {
         enable_interrupts();
 }
 
-static inline bool __warn_unused_result spin_trylock_raw_internal(
+static inline bool cc_warn_unused_result spin_trylock_raw_internal(
     struct spinlock *lock, const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
     enum lock_op_flags flags =
@@ -424,7 +423,7 @@ static inline void spin_unlock_internal(struct spinlock *lock, enum irql old,
     irql_lower(old);
 }
 
-static inline enum irql __warn_unused_result spin_lock_subclass_internal(
+static inline enum irql cc_warn_unused_result spin_lock_subclass_internal(
     struct spinlock *lock, uint8_t subclass, const struct lock_chk_site *site)
     TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
     kassert(subclass < LOCK_CHK_MAX_SUBCLASSES);
@@ -457,13 +456,13 @@ static inline enum irql __warn_unused_result spin_lock_subclass_internal(
     return irql;
 }
 
-static inline enum irql __warn_unused_result
+static inline enum irql cc_warn_unused_result
 spin_lock_internal(struct spinlock *lock, const struct lock_chk_site *site)
     TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
     return spin_lock_subclass_internal(lock, 0, site);
 }
 
-static inline enum irql __warn_unused_result spin_lock_irq_disable_internal(
+static inline enum irql cc_warn_unused_result spin_lock_irq_disable_internal(
     struct spinlock *lock, const struct lock_chk_site *site)
     TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())
@@ -489,7 +488,7 @@ static inline enum irql __warn_unused_result spin_lock_irq_disable_internal(
     return irql;
 }
 
-static inline bool __warn_unused_result spin_trylock_internal(
+static inline bool cc_warn_unused_result spin_trylock_internal(
     struct spinlock *lock, enum irql *out, const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP &&
@@ -525,7 +524,7 @@ static inline bool __warn_unused_result spin_trylock_internal(
     return false;
 }
 
-static inline bool __warn_unused_result spin_trylock_irq_disable_internal(
+static inline bool cc_warn_unused_result spin_trylock_irq_disable_internal(
     struct spinlock *lock, enum irql *out, const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())

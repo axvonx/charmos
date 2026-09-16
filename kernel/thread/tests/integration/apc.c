@@ -299,7 +299,7 @@ static void the_event_apc(void *pc) {
 
 APC_EVENT_CREATE(apc_event_test, "TEST_EVENT");
 
-static void apc_event_test_thread(void *) {
+static void apc_event_test_thread(void *) TSA_NO_ANALYSIS {
     /* We want to enqueue an event APC, then raise to DISPATCH, trigger it a
      * few times, check that no APCs got triggered, and then lower from there,
      * and then check that APCs got triggered, and then test masking, etc. */

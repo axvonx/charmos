@@ -220,7 +220,7 @@ TEST_DECLARE_UNIT(stack_depot, churn, TEST_INTENSITY(200, 2000, 20000)) {
     return TEST_SUCCESS;
 }
 
-static __noinline void sd_save_n(stack_handle_t *out, size_t n) {
+static cc_noinline void sd_save_n(stack_handle_t *out, size_t n) {
     for (size_t i = 0; i < n; i++)
         out[i] = stack_depot_save_current();
 }

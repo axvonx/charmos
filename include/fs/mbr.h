@@ -10,11 +10,11 @@ struct mbr_partition_entry {
     uint8_t chs_last[3];
     uint32_t lba_start;
     uint32_t sector_count;
-} __packed;
+} cc_packed;
 
 struct mbr {
     uint8_t bootstrap[446];
     struct mbr_partition_entry partitions[4];
     uint16_t signature;
-} __packed;
+} cc_packed;
 _Static_assert(sizeof(struct mbr) == 512, "");

@@ -194,7 +194,7 @@ struct ata_identify {
     uint16_t inter_seek_delay;
     uint16_t world_wide_name[4];
     uint16_t reserved4[144];
-} __packed;
+} cc_packed;
 
 LOG_SITE_EXTERN(ide);
 LOG_HANDLE_EXTERN(ide);
