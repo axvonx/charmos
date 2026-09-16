@@ -149,7 +149,7 @@
 #define ct_const_max(a, b) __builtin_choose_expr((a) > (b), (a), (b))
 #define ct_const_clamp(val, min, max) ct_const_min(ct_const_max(val, min), max)
 
-#define ct_decay(x) __typeof__(0 ? (x) : (x))
+#define ct_decay(x) __typeof__(0 ? (x) : ((void) 0, (x)))
 #define ct_is_str(x)                                                           \
     (__builtin_types_compatible_p(ct_decay(x), char *) ||                      \
      __builtin_types_compatible_p(ct_decay(x), const char *))
@@ -181,7 +181,7 @@
     (ct_typecheck_integer(x),                                                  \
      (void) sizeof(char[((__typeof__(x)) -1 > (__typeof__(x)) 0) ? 1 : -1]))
 
-#define ct_type_is_signed(x) ((__typeof__(x)) -1 < (__typeof__(x)) 0)
+#define ct_type_is_signed(x) ((__typeof__(x)) -1 < (__typeof__(x)) 1)
 
 #define ct_typecheck_intmax_nonnegative(x)                                     \
     (((__UINTMAX_TYPE__) (__INTMAX_TYPE__) (x) >>                              \
