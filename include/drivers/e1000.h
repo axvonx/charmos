@@ -59,6 +59,7 @@ struct e1000_device {
     uint8_t bus, device, function;
 };
 
+/* NOTE: offsets and sizes asserted in kernel/drivers/e1000_layout.c */
 struct e1000_tx_desc {
     uint64_t addr;
     uint16_t length;

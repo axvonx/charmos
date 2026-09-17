@@ -219,8 +219,6 @@ struct usb_setup_packet {        /* Refer to page 276 */
     uint16_t length; /* Number of bytes if there is a data stage */
 
 } cc_packed;
-ct_assert_struct_size_eq(usb_setup_packet, 8);
-
 struct usb_device_descriptor { /* Refer to page 290 */
     uint8_t length;
     uint8_t type;
@@ -242,8 +240,8 @@ struct usb_device_descriptor { /* Refer to page 290 */
 
     uint8_t num_configs; /* Number of possible configurations */
 } cc_packed;
-ct_assert_struct_size_eq(usb_device_descriptor, 18);
 
+/* NOTE: offsets and sizes in kernel/drivers/usb/layout.c */
 struct usb_interface_descriptor { /* Page 296 */
     uint8_t length;
     uint8_t type;
@@ -263,8 +261,6 @@ struct usb_interface_descriptor { /* Page 296 */
     uint8_t interface; /* Index of string desc. describing this interface */
 
 } cc_packed;
-ct_assert_struct_size_eq(usb_interface_descriptor, 9);
-
 struct usb_config_descriptor { /* Page 293 */
     uint8_t length;
     uint8_t descriptor_type;
@@ -278,8 +274,6 @@ struct usb_config_descriptor { /* Page 293 */
 
     uint8_t max_power; /* Max power of USB device in milliamps */
 } cc_packed;
-ct_assert_struct_size_eq(usb_config_descriptor, 9);
-
 struct usb_endpoint_descriptor { /* Page 297 */
     uint8_t length;
     uint8_t type;
@@ -290,8 +284,6 @@ struct usb_endpoint_descriptor { /* Page 297 */
 
     uint8_t interval; /* Interval for polling this EP for data transfer */
 } cc_packed;
-ct_assert_struct_size_eq(usb_endpoint_descriptor, 7);
-
 struct usb_endpoint {
     struct usb_endpoint_descriptor *desc;
 

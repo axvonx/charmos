@@ -134,6 +134,7 @@ struct block_device *ide_create_generic(struct ata_drive *ide);
 void ide_identify(struct ata_drive *drive);
 void ide_print_info(struct block_device *d);
 
+/* NOTE: offsets and sizes asserted in kernel/drivers/ata/layout.c */
 struct ata_identify {
     uint16_t config;
     uint16_t cylinders;

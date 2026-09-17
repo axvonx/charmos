@@ -31,50 +31,42 @@ LOG_HANDLE_EXTERN(vtd);
  */
 
 struct vtd_regs {
-    uint32_t version; /* 0x000 - Version                    */
+    /* NOTE: offsets and sizes in kernel/drivers/iommu/vt_d/layout.c */
+    uint32_t version; /* Version                    */
     uint32_t _res0;
-    uint64_t capabilities;          /* 0x008 - Capability                 */
-    uint64_t extended_capabilities; /* 0x010 - Extended Capability        */
-    uint32_t global_command;        /* 0x018 - Global Command             */
-    uint32_t global_status;         /* 0x01C - Global Status              */
-    uint64_t root_table_addr;       /* 0x020 - Root Table Address         */
-    uint64_t context_command;       /* 0x028 - Context Command            */
+    uint64_t capabilities;          /* Capability                 */
+    uint64_t extended_capabilities; /* Extended Capability        */
+    uint32_t global_command;        /* Global Command             */
+    uint32_t global_status;         /* Global Status              */
+    uint64_t root_table_addr;       /* Root Table Address         */
+    uint64_t context_command;       /* Context Command            */
     uint32_t _res1;
-    uint32_t fault_status;           /* 0x034 - Fault Status               */
-    uint32_t fault_event_control;    /* 0x038 - Fault Event Control        */
-    uint32_t fault_event_data;       /* 0x03C - Fault Event Data           */
-    uint32_t fault_event_addr;       /* 0x040 - Fault Event Address        */
-    uint32_t fault_event_addr_upper; /* 0x044 - Fault Event Upper Address*/
+    uint32_t fault_status;           /* Fault Status               */
+    uint32_t fault_event_control;    /* Fault Event Control        */
+    uint32_t fault_event_data;       /* Fault Event Data           */
+    uint32_t fault_event_addr;       /* Fault Event Address        */
+    uint32_t fault_event_addr_upper; /* Fault Event Upper Address*/
     uint64_t _res2[2];
-    uint64_t advanced_fault_log; /* 0x058 - Advanced Fault Log         */
+    uint64_t advanced_fault_log; /* Advanced Fault Log         */
     uint32_t _res3;
-    uint32_t protected_memory_enable;  /* 0x064 - Protected Memory Enable   */
-    uint32_t protected_low_mem_base;   /* 0x068 - Protected Low Mem Base    */
-    uint32_t protected_low_mem_limit;  /* 0x06C - Protected Low Mem Limit   */
-    uint64_t protected_high_mem_base;  /* 0x070 - Protected High Mem Base   */
-    uint64_t protected_high_mem_limit; /* 0x078 - Protected High Mem Limit  */
-    uint64_t invalidation_queue_head;  /* 0x080 - Invalidation Queue Head   */
-    uint64_t invalidation_queue_tail;  /* 0x088 - Invalidation Queue Tail   */
-    uint64_t invalidation_queue_addr;  /* 0x090 - Invalidation Queue Addr   */
+    uint32_t protected_memory_enable;  /* Protected Memory Enable   */
+    uint32_t protected_low_mem_base;   /* Protected Low Mem Base    */
+    uint32_t protected_low_mem_limit;  /* Protected Low Mem Limit   */
+    uint64_t protected_high_mem_base;  /* Protected High Mem Base   */
+    uint64_t protected_high_mem_limit; /* Protected High Mem Limit  */
+    uint64_t invalidation_queue_head;  /* Invalidation Queue Head   */
+    uint64_t invalidation_queue_tail;  /* Invalidation Queue Tail   */
+    uint64_t invalidation_queue_addr;  /* Invalidation Queue Addr   */
     uint32_t _res4;
-    uint32_t
-        invalidation_comp_status; /* 0x09C - Invalidation Completion Status */
-    uint32_t invalidation_event_ctrl; /* 0x0A0 - Invalidation Event Control */
-    uint32_t invalidation_event_data; /* 0x0A4 - Invalidation Event Data */
-    uint32_t invalidation_event_addr; /* 0x0A8 - Invalidation Event Address */
-    uint32_t invalidation_event_addr_upper; /* 0x0AC - Invalidation Event Upper
+    uint32_t invalidation_comp_status;      /* Invalidation Completion Status */
+    uint32_t invalidation_event_ctrl;       /* Invalidation Event Control */
+    uint32_t invalidation_event_data;       /* Invalidation Event Data */
+    uint32_t invalidation_event_addr;       /* Invalidation Event Address */
+    uint32_t invalidation_event_addr_upper; /* Invalidation Event Upper
                                                Addr */
-    uint64_t invalidation_queue_error_record; /* 0x0B0 - IQ Error Record */
-    uint64_t interrupt_remapping_table_addr; /* 0x0B8 - IR Table Address      */
+    uint64_t invalidation_queue_error_record; /* IQ Error Record */
+    uint64_t interrupt_remapping_table_addr;  /* IR Table Address      */
 } cc_packed;
-
-_Static_assert(offsetof(struct vtd_regs, invalidation_queue_head) == 0x080,
-               "vtd_regs layout mismatch");
-_Static_assert(offsetof(struct vtd_regs, interrupt_remapping_table_addr) ==
-                   0x0B8,
-               "vtd_regs layout mismatch");
-_Static_assert(offsetof(struct vtd_regs, fault_status) == 0x034,
-               "vtd_regs layout mismatch");
 
 struct vtd_invl_queue {};
 
@@ -264,8 +256,6 @@ struct vtd_root_entry {
     uint64_t hi; /* must be zero */
 } cc_packed;
 
-_Static_assert(sizeof(struct vtd_root_entry) == 16, "root entry must be 16B");
-
 /*
  * Context Entry (128-bit / two 64-bit words) - Intel VT-d spec 9.3
  * Field acronyms used as suffixes:
@@ -304,8 +294,6 @@ struct vtd_context_entry {
     uint64_t lo;
     uint64_t hi;
 } cc_packed;
-
-_Static_assert(sizeof(struct vtd_context_entry) == 16, "ctx entry must be 16B");
 
 /*
  * Second-Level Page-Table Entry (PTE).
@@ -457,8 +445,6 @@ struct vtd_inv_desc {
     uint64_t lo;
     uint64_t hi;
 } cc_packed;
-
-_Static_assert(sizeof(struct vtd_inv_desc) == 16, "inv desc must be 16B");
 
 struct iommu *vtd_unit_create(uint64_t base_phys, uint16_t segment,
                               uint8_t size_field);

@@ -10,6 +10,7 @@
 #include <thread/wait.h>
 #include <thread/workqueue.h>
 
+/* NOTE: offsets and sizes asserted in kernel/drivers/nvme/layout.c */
 struct nvme_command {
     uint8_t opc;
     uint8_t fuse;
@@ -52,8 +53,6 @@ struct nvme_cc {
         };
     };
 } cc_packed;
-ct_assert_struct_size_eq(nvme_cc, sizeof(uint32_t));
-
 struct nvme_regs {
     uint32_t cap_lo;
     uint32_t cap_hi;
@@ -221,8 +220,6 @@ struct nvme_identify_namespace {
     struct nvme_lbaf lbaf[64]; // LBA format descriptions
     uint8_t vendor_specific[3712];
 } cc_packed;
-ct_assert_struct_size_eq(nvme_identify_namespace, 0x1000);
-
 struct nvme_identify_controller {
     uint16_t vid;    // PCI Vendor ID
     uint16_t ssvid;  // Subsystem Vendor ID

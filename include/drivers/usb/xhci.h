@@ -208,6 +208,7 @@ LOG_SITE_EXTERN(xhci);
  */
 
 // 5.3: XHCI Capability Registers
+/* NOTE: offsets and sizes in kernel/drivers/xhci/layout.c */
 struct xhci_cap_regs {
     uint8_t cap_length;
     uint8_t reserved;
@@ -222,10 +223,10 @@ struct xhci_cap_regs {
 } cc_packed;
 
 struct xhci_port_regs {
-    uint32_t portsc;   // Port Status and Control (offset 0x00)
-    uint32_t portpmsc; // Port Power Management Status and Control (offset 0x04)
-    uint32_t portli;   // Port Link Info (offset 0x08)
-    uint32_t portct;   // Port Configuration Timeout (offset 0x0C)
+    uint32_t portsc;   // Port Status and Control
+    uint32_t portpmsc; // Port Power Management Status and Control
+    uint32_t portli;   // Port Link Info
+    uint32_t portct;   // Port Configuration Timeout
 };
 
 struct xhci_usbcmd {
@@ -256,8 +257,6 @@ struct xhci_usbcmd {
         };
     };
 } cc_packed;
-ct_assert_struct_size_eq(xhci_usbcmd, sizeof(uint32_t));
-
 /* Page 444 */
 struct xhci_slot_ctx {
     uint32_t route_string : 20; // Location in USB topology
@@ -311,11 +310,8 @@ struct xhci_slot_ctx {
                               * addressed, 3 - configured, rest reserved*/
     uint32_t reserved3[4];
 } cc_packed;
-ct_assert_struct_size_eq(xhci_slot_ctx, 0x20);
-
 struct xhci_ep_ctx { // Refer to page 450 of the XHCI specification
 
-    /* DWORD 0 */
     uint32_t ep_state : 3; /* The current operational state of the endpoint
                             * 0 - Disabled (non-operational)
                             * 1 - Running
@@ -362,7 +358,6 @@ struct xhci_ep_ctx { // Refer to page 450 of the XHCI specification
                                        * If this is '0', then this is reserved
                                        */
 
-    /* DWORD 1 */
     uint32_t reserved2 : 1;
 
     uint32_t error_count : 2; /* Two bit down count, identifying the number
@@ -400,7 +395,6 @@ struct xhci_ep_ctx { // Refer to page 450 of the XHCI specification
                                     * receiving when configured.
                                     */
 
-    /* DWORD 2 */
     union {
         uint64_t dequeue_ptr_raw;
         struct {
@@ -418,7 +412,6 @@ struct xhci_ep_ctx { // Refer to page 450 of the XHCI specification
         };
     };
 
-    /* DWORD 4 */
     uint32_t average_trb_length : 16; /* Average length of TRBs executed
                                        * by this endpoint. Must be > '0'
                                        */
@@ -432,8 +425,6 @@ struct xhci_ep_ctx { // Refer to page 450 of the XHCI specification
                                         */
     uint32_t reserved5[3];
 } cc_packed;
-ct_assert_struct_size_eq(xhci_ep_ctx, 0x20);
-
 struct xhci_input_ctrl_ctx { // Refer to page 461 of the XHCI specification
 
     uint32_t drop_flags; /* Single bitfields to identify which
@@ -489,15 +480,11 @@ struct xhci_input_ctrl_ctx { // Refer to page 461 of the XHCI specification
 
     uint32_t reserved1 : 8;
 } cc_packed;
-ct_assert_struct_size_eq(xhci_input_ctrl_ctx, 0x20);
-
 struct xhci_input_ctx { // Refer to page 460 of the XHCI Spec
     struct xhci_input_ctrl_ctx ctrl_ctx;
     struct xhci_slot_ctx slot_ctx;
     struct xhci_ep_ctx ep_ctx[31];
 } cc_packed;
-ct_assert_struct_size_eq(xhci_input_ctx, 0x420);
-
 struct xhci_device_ctx {
     struct xhci_slot_ctx slot_ctx;
     struct xhci_ep_ctx ep_ctx[32]; // Endpoint 1–31 (ep0 separate)
@@ -522,8 +509,6 @@ struct xhci_trb {
     uint32_t status;
     uint32_t control;
 } cc_packed;
-ct_assert_struct_size_eq(xhci_trb, 0x10);
-
 struct xhci_ring {
     struct xhci_trb *trbs;  /* Virtual mapped TRB buffer */
     uint64_t phys;          /* Physical address of TRB buffer */

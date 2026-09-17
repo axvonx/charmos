@@ -132,7 +132,6 @@
 #define smp_wmb() atomic_thread_fence(memory_order_release)
 
 /* Compile-Time Type System & Metaprogramming (ct_) */
-
 #define ct_is_const(x) __builtin_constant_p(x)
 
 #define ct_same_type(a, b)                                                     \

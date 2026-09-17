@@ -93,6 +93,7 @@
 #define AHCI_CMD_FLAGS_CFL_MASK 0x1F
 #define AHCI_CMD_FLAGS_W_BIT 0x40
 
+/* NOTE: offsets and sizes in kernel/drivers/ahci/layout.c */
 struct ahci_fis_reg_h2d {
     uint8_t fis_type; // 0x27
     uint8_t pmport : 4;
@@ -119,7 +120,6 @@ struct ahci_fis_reg_h2d {
 };
 
 struct ahci_fis_reg_d2h {
-    // DWORD 0
     uint8_t fis_type; // FIS_TYPE_REG_D2H
 
     uint8_t pmport : 4; // Port multiplier
@@ -130,24 +130,20 @@ struct ahci_fis_reg_d2h {
     uint8_t status; // Status register
     uint8_t error;  // Error register
 
-    // DWORD 1
     uint8_t lba0;   // LBA low register, 7:0
     uint8_t lba1;   // LBA mid register, 15:8
     uint8_t lba2;   // LBA high register, 23:16
     uint8_t device; // Device register
 
-    // DWORD 2
     uint8_t lba3; // LBA register, 31:24
     uint8_t lba4; // LBA register, 39:32
     uint8_t lba5; // LBA register, 47:40
     uint8_t rsv2; // Reserved
 
-    // DWORD 3
     uint8_t countl;  // Count register, 7:0
     uint8_t counth;  // Count register, 15:8
     uint8_t rsv3[2]; // Reserved
 
-    // DWORD 4
     uint8_t rsv4[4]; // Reserved
 };
 
@@ -195,8 +191,8 @@ struct ahci_port {
     uint32_t ci;        // Command Issue
     uint32_t sntf;      // SATA Notification
     uint32_t fbs;       // FIS-based Switching
-    uint32_t rsv1[11];  // 0x44 ~ 0x6F, Reserved
-    uint32_t vendor[4]; // 0x70 ~ 0x7F, vendor specific
+    uint32_t rsv1[11];  // Reserved
+    uint32_t vendor[4]; // vendor specific
 };
 
 // one controller
@@ -241,7 +237,6 @@ struct ahci_controller {
 };
 
 struct ahci_cmd_header {
-    // DW0
     uint8_t cfl : 5; // Command FIS length in DWORDS, 2 ~ 16
     uint8_t a : 1;   // ATAPI
     uint8_t w : 1;   // Write, 1: H2D, 0: D2H
@@ -255,17 +250,13 @@ struct ahci_cmd_header {
 
     uint16_t prdtl; // Physical region descriptor table length in entries
 
-    // DW1
     uint32_t prdbc; // Physical region descriptor byte count transferred
 
-    // DW2, 3
     uint32_t ctba;  // Command table descriptor base address
     uint32_t ctbau; // Command table descriptor base address upper 32 bits
 
-    // DW4 - 7
     uint32_t rsv1[4]; // Reserved
 } cc_packed;
-ct_assert_struct_size_eq(ahci_cmd_header, 32);
 
 LOG_HANDLE_EXTERN(ahci);
 LOG_SITE_EXTERN(ahci);
