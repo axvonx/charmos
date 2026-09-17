@@ -615,7 +615,8 @@ static void xhci_process_request(struct xhci_device *dev,
 
 /* ack the change bits. multiple changes can coalesce into one event. only
  * write back a 1 for the bits we saw */
-static void xhci_ack_port_changes(uint32_t *portsc_ptr, uint32_t observed) {
+static void xhci_ack_port_changes(uint32_t cc_mem_io *portsc_ptr,
+                                  uint32_t observed) {
     uint32_t change = observed & XHCI_PORTSC_CHANGE_MASK;
     if (!change)
         return;
@@ -667,7 +668,7 @@ static void xhci_reconcile_port_locked(struct xhci_device *dev,
 static void xhci_scan_ports_locked(struct xhci_device *dev) {
     for (size_t i = 0; i < dev->ports; i++) {
         struct xhci_port *port = &dev->port_info[i];
-        uint32_t *portsc_ptr = xhci_portsc_ptr(dev, port->port_id);
+        uint32_t cc_mem_io *portsc_ptr = xhci_portsc_ptr(dev, port->port_id);
         xhci_ack_port_changes(portsc_ptr, mmio_read_32(portsc_ptr));
         xhci_reconcile_port_locked(dev, port);
     }
@@ -705,7 +706,7 @@ void xhci_process_event_ring(struct xhci_device *xhci) {
 
     while (true) {
         struct xhci_trb *evt = &ring->trbs[ring->dequeue_index];
-        uint32_t control = mmio_read_32(&evt->control);
+        uint32_t control = mmio_read_32((void cc_mem_io *) &evt->control);
 
         if ((control & TRB_CYCLE_BIT) != ring->cycle)
             break;
@@ -766,7 +767,7 @@ void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
     xhci_wq = workqueue_create("xhci_wq", &attrs);
 
     xhci_info("Found device at %02x:%02x.%02x", bus, slot, func);
-    void *mmio = xhci_map_mmio(bus, slot, func);
+    void cc_mem_io *mmio = xhci_map_mmio(bus, slot, func);
 
     struct xhci_device *dev = xhci_device_create(mmio);
     xhci_info("Device at %p, offset is %u", dev,
@@ -811,7 +812,7 @@ void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
     enum irql irql = spin_lock_irq_disable(&dev->lock);
     for (uint32_t port = 1; port <= dev->ports; port++) {
         struct xhci_port *p = &dev->port_info[port - 1];
-        uint32_t *portsc_ptr = xhci_portsc_ptr(dev, port);
+        uint32_t cc_mem_io *portsc_ptr = xhci_portsc_ptr(dev, port);
         uint32_t v = mmio_read_32(portsc_ptr);
         xhci_ack_port_changes(portsc_ptr, v);
         if ((v & PORTSC_CCS) && p->state == XHCI_PORT_STATE_DISCONNECTED)

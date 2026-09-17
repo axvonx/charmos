@@ -14,7 +14,7 @@
 #include "internal.h"
 
 bool xhci_controller_stop(struct xhci_device *dev) {
-    struct xhci_op_regs *op = dev->op_regs;
+    struct xhci_op_regs cc_mem_io *op = dev->op_regs;
 
     struct xhci_usbcmd usbcmd = {.raw = mmio_read_32(&op->usbcmd)};
     usbcmd.run_stop = 0;
@@ -29,7 +29,7 @@ bool xhci_controller_stop(struct xhci_device *dev) {
 }
 
 bool xhci_controller_reset(struct xhci_device *dev) {
-    struct xhci_op_regs *op = dev->op_regs;
+    struct xhci_op_regs cc_mem_io *op = dev->op_regs;
 
     struct xhci_usbcmd usbcmd = {.raw = mmio_read_32(&op->usbcmd)};
     usbcmd.host_controller_reset = 1;
@@ -45,7 +45,7 @@ bool xhci_controller_reset(struct xhci_device *dev) {
 }
 
 bool xhci_controller_start(struct xhci_device *dev) {
-    struct xhci_op_regs *op = dev->op_regs;
+    struct xhci_op_regs cc_mem_io *op = dev->op_regs;
 
     struct xhci_usbcmd usbcmd = {.raw = mmio_read_32(&op->usbcmd)};
     usbcmd.run_stop = 1;
@@ -61,7 +61,7 @@ bool xhci_controller_start(struct xhci_device *dev) {
 }
 
 void xhci_controller_enable_ints(struct xhci_device *dev) {
-    struct xhci_op_regs *op = dev->op_regs;
+    struct xhci_op_regs cc_mem_io *op = dev->op_regs;
     struct xhci_usbcmd usbcmd = {.raw = mmio_read_32(&op->usbcmd)};
     usbcmd.interrupter_enable = 1;
     mmio_write_32(&op->usbcmd, usbcmd.raw);

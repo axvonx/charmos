@@ -24,7 +24,7 @@ void hpet_setup_timer(uint8_t timer_index, irq_t irq_line, bool periodic,
 #define HPET_GEN_INT_STAT_OFFSET 0x20
 #define HPET_IRQ_BASE 2
 #define HPET_MAIN_COUNTER_OFFSET 0xF0
-extern uint64_t *hpet_base;
+extern uint64_t cc_mem_io *hpet_base;
 extern uint64_t hpet_timer_count;
 extern uint64_t hpet_fs_per_tick;
 
@@ -70,9 +70,9 @@ union hpet_timer_config {
 } cc_packed;
 
 static inline void hpet_write64(uint64_t offset, uint64_t value) {
-    mmio_write_64((void *) ((uintptr_t) hpet_base + offset), value);
+    mmio_write_64((void cc_mem_io *) ((uintptr_t) hpet_base + offset), value);
 }
 
 static inline uint64_t hpet_read64(uint64_t offset) {
-    return mmio_read_64((void *) ((uintptr_t) hpet_base + offset));
+    return mmio_read_64((void cc_mem_io *) ((uintptr_t) hpet_base + offset));
 }

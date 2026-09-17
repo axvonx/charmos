@@ -34,8 +34,8 @@
 
 #define _ALIGN_UP_CAPTURE(x, align)                                            \
     _ALIGN_CAPTURE_UNCHECKED(x, align);                                        \
-    __typeof__(__x) __mask = __align - 1;                                      \
-    __typeof__(__x) __sum;                                                     \
+    __typeof__((__x) + 0) __mask = __align - 1;                                \
+    __typeof__((__x) + 0) __sum;                                               \
     bool __overflow = __builtin_add_overflow(__x, __mask, &__sum)
 
 /* Rounds up without validating the alignment, wraps on overflow */
@@ -43,7 +43,7 @@
     ({                                                                         \
         _ALIGN_UP_CAPTURE(x, align);                                           \
         (void) __overflow;                                                     \
-        __sum & ~__mask;                                                       \
+        (__typeof__(__x)) (__sum & ~__mask);                                   \
     })
 
 #define ALIGN_UP(x, align)                                                     \
@@ -51,7 +51,7 @@
         _ALIGN_UP_CAPTURE(x, align);                                           \
         (void) kassert(__align > 0 && (__align & (__align - 1)) == 0 &&        \
                        !__overflow);                                           \
-        __sum & ~__mask;                                                       \
+        (__typeof__(__x)) (__sum & ~__mask);                                   \
     })
 
 #define IS_ALIGNED(x, align)                                                   \

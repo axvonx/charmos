@@ -1,5 +1,6 @@
 /* @title: Higher Half Direct Mapping */
 #pragma once
+#include <compiler.h>
 #include <global.h>
 #include <types/types.h>
 
@@ -8,11 +9,11 @@ bool hhdm_paddr_in_range(paddr_t paddr);
 bool hhdm_ptr_in_range(void *ptr);
 
 static inline vaddr_t hhdm_paddr_to_vaddr(paddr_t p) {
-    return p + global.hhdm_offset;
+    return (vaddr_t) (ct_raw(p) + ct_raw(global.hhdm_offset));
 }
 
 static inline paddr_t hhdm_vaddr_to_paddr(vaddr_t v) {
-    return v - global.hhdm_offset;
+    return (paddr_t) (ct_raw(v) - ct_raw(global.hhdm_offset));
 }
 
 static inline paddr_t hhdm_ptr_to_paddr(const void *ptr) {

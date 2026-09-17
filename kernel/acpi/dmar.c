@@ -44,7 +44,7 @@ static void handle_drhd(const struct acpi_dmar_drhd *drhd) {
     dmar_info("DRHD base=0x%016llx size=0x%x seg=%u %s", drhd->address,
               reg_size, drhd->segment, include_all ? "(INCLUDE_ALL)" : "");
 
-    struct vtd_regs *regs = mmio_map(drhd->address, PAGE_SIZE);
+    struct vtd_regs cc_mem_io *regs = mmio_map(drhd->address, PAGE_SIZE);
 
     uint64_t cap = regs->capabilities;
     uint64_t ecap = regs->extended_capabilities;

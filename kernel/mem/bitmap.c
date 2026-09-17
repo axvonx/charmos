@@ -69,7 +69,7 @@ paddr_t bitmap_alloc_pages(uint64_t count, enum alloc_flags flags) {
         set_bit(start_index + i);
     }
 
-    return (vaddr_t) (start_index * PAGE_SIZE);
+    return (paddr_t) (start_index * PAGE_SIZE);
 }
 
 void bitmap_free_pages(paddr_t addr, uint64_t count) {

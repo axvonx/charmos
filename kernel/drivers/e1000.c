@@ -28,7 +28,7 @@ static void e1000_reset(struct e1000_device *dev) {
 static void e1000_setup_tx_ring(struct e1000_device *dev) {
     uint64_t space = sizeof(struct e1000_tx_desc) * E1000_NUM_TX_DESC;
     dev->tx_descs_phys = pmm_alloc_page();
-    dev->tx_descs = mmio_map(dev->tx_descs_phys, space);
+    dev->tx_descs = mmio_map_dma(dev->tx_descs_phys, space);
     memset(dev->tx_descs, 0, space);
 
     for (int i = 0; i < E1000_NUM_TX_DESC; i++) {
@@ -58,7 +58,7 @@ static void e1000_setup_tx_ring(struct e1000_device *dev) {
 static void e1000_setup_rx_ring(struct e1000_device *dev) {
     uint64_t space = sizeof(struct e1000_rx_desc) * E1000_NUM_RX_DESC;
     dev->rx_descs_phys = pmm_alloc_page();
-    dev->rx_descs = mmio_map(dev->rx_descs_phys, space);
+    dev->rx_descs = mmio_map_dma(dev->rx_descs_phys, space);
     memset(dev->rx_descs, 0, space);
 
     for (int i = 0; i < E1000_NUM_RX_DESC; i++) {

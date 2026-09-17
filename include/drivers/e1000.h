@@ -41,7 +41,7 @@
 #define E1000_NUM_TX_DESC 64
 
 struct e1000_device {
-    uint32_t *regs; // MMIO virtual base
+    uint32_t cc_mem_io *regs; // MMIO virtual base
 
     // TX
     struct e1000_tx_desc *tx_descs;

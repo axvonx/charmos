@@ -33,7 +33,7 @@ struct ahci_disk *ahci_discover_device(uint8_t bus, uint8_t device,
     uint64_t abar_size = ~(size_mask & ~0xFU) + 1;
     uint64_t map_size = PAGE_ALIGN_UP(abar_size);
 
-    void *abar_virt = mmio_map(abar_base, map_size);
+    void cc_mem_io *abar_virt = mmio_map(abar_base, map_size);
     if (!abar_virt) {
         ahci_log(LOG_ERROR, "failed to map BAR - likely OOM error");
         return NULL;
@@ -42,7 +42,8 @@ struct ahci_disk *ahci_discover_device(uint8_t bus, uint8_t device,
 
     ahci_log(LOG_INFO, "AHCI device uses IRQ %u ", irq_line);
 
-    struct ahci_controller *ctrl = (struct ahci_controller *) abar_virt;
+    struct ahci_controller cc_mem_io *ctrl =
+        (struct ahci_controller cc_mem_io *) abar_virt;
 
     struct ahci_disk *disk = ahci_setup_controller(ctrl, out_disk_count);
     if (!disk) {

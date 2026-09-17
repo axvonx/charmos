@@ -24,7 +24,7 @@
 /* TODO: horrible code - bit-op spam */
 void ahci_process_completions(struct ahci_device *dev, uint32_t port) {
     struct ahci_full_port *fp = &dev->regs[port];
-    struct ahci_port *p = fp->port;
+    struct ahci_port cc_mem_io *p = fp->port;
 
     uint32_t ci = mmio_read_32(&p->ci);
     uint32_t sact = mmio_read_32(&p->sact);

@@ -34,8 +34,8 @@ void xhci_cleanup(struct xhci_device *dev, struct xhci_request *req);
 struct xhci_ring *xhci_allocate_ring();
 struct xhci_ring *xhci_allocate_event_ring(void);
 void xhci_free_ring(struct xhci_ring *ring);
-void *xhci_map_mmio(uint8_t bus, uint8_t slot, uint8_t func);
-struct xhci_device *xhci_device_create(void *mmio);
+void cc_mem_io *xhci_map_mmio(uint8_t bus, uint8_t slot, uint8_t func);
+struct xhci_device *xhci_device_create(void cc_mem_io *mmio);
 bool xhci_controller_stop(struct xhci_device *dev);
 bool xhci_controller_reset(struct xhci_device *dev);
 bool xhci_controller_start(struct xhci_device *dev);
@@ -119,7 +119,8 @@ static inline uint8_t usb_to_xhci_ep_type(bool in, uint8_t type) {
 
 static inline void xhci_ring_doorbell(struct xhci_device *dev, uint32_t slot_id,
                                       uint32_t ep_id) {
-    uint32_t *doorbell = (void *) dev->cap_regs + dev->cap_regs->dboff;
+    uint32_t cc_mem_io *doorbell =
+        (void cc_mem_io *) dev->cap_regs + dev->cap_regs->dboff;
     mmio_write_32(&doorbell[slot_id], ep_id);
 }
 
@@ -228,7 +229,8 @@ static inline uint64_t xhci_get_trb_phys(struct xhci_ring *ring,
     return ring->phys + offset;
 }
 
-static inline uint32_t *xhci_portsc_ptr(struct xhci_device *dev, uint8_t port) {
+static inline uint32_t cc_mem_io *xhci_portsc_ptr(struct xhci_device *dev,
+                                                  uint8_t port) {
     return &dev->port_regs[port - 1].portsc;
 }
 

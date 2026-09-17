@@ -118,8 +118,8 @@ struct nvme_queue {
     uint16_t sq_depth; // Queue depth (entries)
     uint16_t cq_depth; // Queue depth (entries)
     uint8_t cq_phase;  // Phase bit for completion
-    uint32_t *sq_db;
-    uint32_t *cq_db;
+    uint32_t cc_mem_io *sq_db;
+    uint32_t cc_mem_io *cq_db;
 
     struct nvme_request **sq_requests;
     _Atomic uint16_t outstanding;
@@ -128,13 +128,13 @@ struct nvme_queue {
 };
 
 struct nvme_device {
-    struct nvme_regs *regs;
+    struct nvme_regs cc_mem_io *regs;
     uint64_t cap;
     uint32_t version;
     uint32_t doorbell_stride;
     uint32_t page_size;
-    uint32_t *admin_sq_db;
-    uint32_t *admin_cq_db;
+    uint32_t cc_mem_io *admin_sq_db;
+    uint32_t cc_mem_io *admin_cq_db;
 
     struct nvme_command *admin_sq;
     struct nvme_completion *admin_cq;

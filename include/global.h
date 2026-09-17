@@ -53,7 +53,7 @@ struct globals {
     vaddr_t hhdm_offset;
     _Atomic uint64_t pt_epoch;
     uint64_t total_pages;
-    paddr_t last_pfn;
+    pfn_t last_pfn;
 
     struct movealloc_callback_chain movealloc_chain;
 

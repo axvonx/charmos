@@ -22,7 +22,7 @@ static void setup_port_slots(struct ahci_device *dev, uint32_t port_id) {
     for (uint64_t slot = 0; slot < 32; slot++) {
         uint64_t cmdtbl_phys = pmm_alloc_page();
 
-        void *cmdtbl_virt = mmio_map(cmdtbl_phys, PAGE_SIZE);
+        void *cmdtbl_virt = mmio_map_dma(cmdtbl_phys, PAGE_SIZE);
         memset(cmdtbl_virt, 0, PAGE_SIZE);
 
         struct ahci_cmd_header *cmd_header =
@@ -37,7 +37,7 @@ static void setup_port_slots(struct ahci_device *dev, uint32_t port_id) {
 }
 
 /* Stop the port so it doesn't start overwriting potential kernel text */
-static void ahci_port_quiesce(struct ahci_port *port) {
+static void ahci_port_quiesce(struct ahci_port cc_mem_io *port) {
     mmio_write_32(&port->cmd, mmio_read_32(&port->cmd) & ~AHCI_CMD_ST);
     mmio_spin_wait(&port->cmd, AHCI_CMD_CR, AHCI_CMD_TIMEOUT_MS);
 
@@ -50,12 +50,12 @@ static void ahci_port_quiesce(struct ahci_port *port) {
     mmio_write_32(&port->fbu, 0);
 }
 
-static void allocate_port(struct ahci_device *dev, struct ahci_port *port,
-                          uint32_t port_num) {
+static void allocate_port(struct ahci_device *dev,
+                          struct ahci_port cc_mem_io *port, uint32_t port_num) {
     uint64_t cmdlist_phys = pmm_alloc_page();
     uint64_t fis_phys = pmm_alloc_page();
-    void *cmdlist = mmio_map(cmdlist_phys, PAGE_SIZE);
-    void *fis = mmio_map(fis_phys, PAGE_SIZE);
+    void *cmdlist = mmio_map_dma(cmdlist_phys, PAGE_SIZE);
+    void *fis = mmio_map_dma(fis_phys, PAGE_SIZE);
     memset(cmdlist, 0, PAGE_SIZE);
     memset(fis, 0, PAGE_SIZE);
 
@@ -80,7 +80,7 @@ static void allocate_port(struct ahci_device *dev, struct ahci_port *port,
 }
 
 static struct ahci_disk *device_setup(struct ahci_device *dev,
-                                      struct ahci_controller *ctrl,
+                                      struct ahci_controller cc_mem_io *ctrl,
                                       uint32_t *disk_count) {
     uint32_t pi = mmio_read_32(&ctrl->pi);
 
@@ -91,7 +91,7 @@ static struct ahci_disk *device_setup(struct ahci_device *dev,
         if (!BIT_TEST(pi, i))
             continue;
 
-        struct ahci_port *port = ahci_get_port(dev, i);
+        struct ahci_port cc_mem_io *port = ahci_get_port(dev, i);
 
         ahci_port_quiesce(port);
 
@@ -133,7 +133,7 @@ static struct ahci_disk *device_setup(struct ahci_device *dev,
         if (!BIT_TEST(pi, i))
             continue;
 
-        struct ahci_port *port = ahci_get_port(dev, i);
+        struct ahci_port cc_mem_io *port = ahci_get_port(dev, i);
         uint32_t ssts = mmio_read_32(&port->ssts);
 
         if ((ssts & 0x0F) == AHCI_DET_PRESENT &&
@@ -165,7 +165,7 @@ static struct ahci_disk *device_setup(struct ahci_device *dev,
     return disks;
 }
 
-struct ahci_disk *ahci_setup_controller(struct ahci_controller *ctrl,
+struct ahci_disk *ahci_setup_controller(struct ahci_controller cc_mem_io *ctrl,
                                         uint32_t *d_cnt) {
     bool s64a = BIT_TEST(mmio_read_32(&ctrl->cap), 31);
     if (!s64a) {

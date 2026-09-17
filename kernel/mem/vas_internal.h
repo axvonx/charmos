@@ -1,4 +1,5 @@
 #pragma once
+#include <compiler.h>
 #include <mem/fixed_size_alloc.h>
 #include <mem/vas.h>
 #include <stdatomic.h>
@@ -26,6 +27,11 @@ enum vas_segment_type {
  * addresses leaving low bits for the state */
 enum vas_mag_state { VAS_MAG_LIVE = 1, VAS_MAG_CACHED, VAS_MAG_CLAIMED };
 #define VAS_MAG_STATE_MASK 3UL
+
+static inline uintptr_t vas_token_make(vaddr_t addr, enum vas_mag_state state) {
+    return ct_raw(addr) | state;
+}
+
 struct vas_mag_slot {
     _Atomic uintptr_t token;
     struct vas_segment *segment;

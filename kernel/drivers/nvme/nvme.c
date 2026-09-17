@@ -45,9 +45,9 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
     uint64_t phys_addr =
         ((uint64_t) original_bar1 << 32) | (original_bar0 & ~0xFU);
 
-    void *mmio = mmio_map(phys_addr, size);
+    void cc_mem_io *mmio = mmio_map(phys_addr, size);
 
-    struct nvme_regs *regs = (struct nvme_regs *) mmio;
+    struct nvme_regs cc_mem_io *regs = (struct nvme_regs cc_mem_io *) mmio;
     uint64_t cap = ((uint64_t) regs->cap_hi << 32) | regs->cap_lo;
     uint32_t version = regs->version;
 
@@ -70,10 +70,11 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
         panic("Could not allocate space for NVMe IO queues");
 
     nvme->admin_sq_db =
-        (uint32_t *) ((uint8_t *) nvme->regs + NVME_DOORBELL_BASE);
+        (uint32_t cc_mem_io *) ((uint8_t cc_mem_io *) nvme->regs +
+                                NVME_DOORBELL_BASE);
     nvme->admin_cq_db =
-        (uint32_t *) ((uint8_t *) nvme->regs + NVME_DOORBELL_BASE +
-                      nvme->doorbell_stride);
+        (uint32_t cc_mem_io *) ((uint8_t cc_mem_io *) nvme->regs +
+                                NVME_DOORBELL_BASE + nvme->doorbell_stride);
 
     if (nvme->admin_q_depth > 32)
         nvme->admin_q_depth = 32;

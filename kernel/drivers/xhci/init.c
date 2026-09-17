@@ -23,7 +23,7 @@ void xhci_setup_event_ring(struct xhci_device *dev) {
     erst[0].ring_segment_size = dev->event_ring->size;
     erst[0].reserved = 0;
 
-    struct xhci_interrupter_regs *ir = dev->intr_regs;
+    struct xhci_interrupter_regs cc_mem_io *ir = dev->intr_regs;
 
     mmio_write_32(&ir->imod, 0);
     mmio_write_32(&ir->erstsz, 1);
@@ -32,7 +32,7 @@ void xhci_setup_event_ring(struct xhci_device *dev) {
 }
 
 void xhci_setup_command_ring(struct xhci_device *dev) {
-    struct xhci_op_regs *op = dev->op_regs;
+    struct xhci_op_regs cc_mem_io *op = dev->op_regs;
     dev->cmd_ring = xhci_allocate_ring();
     uintptr_t trb_phys = dev->cmd_ring->phys;
 
@@ -155,7 +155,7 @@ void xhci_disable_slot(struct xhci_device *dev, uint8_t slot_id) {
         kfree(a);
 }
 
-static enum usb_error xhci_spin_wait_port_reset(uint32_t *portsc,
+static enum usb_error xhci_spin_wait_port_reset(uint32_t cc_mem_io *portsc,
                                                 bool is_usb3) {
     const uint64_t timeout_us = 100 * 1000;
     uint64_t start = time_get_us();
@@ -187,7 +187,7 @@ static enum usb_error xhci_spin_wait_port_reset(uint32_t *portsc,
 }
 
 enum usb_error xhci_reset_port(struct xhci_device *dev, uint32_t portnum) {
-    uint32_t *portsc = xhci_portsc_ptr(dev, portnum);
+    uint32_t cc_mem_io *portsc = xhci_portsc_ptr(dev, portnum);
     bool is_usb3 = dev->port_info[portnum - 1].usb3;
 
     uint32_t v = mmio_read_32(portsc);
@@ -233,7 +233,8 @@ void xhci_parse_ext_caps(struct xhci_device *dev) {
     uint32_t offset = (hcc_params1 >> 16) & 0xFFFF;
 
     while (offset) {
-        void *ext_cap_addr = (uint8_t *) dev->cap_regs + offset * 4;
+        void cc_mem_io *ext_cap_addr =
+            (uint8_t cc_mem_io *) dev->cap_regs + offset * 4;
         uint32_t cap_header = mmio_read_32(ext_cap_addr);
 
         uint8_t cap_id = cap_header & 0xFF;
@@ -244,8 +245,8 @@ void xhci_parse_ext_caps(struct xhci_device *dev) {
             continue;
         }
 
-        void *bios_owns_addr = (uint8_t *) ext_cap_addr + 4;
-        void *os_owns_addr = (uint8_t *) ext_cap_addr + 8;
+        void cc_mem_io *bios_owns_addr = (uint8_t cc_mem_io *) ext_cap_addr + 4;
+        void cc_mem_io *os_owns_addr = (uint8_t cc_mem_io *) ext_cap_addr + 8;
 
         mmio_write_32(os_owns_addr, 1);
 
@@ -270,7 +271,8 @@ void xhci_detect_usb3_ports(struct xhci_device *dev) {
     uint32_t offset = (hcc_params1 >> 16) & 0xFFFF;
 
     while (offset) {
-        void *ext_cap_addr = (uint8_t *) dev->cap_regs + offset * 4;
+        void cc_mem_io *ext_cap_addr =
+            (uint8_t cc_mem_io *) dev->cap_regs + offset * 4;
         uint32_t cap_header = mmio_read_32(ext_cap_addr);
 
         uint8_t cap_id = cap_header & 0xFF;
@@ -279,7 +281,8 @@ void xhci_detect_usb3_ports(struct xhci_device *dev) {
         if (cap_id == XHCI_EXT_CAP_ID_USB) {
             uint32_t cap[4];
             for (int i = 0; i < 4; i++)
-                cap[i] = mmio_read_32((uint8_t *) ext_cap_addr + i * 4);
+                cap[i] =
+                    mmio_read_32((uint8_t cc_mem_io *) ext_cap_addr + i * 4);
 
             uint8_t portcount = (cap[2] >> 8) & 0xFF;
             uint8_t portoffset = (cap[2]) & 0xFF;
@@ -301,7 +304,7 @@ void xhci_detect_usb3_ports(struct xhci_device *dev) {
     }
 }
 
-void *xhci_map_mmio(uint8_t bus, uint8_t slot, uint8_t func) {
+void cc_mem_io *xhci_map_mmio(uint8_t bus, uint8_t slot, uint8_t func) {
     uint32_t original_bar0 = pci_read(bus, slot, func, 0x10);
 
     pci_write(bus, slot, func, 0x10, 0xFFFFFFFF);
@@ -314,17 +317,17 @@ void *xhci_map_mmio(uint8_t bus, uint8_t slot, uint8_t func) {
     return mmio_map(phys_addr, size);
 }
 
-struct xhci_device *xhci_device_create(void *mmio) {
+struct xhci_device *xhci_device_create(void cc_mem_io *mmio) {
     struct xhci_device *dev =
         kmalloc(sizeof(struct xhci_device), ALLOC_FLAGS_ZERO);
     if (cc_unlikely(!dev))
         panic("Could not allocate space for XHCI device");
 
-    struct xhci_cap_regs *cap = mmio;
-    struct xhci_op_regs *op = mmio + cap->cap_length;
-    void *runtime_regs = (void *) mmio + cap->rtsoff;
-    struct xhci_interrupter_regs *ir_base =
-        (void *) ((uint8_t *) runtime_regs + 0x20);
+    struct xhci_cap_regs cc_mem_io *cap = mmio;
+    struct xhci_op_regs cc_mem_io *op = mmio + cap->cap_length;
+    void cc_mem_io *runtime_regs = (void cc_mem_io *) mmio + cap->rtsoff;
+    struct xhci_interrupter_regs cc_mem_io *ir_base =
+        (void cc_mem_io *) ((uint8_t cc_mem_io *) runtime_regs + 0x20);
 
     for (size_t i = 0; i < XHCI_REQ_LIST_MAX; i++) {
         INIT_LIST_HEAD(&dev->requests[i]);

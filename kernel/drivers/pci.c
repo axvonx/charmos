@@ -219,15 +219,16 @@ void pci_program_msix_entry(uint8_t bus, uint8_t slot, uint8_t func,
     size_t map_size =
         PAGE_ALIGN_UP((entry_phys & (PAGE_SIZE - 1)) + entry_size);
 
-    void *map = mmio_map(map_base, map_size);
+    void cc_mem_io *map = mmio_map(map_base, map_size);
     if (!map) {
         pci_log(LOG_ERROR, "vmm_map_phys failed for MSI-X table");
         return;
     }
 
-    struct pci_msix_table_entry *entry =
-        (struct pci_msix_table_entry *) ((uintptr_t) map +
-                                         (entry_phys & (PAGE_SIZE - 1)));
+    struct pci_msix_table_entry cc_mem_io *entry =
+        (struct pci_msix_table_entry cc_mem_io *) ((uintptr_t) map +
+                                                   (entry_phys &
+                                                    (PAGE_SIZE - 1)));
 
     uint64_t msg_addr = 0xFEE00000ull | ((uint64_t) apic_id << 12);
     mmio_write_32(&entry->msg_addr_low, (uint32_t) (msg_addr & 0xFFFFFFFF));
@@ -265,10 +266,10 @@ void pci_enable_msix_on_core(uint8_t bus, uint8_t slot, uint8_t func,
     uint64_t map_size =
         (vector_index + 1) * sizeof(struct pci_msix_table_entry);
     map_size = MAX(map_size, PAGE_SIZE);
-    void *msix_table = mmio_map(bar_addr + table_offset, map_size);
+    void cc_mem_io *msix_table = mmio_map(bar_addr + table_offset, map_size);
 
-    struct pci_msix_table_entry *entry_addr =
-        (void *) msix_table +
+    struct pci_msix_table_entry cc_mem_io *entry_addr =
+        (void cc_mem_io *) msix_table +
         vector_index * sizeof(struct pci_msix_table_entry);
 
     uint64_t msg_addr = 0xFEE00000 | (apic_id << 12);

@@ -65,7 +65,8 @@ static void magazine_publish(struct vas_mag_slot *slot,
     atomic_store_explicit(&seg->type,
                           state == VAS_MAG_LIVE ? VAS_SEG_BUSY : VAS_SEG_CACHED,
                           memory_order_release);
-    atomic_store_explicit(&slot->token, addr | state, memory_order_release);
+    atomic_store_explicit(&slot->token, vas_token_make(addr, state),
+                          memory_order_release);
 }
 
 static vaddr_t magazine_alloc(struct vas_arena *arena, uint32_t cls,
@@ -105,7 +106,7 @@ static bool magazine_free(struct vas_arena *arena, uint32_t cls, vaddr_t addr) {
     struct vas_magazine *mag = &arena->magazines[cls];
     for (uint32_t i = 0; i < mag_capacities[cls]; i++) {
         struct vas_mag_slot *slot = &mag->slots[i];
-        uintptr_t token = addr | VAS_MAG_LIVE;
+        uintptr_t token = vas_token_make(addr, VAS_MAG_LIVE);
 
         if (atomic_load_explicit(&slot->token, memory_order_relaxed) != token ||
             !magazine_claim(slot, token))
@@ -599,7 +600,7 @@ void vas_free(struct vas *vas, vaddr_t addr, size_t size) {
 
     if (seg->mag_slot) {
         struct vas_mag_slot *slot = seg->mag_slot;
-        uintptr_t token = addr | VAS_MAG_LIVE;
+        uintptr_t token = vas_token_make(addr, VAS_MAG_LIVE);
         if (!magazine_claim(slot, token))
             panic("vas_free: concurrent/duplicate magazine free at %p",
                   (void *) addr);

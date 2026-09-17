@@ -257,15 +257,15 @@ TSA_NO_ANALYSIS {
     TEST_ASSERT_NONNULL(slot);
     vas_free(vas, addr, PAGE_SIZE);
 
-    uintptr_t token = addr | VAS_MAG_CACHED;
-    TEST_ASSERT(atomic_compare_exchange_strong(&slot->token, &token,
-                                               addr | VAS_MAG_CLAIMED));
+    uintptr_t token = vas_token_make(addr, VAS_MAG_CACHED);
+    TEST_ASSERT(atomic_compare_exchange_strong(
+        &slot->token, &token, vas_token_make(addr, VAS_MAG_CLAIMED)));
     vas_reclaim(vas);
     TEST_ASSERT_EQ(atomic_load(&vas->mag_reserved_bytes), PAGE_SIZE);
     TEST_ASSERT_EQ(rbt_search(&arena->tree, addr), &seg->node);
     TEST_ASSERT_FALSE(vas_vaddr_is_allocated(vas, addr));
     atomic_store(&seg->type, VAS_SEG_BUSY);
-    atomic_store(&slot->token, addr | VAS_MAG_LIVE);
+    atomic_store(&slot->token, vas_token_make(addr, VAS_MAG_LIVE));
     TEST_ASSERT(vas_vaddr_is_allocated(vas, addr + PAGE_SIZE - 1));
     TEST_ASSERT(vas_valid(vas, PAGE_SIZE));
     vas_free(vas, addr, PAGE_SIZE);

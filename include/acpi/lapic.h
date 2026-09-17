@@ -1,6 +1,7 @@
 /* @title: LAPIC */
 #pragma once
 #include <asm.h>
+#include <compiler.h>
 #include <console/printf.h>
 #include <drivers/mmio.h>
 #include <math/bit.h>
@@ -49,7 +50,7 @@
 #define IA32_X2APIC_TIMER_CUR (IA32_X2APIC_BASE + 0x39)
 #define IA32_X2APIC_TIMER_DIV (IA32_X2APIC_BASE + 0x3E)
 
-extern uint32_t *lapic;
+extern uint32_t cc_mem_io *lapic;
 extern bool x2apic_enabled;
 static inline uint32_t lapic_reg_to_x2apic_msr(uint32_t reg) {
     switch (reg) {
@@ -71,7 +72,7 @@ static inline void lapic_write(uint32_t reg, uint32_t val) {
             return;
         wrmsr(msr, val);
     } else {
-        mmio_write_32((uint32_t *) ((uintptr_t) lapic + reg), val);
+        mmio_write_32((uint32_t cc_mem_io *) ((uintptr_t) lapic + reg), val);
     }
 }
 
@@ -82,7 +83,7 @@ static inline uint32_t lapic_read(uint32_t reg) {
             return 0;
         return (uint32_t) rdmsr(msr);
     } else {
-        return mmio_read_32((uint32_t *) ((uintptr_t) lapic + reg));
+        return mmio_read_32((uint32_t cc_mem_io *) ((uintptr_t) lapic + reg));
     }
 }
 

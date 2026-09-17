@@ -4,8 +4,6 @@
 #include <stdint.h>
 #include <time/spin_sleep.h>
 
-extern uint64_t *hpet_base;
-
 static void sleep_hpet_fs(uint64_t femtoseconds) {
     uint32_t fs_per_tick = hpet_fs_per_tick;
     uint64_t ticks_to_wait = femtoseconds / fs_per_tick;
@@ -28,7 +26,7 @@ void sleep_spin(uint64_t seconds) {
     sleep_hpet_fs(seconds * 1000000000000000ULL); // 1 s = 1e15 femtoseconds
 }
 
-bool mmio_spin_wait(uint32_t *reg, uint32_t mask, uint64_t timeout) {
+bool mmio_spin_wait(uint32_t cc_mem_io *reg, uint32_t mask, uint64_t timeout) {
     uint64_t timeout_us = timeout * 1000;
     while ((mmio_read_32(reg) & mask) && timeout_us--) {
         if (timeout_us == 0)

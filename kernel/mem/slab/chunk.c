@@ -9,12 +9,12 @@
 
 #include "internal.h"
 
-static inline vaddr_t vaddr_to_base_addr(vaddr_t vaddr) {
-    return vaddr >> PAGE_4K_SHIFT;
+static inline uintptr_t vaddr_to_base_addr(vaddr_t vaddr) {
+    return ct_raw(vaddr) >> PAGE_4K_SHIFT;
 }
 
-static inline vaddr_t base_addr_to_vaddr(vaddr_t base_addr) {
-    return base_addr << PAGE_4K_SHIFT;
+static inline vaddr_t base_addr_to_vaddr(uintptr_t base_addr) {
+    return (vaddr_t) (base_addr << PAGE_4K_SHIFT);
 }
 
 static void validate_ptr_in_chunk(struct slab_chunk *chunk, void *ptr) {

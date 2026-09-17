@@ -2,12 +2,14 @@
 
 #include "internal.h"
 
-static uint64_t *vtd_iotlb_reg(struct vtd_unit *u) {
-    return (uint64_t *) ((uintptr_t) u->regs + IOTLB_REG_OFFSET(u->ecap));
+static uint64_t cc_mem_io *vtd_iotlb_reg(struct vtd_unit *u) {
+    return (uint64_t cc_mem_io *) ((uintptr_t) u->regs +
+                                   IOTLB_REG_OFFSET(u->ecap));
 }
 
-static uint64_t *vtd_iva_reg(struct vtd_unit *u) {
-    return (uint64_t *) ((uintptr_t) u->regs + IVA_REG_OFFSET(u->ecap));
+static uint64_t cc_mem_io *vtd_iva_reg(struct vtd_unit *u) {
+    return (uint64_t cc_mem_io *) ((uintptr_t) u->regs +
+                                   IVA_REG_OFFSET(u->ecap));
 }
 
 static void vtd_iotlb_reg_flush(struct vtd_unit *u, uint64_t val) {

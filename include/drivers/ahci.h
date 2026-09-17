@@ -164,7 +164,7 @@ struct ahci_cmd_table {
 } cc_packed;
 
 struct ahci_full_port {
-    struct ahci_port *port;
+    struct ahci_port cc_mem_io *port;
     void *cmd_list_base;
     void *fis;
     struct ahci_cmd_table **cmd_tables;
@@ -201,7 +201,7 @@ struct ahci_device {
     uint32_t signature;   // Device signature
     uint32_t sectors;     // Total sectors (for disks)
     uint16_t sector_size; // Sector size in bytes
-    struct ahci_controller *ctrl;
+    struct ahci_controller cc_mem_io *ctrl;
     uint64_t port_count;
 
     uint16_t io_statuses[AHCI_MAX_PORTS][32];
@@ -283,9 +283,9 @@ struct ahci_request {
     void *user_data;
 };
 
-void ahci_discover(struct ahci_controller *ctrl);
+void ahci_discover(struct ahci_controller cc_mem_io *ctrl);
 uint32_t ahci_find_slot(struct ahci_full_port *port);
-struct ahci_disk *ahci_setup_controller(struct ahci_controller *ctrl,
+struct ahci_disk *ahci_setup_controller(struct ahci_controller cc_mem_io *ctrl,
                                         uint32_t *d_cnt);
 void ahci_identify(struct ahci_disk *disk);
 void ahci_prepare_command(struct ahci_full_port *port, uint32_t slot,
@@ -344,6 +344,8 @@ enum irq_result ahci_isr_handler(void *ctx, uint8_t vector,
 
 #define AHCI_PORT_OFFSET(n) (0x100 + (n) * 0x80)
 
-static inline struct ahci_port *ahci_get_port(struct ahci_device *dev, int n) {
-    return (struct ahci_port *) ((uintptr_t) dev->ctrl + AHCI_PORT_OFFSET(n));
+static inline struct ahci_port cc_mem_io *ahci_get_port(struct ahci_device *dev,
+                                                        int n) {
+    return (struct ahci_port cc_mem_io *) ((uintptr_t) dev->ctrl +
+                                           AHCI_PORT_OFFSET(n));
 }

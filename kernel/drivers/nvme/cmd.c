@@ -112,11 +112,13 @@ void nvme_process_completions(struct nvme_device *dev, uint32_t qid) {
     while (true) {
         struct nvme_completion *entry = &queue->cq[queue->cq_head];
 
-        if ((mmio_read_32(&entry->status) & 1) != queue->cq_phase)
+        if ((mmio_read_32((void cc_mem_io *) &entry->status) & 1) !=
+            queue->cq_phase)
             break;
 
-        uint16_t status = mmio_read_32(&entry->status) & 0xFFFE;
-        uint16_t cid = mmio_read_32(&entry->cid);
+        uint16_t status =
+            mmio_read_32((void cc_mem_io *) &entry->status) & 0xFFFE;
+        uint16_t cid = mmio_read_32((void cc_mem_io *) &entry->cid);
 
         /* CIDs are owned by one in-flight rq, and we release the slot here.
          *
@@ -227,8 +229,9 @@ uint16_t nvme_submit_admin_cmd(struct nvme_device *nvme,
     while (true) {
         struct nvme_completion *entry = &nvme->admin_cq[nvme->admin_cq_head];
 
-        if ((mmio_read_16(&entry->status) & 1) == nvme->admin_cq_phase) {
-            if (mmio_read_16(&entry->cid) == cmd->cid) {
+        if ((mmio_read_16((void cc_mem_io *) &entry->status) & 1) ==
+            nvme->admin_cq_phase) {
+            if (mmio_read_16((void cc_mem_io *) &entry->cid) == cmd->cid) {
                 uint16_t status = entry->status & 0xFFFE;
 
                 nvme->admin_cq_head =
@@ -254,7 +257,7 @@ uint8_t *nvme_identify_controller(struct nvme_device *nvme) {
     uint64_t buffer_phys = pmm_alloc_page();
     nvme_check_dma_addr(buffer_phys, "identify buffer");
 
-    void *buffer = mmio_map(buffer_phys, PAGE_SIZE);
+    void *buffer = mmio_map_dma(buffer_phys, PAGE_SIZE);
 
     memset(buffer, 0, PAGE_SIZE);
 
@@ -304,7 +307,7 @@ uint8_t *nvme_identify_namespace(struct nvme_device *nvme, uint32_t nsid) {
     uint64_t buffer_phys = pmm_alloc_page();
     nvme_check_dma_addr(buffer_phys, "identify buffer");
 
-    void *buffer = mmio_map(buffer_phys, PAGE_SIZE);
+    void *buffer = mmio_map_dma(buffer_phys, PAGE_SIZE);
 
     memset(buffer, 0, PAGE_SIZE);
 

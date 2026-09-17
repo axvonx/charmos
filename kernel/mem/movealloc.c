@@ -38,7 +38,8 @@ static void change_slab_backing_page(void *ptr) {
         panic("Moved allocations cannot come from slab");
 }
 
-void movealloc_internal(size_t new_domain, void *ptr, enum vmm_flags flags) {
+void movealloc_internal(domain_id_t new_domain, void *ptr,
+                        enum vmm_flags flags) {
     if (global.current_bootstage >= BOOTSTAGE_COMPLETE)
         panic("movealloc cannot be called after boot completes");
 

@@ -304,7 +304,7 @@ struct slab_chunk {
     struct list_head list; /* Either on: free list, partial list, used list */
     /* Chunk allocator that owns this */
     struct slab_chunks *owner;
-    vaddr_t base_addr : 64 - PAGE_4K_SHIFT;
+    uintptr_t base_addr : 64 - PAGE_4K_SHIFT;
     enum slab_chunk_state state : 2;
 
     /* 10 bits because stride-1 chunks hold 512 slabs, and 512 needs 10 bits.

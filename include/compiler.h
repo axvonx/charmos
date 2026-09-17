@@ -51,8 +51,25 @@
 #define cc_restrict
 #endif
 
-/* Preprocessor Metaprogramming Helpers */
+#define ct_strong_int(stem, STEM, base, max_)                                  \
+    typedef enum : base {                                                      \
+        STEM##_ZERO = 0,                                                       \
+        STEM##_MIN = 0,                                                        \
+        STEM##_MAX = (max_),                                                   \
+    } stem##_t
 
+#if defined(__clang__)
+#define cc_mem(n) __attribute__((address_space(n)))
+#else
+#define cc_mem(n)
+#endif
+
+/* TODO: In the long run, we will need to add more and likely introduce
+ * a cc_mem enum identifier. today we have just one */
+
+#define cc_mem_io cc_mem(1)
+
+/* Preprocessor Metaprogramming Helpers */
 #define PP_ARG_N(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14,  \
                  _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26,   \
                  _27, _28, _29, _30, _31, _32, _33, _34, _35, _36, _37, _38,   \
@@ -133,6 +150,8 @@
 
 /* Compile-Time Type System & Metaprogramming (ct_) */
 #define ct_is_const(x) __builtin_constant_p(x)
+
+#define ct_raw(x) ((__typeof__((x) + 0)) (x))
 
 #define ct_same_type(a, b)                                                     \
     __builtin_types_compatible_p(__typeof__(a), __typeof__(b))

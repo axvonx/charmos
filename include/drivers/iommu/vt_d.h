@@ -1,5 +1,6 @@
 /* @title: VT-d */
 #pragma once
+#include <compiler.h>
 #include <console/panic.h>
 #include <console/printf.h>
 #include <drivers/iommu/iommu.h>
@@ -71,7 +72,7 @@ struct vtd_regs {
 struct vtd_invl_queue {};
 
 struct vtd_unit {
-    struct vtd_regs *regs;
+    struct vtd_regs cc_mem_io *regs;
     uint64_t cap;
     uint64_t ecap;
     uint16_t segment;

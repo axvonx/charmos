@@ -77,7 +77,7 @@ void nvme_alloc_admin_queues(struct nvme_device *nvme) {
     nvme_check_dma_addr(asq_phys, "admin submission queue");
 
     struct nvme_command *asq_virt =
-        mmio_map(asq_phys, asq_pages * nvme->page_size);
+        mmio_map_dma(asq_phys, asq_pages * nvme->page_size);
 
     memset(asq_virt, 0, asq_pages * nvme->page_size);
 
@@ -85,7 +85,7 @@ void nvme_alloc_admin_queues(struct nvme_device *nvme) {
     nvme_check_dma_addr(acq_phys, "admin completion queue");
 
     struct nvme_completion *acq_virt =
-        mmio_map(acq_phys, acq_pages * nvme->page_size);
+        mmio_map_dma(acq_phys, acq_pages * nvme->page_size);
 
     memset(acq_virt, 0, acq_pages * nvme->page_size);
 
@@ -130,11 +130,13 @@ void nvme_alloc_io_queues(struct nvme_device *nvme, uint32_t qid) {
     this_queue->sq_depth = 64; // TODO: #define these or something
     this_queue->cq_depth = 64;
     this_queue->sq_db =
-        (uint32_t *) ((uint8_t *) nvme->regs + NVME_DOORBELL_BASE +
-                      (2 * qid * nvme->doorbell_stride));
+        (uint32_t cc_mem_io *) ((uint8_t cc_mem_io *) nvme->regs +
+                                NVME_DOORBELL_BASE +
+                                (2 * qid * nvme->doorbell_stride));
     this_queue->cq_db =
-        (uint32_t *) ((uint8_t *) nvme->regs + NVME_DOORBELL_BASE +
-                      ((2 * qid + 1) * nvme->doorbell_stride));
+        (uint32_t cc_mem_io *) ((uint8_t cc_mem_io *) nvme->regs +
+                                NVME_DOORBELL_BASE +
+                                ((2 * qid + 1) * nvme->doorbell_stride));
 
     uint8_t this_isr = nvme->isr_index[qid];
 

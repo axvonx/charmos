@@ -14,7 +14,7 @@
 
 LOG_HANDLE_DECLARE_PRINT(hpet);
 
-uint64_t *hpet_base;
+uint64_t cc_mem_io *hpet_base;
 uint64_t hpet_timer_count;
 uint64_t hpet_fs_per_tick;
 

@@ -16,7 +16,7 @@
 #include <time/names.h>
 #include <time/spin_sleep.h>
 
-uint32_t *lapic;
+uint32_t cc_mem_io *lapic;
 bool x2apic_enabled = false;
 static LOG_HANDLE_DECLARE_PRINT(lapic);
 
@@ -274,7 +274,7 @@ static enum errno lapic_evdev_change_state(struct clock_evdev *ced,
 }
 
 static struct clock_evdev *lapic_clock_evdev_create(cpu_id_t core_id) {
-    static const freq_khz_t nanoseconds_per_khz_tick = 1000000;
+    static const uint64_t nanoseconds_per_khz_tick = 1000000;
 
     struct clock_evdev *ced = clock_evdev_create("lapic_timer_%zu", core_id);
 
@@ -284,7 +284,8 @@ static struct clock_evdev *lapic_clock_evdev_create(cpu_id_t core_id) {
     /* bounds based on LAPIC frequency */
     freq_khz_t freq_khz = global.cores[core_id]->lapic_khz;
 
-    ced->min_delta_ns = DIV_ROUND_UP(nanoseconds_per_khz_tick, freq_khz);
+    ced->min_delta_ns =
+        (time_ns_t) DIV_ROUND_UP(nanoseconds_per_khz_tick, freq_khz);
     ced->max_delta_ns = (0xFFFFFFFFULL * 1000000ULL) / freq_khz;
 
     ced->min_delta_ticks = 1;

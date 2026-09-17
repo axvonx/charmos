@@ -659,9 +659,9 @@ struct xhci_device {
     irq_t irq; /* What IRQ line have we routed to this? */
     struct pci_device *pci;
     struct xhci_input_ctx *input_ctx;
-    struct xhci_cap_regs *cap_regs;          /* Capability registers */
-    struct xhci_op_regs *op_regs;            /* Operational registers */
-    struct xhci_interrupter_regs *intr_regs; /* Interrupter registers */
+    struct xhci_cap_regs cc_mem_io *cap_regs; /* Capability registers */
+    struct xhci_op_regs cc_mem_io *op_regs;   /* Operational registers */
+    struct xhci_interrupter_regs cc_mem_io *intr_regs; /* Interrupter regs */
 
     struct xhci_dcbaa *dcbaa;
 
@@ -669,7 +669,7 @@ struct xhci_device {
     struct xhci_ring *cmd_ring;
     struct xhci_erst_entry *erst;
 
-    struct xhci_port_regs *port_regs;
+    struct xhci_port_regs cc_mem_io *port_regs;
     uint64_t ports;
     struct xhci_slot slots[XHCI_SLOT_COUNT];
     struct xhci_port port_info[XHCI_PORT_COUNT];

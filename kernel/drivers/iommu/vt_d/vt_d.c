@@ -59,7 +59,7 @@ enum iommu_error vtd_iq_init(struct vtd_unit *u) {
         return IOMMU_ERR_NO_MEM;
 
     u->iq_phys = phys;
-    u->iq_base = mmio_map(phys, PAGE_SIZE);
+    u->iq_base = mmio_map_dma(phys, PAGE_SIZE);
     u->iq_head = 0;
     u->iq_tail = 0;
     memset(u->iq_base, 0, PAGE_SIZE);
@@ -76,8 +76,8 @@ enum iommu_error vtd_iq_init(struct vtd_unit *u) {
 
 void vtd_iq_submit(struct vtd_unit *u, struct vtd_inv_desc desc) {
     struct vtd_inv_desc *ring = u->iq_base;
-    mmio_write_64(&ring[u->iq_tail].hi, desc.hi);
-    mmio_write_64(&ring[u->iq_tail].lo, desc.lo);
+    mmio_write_64((uint64_t cc_mem_io *) &ring[u->iq_tail].hi, desc.hi);
+    mmio_write_64((uint64_t cc_mem_io *) &ring[u->iq_tail].lo, desc.lo);
 
     u->iq_tail = (u->iq_tail + 1) % u->iq_size;
     mmio_write_64(&u->regs->invalidation_queue_tail, u->iq_tail << 4);
@@ -101,7 +101,7 @@ enum iommu_error vtd_root_table_init(struct vtd_unit *u) {
         return IOMMU_ERR_NO_MEM;
 
     u->root_table_phys = phys;
-    u->root_table = mmio_map(phys, PAGE_SIZE);
+    u->root_table = mmio_map_dma(phys, PAGE_SIZE);
     memset(u->root_table, 0, PAGE_SIZE);
 
     mmio_write_64(&u->regs->root_table_addr,
@@ -132,13 +132,13 @@ static paddr_t vtd_build_identity_sl(struct vtd_unit *u) {
     paddr_t pml4_phys = pmm_alloc_page();
     if (!pml4_phys)
         return 0;
-    uint64_t *pml4 = mmio_map(pml4_phys, PAGE_SIZE);
+    uint64_t *pml4 = mmio_map_dma(pml4_phys, PAGE_SIZE);
     memset(pml4, 0, PAGE_SIZE);
 
     paddr_t pdpt_phys = pmm_alloc_page();
     if (!pdpt_phys)
         return 0;
-    uint64_t *pdpt = mmio_map(pdpt_phys, PAGE_SIZE);
+    uint64_t *pdpt = mmio_map_dma(pdpt_phys, PAGE_SIZE);
 
     for (int i = 0; i < 512; i++) {
         pdpt[i] = ((uint64_t) i << 30) | SL_PTE_LARGE_PAGE |
@@ -178,7 +178,7 @@ static enum iommu_error vtd_passthrough_all_devices(struct vtd_unit *u) {
             if (!ctx_phys)
                 return IOMMU_ERR_NO_MEM;
 
-            void *ctx_virt = mmio_map(ctx_phys, PAGE_SIZE);
+            void *ctx_virt = mmio_map_dma(ctx_phys, PAGE_SIZE);
             memset(ctx_virt, 0, PAGE_SIZE);
 
             root[bus].lo = ROOT_ENTRY_SET_CONTEXT_TABLE_PTR(ctx_phys);
@@ -186,7 +186,7 @@ static enum iommu_error vtd_passthrough_all_devices(struct vtd_unit *u) {
         }
 
         paddr_t ctx_phys = root[bus].lo & ROOT_ENTRY_CONTEXT_TABLE_PTR_MASK;
-        struct vtd_context_entry *ctx = mmio_map(ctx_phys, PAGE_SIZE);
+        struct vtd_context_entry *ctx = mmio_map_dma(ctx_phys, PAGE_SIZE);
 
         for (int df = 0; df < 256; df++) {
             ctx[df].lo = ctx_lo;

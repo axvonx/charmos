@@ -45,7 +45,7 @@ bool ext2_block_write(struct ext2_fs *fs, struct bcache_entry *ent,
     return true;
 }
 
-struct ext2_inode *ext2_inode_read(struct ext2_fs *fs, uint32_t inode_idx,
+struct ext2_inode *ext2_inode_read(struct ext2_fs *fs, inode_t inode_idx,
                                    struct bcache_entry **out_ent) {
     if (!fs || inode_idx == 0 || inode_idx > fs->inodes_count) {
         return NULL;
@@ -79,7 +79,7 @@ struct ext2_inode *ext2_inode_read(struct ext2_fs *fs, uint32_t inode_idx,
     return inode_ptr;
 }
 
-bool ext2_inode_write(struct ext2_fs *fs, uint32_t inode_num,
+bool ext2_inode_write(struct ext2_fs *fs, inode_t inode_num,
                       const struct ext2_inode *inode) {
     uint32_t group = ext2_get_inode_group(fs, inode_num);
     uint32_t index = (inode_num - 1) % fs->inodes_per_group;
