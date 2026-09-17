@@ -12,15 +12,15 @@ void scheduler_idle_main(void *nop) {
     struct scheduler *sched = global.schedulers[smp_id_raw()];
 
     while (true) {
-        disable_interrupts();
+        irq_disable();
         if (scheduler_mark_self_needs_resched(false) ||
             sched->total_thread_count > 0 ||
             sched->completed_rbt.root != NULL) {
-            enable_interrupts();
+            irq_enable();
             scheduler_yield();
             continue;
         }
 
-        do_idle_insn();
+        cpu_idle();
     }
 }

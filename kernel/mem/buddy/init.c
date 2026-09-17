@@ -1,3 +1,4 @@
+#include <compiler_intrinsics.h>
 #include <console/printf.h>
 #include <math/align.h>
 #include <math/bit.h>
@@ -50,7 +51,7 @@ static bool is_block_free(uint64_t pfn, uint64_t order) {
 }
 
 static inline int order_base_2(uint64_t x) {
-    return 64 - __builtin_clzll(x) - 1;
+    return 64 - ci_clzll(x) - 1;
 }
 
 void buddy_add_entry(struct page *page_array, struct limine_memmap_entry *entry,

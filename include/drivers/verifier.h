@@ -1,6 +1,7 @@
 /* @title: Driver Verifier */
 #pragma once
 #include <compiler.h>
+#include <compiler_intrinsics.h>
 
 /* Comptime verification that structures matches spec
  *
@@ -24,14 +25,14 @@
                    PP_STRINGIZE(type) " is not " #bytes "-byte aligned")
 
 #define dv_field_full(type, member_type, member, offset, ...)                  \
-    _Static_assert(__builtin_offsetof(type, member) == (offset) &&             \
-                       __builtin_types_compatible_p(                           \
-                           __typeof__(((type *) 0)->member), member_type),     \
+    _Static_assert(ci_offsetof(type, member) == (offset) &&                    \
+                       ci_types_compatible_p(__typeof__(((type *) 0)->member), \
+                                             member_type),                     \
                    PP_STRINGIZE(type) "." #member " is not " #member_type      \
                                       " at " #offset)
 
 #define dv_field_at_full(type, member, offset, ...)                            \
-    _Static_assert(__builtin_offsetof(type, member) == (offset),               \
+    _Static_assert(ci_offsetof(type, member) == (offset),                      \
                    PP_STRINGIZE(type) "." #member " is not at " #offset)
 
 #define dv_size(...) dv_size_full(struct DV_STRUCT, __VA_ARGS__)

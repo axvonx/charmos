@@ -1,5 +1,6 @@
 /* @title: Assertions */
 #include <compiler.h>
+#include <compiler_intrinsics.h>
 #include <console/crash.h>
 #include <console/panic.h>
 
@@ -17,15 +18,14 @@
 #define _kassert_debug_off_dispatch(first, ...) ({ first; })
 
 #define _kassert_eval(x, msg_stmt)                                             \
-    __builtin_choose_expr(__builtin_types_compatible_p(ct_decay(x), void),     \
-                          ({ (x); }), ({                                       \
-                              ct_decay(x) _kassert_res = (x);                  \
-                              if (cc_unlikely(!(_kassert_res))) {              \
-                                  msg_stmt;                                    \
-                                  __builtin_unreachable();                     \
-                              }                                                \
-                              _kassert_res;                                    \
-                          }))
+    ci_choose_expr(ci_types_compatible_p(ct_decay(x), void), ({ (x); }), ({    \
+                       ct_decay(x) _kassert_res = (x);                         \
+                       if (cc_unlikely(!(_kassert_res))) {                     \
+                           msg_stmt;                                           \
+                           ci_unreachable();                                   \
+                       }                                                       \
+                       _kassert_res;                                           \
+                   }))
 /*
  * kassert(x)
  */
@@ -39,7 +39,7 @@
  * kassert(x, "msg")
  */
 #define _kassert_2(default, prefix, x, a)                                      \
-    __builtin_choose_expr(                                                     \
+    ci_choose_expr(                                                            \
         ct_is_str(a),                                                          \
         _kassert_eval(x, assert_impl_default(CRASH_CODE_TO_PAYLOAD(default),   \
                                              __FILE__, __LINE__, __func__,     \
@@ -55,7 +55,7 @@
  * kassert(x, CODE, "msg %d", 12)
  */
 #define _kassert_n(default, prefix, x, a, b, ...)                              \
-    __builtin_choose_expr(                                                     \
+    ci_choose_expr(                                                            \
         ct_is_str(a), /* a is format, b is first vararg */                     \
         _kassert_eval(x, assert_impl_default(CRASH_CODE_TO_PAYLOAD(default),   \
                                              __FILE__, __LINE__, __func__,     \
@@ -76,16 +76,16 @@
     _kassert_dispatch(CRASH_CODE_GENERIC, _kassert, "", __VA_ARGS__)
 
 #define kassert_with(x, payload, fmt, ...)                                     \
-    __builtin_choose_expr(                                                     \
-        __builtin_types_compatible_p(ct_decay(x), void), ({ (x); }), ({        \
-            ct_decay(x) _kassert_res = (x);                                    \
-            if (cc_unlikely(!(_kassert_res))) {                                \
-                assert_impl_default(payload, __FILE__, __LINE__, __func__, "", \
-                                    _kassert_msg(x), fmt, ##__VA_ARGS__);      \
-                __builtin_unreachable();                                       \
-            }                                                                  \
-            _kassert_res;                                                      \
-        }))
+    ci_choose_expr(ci_types_compatible_p(ct_decay(x), void), ({ (x); }), ({    \
+                       ct_decay(x) _kassert_res = (x);                         \
+                       if (cc_unlikely(!(_kassert_res))) {                     \
+                           assert_impl_default(payload, __FILE__, __LINE__,    \
+                                               __func__, "", _kassert_msg(x),  \
+                                               fmt, ##__VA_ARGS__);            \
+                           ci_unreachable();                                   \
+                       }                                                       \
+                       _kassert_res;                                           \
+                   }))
 
 #define unreachable(...)                                                       \
     _kassert_fail(CRASH_CODE_GENERIC, "unreachable! ", ##__VA_ARGS__)

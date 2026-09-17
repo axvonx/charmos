@@ -13,17 +13,17 @@ void ata_select_drive(struct ata_drive *ata_drive) {
     uint16_t base = ata_drive->io_base;
 
     outb(REG_DRIVE_HEAD(base), 0xA0 | (ata_drive->slave ? 0x10 : 0x00));
-    io_wait();
+    io_port_wait();
 }
 
 void ata_soft_reset(struct ata_drive *ata_drive) {
     uint16_t ctrl = ata_drive->ctrl_base;
 
     outb(ctrl, 0x04); // nIEN=0, SRST=1
-    io_wait();
+    io_port_wait();
 
     outb(ctrl, 0x00); // nIEN=0, SRST=0
-    io_wait();
+    io_port_wait();
 
     uint16_t base = ata_drive->io_base;
     uint64_t timeout = IDE_CMD_TIMEOUT_MS * 1000;
@@ -38,7 +38,7 @@ void ata_soft_reset(struct ata_drive *ata_drive) {
 
 bool ata_identify(struct ata_drive *ata_drive) {
     ata_select_drive(ata_drive);
-    io_wait();
+    io_port_wait();
 
     outb(REG_COMMAND(ata_drive->io_base), AHCI_CMD_IDENTIFY);
     uint8_t status = inb(REG_STATUS(ata_drive->io_base));

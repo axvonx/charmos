@@ -33,7 +33,7 @@ void vtd_wait_gsts(struct vtd_unit *u, uint32_t bit, bool set) {
         if (!set && !(s & bit))
             break;
 
-        cpu_relax(); /* pause */
+        cpu_pause(); /* pause */
     }
 }
 
@@ -92,7 +92,7 @@ void vtd_iq_flush(struct vtd_unit *u) {
     vtd_iq_submit(u, WAIT_DESC(token_phys, 1));
 
     while (wait_token != 1)
-        cpu_relax();
+        cpu_pause();
 }
 
 enum iommu_error vtd_root_table_init(struct vtd_unit *u) {

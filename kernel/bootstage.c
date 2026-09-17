@@ -76,8 +76,7 @@ static void bootstage_patch_all(enum bootstage bs) {
 
 void bootstage_advance(enum bootstage new) {
     /* disable interrupts to be safe */
-    bool ints = are_interrupts_enabled();
-    disable_interrupts();
+    bool ints = irq_disable_save();
 
     global.current_bootstage = new;
     atomic_thread_fence(memory_order_seq_cst);
@@ -87,7 +86,7 @@ void bootstage_advance(enum bootstage new) {
         bootstage_patch_all(new);
 
     if (ints)
-        enable_interrupts();
+        irq_enable();
 
     log_info_global(LOG_HANDLE(bootstage), "Reached bootstage \'%s\'",
                     bootstage_str[new]);

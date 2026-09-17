@@ -81,7 +81,7 @@ void mm_pgtable_free(struct mm *mm) {
 }
 
 void mm_activate(struct mm *mm) {
-    write_cr3(mm->pml4);
+    cr3_write(mm->pml4);
 }
 
 enum errno mm_map_page(struct mm *mm, vaddr_t va, paddr_t pa, uint64_t pflags) {

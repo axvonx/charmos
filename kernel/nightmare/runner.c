@@ -30,7 +30,7 @@ static void nightmare_exit(uint8_t code, const char *reason) {
     ndjson_bye(code, reason);
     qemu_exit(code);
     while (true)
-        cpu_relax();
+        cpu_pause();
 }
 
 const char *nightmare_result_string(enum nightmare_result result) {

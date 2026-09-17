@@ -25,6 +25,6 @@ struct idt_ptr {
     uint64_t base;
 } cc_packed;
 
-void irq_init();
-void irq_load();
+void irq_init(void);
+void idt_load(void);
 void idt_set_gate(uint8_t num, uint16_t sel, uint8_t flags);

@@ -59,14 +59,13 @@ bool ndjson_carrier_begin(bool *irqs_were_on) TSA_NO_ANALYSIS {
     if (!ndjson_carrier_online())
         return false;
 
-    *irqs_were_on = are_interrupts_enabled();
-    disable_interrupts();
+    *irqs_were_on = irq_disable_save();
 
     if (atomic_load_explicit(&carrier_panicked, memory_order_acquire)) {
         for (uint64_t i = 0; i < NDJSON_PANIC_LOCK_SPINS; i++) {
             if (raw_spin_trylock(&carrier_lock))
                 break;
-            cpu_relax();
+            cpu_pause();
         }
         return true;
     }
@@ -79,12 +78,12 @@ void ndjson_carrier_end(bool irqs_were_on) TSA_NO_ANALYSIS {
     raw_spin_unlock(&carrier_lock);
 
     if (irqs_were_on)
-        enable_interrupts();
+        irq_enable();
 }
 
 void ndjson_carrier_putc(char c) {
     while (!(inb(carrier_port + UART_LINE_STATUS) & UART_LSR_THRE))
-        cpu_relax();
+        cpu_pause();
 
     outb(carrier_port + UART_DATA, (uint8_t) c);
 }

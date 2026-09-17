@@ -1,3 +1,4 @@
+#include <compiler_intrinsics.h>
 #include <log.h>
 #include <math/range.h>
 #include <math/units.h>
@@ -119,7 +120,7 @@ static bool gap_fits(vaddr_t need_align, size_t need_size, vaddr_t gap_base,
     vaddr_t aligned = ALIGN_UP_WRAPPING(gap_base, need_align);
     uintptr_t end_raw;
     if (aligned < gap_base ||
-        __builtin_add_overflow((uintptr_t) aligned, need_size, &end_raw))
+        ci_add_overflow((uintptr_t) aligned, need_size, &end_raw))
         return false;
     vaddr_t end = (vaddr_t) end_raw;
     if (aligned < gap_end && end <= gap_end) {

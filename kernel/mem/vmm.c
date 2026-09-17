@@ -1,6 +1,7 @@
 #include <acpi/lapic.h>
 #include <cmdline.h>
 #include <compiler.h>
+#include <compiler_intrinsics.h>
 #include <console/printf.h>
 #include <global.h>
 #include <irq/idt.h>
@@ -115,8 +116,8 @@ void pte_unlock(pte_t *pt, enum irql irql) TSA_NO_ANALYSIS {
 }
 
 static void barrier_and_shootdown(enum vmm_flags flags, vaddr_t virt) {
-    memory_barrier();
-    invlpg(virt);
+    cpu_memory_barrier();
+    tlb_invlpg(virt);
 
     if (!(flags & VMM_FLAG_NO_TLB_SHOOTDOWN))
         tlb_shootdown(virt, true);
@@ -706,7 +707,7 @@ enum errno vmm_map_aliased(vaddr_t virt, size_t len, paddr_t phys,
 
     /* Fresh mappings over non-present entries, so no stale translation can
      * exist, although previously speculative walks may have cached */
-    memory_barrier();
+    cpu_memory_barrier();
     if (!(vflags & VMM_FLAG_NO_TLB_SHOOTDOWN))
         tlb_shootdown(virt, true);
 
@@ -1006,7 +1007,7 @@ static pte_t vmm_walk_leaf(struct page_table *root, vaddr_t virt,
 
         /* assert so that clang inlines this instead of creating a call to
          * __atomic_load (from c lib, breaks under -nostdlib), gcc inlines */
-        snap = atomic_load_explicit((_Atomic pte_t *) __builtin_assume_aligned(
+        snap = atomic_load_explicit((_Atomic pte_t *) ci_assume_aligned(
                                         &table->entries[index], sizeof(pte_t)),
                                     memory_order_acquire);
 
@@ -1027,7 +1028,7 @@ static pte_t vmm_walk_leaf(struct page_table *root, vaddr_t virt,
 #pragma GCC diagnostic ignored "-Waddress-of-packed-member"
 
     snap = atomic_load_explicit(
-        (_Atomic pte_t *) __builtin_assume_aligned(
+        (_Atomic pte_t *) ci_assume_aligned(
             &table->entries[pt_index(virt, PT_LEVEL_PT)], sizeof(pte_t)),
         memory_order_acquire);
 

@@ -2,6 +2,7 @@
 #include <acpi/lapic.h>
 #include <asm.h>
 #include <bootstage.h>
+#include <compiler_intrinsics.h>
 #include <console/crash.h>
 #include <console/panic_scene.h>
 #include <console/printf.h>
@@ -80,11 +81,11 @@ void crash_nmi_handoff(void *p, struct irq_registers *irqc) {
     this_regs_buf->rdx = irqc->rdx;
     this_regs_buf->rip = irqc->rip;
     this_regs_buf->rflags = irqc->rflags;
-    this_regs_buf->cr2 = read_cr2();
-    this_regs_buf->cr3 = read_cr3();
+    this_regs_buf->cr2 = cr2_read();
+    this_regs_buf->cr3 = cr3_read();
     atomic_store(PERCPU_PTR(TOPC_NONE, crash_quiesced), 1);
     while (1)
-        hcf();
+        cpu_freeze();
 }
 
 void crash_broadcast_nmi(void) {
@@ -92,7 +93,7 @@ void crash_broadcast_nmi(void) {
 }
 
 void panic_handler(struct crash_regs *regs) {
-    disable_interrupts();
+    irq_disable();
 
     if (PERCPU_READY(crash_regs)) {
         PERCPU_READ(TOPC_NONE, crash_regs) = *regs;
@@ -310,8 +311,8 @@ static void crash_backtrace_panel(struct report_target *tgt,
             nr += stack_unwind(regs->rbp, entries + nr,
                                STACK_TRACE_MAX_DEPTH - nr);
         else
-            nr += stack_unwind((uint64_t) __builtin_frame_address(0),
-                               entries + nr, STACK_TRACE_MAX_DEPTH - nr);
+            nr += stack_unwind((uint64_t) ci_frame_address(0), entries + nr,
+                               STACK_TRACE_MAX_DEPTH - nr);
     }
 
     if (!debug_syms_present())
@@ -650,8 +651,8 @@ static void crash_emit_ndjson_records(const struct crash_context *ctx,
             nr += stack_unwind(regs->rbp, entries + nr,
                                STACK_TRACE_MAX_DEPTH - nr);
         else
-            nr += stack_unwind((uint64_t) __builtin_frame_address(0),
-                               entries + nr, STACK_TRACE_MAX_DEPTH - nr);
+            nr += stack_unwind((uint64_t) ci_frame_address(0), entries + nr,
+                               STACK_TRACE_MAX_DEPTH - nr);
     }
 
     for (size_t i = 0; i < nr; i++) {
@@ -812,7 +813,7 @@ static void crash_report_raw_serial(const struct crash_context *ctx,
 }
 
 cc_noreturn void crash_full(const struct crash_context *ctx) TSA_NO_ANALYSIS {
-    disable_interrupts();
+    irq_disable();
 
     uint32_t depth =
         atomic_fetch_add_explicit(&crash_depth, 1, memory_order_relaxed);
@@ -824,7 +825,7 @@ cc_noreturn void crash_full(const struct crash_context *ctx) TSA_NO_ANALYSIS {
         qemu_exit(QEMU_EXIT_PANIC);
 #endif
         while (true)
-            wait_for_interrupt();
+            cpu_halt();
     }
 
     if (depth == 0)
@@ -882,7 +883,7 @@ cc_noreturn void crash_full(const struct crash_context *ctx) TSA_NO_ANALYSIS {
 #endif
 
     while (true)
-        wait_for_interrupt();
+        cpu_halt();
 }
 
 static int cmp_facility_prefix(const void *key, const void *elem) {

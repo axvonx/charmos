@@ -10,7 +10,7 @@ static void sleep_hpet_fs(uint64_t femtoseconds) {
 
     uint64_t start = hpet_read64(HPET_MAIN_COUNTER_OFFSET);
     while ((hpet_read64(HPET_MAIN_COUNTER_OFFSET) - start) < ticks_to_wait) {
-        cpu_relax();
+        cpu_pause();
     }
 }
 

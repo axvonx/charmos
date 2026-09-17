@@ -847,7 +847,7 @@ void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
 
     /*
     while (1)
-        wait_for_interrupt(); */
+        cpu_halt(); */
 
 #endif
 

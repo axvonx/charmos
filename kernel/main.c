@@ -67,7 +67,7 @@ struct globals global = {0};
 #define BEHAVIOR /* avoids undefined behavior */
 
 cc_no_sanitize_address void k_main(void) {
-    disable_interrupts();
+    irq_disable();
     global.core_count = mp_request.response->cpu_count;
     global.hhdm_offset = hhdm_request.response->offset;
     global.pt_epoch = 1;
@@ -99,7 +99,7 @@ cc_no_sanitize_address void k_main(void) {
     stack_depot_init();
     log_sites_init();
     bootstage_advance(BOOTSTAGE_EARLY_ALLOCATORS);
-    gdt_install();
+    gdt_load();
     syscall_setup(syscall_entry);
     smp_setup_bsp();
 

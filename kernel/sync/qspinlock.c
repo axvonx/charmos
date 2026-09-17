@@ -52,7 +52,7 @@ void qspin_lock_slowpath(struct qspinlock *lock, uint32_t val) {
                 while ((val = atomic_load_explicit(&lock->val,
                                                    memory_order_relaxed)) &
                        Q_SPIN_LOCKED_MASK)
-                    cpu_relax();
+                    cpu_pause();
 
                 /* pending -> locked: -0x100 + 1 */
                 atomic_fetch_add_explicit(
@@ -69,7 +69,7 @@ void qspin_lock_slowpath(struct qspinlock *lock, uint32_t val) {
     /* Fallback if not ready */
     if (cc_unlikely(!PERCPU_READY(qnodes))) {
         while (!qspin_trylock_physical(lock))
-            cpu_relax();
+            cpu_pause();
         return;
     }
 
@@ -103,14 +103,14 @@ void qspin_lock_slowpath(struct qspinlock *lock, uint32_t val) {
 
         /* The signal will propagate to us */
         while (!atomic_load_explicit(&node->locked, memory_order_acquire))
-            cpu_relax();
+            cpu_pause();
     }
 
     /* We're at the head now, wait for pending, at this point no new CPU
      * will be able to set PENDING as they're failing on Q_SPIN_TAIL_MASK */
     while ((val = atomic_load_explicit(&lock->val, memory_order_relaxed)) &
            Q_SPIN_LOCKED_PENDING_MASK)
-        cpu_relax();
+        cpu_pause();
 
     /* If no one new joined, clear the tail and claim the lock, or claim
      * lock + notify the successor to us */
@@ -125,12 +125,12 @@ void qspin_lock_slowpath(struct qspinlock *lock, uint32_t val) {
                                      memory_order_acquire);
             break;
         }
-        cpu_relax();
+        cpu_pause();
     }
 
     /* successor links */
     while (!atomic_load_explicit(&node->next, memory_order_acquire))
-        cpu_relax();
+        cpu_pause();
 
     struct qnode *next_node =
         atomic_load_explicit(&node->next, memory_order_relaxed);

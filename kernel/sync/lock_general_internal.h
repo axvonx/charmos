@@ -24,5 +24,5 @@ static inline void lock_delay(size_t backoff, size_t pct) {
     backoff += jitter;
 
     for (size_t i = 0; i < backoff; i++)
-        cpu_relax();
+        cpu_pause();
 }

@@ -77,7 +77,7 @@ static void lapic_write_icr(uint8_t apic_id, uint8_t vector) {
 static void lapic_send_ipi(uint8_t apic_id, uint8_t vector) {
     enum irql irql = irql_raise(IRQL_HIGH_LEVEL);
     while (lapic_read(LAPIC_ICR_LOW) & LAPIC_IPI_IN_FLIGHT)
-        cpu_relax();
+        cpu_pause();
 
     lapic_write_icr(apic_id, vector);
     irql_lower(irql);
@@ -145,7 +145,7 @@ void nmi_send(uint32_t apic_id) {
     lapic_write(LAPIC_ICR_LOW, lo);
 
     while (lapic_read(LAPIC_ICR_LOW) & LAPIC_IPI_IN_FLIGHT)
-        cpu_relax();
+        cpu_pause();
 }
 
 static int cpu_has_x2apic(void) {

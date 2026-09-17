@@ -12,7 +12,7 @@
 
 bool atapi_identify(struct ata_drive *ide) {
     ata_select_drive(ide);
-    io_wait();
+    io_port_wait();
 
     outb(REG_COMMAND(ide->io_base), 0xA1);
     uint8_t status = inb(REG_STATUS(ide->io_base));
@@ -46,7 +46,7 @@ bool atapi_read_sector(struct block_device *disk, uint64_t lba, uint8_t *buffer,
     uint16_t io = atapi->io_base;
 
     outb(REG_DRIVE_HEAD(io), atapi->slave ? 0xB0 : 0xA0);
-    io_wait();
+    io_port_wait();
 
     outb(REG_FEATURES(io), 0);
     outb(REG_LBA_MID(io), ATAPI_SECTOR_SIZE & 0xFF);

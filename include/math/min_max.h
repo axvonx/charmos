@@ -1,6 +1,7 @@
 /* @title: Min, Max, Clamping, and Absolute Value */
 #pragma once
 #include <compiler.h>
+#include <compiler_intrinsics.h>
 #include <kassert.h>
 #include <stdbool.h>
 
@@ -11,7 +12,7 @@
         __typeof__(__n) __result = __n;                                        \
         if (__n < 0) {                                                         \
             bool __overflow =                                                  \
-                __builtin_sub_overflow((__typeof__(__n)) 0, __n, &__result);   \
+                ci_sub_overflow((__typeof__(__n)) 0, __n, &__result);          \
             (void) kassert(!__overflow);                                       \
         }                                                                      \
         __result;                                                              \

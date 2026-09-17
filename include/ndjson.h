@@ -1,6 +1,7 @@
 /* @title: NDJSON */
 #pragma once
 #include <compiler.h>
+#include <compiler_intrinsics.h>
 #include <linker/symbols.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -113,7 +114,7 @@ LINKER_SECTION_DEFINE(struct ndjson_record, ndjson_records);
 #define NDJSON_DESC__(id, t, n)                                                \
     {.name = #n,                                                               \
      .type = NDJSON_TYPE_##t,                                                  \
-     .offset = (uint16_t) __builtin_offsetof(struct __ndjson_args_##id, n)},
+     .offset = (uint16_t) ci_offsetof(struct __ndjson_args_##id, n)},
 
 /* Apply f(a, x) to each x with constant a */
 #define NDJSON_MAP_1(f, a, x) f(a, x)

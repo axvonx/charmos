@@ -227,7 +227,7 @@ static inline void folio_lock(struct folio *f) {
             break;
 
         while (folio_test_flag(f, FOLIO_FLAG_LOCKED))
-            cpu_relax();
+            cpu_pause();
     }
 }
 

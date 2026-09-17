@@ -90,7 +90,7 @@ static void chaos_apc_fn(void *arg) {
 
     atomic_fetch_add_explicit(&chaos_apc_lock_taken, 1, memory_order_relaxed);
     for (volatile int j = 0; j < 10; j++)
-        cpu_relax();
+        cpu_pause();
     spin_unlock(&chaos_fuzz_spin, irql);
 }
 
@@ -145,7 +145,7 @@ static void chaos_sleeper(void *arg) {
     atomic_store(&states[id].alive, true);
 
     while (!atomic_load(&starter_ok))
-        cpu_relax();
+        cpu_pause();
 
     for (size_t i = 0; i < chaos_iters_count; i++) {
         atomic_fetch_add_explicit(&chaos_iters[id], 1, memory_order_relaxed);
@@ -153,26 +153,26 @@ static void chaos_sleeper(void *arg) {
         /* Exercise mutex */
         mutex_lock(&chaos_fuzz_mtx);
         for (volatile int j = 0; j < (int) (prng_next() & 0xF); j++)
-            cpu_relax();
+            cpu_pause();
         mutex_unlock(&chaos_fuzz_mtx);
 
         /* Exercise rwlock */
         if (prng_next() & 1) {
             rw_lock(&chaos_fuzz_rw, RWLOCK_READ);
             for (volatile int j = 0; j < (int) (prng_next() & 0xF); j++)
-                cpu_relax();
+                cpu_pause();
             rw_unlock(&chaos_fuzz_rw);
         } else {
             rw_lock(&chaos_fuzz_rw, RWLOCK_WRITE);
             for (volatile int j = 0; j < (int) (prng_next() & 0xF); j++)
-                cpu_relax();
+                cpu_pause();
             rw_unlock(&chaos_fuzz_rw);
         }
 
         /* Exercise qspinlock */
         enum irql irql = qspin_lock(&chaos_fuzz_qspin);
         for (volatile int j = 0; j < (int) (prng_next() & 0xF); j++)
-            cpu_relax();
+            cpu_pause();
         qspin_unlock(&chaos_fuzz_qspin, irql);
 
         /* Sleep and wait for waker */

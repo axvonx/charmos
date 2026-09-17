@@ -176,7 +176,7 @@ lock_chk_acq_req_make(struct lock_chk_lock *lock,
         .prev_irql = irql_get(),
         .subclass = subclass,
         .op_flags = flags,
-        .irqs_enabled = are_interrupts_enabled(),
+        .irqs_enabled = irqs_enabled(),
         .in_irq = irq_in_interrupt(),
         .in_nmi = irq_in_nmi(),
     };

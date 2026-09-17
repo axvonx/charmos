@@ -1,5 +1,6 @@
 import json
 import shutil
+import signal
 import subprocess
 import time
 from collections.abc import Callable, Sequence
@@ -99,10 +100,28 @@ class BootResult:
     crashed: bool = False
     console_log: Path | None = None
     machine_log: Path | None = None
+    attempts: list["BootAttempt"] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
         return self.status in (BootStatus.OK.value, BootStatus.FINDING.value)
+
+    @property
+    def recovered_infrastructure(self) -> bool:
+        return self.ok and any(
+            attempt.status == BootStatus.INFRA.value for attempt in self.attempts[:-1]
+        )
+
+
+@dataclass(frozen=True)
+class BootAttempt:
+    attempt: int
+    duration_ms: int
+    exit_code: int
+    status: str
+    reason: str
+    console_log: Path
+    machine_log: Path
 
 
 @dataclass
@@ -490,6 +509,13 @@ def _result_from_logs(
     elif exit_code == 4:
         status = BootStatus.FAIL.value
         reason = "harness_fail"
+    elif exit_code < 0:
+        status = BootStatus.INFRA.value
+        try:
+            signal_name = signal.Signals(-exit_code).name.lower()
+        except ValueError:
+            signal_name = f"signal_{-exit_code}"
+        reason = f"qemu_{signal_name}"
     elif exit_code != 0:
         status = BootStatus.FAIL.value
         reason = f"exit_code_{exit_code}"
@@ -513,6 +539,15 @@ def _result_from_logs(
         crashed=crashed,
         console_log=console_log_path,
         machine_log=machine_log_path,
+    )
+
+
+def _is_retryable_qemu_crash(result: BootResult) -> bool:
+    return (
+        result.status == BootStatus.INFRA.value
+        and result.exit_code < 0
+        and not result.crashed
+        and not result.findings
     )
 
 
@@ -613,6 +648,8 @@ class QemuBootRunner:
 class BundleBootRunner:
     """Repack and boot a verified compile-once bundle."""
 
+    MAX_QEMU_ATTEMPTS = 4
+
     _DEBUG_EXIT: ClassVar[dict[int, int]] = {
         1: 0,
         3: 1,
@@ -649,12 +686,9 @@ class BundleBootRunner:
             repo_root=self.repo_root,
         )
         disk_path = boot_dir / "disk.img"
-        shutil.copy2(self.bundle.pristine_disk, disk_path)
         console_log_path = boot_dir / "console.log"
         machine_log_path = boot_dir / "machine.nd.log"
-        machine_log_path.unlink(missing_ok=True)
         qmp_socket = boot_dir / "qmp.sock"
-        qmp_socket.unlink(missing_ok=True)
         command = bundle_model.qemu_command(
             self.bundle,
             iso_path=repacked.iso_path,
@@ -664,52 +698,91 @@ class BundleBootRunner:
             qmp_socket=qmp_socket,
         )
 
-        started = time.monotonic()
-        timed_out = False
-        try:
-            completed = subprocess.run(
-                command,
-                cwd=boot_dir,
-                capture_output=True,
-                text=True,
-                timeout=max(5.0, timeout_ms / 1000.0),
+        attempts: list[BootAttempt] = []
+        result: BootResult | None = None
+
+        for attempt in range(1, self.MAX_QEMU_ATTEMPTS + 1):
+            shutil.copy2(self.bundle.pristine_disk, disk_path)
+            machine_log_path.unlink(missing_ok=True)
+            qmp_socket.unlink(missing_ok=True)
+
+            started = time.monotonic()
+            timed_out = False
+            try:
+                completed = subprocess.run(
+                    command,
+                    cwd=boot_dir,
+                    capture_output=True,
+                    text=True,
+                    timeout=max(5.0, timeout_ms / 1000.0),
+                )
+                exit_code = self._DEBUG_EXIT.get(
+                    completed.returncode, completed.returncode
+                )
+                console_log_path.write_text(
+                    completed.stdout + completed.stderr, encoding="utf-8"
+                )
+            except subprocess.TimeoutExpired as error:
+                timed_out = True
+                exit_code = R.EXIT_TIMEOUT
+                stdout = (
+                    error.stdout
+                    if isinstance(error.stdout, str)
+                    else (error.stdout or b"").decode("utf-8", "replace")
+                )
+                stderr = (
+                    error.stderr
+                    if isinstance(error.stderr, str)
+                    else (error.stderr or b"").decode("utf-8", "replace")
+                )
+                console_log_path.write_text(stdout + stderr, encoding="utf-8")
+            except OSError as error:
+                exit_code = 127
+                console_log_path.write_text(
+                    f"Execution failed: {error}\n", encoding="utf-8"
+                )
+            duration_ms = int((time.monotonic() - started) * 1000)
+            if not machine_log_path.exists():
+                machine_log_path.write_text("", encoding="utf-8")
+
+            result = _result_from_logs(
+                boot_index=boot_index,
+                task_name=task.name,
+                cmdline=cmdline,
+                duration_ms=duration_ms,
+                exit_code=exit_code,
+                timed_out=timed_out,
+                console_log_path=console_log_path,
+                machine_log_path=machine_log_path,
             )
-            exit_code = self._DEBUG_EXIT.get(completed.returncode, completed.returncode)
-            console_log_path.write_text(
-                completed.stdout + completed.stderr, encoding="utf-8"
+            attempt_dir = boot_dir / "attempts" / f"attempt-{attempt:02d}"
+            attempt_dir.mkdir(parents=True, exist_ok=True)
+            attempt_console = attempt_dir / "console.log"
+            attempt_machine = attempt_dir / "machine.nd.log"
+            shutil.copy2(console_log_path, attempt_console)
+            shutil.copy2(machine_log_path, attempt_machine)
+            attempts.append(
+                BootAttempt(
+                    attempt=attempt,
+                    duration_ms=duration_ms,
+                    exit_code=exit_code,
+                    status=result.status,
+                    reason=result.reason,
+                    console_log=attempt_console,
+                    machine_log=attempt_machine,
+                )
             )
-        except subprocess.TimeoutExpired as error:
-            timed_out = True
-            exit_code = R.EXIT_TIMEOUT
-            stdout = (
-                error.stdout
-                if isinstance(error.stdout, str)
-                else (error.stdout or b"").decode("utf-8", "replace")
-            )
-            stderr = (
-                error.stderr
-                if isinstance(error.stderr, str)
-                else (error.stderr or b"").decode("utf-8", "replace")
-            )
-            console_log_path.write_text(stdout + stderr, encoding="utf-8")
-        except OSError as error:
-            exit_code = 127
-            console_log_path.write_text(
-                f"Execution failed: {error}\n", encoding="utf-8"
-            )
-        duration_ms = int((time.monotonic() - started) * 1000)
-        if not machine_log_path.exists():
-            machine_log_path.write_text("", encoding="utf-8")
-        return _result_from_logs(
-            boot_index=boot_index,
-            task_name=task.name,
-            cmdline=cmdline,
-            duration_ms=duration_ms,
-            exit_code=exit_code,
-            timed_out=timed_out,
-            console_log_path=console_log_path,
-            machine_log_path=machine_log_path,
-        )
+
+            # QEMU has very rarely crashed in CI. we should
+            # give it a shot and retry anyways though
+            if not _is_retryable_qemu_crash(result):
+                break
+
+        if result is None:  # the bounded loop always executes at least once
+            raise AssertionError("QEMU attempt loop did not execute")
+        result.duration_ms = sum(item.duration_ms for item in attempts)
+        result.attempts = attempts
+        return result
 
 
 class CampaignRunner:
@@ -932,6 +1005,9 @@ def render_json(result: CampaignResult) -> str:
             "total_duration_ms": result.total_duration_ms,
             "tail_unused_ms": result.tail_unused_ms,
             "unique_findings": len(result.findings),
+            "recovered_infrastructure_boots": sum(
+                boot.recovered_infrastructure for boot in result.boots
+            ),
         },
         "findings": [
             {
@@ -960,6 +1036,17 @@ def render_json(result: CampaignResult) -> str:
                 "reason": b.reason,
                 "progress": b.progress,
                 "findings_count": len(b.findings),
+                "recovered_infrastructure": b.recovered_infrastructure,
+                "attempts": [
+                    {
+                        "attempt": attempt.attempt,
+                        "duration_ms": attempt.duration_ms,
+                        "exit_code": attempt.exit_code,
+                        "status": attempt.status,
+                        "reason": attempt.reason,
+                    }
+                    for attempt in b.attempts
+                ],
             }
             for b in result.boots
         ],
@@ -987,6 +1074,7 @@ def render_markdown(result: CampaignResult) -> str:
         f"- **Boots**: {result.total_boots} total ({result.completed_boots} completed, {result.finding_boots} with findings, {result.failed_boots} failed, {result.stalled_boots} stalled, {result.skipped_boots} skipped)",
         f"- **Cumulative Progress**: {result.total_progress:,} iterations",
         f"- **Duration**: {result.total_duration_ms / 1000.0:.2f}s (unused tail: {result.tail_unused_ms / 1000.0:.2f}s)",
+        f"- **Recovered infrastructure boots**: {sum(boot.recovered_infrastructure for boot in result.boots)}",
         "",
     ]
 
@@ -1014,14 +1102,14 @@ def render_markdown(result: CampaignResult) -> str:
         [
             "## Boots",
             "",
-            "| Boot | Task | Seed | Duration | Exit | Status | Progress | Findings |",
-            "|---|---|---|---|---|---|---|---|",
+            "| Boot | Task | Seed | Duration | Exit | Status | Attempts | Progress | Findings |",
+            "|---|---|---|---|---|---|---|---|---|",
         ]
     )
     for b in result.boots:
         seed_str = f"0x{b.seed:016x}" if b.seed is not None else "-"
         lines.append(
-            f"| {b.boot_index} | {b.task_name} | {seed_str} | {b.duration_ms}ms | {b.exit_code} | `{b.status}` | {b.progress:,} | {len(b.findings)} |"
+            f"| {b.boot_index} | {b.task_name} | {seed_str} | {b.duration_ms}ms | {b.exit_code} | `{b.status}` | {max(1, len(b.attempts))} | {b.progress:,} | {len(b.findings)} |"
         )
     lines.append("")
 

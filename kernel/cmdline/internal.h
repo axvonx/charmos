@@ -2,6 +2,7 @@
 
 #include <asm.h>
 #include <cmdline.h>
+#include <compiler_intrinsics.h>
 #include <console/panic.h>
 #include <console/printf.h>
 #include <errno.h>
@@ -144,7 +145,7 @@ cmdline_entry_get_accepted_mask(const struct cmdline_entry *e) {
 static inline enum cmdline_type
 cmdline_entry_effective_type(const struct cmdline_entry *e) {
     if (e->types != 0 && !(e->types & (e->types - 1)))
-        return (enum cmdline_type) __builtin_ctzll(e->types);
+        return (enum cmdline_type) ci_ctzll(e->types);
     if (e->value.mode == CMDLINE_MODE_VAR)
         return cmdline_type_enum_to_cmdline_type(e->value.c_type);
     return e->value.type;

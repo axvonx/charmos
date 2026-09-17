@@ -1,5 +1,6 @@
 /* @title: Kernel Panic Interface */
 #pragma once
+#include <compiler_intrinsics.h>
 #include <console/crash.h>
 
 cc_noreturn void panic_impl_default(struct crash_payload payload,
@@ -21,7 +22,7 @@ cc_noreturn void panic_impl_default(struct crash_payload payload,
  * panic("msg")
  */
 #define _panic_1(default, x)                                                   \
-    __builtin_choose_expr(                                                     \
+    ci_choose_expr(                                                            \
         ct_is_str(x),                                                          \
         panic_impl_default(CRASH_CODE_TO_PAYLOAD(default), __FILE__, __LINE__, \
                            __func__, ct_as_str(x)),                            \
@@ -32,7 +33,7 @@ cc_noreturn void panic_impl_default(struct crash_payload payload,
  * panic("msg %d", 12)
  */
 #define _panic_2(default, x, y)                                                \
-    __builtin_choose_expr(                                                     \
+    ci_choose_expr(                                                            \
         ct_is_str(x),                                                          \
         panic_impl_default(CRASH_CODE_TO_PAYLOAD(default), __FILE__, __LINE__, \
                            __func__, ct_as_str(x),                             \
@@ -45,7 +46,7 @@ cc_noreturn void panic_impl_default(struct crash_payload payload,
  * panic("msg %d %d", 12, 13)
  */
 #define _panic_n(default, x, y, ...)                                           \
-    __builtin_choose_expr(                                                     \
+    ci_choose_expr(                                                            \
         ct_is_str(x),                                                          \
         panic_impl_default(CRASH_CODE_TO_PAYLOAD(default), __FILE__, __LINE__, \
                            __func__, ct_as_str(x), y, ##__VA_ARGS__),          \

@@ -562,7 +562,7 @@ bool topology_contract_verify(struct topology_contract c) {
         bool valid = false;
 
         if (caller & TOPC_IFLAG)
-            valid = !are_interrupts_enabled();
+            valid = !irqs_enabled();
 
         valid = valid || global.current_bootstage < BOOTSTAGE_LATE;
 

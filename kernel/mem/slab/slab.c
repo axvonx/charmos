@@ -120,6 +120,7 @@
  *
  */
 
+#include <compiler_intrinsics.h>
 #include <console/printf.h>
 #include <kassert.h>
 #include <math/align.h>
@@ -485,7 +486,7 @@ static void *slab_alloc_from(struct slab_cache *cache, stack_handle_t handle,
     for (size_t w = 0; w < nwords; w++) {
         if (bm[w] != UINT64_MAX) {
             uint64_t free_bits = ~bm[w];
-            uint64_t bit = __builtin_ctzll(free_bits);
+            uint64_t bit = ci_ctzll(free_bits);
             uint64_t i = w * 64 + bit;
 
             if (i >= cache->objs_per_slab)
@@ -1548,8 +1549,7 @@ void *kmalloc_internal(size_t size, enum alloc_flags flags,
 #ifdef DEBUG_SLAB_DEEP
     /* Track the REAL caller (this function is the public entry point). */
     if (p)
-        slab_track_event((vaddr_t) p, (uint64_t) __builtin_return_address(0), 0,
-                         true);
+        slab_track_event((vaddr_t) p, (uint64_t) ci_return_address(0), 0, true);
 #endif
 
     return p;
@@ -1565,8 +1565,7 @@ void kfree_internal(void *p, enum alloc_behavior behavior) {
     }
 
 #ifdef DEBUG_SLAB_DEEP
-    slab_track_event((vaddr_t) p, (uint64_t) __builtin_return_address(0), 0,
-                     false);
+    slab_track_event((vaddr_t) p, (uint64_t) ci_return_address(0), 0, false);
 #endif
 
 #ifdef DEBUG_SLAB

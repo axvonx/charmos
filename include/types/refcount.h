@@ -89,7 +89,7 @@ static inline bool refcount_dec_and_test(refcount_t *rc) {
                 return true;                                                   \
             }                                                                  \
                                                                                \
-            cpu_relax();                                                       \
+            cpu_pause();                                                       \
         }                                                                      \
     }
 

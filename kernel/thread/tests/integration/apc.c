@@ -19,7 +19,7 @@ static void the_apc_destroy(struct apc *apc) {
 
 static void apc_thread(void *) {
     while (!atomic_load(&apc_ran))
-        cpu_relax();
+        cpu_pause();
 }
 
 static struct thread *ted = NULL;

@@ -48,7 +48,7 @@ freq_hz_t tsc_calibrate_hpet(void) {
     time_us_t target_us = start_us + 20000; /* 20 ms calibration window */
 
     while (hpet_timestamp_us() < target_us)
-        cpu_relax();
+        cpu_pause();
 
     uint64_t end_tsc = rdtsc_ordered();
     time_us_t end_us = hpet_timestamp_us();
@@ -73,7 +73,7 @@ bool tsc_sync_check_bsp(cpu_id_t ap_cpu) {
                               memory_order_release);
         while (atomic_load_explicit(&mailboxes[ap_cpu].stage,
                                     memory_order_acquire) != 2)
-            cpu_relax();
+            cpu_pause();
 
         /* Sample T0, signal AP to sample its TSC */
         uint64_t t0 = rdtsc_ordered();
@@ -82,7 +82,7 @@ bool tsc_sync_check_bsp(cpu_id_t ap_cpu) {
 
         while (atomic_load_explicit(&mailboxes[ap_cpu].stage,
                                     memory_order_acquire) != 4)
-            cpu_relax();
+            cpu_pause();
 
         uint64_t t1 = rdtsc_ordered();
         uint64_t t_ap = atomic_load_explicit(&mailboxes[ap_cpu].ap_tsc,
@@ -131,13 +131,13 @@ void tsc_sync_check_ap(cpu_id_t self) {
     for (int i = 0; i < TSC_SYNC_ROUNDS; i++) {
         while (atomic_load_explicit(&mailboxes[self].stage,
                                     memory_order_acquire) != 1)
-            cpu_relax();
+            cpu_pause();
 
         atomic_store_explicit(&mailboxes[self].stage, 2, memory_order_release);
 
         while (atomic_load_explicit(&mailboxes[self].stage,
                                     memory_order_acquire) != 3)
-            cpu_relax();
+            cpu_pause();
 
         uint64_t ap = rdtsc_ordered();
         atomic_store_explicit(&mailboxes[self].ap_tsc, ap,

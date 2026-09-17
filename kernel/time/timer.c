@@ -138,7 +138,7 @@ static inline void timer_fn_call(struct timer *timer) {
 
 static inline void timer_sync_wait_spin() {
     for (int i = 0; i < TIMER_SYNC_SPIN_TIMES; i++)
-        cpu_relax();
+        cpu_pause();
 }
 
 static void timer_dpc(void *ctx) {

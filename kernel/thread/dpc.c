@@ -89,7 +89,7 @@ static void dpc_queue_enqueue(struct dpc_queue *dq, struct dpc *d) {
                                                   memory_order_relaxed)) {
             break;
         }
-        cpu_relax();
+        cpu_pause();
     }
 }
 

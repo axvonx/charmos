@@ -30,20 +30,20 @@ TEST_DECLARE_UNIT(raw_spinlock, physical_operations) {
 
 TEST_DECLARE_UNIT(raw_spinlock, irq_restore) {
     struct raw_spinlock lock = RAW_SPINLOCK_INIT;
-    bool entry_irqs_enabled = are_interrupts_enabled();
+    bool entry_irqs_enabled = irqs_enabled();
 
     bool saved_irqs_enabled = raw_spin_lock_irq_disable(&lock);
-    bool disabled_while_held = !are_interrupts_enabled();
+    bool disabled_while_held = !irqs_enabled();
     raw_spin_unlock_irq_restore(&lock, saved_irqs_enabled);
-    bool restored_entry_state = are_interrupts_enabled() == entry_irqs_enabled;
+    bool restored_entry_state = irqs_enabled() == entry_irqs_enabled;
 
-    disable_interrupts();
+    irq_disable();
     bool saved_disabled_state = raw_spin_lock_irq_disable(&lock);
     raw_spin_unlock_irq_restore(&lock, saved_disabled_state);
-    bool remained_disabled = !are_interrupts_enabled();
+    bool remained_disabled = !irqs_enabled();
 
     if (entry_irqs_enabled)
-        enable_interrupts();
+        irq_enable();
 
     TEST_ASSERT_EQ(saved_irqs_enabled, entry_irqs_enabled);
     TEST_ASSERT(disabled_while_held);

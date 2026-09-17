@@ -1,6 +1,7 @@
 /* @title: Per-CPU structure */
 #pragma once
 #include <compiler.h>
+#include <compiler_intrinsics.h>
 #include <console/panic.h>
 #include <math/bit.h>
 #include <sch/irql.h>
@@ -150,7 +151,7 @@ void smp_caller_verify(enum topology_caller caller);
         case 2: _raw = smp_read16(offsetof(struct core, member)); break;       \
         case 4: _raw = smp_read32(offsetof(struct core, member)); break;       \
         case 8: _raw = smp_read64(offsetof(struct core, member)); break;       \
-        default: __builtin_unreachable();                                      \
+        default: ci_unreachable();                                             \
         }                                                                      \
         (typeof(ct_decay(((struct core *) 0)->member))) (uintptr_t) _raw;      \
     })
@@ -200,7 +201,7 @@ void smp_caller_verify(enum topology_caller caller);
             smp_write32(offsetof(struct core, member), (uint32_t) _raw);       \
             break;                                                             \
         case 8: smp_write64(offsetof(struct core, member), _raw); break;       \
-        default: __builtin_unreachable();                                      \
+        default: ci_unreachable();                                             \
         }                                                                      \
     } while (0)
 

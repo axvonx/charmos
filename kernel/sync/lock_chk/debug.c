@@ -15,7 +15,7 @@ static bool debug_is_active(void) {
 }
 
 static struct lock_debug_cpu *debug_cpu_here(void) {
-    kassert(!are_interrupts_enabled());
+    kassert(!irqs_enabled());
     return PERCPU_PTR(TOPC_IFLAG, lock_debug_cpu);
 }
 

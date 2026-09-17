@@ -57,7 +57,7 @@ static void chaos(void *) {
         mutex_lock(&chaos_mtx);
 
         for (volatile size_t j = 0; j < (prng_next() & 0x1F); j++)
-            cpu_relax();
+            cpu_pause();
 
         mutex_unlock(&chaos_mtx);
 

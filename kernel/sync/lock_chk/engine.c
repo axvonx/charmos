@@ -17,9 +17,8 @@ PERCPU_DECLARE(lock_chk_recursion_depth, uint8_t, NULL);
 
 struct lock_chk_guard lock_chk_enter(void) {
     struct lock_chk_guard guard = {
-        .irqs_enabled = are_interrupts_enabled(),
+        .irqs_enabled = irq_disable_save(),
     };
-    disable_interrupts();
     guard.depth = PERCPU_PTR(TOPC_IFLAG, lock_chk_recursion_depth);
     if (*guard.depth != 0)
         panic("Recursive lock validator entry");
@@ -31,7 +30,7 @@ void lock_chk_leave(const struct lock_chk_guard *guard) {
     kassert(*guard->depth == 1);
     *guard->depth = 0;
     if (guard->irqs_enabled)
-        enable_interrupts();
+        irq_enable();
 }
 
 static enum lock_chk_result

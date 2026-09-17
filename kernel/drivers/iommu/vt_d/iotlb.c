@@ -16,7 +16,7 @@ static void vtd_iotlb_reg_flush(struct vtd_unit *u, uint64_t val) {
     mmio_write_64(vtd_iotlb_reg(u), val | IOTLB_REG_INVALIDATE);
 
     while (mmio_read_64(vtd_iotlb_reg(u)) & IOTLB_REG_INVALIDATE)
-        cpu_relax();
+        cpu_pause();
 }
 
 void vtd_iotlb_flush_global(struct vtd_unit *u) {

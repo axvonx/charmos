@@ -14,19 +14,17 @@ struct text_patch_window {
 
 static inline struct text_patch_window text_patch_begin(void) {
     struct text_patch_window w = {
-        .interrupts = are_interrupts_enabled(),
+        .interrupts = irq_disable_save(),
     };
-
-    disable_interrupts();
-    w.cr0 = read_cr0();
-    write_cr0(w.cr0 & ~CR0_WP);
+    w.cr0 = cr0_read();
+    cr0_write(w.cr0 & ~CR0_WP);
 
     return w;
 }
 
 static inline void text_patch_end(struct text_patch_window w) {
-    write_cr0(w.cr0);
+    cr0_write(w.cr0);
 
     if (w.interrupts)
-        enable_interrupts();
+        irq_enable();
 }

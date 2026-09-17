@@ -134,7 +134,7 @@ static inline void pte_lock_internal(pte_atomic_t *pte) {
         uint64_t old = atomic_load_explicit(pte, memory_order_relaxed);
 
         if (old & PTE_LOCK_BIT) {
-            cpu_relax();
+            cpu_pause();
             continue;
         }
 
@@ -143,7 +143,7 @@ static inline void pte_lock_internal(pte_atomic_t *pte) {
                                                   memory_order_relaxed))
             return;
 
-        cpu_relax();
+        cpu_pause();
     }
 }
 

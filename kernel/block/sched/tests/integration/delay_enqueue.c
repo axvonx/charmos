@@ -102,7 +102,7 @@ TEST_DECLARE_INTEGRATION(bio_sched, delay_enqueue,
     bio_sched_dispatch_all(d);
 
     for (uint64_t i = 0; i < 150000; i++)
-        cpu_relax();
+        cpu_pause();
 
     for (uint64_t i = 0; i < BIO_SCHED_LEVELS; i++) {
         if (runs_per_lvl[i] > 0)

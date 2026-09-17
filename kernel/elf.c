@@ -1,4 +1,5 @@
 #include <asm.h>
+#include <compiler_intrinsics.h>
 #include <console/printf.h>
 #include <elf.h>
 #include <math/bit.h>
@@ -151,5 +152,5 @@ cc_noreturn void enter_userspace(uintptr_t entry_point,
                    "r"((uint64_t) user_cs), "r"(entry_point)
                  : "memory");
 
-    __builtin_unreachable();
+    ci_unreachable();
 }

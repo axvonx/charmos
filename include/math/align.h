@@ -1,6 +1,7 @@
 /* @title: Alignment and Rounding */
 #pragma once
 #include <compiler.h>
+#include <compiler_intrinsics.h>
 #include <kassert.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -36,7 +37,7 @@
     _ALIGN_CAPTURE_UNCHECKED(x, align);                                        \
     __typeof__((__x) + 0) __mask = __align - 1;                                \
     __typeof__((__x) + 0) __sum;                                               \
-    bool __overflow = __builtin_add_overflow(__x, __mask, &__sum)
+    bool __overflow = ci_add_overflow(__x, __mask, &__sum)
 
 /* Rounds up without validating the alignment, wraps on overflow */
 #define ALIGN_UP_WRAPPING(x, align)                                            \

@@ -254,7 +254,7 @@ static inline void set_core_awake(void) {
 }
 
 void smp_wakeup() {
-    disable_interrupts();
+    irq_disable();
 
     asm volatile("mov %0, %%cr3" ::"r"(cr3));
 
@@ -262,9 +262,9 @@ void smp_wakeup() {
     uint64_t cpu = cpu_get_this_id();
     setup_cpu(cpu);
 
-    gdt_install();
+    gdt_load();
     wrmsr(MSR_GS_BASE, (uint64_t) global.cores[cpu]);
-    irq_load();
+    idt_load();
 
     lapic_timer_init(cpu);
     tsc_sync_check_ap(cpu);
@@ -294,7 +294,7 @@ void smp_wait_for_others_to_idle() {
     /* wait for them to enter idle threads */
     size_t expected_idle = global.core_count - 1;
     while (atomic_load(&global.idle_core_count) < expected_idle) {
-        cpu_relax();
+        cpu_pause();
     }
 }
 
@@ -312,7 +312,7 @@ void smp_wake(struct limine_mp_response *mpr) {
      * way to do this, reading a volatile and NOT using
      * atomics here is problematic */
     while (global.current_bootstage != BOOTSTAGE_MID_MP)
-        cpu_relax();
+        cpu_pause();
 
     smp_wait_for_others_to_idle();
 }
@@ -374,7 +374,7 @@ static void send_em_all_out(bool e) {
 
     /* wait for everyone to change their tick state */
     while (atomic_load(&tick_change_state) < (global.core_count - 1))
-        cpu_relax();
+        cpu_pause();
 }
 
 void smp_disable_all_ticks() {

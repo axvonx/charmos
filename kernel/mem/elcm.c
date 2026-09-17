@@ -1,3 +1,4 @@
+#include <compiler_intrinsics.h>
 #include <kassert.h>
 #include <math/align.h>
 #include <math/arith.h>
@@ -25,7 +26,7 @@ static fx32_32_t pow2_proximity(size_t n) {
     if (popcount(n) == 1)
         return FX_ONE;
 
-    size_t bit_len = 64 - __builtin_clzll(n);
+    size_t bit_len = 64 - ci_clzll(n);
     size_t upper = 1ULL << bit_len;
     size_t lower = upper >> 1;
 

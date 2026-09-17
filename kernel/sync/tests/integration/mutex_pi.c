@@ -37,7 +37,7 @@ static void pi_ts_thread(void *nothing) {
     atomic_store(&pi_ts_got, true);
 
     while (thread_get_current()->perceived_prio_class != THREAD_PRIO_CLASS_RT)
-        cpu_relax();
+        cpu_pause();
 
     kassert(mutex_get_owner(&pi_mutex) == thread_get_current());
     test_info("boosted");
@@ -105,7 +105,7 @@ static void pi_chain_ts2(void *arg) {
     atomic_store(&ts2_grabbed_b, true);
 
     while (thread_get_current()->perceived_prio_class != THREAD_PRIO_CLASS_RT)
-        cpu_relax();
+        cpu_pause();
 
     test_info("ts2 boosted");
     mutex_unlock(&pi_mtx_b);
@@ -119,7 +119,7 @@ static void pi_chain_ts1(void *arg) {
     atomic_store(&ts1_grabbed_a, true);
 
     while (thread_get_current()->perceived_prio_class != THREAD_PRIO_CLASS_RT)
-        cpu_relax();
+        cpu_pause();
 
     mutex_lock(&pi_mtx_b);
     test_info("ts1 lock b");
@@ -195,7 +195,7 @@ static void pi_multi_ts(void *arg) {
     atomic_store(&ts_got, true);
 
     while (thread_get_current()->perceived_prio_class != THREAD_PRIO_CLASS_RT)
-        cpu_relax();
+        cpu_pause();
 
     test_info("ts boosted");
     mutex_unlock(&pi_multi_mtx);
@@ -267,12 +267,12 @@ static void pi_revert_ts(void *arg) {
     atomic_store(&pi_revert_got, true);
 
     while (thread_get_current()->perceived_prio_class != THREAD_PRIO_CLASS_RT)
-        cpu_relax();
+        cpu_pause();
 
     mutex_unlock(&pi_revert_mtx);
 
     while (thread_get_current()->perceived_prio_class == THREAD_PRIO_CLASS_RT)
-        cpu_relax();
+        cpu_pause();
 
     atomic_store(&pi_reverted, true);
     atomic_fetch_add(&pi_reverted_done, 1);

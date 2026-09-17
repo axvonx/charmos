@@ -33,5 +33,5 @@ void acpi_find_cst(void) {
     return;
     uacpi_namespace_node *root = uacpi_namespace_root();
     uacpi_namespace_for_each_child_simple(root, walk_callback, NULL);
-    hcf();
+    cpu_freeze();
 }

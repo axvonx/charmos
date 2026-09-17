@@ -488,8 +488,7 @@ static inline void qspin_unlock_internal(struct qspinlock *lock,
     bool checked_shallow = qspinlock_order_checked(lock);
     struct qspinlock_rel_scope chk;
 
-    bool irqs_enabled = are_interrupts_enabled();
-    disable_interrupts();
+    bool irqs_enabled = irq_disable_save();
 
     if (checked_shallow)
         qspinlock_shallow_validate_top(lock, old_irql, site);
@@ -503,7 +502,7 @@ static inline void qspin_unlock_internal(struct qspinlock *lock,
 
     crash_unwind_exit_qspinlock(lock);
     if (irqs_enabled)
-        enable_interrupts();
+        irq_enable();
 
     irql_lower(old_irql);
 }
@@ -529,15 +528,15 @@ static inline enum irql cc_warn_unused_result qspin_lock_subclass_internal(
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
     qspin_lock_physical(lock);
 
-    kassert(are_interrupts_enabled());
-    disable_interrupts();
+    kassert(irqs_enabled());
+    irq_disable();
 
     if (checked_shallow)
         qspinlock_shallow_push(lock, irql, site);
     qspinlock_acq_commit(&chk);
 
     crash_unwind_enter_qspinlock(lock, irql);
-    enable_interrupts();
+    irq_enable();
 
     return irql;
 }
@@ -594,12 +593,12 @@ static inline bool cc_warn_unused_result qspin_trylock_internal(
 
     *out = irql_raise(IRQL_DISPATCH_LEVEL);
     if (qspin_trylock_physical(lock)) {
-        kassert(are_interrupts_enabled()); /* Should not go false */
-        disable_interrupts();
+        kassert(irqs_enabled()); /* Should not go false */
+        irq_disable();
         if (checked_shallow)
             qspinlock_shallow_push(lock, *out, site);
         qspinlock_acq_commit(&chk);
-        enable_interrupts();
+        irq_enable();
         crash_unwind_enter_qspinlock(lock, *out);
         return true;
     }

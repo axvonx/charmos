@@ -1,6 +1,9 @@
 import unittest
 from dataclasses import dataclass, field
 from pathlib import Path
+from subprocess import CompletedProcess
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from charm.nightmare import campaign as C
 from charm.nightmare import codec
@@ -170,6 +173,124 @@ class GateExecutionTests(unittest.TestCase):
         self.assertEqual(len(runner.calls), 1)
         self.assertFalse(result.ok)
         self.assertEqual(result.status, C.CampaignStatus.INFRASTRUCTURE.value)
+
+
+class QemuInfrastructureRetryTests(unittest.TestCase):
+    def test_a_signal_killed_qemu_is_infrastructure(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            console = root / "console.log"
+            machine = root / "machine.nd.log"
+            console.write_text("", encoding="utf-8")
+            machine.write_text("", encoding="utf-8")
+
+            result = C._result_from_logs(
+                boot_index=4,
+                task_name="wake_storm",
+                cmdline="nightmare=wake_storm",
+                duration_ms=15,
+                exit_code=-11,
+                timed_out=False,
+                console_log_path=console,
+                machine_log_path=machine,
+            )
+
+        self.assertEqual(result.status, C.BootStatus.INFRA.value)
+        self.assertEqual(result.reason, "qemu_sigsegv")
+        self.assertTrue(C._is_retryable_qemu_crash(result))
+
+    def test_guest_panic_evidence_is_not_retryable(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            console = root / "console.log"
+            machine = root / "machine.nd.log"
+            console.write_text("", encoding="utf-8")
+            machine.write_text('{"s":"panic","k":"at"}\n', encoding="utf-8")
+
+            result = C._result_from_logs(
+                boot_index=4,
+                task_name="wake_storm",
+                cmdline="nightmare=wake_storm",
+                duration_ms=15,
+                exit_code=-11,
+                timed_out=False,
+                console_log_path=console,
+                machine_log_path=machine,
+            )
+
+        self.assertEqual(result.status, C.BootStatus.CRASH.value)
+        self.assertFalse(C._is_retryable_qemu_crash(result))
+
+    def test_bundle_runner_retries_once_and_preserves_attempts(self) -> None:
+        import tempfile
+
+        suite = S.load(SUITES / "overnight_wake.toml")
+        task = suite.tasks[0]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            pristine = root / "pristine.img"
+            pristine.write_text("disk", encoding="utf-8")
+            iso = root / "image.iso"
+            iso.write_text("iso", encoding="utf-8")
+            bundle = SimpleNamespace(pristine_disk=pristine)
+            runner = C.BundleBootRunner(bundle, root)
+            manifest = C.CampaignManifest(
+                suite=suite,
+                campaign_id="test-campaign",
+                out_dir=root / "results",
+            )
+            calls = 0
+
+            def run(command: list[str], **_kwargs: object) -> CompletedProcess[str]:
+                nonlocal calls
+                calls += 1
+                return CompletedProcess(
+                    command,
+                    -11 if calls == 1 else 1,
+                    f"attempt {calls}\n",
+                    "",
+                )
+
+            with (
+                patch.object(C.subprocess, "run", side_effect=run),
+                patch(
+                    "charm.nightmare.build_bundle.repack",
+                    return_value=SimpleNamespace(iso_path=iso),
+                ),
+                patch(
+                    "charm.nightmare.build_bundle.qemu_command",
+                    return_value=["qemu-system-x86_64"],
+                ),
+            ):
+                result = runner.run_boot(
+                    manifest=manifest,
+                    task=task,
+                    boot_index=59,
+                    cmdline="nightmare=wake_storm",
+                    timeout_ms=1000,
+                    out_dir=manifest.out_dir,
+                )
+
+            first = manifest.out_dir / "boot-0059" / "attempts" / "attempt-01"
+            second = manifest.out_dir / "boot-0059" / "attempts" / "attempt-02"
+            self.assertEqual(calls, 2)
+            self.assertTrue(result.ok)
+            self.assertTrue(result.recovered_infrastructure)
+            self.assertEqual(
+                [attempt.status for attempt in result.attempts], ["infra", "ok"]
+            )
+            self.assertEqual(
+                (first / "console.log").read_text(encoding="utf-8"),
+                "attempt 1\n",
+            )
+            self.assertEqual(
+                (second / "console.log").read_text(encoding="utf-8"),
+                "attempt 2\n",
+            )
 
 
 if __name__ == "__main__":

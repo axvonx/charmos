@@ -58,7 +58,7 @@ static _Atomic size_t qspinlock_contention_count = 0;
 
 static void qspinlock_contention_worker(void *) {
     while (!atomic_load(&qspinlock_contention_start))
-        cpu_relax();
+        cpu_pause();
 
     for (size_t i = 0; i < QSPINLOCK_CONTENTION_ITERS; i++) {
         enum irql irql = qspin_lock(&qspinlock_contention_lock);

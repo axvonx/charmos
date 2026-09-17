@@ -86,7 +86,7 @@ static void apc_enqueue_thread(void *) {
     apc_init(apc, apc_si, NULL, apc_destroy_free);
 
     while (!atomic_load(&si_started))
-        cpu_relax();
+        cpu_pause();
 
     rcu_read_lock();
     bool got = thread_get_rcu(si_t);
@@ -159,7 +159,7 @@ static void apc_sub_enq_thread(void *) {
     apc_init(apc, apc_sub, NULL, apc_destroy_free);
 
     while (!atomic_load(&sub_started))
-        cpu_relax();
+        cpu_pause();
 
     rcu_read_lock();
     bool got = thread_get_rcu(sub_t);
@@ -222,7 +222,7 @@ static void arbitrary_sleeping_thread(void *) {
 
 static void arbitrary_waking_thread(void *) {
     while (!atomic_load(&arb_started))
-        cpu_relax();
+        cpu_pause();
 
     thread_sleep_for_ms(5);
 

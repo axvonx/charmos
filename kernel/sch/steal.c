@@ -1,3 +1,4 @@
+#include <compiler_intrinsics.h>
 #include <math/bit.h>
 #include <sch/sched.h>
 #include <stdatomic.h>
@@ -137,7 +138,7 @@ struct thread *scheduler_steal_work(struct scheduler *new,
     struct thread *stolen = NULL;
     uint8_t mask = atomic_load(&victim->queue_bitmap);
     while (mask) {
-        int level = 31 - __builtin_clz((uint32_t) mask);
+        int level = 31 - ci_clz((uint32_t) mask);
         mask = BIT_CLEAR(mask, level); /* remove that bit from local copy */
 
         if (level == THREAD_PRIO_CLASS_TIMESHARE) {

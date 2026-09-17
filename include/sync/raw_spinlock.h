@@ -32,7 +32,7 @@ static inline void raw_spin_lock(struct raw_spinlock *lock)
             return;
 
         while (atomic_load_explicit(&lock->state, memory_order_relaxed) != 0)
-            cpu_relax();
+            cpu_pause();
     }
 }
 
@@ -44,8 +44,7 @@ static inline void raw_spin_unlock(struct raw_spinlock *lock)
 /* whether interrupts were enabled on entry */
 static inline bool cc_warn_unused_result raw_spin_lock_irq_disable(
     struct raw_spinlock *lock) TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
-    bool irqs_were_enabled = are_interrupts_enabled();
-    disable_interrupts();
+    bool irqs_were_enabled = irq_disable_save();
     raw_spin_lock(lock);
     return irqs_were_enabled;
 }
@@ -55,5 +54,5 @@ static inline void raw_spin_unlock_irq_restore(struct raw_spinlock *lock,
     TSA_RELEASES(lock) TSA_NO_ANALYSIS {
     raw_spin_unlock(lock);
     if (irqs_were_enabled)
-        enable_interrupts();
+        irq_enable();
 }

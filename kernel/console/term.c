@@ -114,7 +114,7 @@ bool term_probe(void) {
             break;
 
         if (!serial_try_getc(&c)) {
-            cpu_relax();
+            cpu_pause();
             continue;
         }
 

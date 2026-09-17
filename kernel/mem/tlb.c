@@ -36,7 +36,7 @@ static void tlb_shootdown_internal(void) {
                                          memory_order_acquire);
 
                 if (addr)
-                    invlpg(addr);
+                    tlb_invlpg(addr);
 
                 tail++;
             }
@@ -86,7 +86,7 @@ void tlb_shootdown(uintptr_t addr, bool synchronous) {
     size_t i;
     for_each_cpu_id(i) {
         if (i == this_cpu) {
-            invlpg(addr);
+            tlb_invlpg(addr);
             continue;
         }
 
@@ -119,7 +119,7 @@ void tlb_shootdown(uintptr_t addr, bool synchronous) {
             while (atomic_load_explicit(&o->done_gen, memory_order_acquire) <
                    gen) {
                 if (spins < 100) {
-                    cpu_relax();
+                    cpu_pause();
                     spins++;
                     continue;
                 }

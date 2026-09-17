@@ -10,7 +10,7 @@ static void tlb_reader(void *arg) {
     size_t id = (size_t) arg;
 
     while (!atomic_load(&tlb_go))
-        cpu_relax();
+        cpu_pause();
 
     volatile uint64_t *va = thread_get_current()->private;
     tlb_seen[id] = *va;

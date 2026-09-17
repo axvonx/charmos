@@ -65,7 +65,7 @@ static inline uint32_t seqcount_begin_read(const struct seqcount *s) {
             smp_rmb();
             return seq;
         }
-        cpu_relax();
+        cpu_pause();
     }
 }
 

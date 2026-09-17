@@ -1,3 +1,4 @@
+#include <compiler_intrinsics.h>
 #include <console/panic.h>
 #include <kassert.h>
 #include <math/align.h>
@@ -134,7 +135,7 @@ static int32_t segment_cmp(const struct rbt_node *a, const struct rbt_node *b) {
 
 static uint32_t size_to_bin(size_t size) {
     kassert(size);
-    return 63U - __builtin_clzll(size);
+    return 63U - ci_clzll(size);
 }
 
 static void bin_insert(struct vas_arena *arena, struct vas_segment *seg) {
@@ -229,7 +230,7 @@ static struct vas_segment *arena_alloc(struct vas_arena *arena, size_t size,
                                        size_t align, bool *metadata_failed) {
     uint64_t mask = arena->bin_mask & (UINT64_MAX << size_to_bin(size));
     while (mask) {
-        uint32_t bin = __builtin_ctzll(mask);
+        uint32_t bin = ci_ctzll(mask);
         struct list_head *pos;
         list_for_each(pos, &arena->free_bins[bin]) {
             struct vas_segment *seg =

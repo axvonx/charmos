@@ -1,3 +1,4 @@
+#include <compiler_intrinsics.h>
 #include <math/align.h>
 #include <math/bit.h>
 #include <math/range.h>
@@ -110,7 +111,7 @@ static vaddr_t alloc_from(struct slab_chunks *chunks,
     for (size_t w = 0; w < nwords; w++) {
         if (bm[w] != UINT64_MAX) {
             uint64_t free_bits = ~bm[w];
-            uint64_t bit = __builtin_ctzll(free_bits);
+            uint64_t bit = ci_ctzll(free_bits);
             uint64_t i = w * 64 + bit;
 
             if (i >= chunks->bitmap_bits)

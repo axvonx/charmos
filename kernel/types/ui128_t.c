@@ -1,3 +1,4 @@
+#include <compiler_intrinsics.h>
 #include <console/panic.h>
 #include <types/types.h>
 
@@ -117,8 +118,8 @@ uint128_t __udivmodti4(uint128_t n, uint128_t d, uint128_t *rem) {
     }
 
     uint128_t q = 0, r = 0;
-    int msb = (np.s.hi != 0) ? (127 - __builtin_clzll(np.s.hi))
-                             : (63 - __builtin_clzll(np.s.lo));
+    int msb =
+        (np.s.hi != 0) ? (127 - ci_clzll(np.s.hi)) : (63 - ci_clzll(np.s.lo));
 
     for (int i = msb; i >= 0; i--) {
         r = (r << 1) | ((n >> i) & 1);
@@ -186,23 +187,23 @@ int __ucmpti2(uint128_t a, uint128_t b) {
 int __clzti2(uint128_t a) {
     u128_parts p = {.all = a};
     if (p.s.hi)
-        return __builtin_clzll(p.s.hi);
-    return 64 + __builtin_clzll(p.s.lo);
+        return ci_clzll(p.s.hi);
+    return 64 + ci_clzll(p.s.lo);
 }
 
 int __ctzti2(uint128_t a) {
     u128_parts p = {.all = a};
     if (p.s.lo)
-        return __builtin_ctzll(p.s.lo);
-    return 64 + __builtin_ctzll(p.s.hi);
+        return ci_ctzll(p.s.lo);
+    return 64 + ci_ctzll(p.s.hi);
 }
 
 int __ffsti2(int128_t a) {
     u128_parts p = {.all = (uint128_t) a};
     if (p.s.lo)
-        return __builtin_ctzll(p.s.lo) + 1;
+        return ci_ctzll(p.s.lo) + 1;
     if (p.s.hi)
-        return __builtin_ctzll(p.s.hi) + 65;
+        return ci_ctzll(p.s.hi) + 65;
     return 0;
 }
 

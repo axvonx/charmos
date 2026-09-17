@@ -1,4 +1,6 @@
 /* @title: Debugging */
+#pragma once
+#include <compiler_intrinsics.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -22,5 +24,4 @@ bool debug_syms_present(void);
 
 /* Unwinds from the caller's own frame */
 #define stack_trace_save(entries, max)                                         \
-    stack_unwind((uint64_t) __builtin_frame_address(0), (entries), (max))
-#pragma once
+    stack_unwind((uint64_t) ci_frame_address(0), (entries), (max))

@@ -1,3 +1,4 @@
+#include <compiler_intrinsics.h>
 #include <kassert.h>
 #include <math/bit.h>
 #include <math/min_max.h>
@@ -110,7 +111,7 @@ static inline bool scheduler_ts_empty(struct scheduler *sched) {
 
 static inline enum thread_prio_class
 available_prio_level_from_bitmap(uint8_t bitmap) {
-    return 31 - __builtin_clz((uint32_t) bitmap);
+    return 31 - ci_clz((uint32_t) bitmap);
 }
 
 static inline struct thread *find_highest_prio(struct scheduler *sched) {

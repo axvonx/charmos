@@ -2,6 +2,7 @@
 #pragma once
 #include <bootstage.h>
 #include <colors.h>
+#include <compiler_intrinsics.h>
 #include <linker/symbols.h>
 #include <sch/irql.h>
 #include <stdbool.h>
@@ -224,8 +225,7 @@ static inline size_t log_site_message_count(struct log_site *site) {
 
 #define log_msg(lvl, fmt, ...)                                                 \
     log_emit_internal(LOG_SITE(global), LOG_HANDLE(global), lvl, __func__,     \
-                      __FILE__, __LINE__,                                      \
-                      (uintptr_t) __builtin_return_address(0),                 \
+                      __FILE__, __LINE__, (uintptr_t) ci_return_address(0),    \
                       PP_NARG(__VA_ARGS__), fmt, ##__VA_ARGS__)
 
 #define log_warn_once(fmt, ...)                                                \
@@ -239,13 +239,13 @@ static inline size_t log_site_message_count(struct log_site *site) {
 
 #define log_global(handle, lvl, fmt, ...)                                      \
     log_emit_internal(LOG_SITE(global), handle, lvl, __func__, __FILE__,       \
-                      __LINE__, (uintptr_t) __builtin_return_address(0),       \
+                      __LINE__, (uintptr_t) ci_return_address(0),              \
                       PP_NARG(__VA_ARGS__), fmt, ##__VA_ARGS__)
 
 #define log(site, handle, lvl, fmt, ...)                                       \
     log_emit_internal(site, handle, lvl, __func__, __FILE__, __LINE__,         \
-                      (uintptr_t) __builtin_return_address(0),                 \
-                      PP_NARG(__VA_ARGS__), fmt, ##__VA_ARGS__)
+                      (uintptr_t) ci_return_address(0), PP_NARG(__VA_ARGS__),  \
+                      fmt, ##__VA_ARGS__)
 
 #define log_err(site, handle, fmt, ...)                                        \
     log(site, handle, LOG_ERROR, fmt, ##__VA_ARGS__)

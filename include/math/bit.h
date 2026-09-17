@@ -1,6 +1,7 @@
 /* @title: Bit Manipulation & Integer Powers of Two */
 #pragma once
 #include <compiler.h>
+#include <compiler_intrinsics.h>
 #include <kassert.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -123,11 +124,11 @@
     })
 
 static inline size_t popcount(size_t n) {
-    return (size_t) __builtin_popcountll((unsigned long long) n);
+    return (size_t) ci_popcountll((unsigned long long) n);
 }
 
 static inline uint8_t ilog2(uint64_t x) {
-    return x == 0 ? 0 : (uint8_t) (63 - __builtin_clzll(x));
+    return x == 0 ? 0 : (uint8_t) (63 - ci_clzll(x));
 }
 
 static inline size_t pow2(size_t n) {

@@ -1,3 +1,4 @@
+#include <compiler_intrinsics.h>
 #include <kassert.h>
 #include <math/bit.h>
 #include <sch/sched.h>
@@ -545,7 +546,7 @@ void apc_check_and_deliver(struct thread *t) {
         return;
 
     /* Which IRQL-lowering site keeps handing this thread back to delivery */
-    thread_diag_apc_deliver_enter(t, __builtin_return_address(0));
+    thread_diag_apc_deliver_enter(t, ci_return_address(0));
 
     thread_or_flags(t, THREAD_FLAG_DELIVERING_APCS);
 

@@ -163,24 +163,24 @@ static void wake_storm_contend(struct wake_storm_state *state,
                                struct nightmare_worker *self) {
     mutex_lock(&state->mtx);
     for (volatile int i = 0; i < (int) (nightmare_rand(&self->rng) & 0xF); i++)
-        cpu_relax();
+        cpu_pause();
     mutex_unlock(&state->mtx);
 
     if (nightmare_rand(&self->rng) & 1) {
         rw_lock(&state->rw, RWLOCK_READ);
         for (volatile int i = 0; i < 4; i++)
-            cpu_relax();
+            cpu_pause();
         rw_unlock(&state->rw);
     } else {
         rw_lock(&state->rw, RWLOCK_WRITE);
         for (volatile int i = 0; i < 4; i++)
-            cpu_relax();
+            cpu_pause();
         rw_unlock(&state->rw);
     }
 
     enum irql irql = qspin_lock(&state->qspin);
     for (volatile int i = 0; i < 4; i++)
-        cpu_relax();
+        cpu_pause();
     qspin_unlock(&state->qspin, irql);
 }
 

@@ -29,7 +29,7 @@ static enum irq_result kfree_irq_test_irq(void *ctx, uint8_t vector,
             int spins = prng_next() & KFREE_IRQ_TEST_SPIN_MASK;
 
             while (spins) {
-                cpu_relax();
+                cpu_pause();
                 spins--;
             }
         }
@@ -66,7 +66,7 @@ TEST_DECLARE_INTEGRATION(slab, kfree_defer_irq,
         int spins = prng_next() & KFREE_IRQ_TEST_SPIN_MASK;
 
         while (spins) {
-            cpu_relax();
+            cpu_pause();
             spins--;
         }
     }

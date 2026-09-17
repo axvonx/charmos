@@ -1,6 +1,7 @@
 #include "mem/tests/test_internal.h"
 #include "mem/vas_internal.h"
 #include <asm.h>
+#include <compiler_intrinsics.h>
 
 TEST_GROUP_DECLARE(vas);
 
@@ -84,7 +85,7 @@ static bool arena_valid(struct vas_arena *arena, vaddr_t base, vaddr_t limit,
             struct vas_segment *seg =
                 list_entry(pos, struct vas_segment, bin_node);
             if (seg->type != VAS_SEG_FREE ||
-                (63U - __builtin_clzll(seg->length)) != bin ||
+                (63U - ci_clzll(seg->length)) != bin ||
                 rbt_search(&arena->tree, seg->start) != &seg->node)
                 return false;
             mask |= BIT(bin);

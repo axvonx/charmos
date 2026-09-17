@@ -212,7 +212,7 @@ void idt_set_gate(uint8_t num, uint16_t sel, uint8_t flags) {
     idt[num].reserved = 0;
 }
 
-void irq_load(void) {
+void idt_load(void) {
     idtps.limit = sizeof(struct idt_entry) * IDT_ENTRIES - 1;
     idtps.base = (uint64_t) &idts;
     asm volatile("lidt %0" : : "m"(idtps));
@@ -263,14 +263,14 @@ void irq_free_entry(int32_t entry) {
     spin_unlock(&irq_table_lock, irql);
 }
 
-void irq_disable(irq_t irq) {
+void irq_vector_disable(irq_t irq) {
     struct irq_desc *desc = &irq_table[irq];
     desc->enabled = false;
     if (desc->chip && desc->chip->mask)
         desc->chip->mask(desc);
 }
 
-void irq_enable(irq_t irq) {
+void irq_vector_enable(irq_t irq) {
     struct irq_desc *desc = &irq_table[irq];
     desc->enabled = true;
     if (desc->chip && desc->chip->unmask)
@@ -340,5 +340,5 @@ void irq_init() {
     irq_set_chip(IRQ_DPC, lapic_get_chip(), NULL);
 
     idt_set_gate(0x80, 0x2b, 0xee);
-    irq_load();
+    idt_load();
 }

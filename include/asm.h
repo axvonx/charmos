@@ -1,5 +1,6 @@
 /* @title: Assembly Routines */
 #pragma once
+#include <compiler_intrinsics.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -93,7 +94,7 @@ static inline void outsl(uint16_t port, const void *addr, uint32_t count) {
 //
 //
 
-static inline void write_cr8(uint64_t cr8) {
+static inline void cr8_write(uint64_t cr8) {
     asm volatile("mov %0, %%cr8" ::"r"(cr8));
 }
 
@@ -118,38 +119,27 @@ static inline void cpuid_count(uint32_t leaf, uint32_t subleaf, uint32_t *eax,
                  : "a"(leaf), "c"(subleaf));
 }
 
-static inline uint64_t read_cr0(void) {
+static inline uint64_t cr0_read(void) {
     uint64_t cr0;
     asm volatile("mov %%cr0, %0" : "=r"(cr0));
     return cr0;
 }
 
-static inline void write_cr0(uint64_t cr0) {
+static inline void cr0_write(uint64_t cr0) {
     asm volatile("mov %0, %%cr0" : : "r"(cr0) : "memory");
 }
 
-static inline uint64_t read_cr4(void) {
+static inline uint64_t cr4_read(void) {
     uint64_t cr4;
     asm volatile("mov %%cr4, %0" : "=r"(cr4));
     return cr4;
 }
 
-static inline void write_cr4(uint64_t cr4) {
+static inline void cr4_write(uint64_t cr4) {
     asm volatile("mov %0, %%cr4" : : "r"(cr4));
 }
 
-static inline uint32_t get_core_id(void) {
-    uint32_t eax, ebx, ecx, edx;
-
-    eax = 1;
-    asm volatile("cpuid"
-                 : "=b"(ebx), "=a"(eax), "=c"(ecx), "=d"(edx)
-                 : "a"(eax));
-
-    return (ebx >> 24) & 0xFF;
-}
-
-static inline bool are_interrupts_enabled() {
+static inline bool irqs_enabled() {
     unsigned long flags;
     asm volatile("pushf\n\t"
                  "pop %0\n\t"
@@ -173,71 +163,69 @@ static inline uint64_t rdmsr(uint32_t msr) {
     return (hi << 32U) | lo;
 }
 
-static inline void io_wait(void) {
+static inline void io_port_wait(void) {
     outb(0x80, 0);
 }
 
-static inline void clear_interrupts(void) {
-    asm volatile("cli");
-}
-
-static inline void restore_interrupts(void) {
+static inline void irq_enable(void) {
     asm volatile("sti");
 }
 
-static inline void enable_interrupts(void) {
-    asm volatile("sti");
-}
-
-static inline void disable_interrupts(void) {
+static inline void irq_disable(void) {
     asm volatile("cli");
 }
 
-static inline void invlpg(uint64_t virt) {
+static inline bool irq_disable_save(void) {
+    bool enabled = irqs_enabled();
+    irq_disable();
+    return enabled;
+}
+
+static inline void tlb_invlpg(uint64_t virt) {
     asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
 }
 
-static inline uint64_t read_cr2(void) {
+static inline uint64_t cr2_read(void) {
     uint64_t cr2;
     asm volatile("mov %%cr2, %0" : "=r"(cr2));
     return cr2;
 }
 
-static inline uint64_t read_cr3(void) {
+static inline uint64_t cr3_read(void) {
     uint64_t cr3;
     asm volatile("mov %%cr3, %0" : "=r"(cr3));
     return cr3;
 }
 
-static inline void write_cr3(uint64_t cr3) {
+static inline void cr3_write(uint64_t cr3) {
     asm volatile("mov %0, %%cr3" ::"r"(cr3));
 }
 
 static inline void tlb_flush(void) {
-    uint64_t cr3 = read_cr3();
-    write_cr3(cr3);
+    uint64_t cr3 = cr3_read();
+    cr3_write(cr3);
 }
 
-static inline void cpu_relax(void) {
+static inline void cpu_pause(void) {
     asm volatile("pause");
 }
 
-static inline void wait_for_interrupt(void) {
+static inline void cpu_halt(void) {
     asm volatile("hlt");
 }
 
-static inline void hcf(void) {
+static inline void cpu_freeze(void) {
     asm volatile("cli; hlt");
 }
 
-static inline void do_idle_insn(void) {
+static inline void cpu_idle(void) {
     asm volatile("sti\n\thlt" ::: "memory");
 }
 
-static inline int clz(uint8_t a) {
-    return __builtin_clz(a);
+static inline int bit_clz8(uint8_t a) {
+    return ci_clz(a);
 }
 
-static inline void memory_barrier(void) {
+static inline void cpu_memory_barrier(void) {
     asm volatile("mfence" ::: "memory");
 }

@@ -34,7 +34,7 @@ void gdt_set_gate(struct gdt_entry *gdt, int num, uint64_t base, uint32_t limit,
     gdt[num].base_high = (base >> 24) & 0xFF;
 }
 
-void gdt_load(struct gdt_entry *gdt, uint64_t n_entries) {
+static void gdt_lgdt(struct gdt_entry *gdt, uint64_t n_entries) {
     struct gdt_ptr gp = {
         .limit = (sizeof(struct gdt_entry) * n_entries) - 1,
         .base = (uint64_t) gdt,
@@ -73,7 +73,7 @@ void gdt_init(struct gdt_entry *gdt, struct tss *tss) {
 
     tss->io_map_base = sizeof(struct tss);
 
-    gdt_load(gdt, GDT_ENTRIES);
+    gdt_lgdt(gdt, GDT_ENTRIES);
     tss->ist1 =
         (uint64_t) alloc_or_die(kmalloc_aligned(8 * PAGE_SIZE, PAGE_SIZE));
     tss->rsp0 =
@@ -88,7 +88,7 @@ void gdt_init(struct gdt_entry *gdt, struct tss *tss) {
     asm volatile("ltr %w0" : : "r"(0x18)); // TSS selector
 }
 
-void gdt_install(void) {
+void gdt_load(void) {
     struct gdt_entry *gdt = kmalloc_aligned(
         sizeof(struct gdt_entry) * GDT_ENTRIES, 64, ALLOC_FLAGS_ZERO);
     struct tss *tss = kmalloc_aligned(sizeof(struct tss), 64, ALLOC_FLAGS_ZERO);

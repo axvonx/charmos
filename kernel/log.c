@@ -1,4 +1,5 @@
 #include <bootstage_condition.h>
+#include <compiler_intrinsics.h>
 #include <console/printf.h>
 #include <dbg.h>
 #include <linker/symbol_table.h>
@@ -523,7 +524,7 @@ void log_emit_internal(struct log_site *site, struct log_handle *handle,
                         queued = true;
                         break;
                     }
-                    cpu_relax();
+                    cpu_pause();
                 }
             }
 
@@ -755,7 +756,7 @@ void debug_print_stack_trace(const uint64_t *entries, size_t nr) {
 void debug_print_stack(void) {
     uint64_t entries[STACK_TRACE_MAX_DEPTH];
 
-    size_t nr = stack_unwind((uint64_t) __builtin_frame_address(0), entries,
+    size_t nr = stack_unwind((uint64_t) ci_frame_address(0), entries,
                              sizeof(entries) / sizeof(*entries));
 
     debug_print_stack_trace(entries, nr);

@@ -351,7 +351,7 @@ spinlock_init_chk_internal(struct spinlock *lock,
 
 static inline void spinlock_restore_interrupts(bool enabled) {
     if (enabled)
-        enable_interrupts();
+        irq_enable();
 }
 
 static inline bool cc_warn_unused_result spin_trylock_raw_internal(
@@ -405,8 +405,7 @@ static inline void spin_unlock_internal(struct spinlock *lock, enum irql old,
     bool checked_shallow = spinlock_order_checked(lock);
     struct spinlock_rel_scope chk;
 
-    bool irqs_enabled = are_interrupts_enabled();
-    disable_interrupts();
+    bool irqs_enabled = irq_disable_save();
 
     if (checked_shallow)
         spinlock_shallow_validate_top(lock, old, site);
@@ -444,8 +443,7 @@ static inline enum irql cc_warn_unused_result spin_lock_subclass_internal(
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
     spin_lock_physical(lock);
 
-    bool irqs_enabled = are_interrupts_enabled();
-    disable_interrupts();
+    bool irqs_enabled = irq_disable_save();
 
     if (checked_shallow)
         spinlock_shallow_push(lock, irql, site);
@@ -508,8 +506,7 @@ static inline bool cc_warn_unused_result spin_trylock_internal(
 
     *out = irql_raise(IRQL_DISPATCH_LEVEL);
     if (spin_trylock_physical(lock)) {
-        bool irqs_enabled = are_interrupts_enabled();
-        disable_interrupts();
+        bool irqs_enabled = irq_disable_save();
 
         if (checked_shallow)
             spinlock_shallow_push(lock, *out, site);

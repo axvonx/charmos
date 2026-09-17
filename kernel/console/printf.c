@@ -35,7 +35,7 @@ void serial_init() {
     outb(0x3F8 + 2, 0xC7);
     outb(0x3F8 + 4, 0x0B);
     for (volatile int i = 0; i < 1000; i++)
-        cpu_relax();
+        cpu_pause();
 }
 
 static int serial_is_transmit_empty() {
@@ -503,8 +503,7 @@ void printf_unlocked(const char *format, ...) {
 }
 
 void printf(const char *format, ...) TSA_NO_ANALYSIS {
-    bool i = are_interrupts_enabled();
-    disable_interrupts();
+    bool i = irq_disable_save();
 
     bool lock = !atomic_load_explicit(&global.panicked, memory_order_relaxed);
 
@@ -520,7 +519,7 @@ void printf(const char *format, ...) TSA_NO_ANALYSIS {
         raw_spin_unlock(&k_printf_lock.raw);
 
     if (i)
-        enable_interrupts();
+        irq_enable();
 }
 
 int vsnprintf(char *buffer, int buffer_len, const char *format, va_list args) {

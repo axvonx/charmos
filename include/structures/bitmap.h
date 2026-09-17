@@ -1,5 +1,6 @@
 /* @title: Bitmap */
 #pragma once
+#include <compiler_intrinsics.h>
 #include <math/align.h>
 #include <math/bit.h>
 #include <math/min_max.h>
@@ -245,7 +246,7 @@ static inline size_t bitmap_weight(const bitmap_word_t *map, size_t nbits) {
     }
 
     for (size_t i = 0; i < words - 1; i++) {
-        count += (size_t) __builtin_popcountll(map[i]);
+        count += (size_t) ci_popcountll(map[i]);
     }
 
     size_t rem = nbits % BITMAP_BITS_PER_WORD;
@@ -253,7 +254,7 @@ static inline size_t bitmap_weight(const bitmap_word_t *map, size_t nbits) {
     if (rem) {
         last &= ((bitmap_word_t) 1 << rem) - 1;
     }
-    count += (size_t) __builtin_popcountll(last);
+    count += (size_t) ci_popcountll(last);
 
     return count;
 }
@@ -263,8 +264,7 @@ static inline size_t bitmap_find_first_set(const bitmap_word_t *map,
     size_t words = BITMAP_WORDS(nbits);
     for (size_t i = 0; i < words; i++) {
         if (map[i]) {
-            size_t bit =
-                i * BITMAP_BITS_PER_WORD + (size_t) __builtin_ctzll(map[i]);
+            size_t bit = i * BITMAP_BITS_PER_WORD + (size_t) ci_ctzll(map[i]);
             return MIN(bit, nbits);
         }
     }
@@ -277,8 +277,7 @@ static inline size_t bitmap_find_first_zero(const bitmap_word_t *map,
     for (size_t i = 0; i < words; i++) {
         bitmap_word_t inv = ~map[i];
         if (inv) {
-            size_t bit =
-                i * BITMAP_BITS_PER_WORD + (size_t) __builtin_ctzll(inv);
+            size_t bit = i * BITMAP_BITS_PER_WORD + (size_t) ci_ctzll(inv);
             return MIN(bit, nbits);
         }
     }
@@ -297,14 +296,13 @@ static inline size_t bitmap_find_next_bit(const bitmap_word_t *map,
     bitmap_word_t word = map[word_index] & (~((bitmap_word_t) 0) << bit_offset);
     if (word) {
         size_t bit =
-            word_index * BITMAP_BITS_PER_WORD + (size_t) __builtin_ctzll(word);
+            word_index * BITMAP_BITS_PER_WORD + (size_t) ci_ctzll(word);
         return MIN(bit, nbits);
     }
 
     for (size_t i = word_index + 1; i < BITMAP_WORDS(nbits); i++) {
         if (map[i]) {
-            size_t bit =
-                i * BITMAP_BITS_PER_WORD + (size_t) __builtin_ctzll(map[i]);
+            size_t bit = i * BITMAP_BITS_PER_WORD + (size_t) ci_ctzll(map[i]);
             return MIN(bit, nbits);
         }
     }
@@ -323,16 +321,14 @@ static inline size_t bitmap_find_next_zero_bit(const bitmap_word_t *map,
 
     bitmap_word_t inv = ~map[word_index] & (~((bitmap_word_t) 0) << bit_offset);
     if (inv) {
-        size_t bit =
-            word_index * BITMAP_BITS_PER_WORD + (size_t) __builtin_ctzll(inv);
+        size_t bit = word_index * BITMAP_BITS_PER_WORD + (size_t) ci_ctzll(inv);
         return MIN(bit, nbits);
     }
 
     for (size_t i = word_index + 1; i < BITMAP_WORDS(nbits); i++) {
         inv = ~map[i];
         if (inv) {
-            size_t bit =
-                i * BITMAP_BITS_PER_WORD + (size_t) __builtin_ctzll(inv);
+            size_t bit = i * BITMAP_BITS_PER_WORD + (size_t) ci_ctzll(inv);
             return MIN(bit, nbits);
         }
     }

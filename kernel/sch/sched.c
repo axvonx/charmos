@@ -287,7 +287,7 @@ static inline void assert_switch_ctx(const char *where) {
             irql_to_str(irql_get()), irql_to_str(IRQL_DISPATCH_LEVEL));
     kassert(scheduler_preemption_disabled(TOPC_NONE),
             "%s with preemption enabled", where);
-    kassert(!are_interrupts_enabled(), "%s with interrupts enabled", where);
+    kassert(!irqs_enabled(), "%s with interrupts enabled", where);
 }
 
 static inline void context_switch(struct thread *curr, struct thread *next) {

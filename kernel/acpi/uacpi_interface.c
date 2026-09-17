@@ -126,7 +126,7 @@ void uacpi_kernel_stall(uacpi_u8 usec) {
     uint64_t target = start + (HZ_TO_MHZ(tsc_freq) * usec);
 
     while (rdtsc() < target)
-        cpu_relax();
+        cpu_pause();
 }
 
 void uacpi_kernel_sleep(uacpi_u64 msec) {

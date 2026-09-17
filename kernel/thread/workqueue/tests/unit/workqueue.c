@@ -30,7 +30,7 @@ TEST_DECLARE_UNIT(workqueue, fast_oneshot, TEST_INTENSITY(32, 256, 4096)) {
     sleep_spin_ms(50);
 
     while (!atomic_load(&workqueue_ran))
-        cpu_relax();
+        cpu_pause();
 
     char *msg = kmalloc(100, ALLOC_FLAGS_ZERO);
     TEST_ASSERT_NONNULL(msg);
@@ -61,7 +61,7 @@ static void wq_test_2(void *a, void *b) {
     (void) a, (void) b;
     atomic_fetch_add(&times_2, 1);
     for (uint64_t i = 0; i < 500; i++)
-        cpu_relax();
+        cpu_pause();
 }
 
 static struct workqueue *wq = NULL;
@@ -70,7 +70,7 @@ static _Atomic uint32_t threads_left = WQ_2_THREADS;
 static void enqueue_thread(void *) {
     for (size_t i = 0; i < wq_2_items_per_thread; i++) {
         for (uint64_t j = 0; j < 500; j++)
-            cpu_relax();
+            cpu_pause();
 
         workqueue_enqueue_oneshot(wq, wq_test_2, WORK_ARGS(NULL, wq));
         scheduler_yield();

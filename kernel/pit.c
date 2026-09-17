@@ -39,7 +39,7 @@ static void pit_wait_until_zero(void) {
         uint16_t count = pit_read_count();
         if (count <= 1)
             break;
-        cpu_relax();
+        cpu_pause();
     }
 }
 

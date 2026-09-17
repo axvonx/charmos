@@ -1,3 +1,4 @@
+#include <compiler_intrinsics.h>
 #include <mem/fixed_size_alloc.h>
 #include <stack_depot.h>
 #include <string.h>
@@ -170,7 +171,7 @@ void stack_depot_put(stack_handle_t key) {
 
 stack_handle_t stack_depot_save_current() {
     uintptr_t entries[STACK_TRACE_MAX_DEPTH] = {0};
-    size_t num_entries = stack_unwind((uint64_t) __builtin_frame_address(0),
-                                      entries, STACK_TRACE_MAX_DEPTH);
+    size_t num_entries = stack_unwind((uint64_t) ci_frame_address(0), entries,
+                                      STACK_TRACE_MAX_DEPTH);
     return stack_depot_save(entries, num_entries, ALLOC_FLAGS_DEFAULT);
 }

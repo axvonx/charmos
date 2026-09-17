@@ -389,7 +389,7 @@ static time_ms_t watchdog_spin_for_response(struct watchdog_master_cpu *cpu) {
     do {
         seq = seqcount_begin_read_raw(&resp->seqcount);
         if (seq & 1) {
-            cpu_relax();
+            cpu_pause();
             continue;
         }
 

@@ -36,7 +36,7 @@ struct gdt_entry_tss {
 #define GRAN_CODE 0xAF // G=1, D/B=0, L=1, AVL=0
 #define GRAN_DATA 0xAF // G=1, D/B=0, L=0, AVL=0
 
-void gdt_install();
+void gdt_load(void);
 // Kernel selectors (RPL = 0)
 #define GDT_KERNEL_CODE 0x08 // index 1
 #define GDT_KERNEL_DATA 0x10 // index 2

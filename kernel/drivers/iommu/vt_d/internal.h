@@ -58,7 +58,7 @@ vtd_pt_lock_internal(sl_pte_atomic_t *pte) {
         if (old & SL_PTE_DEAD_BIT)
             return VTD_PT_LOCK_DEAD;
         if (old & SL_PTE_LOCK_BIT) {
-            cpu_relax();
+            cpu_pause();
             continue;
         }
 
@@ -67,7 +67,7 @@ vtd_pt_lock_internal(sl_pte_atomic_t *pte) {
                 memory_order_relaxed))
             return VTD_PT_LOCK_OK;
 
-        cpu_relax();
+        cpu_pause();
     }
 }
 
@@ -76,7 +76,7 @@ static inline enum irql vtd_pt_lock(sl_pte_atomic_t *pte) TSA_NO_ANALYSIS {
     for (;;) {
         uint64_t val = atomic_load_explicit(pte, memory_order_relaxed);
         if (val & SL_PTE_LOCK_BIT) {
-            cpu_relax();
+            cpu_pause();
             continue;
         }
         if (atomic_compare_exchange_weak_explicit(

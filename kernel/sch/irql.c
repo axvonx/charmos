@@ -19,7 +19,7 @@ static void irql_set(enum irql irql) {
 }
 
 static inline uint32_t scheduler_preemption_disable(void) {
-    kassert(!are_interrupts_enabled());
+    kassert(!irqs_enabled());
 
     /* We enforce that interrupts are disabled upon raise, no migration */
     return smp_ctx_preempt_count(
@@ -38,8 +38,7 @@ enum irql irql_raise(enum irql new_level) TSA_NO_ANALYSIS {
         return IRQL_NONE;
     }
 
-    bool iflag = are_interrupts_enabled();
-    disable_interrupts();
+    bool iflag = irq_disable_save();
 
     enum irql old = irql_get();
 
@@ -49,7 +48,7 @@ enum irql irql_raise(enum irql new_level) TSA_NO_ANALYSIS {
             scheduler_preemption_disable();
 
         if (new_level >= IRQL_HIGH_LEVEL)
-            disable_interrupts();
+            irq_disable();
 
     } else if (new_level < old) {
         panic("Raising to lower IRQL, from %s to %s", irql_to_str(old),
@@ -58,7 +57,7 @@ enum irql irql_raise(enum irql new_level) TSA_NO_ANALYSIS {
 
     /* ok now we re-enable interrupts if we had disabled them prior */
     if (iflag && new_level < IRQL_HIGH_LEVEL)
-        enable_interrupts();
+        irq_enable();
 
     return old;
 }
@@ -87,7 +86,7 @@ static void irql_lower_internal(enum irql new_level, bool allow_resched) {
         enum irql intermediate = MAX(new_level, IRQL_DISPATCH_LEVEL);
         irql_set(intermediate);
         if (in_thread)
-            enable_interrupts();
+            irq_enable();
     }
 
     if (old >= IRQL_DISPATCH_LEVEL && new_level < IRQL_DISPATCH_LEVEL) {

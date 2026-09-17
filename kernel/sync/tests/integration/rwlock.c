@@ -93,7 +93,7 @@ static void rw_mixed_worker(void *) {
         }
 
         for (volatile size_t j = 0; j < (prng_next() & 0x1f); j++)
-            cpu_relax();
+            cpu_pause();
 
         rw_unlock(&rw_mixed);
 
@@ -138,7 +138,7 @@ static void rw_chaos_worker(void *) {
             rw_lock(&rw_chaos, RWLOCK_WRITE);
 
         for (volatile size_t j = 0; j < (prng_next() & 0x1F); j++)
-            cpu_relax();
+            cpu_pause();
 
         rw_unlock(&rw_chaos);
 
@@ -194,7 +194,7 @@ static void rw_correct_worker(void *) {
                 atomic_store(&correctness_ok, false);
 
             for (volatile size_t j = 0; j < (prng_next() & 0xF); j++)
-                cpu_relax();
+                cpu_pause();
 
             atomic_fetch_sub(&active_readers, 1);
             rw_unlock(&rw_correct);
@@ -208,7 +208,7 @@ static void rw_correct_worker(void *) {
                 atomic_store(&correctness_ok, false);
 
             for (volatile size_t j = 0; j < (prng_next() & 0xF); j++)
-                cpu_relax();
+                cpu_pause();
 
             atomic_fetch_sub(&active_writers, 1);
             rw_unlock(&rw_correct);

@@ -2,6 +2,7 @@
 #pragma once
 #include <asm.h>
 #include <compiler.h>
+#include <compiler_intrinsics.h>
 #include <kassert.h>
 #include <math/bit.h>
 #include <sch/irql.h>
@@ -17,10 +18,9 @@
 
 #define BIT_SPINLOCK_CHECK(bit, ptr)                                           \
     do {                                                                       \
-        static_assert(__builtin_constant_p(bit)                                \
-                          ? ((size_t) (bit) < sizeof(*(ptr)) * 8)              \
-                          : 1,                                                 \
-                      "bit index exceeds type width");                         \
+        static_assert(                                                         \
+            ci_constant_p(bit) ? ((size_t) (bit) < sizeof(*(ptr)) * 8) : 1,    \
+            "bit index exceeds type width");                                   \
         kassert((size_t) (bit) < sizeof(*(ptr)) * 8,                           \
                 "bit index out of bounds for pointer type");                   \
     } while (0)
@@ -58,7 +58,7 @@
             typeof(*(ptr)) __old = atomic_load_explicit(                       \
                 (_Atomic typeof(*(ptr)) *) (ptr), memory_order_relaxed);       \
             if (__old & __m) {                                                 \
-                cpu_relax();                                                   \
+                cpu_pause();                                                   \
                 continue;                                                      \
             }                                                                  \
             if (atomic_compare_exchange_weak_explicit(                         \
@@ -66,7 +66,7 @@
                     (typeof(*(ptr))) (__old | __m), memory_order_acquire,      \
                     memory_order_relaxed))                                     \
                 break;                                                         \
-            cpu_relax();                                                       \
+            cpu_pause();                                                       \
         }                                                                      \
     } while (0)
 

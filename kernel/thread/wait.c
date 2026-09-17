@@ -1,3 +1,4 @@
+#include <compiler_intrinsics.h>
 #include <sch/sched.h>
 #include <thread/apc.h>
 #include <thread/thread.h>
@@ -63,7 +64,7 @@ static void prepare_wait(const struct thread_wait_object *objects, size_t count,
     t->wait_type = type;
     thread_clear_flag(t, THREAD_FLAG_YIELDED);
 
-    thread_diag_record_arm(t, "wait_blocks", __builtin_return_address(0),
+    thread_diag_record_arm(t, "wait_blocks", ci_return_address(0),
                            count ? objects[0].object : NULL, state, type,
                            reason);
 

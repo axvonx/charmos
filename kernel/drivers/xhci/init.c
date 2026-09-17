@@ -179,7 +179,7 @@ static enum usb_error xhci_spin_wait_port_reset(uint32_t cc_mem_io *portsc,
             }
         }
 
-        cpu_relax();
+        cpu_pause();
         sleep_spin_us(10);
     }
 

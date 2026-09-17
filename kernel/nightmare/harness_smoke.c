@@ -26,7 +26,7 @@ NIGHTMARE_OPTIONS_DECLARE(
 NIGHTMARE_WORKER(harness_smoke_worker) {
     if (harness_smoke_options.blocked_drain) {
         while (true)
-            cpu_relax();
+            cpu_pause();
     }
 
     if (harness_smoke_options.plateau ||
@@ -39,7 +39,7 @@ NIGHTMARE_WORKER(harness_smoke_worker) {
     if (harness_smoke_options.stall) {
         while (true) {
             NIGHTMARE_PROGRESS();
-            cpu_relax();
+            cpu_pause();
         }
     }
 
