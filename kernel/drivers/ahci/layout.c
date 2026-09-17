@@ -3,76 +3,92 @@
 #include <drivers/ahci.h>
 #include <drivers/verifier.h>
 
-dv_layout(ahci_prdt_entry, 0x10);
-dv_field(ahci_prdt_entry, dba, 0x00, 4);
-dv_field(ahci_prdt_entry, dbau, 0x04, 4);
-dv_field(ahci_prdt_entry, reserved, 0x08, 4);
+#define DV_STRUCT ahci_prdt_entry
+dv_size(0x10);
+dv_align(1);
+dv_field(uint32_t, dba, 0x00);
+dv_field(uint32_t, dbau, 0x04);
+dv_field(uint32_t, reserved, 0x08);
+#undef DV_STRUCT
 
-dv_layout(ahci_cmd_table, 0x80);
-dv_field(ahci_cmd_table, cfis, 0x00, AHCI_CMD_TABLE_FIS_SIZE);
-dv_field(ahci_cmd_table, acmd, 0x40, AHCI_CMD_TABLE_ATAPI_SIZE);
-dv_field(ahci_cmd_table, reserved, 0x50, 48);
-dv_field_at(ahci_cmd_table, prdt_entry, 0x80);
+#define DV_STRUCT ahci_cmd_table
+dv_size(0x80);
+dv_align(1);
+dv_field(uint8_t[64], cfis, 0x00);
+dv_field(uint8_t[16], acmd, 0x40);
+dv_field(uint8_t[48], reserved, 0x50);
+dv_field_at(prdt_entry, 0x80);
+#undef DV_STRUCT
 
-dv_layout(ahci_cmd_header, 0x20);
-dv_field(ahci_cmd_header, prdtl, 0x02, 2);
-dv_field(ahci_cmd_header, prdbc, 0x04, 4);
-dv_field(ahci_cmd_header, ctba, 0x08, 4);
-dv_field(ahci_cmd_header, ctbau, 0x0C, 4);
-dv_field(ahci_cmd_header, rsv1, 0x10, 16);
+#define DV_STRUCT ahci_cmd_header
+dv_size(0x20);
+dv_align(1);
+dv_field(uint16_t, prdtl, 0x02);
+dv_field(uint32_t, prdbc, 0x04);
+dv_field(uint32_t, ctba, 0x08);
+dv_field(uint32_t, ctbau, 0x0C);
+dv_field(uint32_t[4], rsv1, 0x10);
+#undef DV_STRUCT
 
-dv_layout(ahci_fis_reg_h2d, 0x14);
-dv_field(ahci_fis_reg_h2d, fis_type, 0x00, 1);
-dv_field(ahci_fis_reg_h2d, command, 0x02, 1);
-dv_field(ahci_fis_reg_h2d, featurel, 0x03, 1);
-dv_field(ahci_fis_reg_h2d, lba0, 0x04, 1);
-dv_field(ahci_fis_reg_h2d, lba1, 0x05, 1);
-dv_field(ahci_fis_reg_h2d, lba2, 0x06, 1);
-dv_field(ahci_fis_reg_h2d, device, 0x07, 1);
-dv_field(ahci_fis_reg_h2d, lba3, 0x08, 1);
-dv_field(ahci_fis_reg_h2d, lba4, 0x09, 1);
-dv_field(ahci_fis_reg_h2d, lba5, 0x0A, 1);
-dv_field(ahci_fis_reg_h2d, featureh, 0x0B, 1);
-dv_field(ahci_fis_reg_h2d, countl, 0x0C, 1);
-dv_field(ahci_fis_reg_h2d, counth, 0x0D, 1);
-dv_field(ahci_fis_reg_h2d, icc, 0x0E, 1);
-dv_field(ahci_fis_reg_h2d, control, 0x0F, 1);
-dv_field(ahci_fis_reg_h2d, reserved2, 0x10, 4);
+#define DV_STRUCT ahci_fis_reg_h2d
+dv_size(0x14);
+dv_field(uint8_t, fis_type, 0x00);
+dv_field(uint8_t, command, 0x02);
+dv_field(uint8_t, featurel, 0x03);
+dv_field(uint8_t, lba0, 0x04);
+dv_field(uint8_t, lba1, 0x05);
+dv_field(uint8_t, lba2, 0x06);
+dv_field(uint8_t, device, 0x07);
+dv_field(uint8_t, lba3, 0x08);
+dv_field(uint8_t, lba4, 0x09);
+dv_field(uint8_t, lba5, 0x0A);
+dv_field(uint8_t, featureh, 0x0B);
+dv_field(uint8_t, countl, 0x0C);
+dv_field(uint8_t, counth, 0x0D);
+dv_field(uint8_t, icc, 0x0E);
+dv_field(uint8_t, control, 0x0F);
+dv_field(uint8_t[4], reserved2, 0x10);
+#undef DV_STRUCT
 
-dv_layout(ahci_fis_reg_d2h, 0x14);
-dv_field(ahci_fis_reg_d2h, fis_type, 0x00, 1);
-dv_field(ahci_fis_reg_d2h, status, 0x02, 1);
-dv_field(ahci_fis_reg_d2h, error, 0x03, 1);
-dv_field(ahci_fis_reg_d2h, lba0, 0x04, 1);
-dv_field(ahci_fis_reg_d2h, lba1, 0x05, 1);
-dv_field(ahci_fis_reg_d2h, lba2, 0x06, 1);
-dv_field(ahci_fis_reg_d2h, device, 0x07, 1);
-dv_field(ahci_fis_reg_d2h, lba3, 0x08, 1);
-dv_field(ahci_fis_reg_d2h, lba4, 0x09, 1);
-dv_field(ahci_fis_reg_d2h, lba5, 0x0A, 1);
-dv_field(ahci_fis_reg_d2h, rsv2, 0x0B, 1);
-dv_field(ahci_fis_reg_d2h, countl, 0x0C, 1);
-dv_field(ahci_fis_reg_d2h, counth, 0x0D, 1);
-dv_field(ahci_fis_reg_d2h, rsv3, 0x0E, 2);
-dv_field(ahci_fis_reg_d2h, rsv4, 0x10, 4);
+/* ahci_fis_reg_d2h is unused, so absent from debug info; written by hand */
+#define DV_STRUCT ahci_fis_reg_d2h
+dv_size(0x14);
+dv_field(uint8_t, fis_type, 0x00);
+dv_field(uint8_t, status, 0x02);
+dv_field(uint8_t, error, 0x03);
+dv_field(uint8_t, lba0, 0x04);
+dv_field(uint8_t, lba1, 0x05);
+dv_field(uint8_t, lba2, 0x06);
+dv_field(uint8_t, device, 0x07);
+dv_field(uint8_t, lba3, 0x08);
+dv_field(uint8_t, lba4, 0x09);
+dv_field(uint8_t, lba5, 0x0A);
+dv_field(uint8_t, rsv2, 0x0B);
+dv_field(uint8_t, countl, 0x0C);
+dv_field(uint8_t, counth, 0x0D);
+dv_field(uint8_t[2], rsv3, 0x0E);
+dv_field(uint8_t[4], rsv4, 0x10);
+#undef DV_STRUCT
 
-dv_layout(ahci_port, 0x80);
-dv_field(ahci_port, clb, 0x00, 4);
-dv_field(ahci_port, clbu, 0x04, 4);
-dv_field(ahci_port, fb, 0x08, 4);
-dv_field(ahci_port, fbu, 0x0C, 4);
-dv_field(ahci_port, is, 0x10, 4);
-dv_field(ahci_port, ie, 0x14, 4);
-dv_field(ahci_port, cmd, 0x18, 4);
-dv_field(ahci_port, rsv0, 0x1C, 4);
-dv_field(ahci_port, tfd, 0x20, 4);
-dv_field(ahci_port, sig, 0x24, 4);
-dv_field(ahci_port, ssts, 0x28, 4);
-dv_field(ahci_port, sctl, 0x2C, 4);
-dv_field(ahci_port, serr, 0x30, 4);
-dv_field(ahci_port, sact, 0x34, 4);
-dv_field(ahci_port, ci, 0x38, 4);
-dv_field(ahci_port, sntf, 0x3C, 4);
-dv_field(ahci_port, fbs, 0x40, 4);
-dv_field(ahci_port, rsv1, 0x44, 44);
-dv_field(ahci_port, vendor, 0x70, 16);
+#define DV_STRUCT ahci_port
+dv_size(0x80);
+dv_field(uint32_t, clb, 0x00);
+dv_field(uint32_t, clbu, 0x04);
+dv_field(uint32_t, fb, 0x08);
+dv_field(uint32_t, fbu, 0x0C);
+dv_field(uint32_t, is, 0x10);
+dv_field(uint32_t, ie, 0x14);
+dv_field(uint32_t, cmd, 0x18);
+dv_field(uint32_t, rsv0, 0x1C);
+dv_field(uint32_t, tfd, 0x20);
+dv_field(uint32_t, sig, 0x24);
+dv_field(uint32_t, ssts, 0x28);
+dv_field(uint32_t, sctl, 0x2C);
+dv_field(uint32_t, serr, 0x30);
+dv_field(uint32_t, sact, 0x34);
+dv_field(uint32_t, ci, 0x38);
+dv_field(uint32_t, sntf, 0x3C);
+dv_field(uint32_t, fbs, 0x40);
+dv_field(uint32_t[11], rsv1, 0x44);
+dv_field(uint32_t[4], vendor, 0x70);
+#undef DV_STRUCT

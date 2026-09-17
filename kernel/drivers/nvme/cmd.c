@@ -36,7 +36,7 @@ static enum bio_request_status nvme_to_bio_status(uint16_t status_word) {
 }
 TEST_EXPORT(nvme_to_bio_status);
 
-static void nvme_send_waiters(struct nvme_device *dev) {
+void nvme_send_waiters(struct nvme_device *dev) {
     struct nvme_waiting_requests *waiters = &dev->waiting_requests;
     struct nvme_request *next = NULL;
 
@@ -118,18 +118,34 @@ void nvme_process_completions(struct nvme_device *dev, uint32_t qid) {
         uint16_t status = mmio_read_32(&entry->status) & 0xFFFE;
         uint16_t cid = mmio_read_32(&entry->cid);
 
-        struct nvme_request *req = queue->sq_requests[cid];
+        /* CIDs are owned by one in-flight rq, and we release the slot here.
+         *
+         * CIDs out of range, or second completions for retired CIDs
+         * refer to requests that could already be freed, so we need
+         * to drop those and keep draining, else other
+         * completions later on get lost */
+        struct nvme_request *req =
+            cid < queue->sq_depth ? queue->sq_requests[cid] : NULL;
 
-        req->status = status;
+        if (cc_unlikely(!req)) {
+            nvme_log(LOG_ERROR,
+                     "spurious completion on qid %u: cid %u, status 0x%x", qid,
+                     cid, status);
+        } else {
+            queue->sq_requests[cid] = NULL;
 
-        enum irql irql2 = spin_lock_irq_disable(&dev->finished_requests.lock);
+            req->status = status;
 
-        list_add_tail(&req->list_node, &dev->finished_requests.list);
+            enum irql irql2 =
+                spin_lock_irq_disable(&dev->finished_requests.lock);
 
-        spin_unlock(&dev->finished_requests.lock, irql2);
+            list_add_tail(&req->list_node, &dev->finished_requests.list);
 
-        atomic_fetch_sub(&queue->outstanding, 1);
-        atomic_fetch_sub(&dev->total_outstanding, 1);
+            spin_unlock(&dev->finished_requests.lock, irql2);
+
+            atomic_fetch_sub(&queue->outstanding, 1);
+            atomic_fetch_sub(&dev->total_outstanding, 1);
+        }
 
         queue->cq_head = (queue->cq_head + 1) % queue->cq_depth;
         if (queue->cq_head == 0)
@@ -151,16 +167,29 @@ enum irq_result nvme_isr_handler(void *ctx, uint8_t vector,
     return IRQ_HANDLED;
 }
 
-void nvme_submit_io_cmd(struct nvme_device *nvme, struct nvme_command *cmd,
+/* Place a command on the queue and use the tail slot's index as the CID.
+ *
+ * Return false if the thread is owned by an in-flight request, with
+ * outstanding counters moving under a lock */
+bool nvme_submit_io_cmd(struct nvme_device *nvme, struct nvme_command *cmd,
                         uint32_t qid, struct nvme_request *req) {
     struct nvme_queue *this_queue = nvme->io_queues[qid];
-
-    atomic_fetch_add(&this_queue->outstanding, 1);
-    atomic_fetch_add(&nvme->total_outstanding, 1);
 
     enum irql irql = spin_lock_irq_disable(&this_queue->lock);
 
     uint16_t tail = this_queue->sq_tail;
+
+    /* A ring of sq_depth entries holds at MOST sq_depth -1 */
+    if (atomic_load(&this_queue->outstanding) >= this_queue->sq_depth - 1) {
+        spin_unlock(&this_queue->lock, irql);
+        return false;
+    }
+
+    if (this_queue->sq_requests[tail]) {
+        spin_unlock(&this_queue->lock, irql);
+        return false;
+    }
+
     uint16_t next_tail = (tail + 1) % this_queue->sq_depth;
 
     cmd->cid = tail;
@@ -172,9 +201,14 @@ void nvme_submit_io_cmd(struct nvme_device *nvme, struct nvme_command *cmd,
 
     this_queue->sq_tail = next_tail;
 
+    atomic_fetch_add(&this_queue->outstanding, 1);
+    atomic_fetch_add(&nvme->total_outstanding, 1);
+
     mmio_write_32(this_queue->sq_db, next_tail);
 
     spin_unlock(&this_queue->lock, irql);
+
+    return true;
 }
 
 uint16_t nvme_submit_admin_cmd(struct nvme_device *nvme,

@@ -1,5 +1,13 @@
 #include "block/tests/test_internal.h"
 
+#include <thread/thread.h>
+#include <time/time.h>
+
+/* The completion has to reach the driver's worker thread and back, so the
+ * budget is loose */
+#define BIO_COMPLETE_TIMEOUT_MS 2000
+#define BIO_POLL_INTERVAL_US 200
+
 TEST_GROUP_DECLARE(bio, .intensity_desc = {
                             .curve = SCALE_PIECEWISE_LINEAR,
                             .unit = "ios",
@@ -16,7 +24,6 @@ static atomic_bool done = false;
 static void bio_callback(struct bio_request *req) {
     (void) req;
     done = true;
-    test_info("blkdev_bio callback succeeded");
 }
 
 TEST_DECLARE_INTEGRATION(bio, async_submit, TEST_INTENSITY(1, 1, 16)) {
@@ -24,6 +31,7 @@ TEST_DECLARE_INTEGRATION(bio, async_submit, TEST_INTENSITY(1, 1, 16)) {
     struct ext2_fs *fs = root->fs_data;
     struct block_device *d = fs->drive;
     uint64_t run_times = ctx->intensity_val ? ctx->intensity_val : 1;
+    time_ms_t worst_ms = 0;
     done = false;
     enable_interrupts();
 
@@ -48,14 +56,40 @@ TEST_DECLARE_INTEGRATION(bio, async_submit, TEST_INTENSITY(1, 1, 16)) {
             bio->user_data = (void *) BIO_RQ_HIGH;
         }
 
+        /* Reset per request */
+        done = false;
+
         bool submitted = d->submit_bio_async(d, bio);
         if (!submitted)
             return TEST_FAIL("submit_bio_async rejected the request");
 
-        sleep_spin_ms(100);
+        time_ms_t start = time_get_ms();
+        while (!atomic_load(&done)) {
+            if (time_get_ms() - start >= BIO_COMPLETE_TIMEOUT_MS) {
+                test_err("request %llu never completed: %u ms elapsed, "
+                         "status still %d",
+                         (unsigned long long) i, BIO_COMPLETE_TIMEOUT_MS,
+                         bio->status);
+                return TEST_FAIL("bio did not complete before the deadline");
+            }
+            thread_sleep_for_us(BIO_POLL_INTERVAL_US);
+        }
+
+        time_ms_t took = time_get_ms() - start;
+        if (took > worst_ms)
+            worst_ms = took;
 
         TEST_ASSERT_OK(bio->status);
+
+        /* Now that the request is known to be finished, its buffers can go
+         * back */
+        kfree_aligned(buf);
+        kfree(bio);
     }
+
+    test_info("%llu request(s), worst completion %llu ms",
+              (unsigned long long) run_times, (unsigned long long) worst_ms);
+
     TEST_ASSERT_TRUE(done);
     return TEST_SUCCESS;
 }

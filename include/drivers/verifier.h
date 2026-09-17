@@ -15,20 +15,26 @@
  * - bitfields
  * - reference spec
  * - give full names to members */
-#define dv_layout_full(type, bytes, ...) ct_assert_size(type, bytes)
+#define dv_size_full(type, bytes, ...)                                         \
+    _Static_assert(sizeof(type) == (bytes),                                    \
+                   PP_STRINGIZE(type) " is not " #bytes " bytes")
 
-#define dv_align_full(type, bytes, ...) ct_assert_align(type, bytes)
+#define dv_align_full(type, bytes, ...)                                        \
+    _Static_assert(_Alignof(type) == (bytes),                                  \
+                   PP_STRINGIZE(type) " is not " #bytes "-byte aligned")
 
-#define dv_field_full(type, member, offset, bytes, ...)                        \
+#define dv_field_full(type, member_type, member, offset, ...)                  \
     _Static_assert(__builtin_offsetof(type, member) == (offset) &&             \
-                       sizeof(((type *) 0)->member) == (bytes),                \
-                   #type "." #member " is not at offset " #offset              \
-                         " with size " #bytes)
+                       __builtin_types_compatible_p(                           \
+                           __typeof__(((type *) 0)->member), member_type),     \
+                   PP_STRINGIZE(type) "." #member " is not " #member_type      \
+                                      " at " #offset)
 
 #define dv_field_at_full(type, member, offset, ...)                            \
-    ct_assert_offset(type, member, offset)
+    _Static_assert(__builtin_offsetof(type, member) == (offset),               \
+                   PP_STRINGIZE(type) "." #member " is not at " #offset)
 
-#define dv_layout(name, ...) dv_layout_full(struct name, __VA_ARGS__)
-#define dv_align(name, ...) dv_align_full(struct name, __VA_ARGS__)
-#define dv_field(name, ...) dv_field_full(struct name, __VA_ARGS__)
-#define dv_field_at(name, ...) dv_field_at_full(struct name, __VA_ARGS__)
+#define dv_size(...) dv_size_full(struct DV_STRUCT, __VA_ARGS__)
+#define dv_align(...) dv_align_full(struct DV_STRUCT, __VA_ARGS__)
+#define dv_field(...) dv_field_full(struct DV_STRUCT, __VA_ARGS__)
+#define dv_field_at(...) dv_field_at_full(struct DV_STRUCT, __VA_ARGS__)

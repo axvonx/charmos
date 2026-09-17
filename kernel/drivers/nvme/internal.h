@@ -51,6 +51,9 @@ static inline void nvme_check_dma_addr(uint64_t phys, const char *what) {
         panic("NVMe: %s aims at kernel text (phys 0x%lx)", what, phys);
 }
 
+/* Hand head of the waiting list back submission */
+void nvme_send_waiters(struct nvme_device *dev);
+
 bool nvme_read_sector_async(struct block_device *disk,
                             struct nvme_request *req);
 

@@ -1,138 +1,159 @@
 /* TODO: spec citations per structure */
+
 #include <drivers/nvme.h>
 #include <drivers/verifier.h>
 
-dv_layout(nvme_regs, 0x1020);
-dv_field(nvme_regs, cap_lo, 0x0, 4);
-dv_field(nvme_regs, cap_hi, 0x4, 4);
-dv_field(nvme_regs, version, 0x8, 4);
-dv_field(nvme_regs, intms, 0xc, 4);
-dv_field(nvme_regs, intmc, 0x10, 4);
-dv_field(nvme_regs, cc, 0x14, 4);
-dv_field(nvme_regs, nssr, 0x18, 4);
-dv_field(nvme_regs, csts, 0x1c, 4);
-dv_field(nvme_regs, reserved1, 0x20, 4);
-dv_field(nvme_regs, aqa, 0x24, 4);
-dv_field(nvme_regs, asq_lo, 0x28, 4);
-dv_field(nvme_regs, asq_hi, 0x2c, 4);
-dv_field(nvme_regs, acq_lo, 0x30, 4);
-dv_field(nvme_regs, acq_hi, 0x34, 4);
-dv_field(nvme_regs, reserved4, 0x38, 4072);
+#define DV_STRUCT nvme_regs
+dv_size(0x1020);
+dv_field(uint32_t, cap_lo, 0x00);
+dv_field(uint32_t, cap_hi, 0x04);
+dv_field(uint32_t, version, 0x08);
+dv_field(uint32_t, intms, 0x0C);
+dv_field(uint32_t, intmc, 0x10);
+dv_field(struct nvme_cc, cc, 0x14);
+dv_field(uint32_t, nssr, 0x18);
+dv_field(uint32_t, csts, 0x1C);
+dv_field(uint32_t, reserved1, 0x20);
+dv_field(uint32_t, aqa, 0x24);
+dv_field(uint32_t, asq_lo, 0x28);
+dv_field(uint32_t, asq_hi, 0x2C);
+dv_field(uint32_t, acq_lo, 0x30);
+dv_field(uint32_t, acq_hi, 0x34);
+dv_field(uint32_t[1018], reserved4, 0x38);
+#undef DV_STRUCT
 
-dv_layout(nvme_command, 0x40);
-dv_field(nvme_command, opc, 0x0, 1);
-dv_field(nvme_command, fuse, 0x1, 1);
-dv_field(nvme_command, cid, 0x2, 2);
-dv_field(nvme_command, nsid, 0x4, 4);
-dv_field(nvme_command, rsvd2, 0x8, 8);
-dv_field(nvme_command, mptr, 0x10, 8);
-dv_field(nvme_command, prp1, 0x18, 8);
-dv_field(nvme_command, prp2, 0x20, 8);
-dv_field(nvme_command, cdw10, 0x28, 4);
-dv_field(nvme_command, cdw11, 0x2c, 4);
-dv_field(nvme_command, cdw12, 0x30, 4);
-dv_field(nvme_command, cdw13, 0x34, 4);
-dv_field(nvme_command, cdw14, 0x38, 4);
-dv_field(nvme_command, cdw15, 0x3c, 4);
+#define DV_STRUCT nvme_command
+dv_size(0x40);
+dv_align(1);
+dv_field(uint8_t, opc, 0x00);
+dv_field(uint8_t, fuse, 0x01);
+dv_field(uint16_t, cid, 0x02);
+dv_field(uint32_t, nsid, 0x04);
+dv_field(uint64_t, rsvd2, 0x08);
+dv_field(uint64_t, mptr, 0x10);
+dv_field(uint64_t, prp1, 0x18);
+dv_field(uint64_t, prp2, 0x20);
+dv_field(uint32_t, cdw10, 0x28);
+dv_field(uint32_t, cdw11, 0x2C);
+dv_field(uint32_t, cdw12, 0x30);
+dv_field(uint32_t, cdw13, 0x34);
+dv_field(uint32_t, cdw14, 0x38);
+dv_field(uint32_t, cdw15, 0x3C);
+#undef DV_STRUCT
 
-dv_layout(nvme_completion, 0x10);
-dv_field(nvme_completion, result, 0x0, 4);
-dv_field(nvme_completion, rsvd, 0x4, 4);
-dv_field(nvme_completion, sq_head, 0x8, 2);
-dv_field(nvme_completion, sq_id, 0xa, 2);
-dv_field(nvme_completion, cid, 0xc, 2);
-dv_field(nvme_completion, status, 0xe, 2);
+#define DV_STRUCT nvme_completion
+dv_size(0x10);
+dv_align(1);
+dv_field(uint32_t, result, 0x00);
+dv_field(uint32_t, rsvd, 0x04);
+dv_field(uint16_t, sq_head, 0x08);
+dv_field(uint16_t, sq_id, 0x0A);
+dv_field(uint16_t, cid, 0x0C);
+dv_field(uint16_t, status, 0x0E);
+#undef DV_STRUCT
 
-dv_layout(nvme_cc, 0x4);
+#define DV_STRUCT nvme_cc
+dv_size(0x04);
+dv_align(1);
+#undef DV_STRUCT
 
-dv_layout(nvme_lbaf, 0x4);
-dv_field(nvme_lbaf, ms, 0x0, 2);
-dv_field(nvme_lbaf, lbads, 0x2, 1);
-/* bitfields, not offsetof-able: rp, reserved */
+#define DV_STRUCT nvme_lbaf
+dv_size(0x04);
+dv_align(1);
+dv_field(uint16_t, ms, 0x00);
+dv_field(uint8_t, lbads, 0x02);
+/* bitfields: rp, reserved */
+#undef DV_STRUCT
 
-dv_layout(nvme_identify_namespace, 0x1000);
-dv_field(nvme_identify_namespace, nsze, 0x0, 8);
-dv_field(nvme_identify_namespace, ncap, 0x8, 8);
-dv_field(nvme_identify_namespace, nuse, 0x10, 8);
-dv_field(nvme_identify_namespace, nsfeat, 0x18, 1);
-dv_field(nvme_identify_namespace, nlbaf, 0x19, 1);
-dv_field(nvme_identify_namespace, flbas, 0x1a, 1);
-dv_field(nvme_identify_namespace, mc, 0x1b, 1);
-dv_field(nvme_identify_namespace, dpc, 0x1c, 1);
-dv_field(nvme_identify_namespace, dps, 0x1d, 1);
-dv_field(nvme_identify_namespace, nmic, 0x1e, 1);
-dv_field(nvme_identify_namespace, rescap, 0x1f, 1);
-dv_field(nvme_identify_namespace, fpi, 0x20, 1);
-dv_field(nvme_identify_namespace, dlfeat, 0x21, 1);
-dv_field(nvme_identify_namespace, nawun, 0x22, 2);
-dv_field(nvme_identify_namespace, nawupf, 0x24, 2);
-dv_field(nvme_identify_namespace, nacwu, 0x26, 2);
-dv_field(nvme_identify_namespace, nabsn, 0x28, 2);
-dv_field(nvme_identify_namespace, nabo, 0x2a, 2);
-dv_field(nvme_identify_namespace, nabspf, 0x2c, 2);
-dv_field(nvme_identify_namespace, noiob, 0x2e, 2);
-dv_field(nvme_identify_namespace, nvmcap, 0x30, 16);
-dv_field(nvme_identify_namespace, npwg, 0x40, 2);
-dv_field(nvme_identify_namespace, npwa, 0x42, 2);
-dv_field(nvme_identify_namespace, npdg, 0x44, 2);
-dv_field(nvme_identify_namespace, npda, 0x46, 2);
-dv_field(nvme_identify_namespace, nows, 0x48, 2);
-dv_field(nvme_identify_namespace, mssrl, 0x4a, 2);
-dv_field(nvme_identify_namespace, mcl, 0x4c, 4);
-dv_field(nvme_identify_namespace, msrc, 0x50, 1);
-dv_field(nvme_identify_namespace, reserved0, 0x51, 11);
-dv_field(nvme_identify_namespace, adagrpid, 0x5c, 4);
-dv_field(nvme_identify_namespace, reserved1, 0x60, 3);
-dv_field(nvme_identify_namespace, nsattr, 0x63, 1);
-dv_field(nvme_identify_namespace, nvmsetid, 0x64, 2);
-dv_field(nvme_identify_namespace, endgid, 0x66, 2);
-dv_field(nvme_identify_namespace, nguid, 0x68, 16);
-dv_field(nvme_identify_namespace, eui64, 0x78, 8);
-dv_field(nvme_identify_namespace, lbaf, 0x80, 256);
-dv_field(nvme_identify_namespace, vendor_specific, 0x180, 3712);
+#define DV_STRUCT nvme_identify_namespace
+dv_size(0x1000);
+dv_align(1);
+dv_field(uint64_t, nsze, 0x00);
+dv_field(uint64_t, ncap, 0x08);
+dv_field(uint64_t, nuse, 0x10);
+dv_field(uint8_t, nsfeat, 0x18);
+dv_field(uint8_t, nlbaf, 0x19);
+dv_field(uint8_t, flbas, 0x1A);
+dv_field(uint8_t, mc, 0x1B);
+dv_field(uint8_t, dpc, 0x1C);
+dv_field(uint8_t, dps, 0x1D);
+dv_field(uint8_t, nmic, 0x1E);
+dv_field(uint8_t, rescap, 0x1F);
+dv_field(uint8_t, fpi, 0x20);
+dv_field(uint8_t, dlfeat, 0x21);
+dv_field(uint16_t, nawun, 0x22);
+dv_field(uint16_t, nawupf, 0x24);
+dv_field(uint16_t, nacwu, 0x26);
+dv_field(uint16_t, nabsn, 0x28);
+dv_field(uint16_t, nabo, 0x2A);
+dv_field(uint16_t, nabspf, 0x2C);
+dv_field(uint16_t, noiob, 0x2E);
+dv_field(uint64_t[2], nvmcap, 0x30);
+dv_field(uint16_t, npwg, 0x40);
+dv_field(uint16_t, npwa, 0x42);
+dv_field(uint16_t, npdg, 0x44);
+dv_field(uint16_t, npda, 0x46);
+dv_field(uint16_t, nows, 0x48);
+dv_field(uint16_t, mssrl, 0x4A);
+dv_field(uint32_t, mcl, 0x4C);
+dv_field(uint8_t, msrc, 0x50);
+dv_field(uint8_t[11], reserved0, 0x51);
+dv_field(uint32_t, adagrpid, 0x5C);
+dv_field(uint8_t[3], reserved1, 0x60);
+dv_field(uint8_t, nsattr, 0x63);
+dv_field(uint16_t, nvmsetid, 0x64);
+dv_field(uint16_t, endgid, 0x66);
+dv_field(uint64_t[2], nguid, 0x68);
+dv_field(uint64_t, eui64, 0x78);
+dv_field(struct nvme_lbaf[64], lbaf, 0x80);
+dv_field(uint8_t[3712], vendor_specific, 0x180);
+#undef DV_STRUCT
 
-dv_layout(nvme_identify_controller, 0x202);
-dv_field(nvme_identify_controller, vid, 0x0, 2);
-dv_field(nvme_identify_controller, ssvid, 0x2, 2);
-dv_field(nvme_identify_controller, sn, 0x4, 20);
-dv_field(nvme_identify_controller, mn, 0x18, 40);
-dv_field(nvme_identify_controller, fr, 0x40, 8);
-dv_field(nvme_identify_controller, rab, 0x48, 1);
-dv_field(nvme_identify_controller, ieee, 0x49, 3);
-dv_field(nvme_identify_controller, mic, 0x4c, 1);
-dv_field(nvme_identify_controller, mdts, 0x4d, 1);
-dv_field(nvme_identify_controller, cntlid, 0x4e, 2);
-dv_field(nvme_identify_controller, ver, 0x50, 4);
-dv_field(nvme_identify_controller, rtd3r, 0x54, 4);
-dv_field(nvme_identify_controller, rtd3e, 0x58, 4);
-dv_field(nvme_identify_controller, oaes, 0x5c, 4);
-dv_field(nvme_identify_controller, ctratt, 0x60, 4);
-dv_field(nvme_identify_controller, rsvd96, 0x64, 156);
-dv_field(nvme_identify_controller, oacs, 0x100, 2);
-dv_field(nvme_identify_controller, acl, 0x102, 1);
-dv_field(nvme_identify_controller, aerl, 0x103, 1);
-dv_field(nvme_identify_controller, frmw, 0x104, 1);
-dv_field(nvme_identify_controller, lpa, 0x105, 1);
-dv_field(nvme_identify_controller, elpe, 0x106, 1);
-dv_field(nvme_identify_controller, npss, 0x107, 1);
-dv_field(nvme_identify_controller, avscc, 0x108, 1);
-dv_field(nvme_identify_controller, apsta, 0x109, 1);
-dv_field(nvme_identify_controller, wctemp, 0x10a, 2);
-dv_field(nvme_identify_controller, cctemp, 0x10c, 2);
-dv_field(nvme_identify_controller, mtfa, 0x10e, 2);
-dv_field(nvme_identify_controller, hmpre, 0x110, 4);
-dv_field(nvme_identify_controller, hmmin, 0x114, 4);
-dv_field(nvme_identify_controller, tnvmcap, 0x118, 16);
-dv_field(nvme_identify_controller, unvmcap, 0x128, 16);
-dv_field(nvme_identify_controller, rpmbs, 0x138, 4);
-dv_field(nvme_identify_controller, edstt, 0x13c, 2);
-dv_field(nvme_identify_controller, dsto, 0x13e, 1);
-dv_field(nvme_identify_controller, fwug, 0x13f, 1);
-dv_field(nvme_identify_controller, kas, 0x140, 2);
-dv_field(nvme_identify_controller, hctma, 0x142, 2);
-dv_field(nvme_identify_controller, mntmt, 0x144, 2);
-dv_field(nvme_identify_controller, mxtmt, 0x146, 2);
-dv_field(nvme_identify_controller, sanicap, 0x148, 4);
-dv_field(nvme_identify_controller, rsvd228, 0x14c, 180);
-dv_field(nvme_identify_controller, sqes, 0x200, 1);
-dv_field(nvme_identify_controller, cqes, 0x201, 1);
+#define DV_STRUCT nvme_identify_controller
+dv_size(0x202);
+dv_align(1);
+dv_field(uint16_t, vid, 0x00);
+dv_field(uint16_t, ssvid, 0x02);
+dv_field(char[20], sn, 0x04);
+dv_field(char[40], mn, 0x18);
+dv_field(char[8], fr, 0x40);
+dv_field(uint8_t, rab, 0x48);
+dv_field(uint8_t[3], ieee, 0x49);
+dv_field(uint8_t, mic, 0x4C);
+dv_field(uint8_t, mdts, 0x4D);
+dv_field(uint16_t, cntlid, 0x4E);
+dv_field(uint32_t, ver, 0x50);
+dv_field(uint32_t, rtd3r, 0x54);
+dv_field(uint32_t, rtd3e, 0x58);
+dv_field(uint32_t, oaes, 0x5C);
+dv_field(uint32_t, ctratt, 0x60);
+dv_field(uint8_t[156], rsvd96, 0x64);
+dv_field(uint16_t, oacs, 0x100);
+dv_field(uint8_t, acl, 0x102);
+dv_field(uint8_t, aerl, 0x103);
+dv_field(uint8_t, frmw, 0x104);
+dv_field(uint8_t, lpa, 0x105);
+dv_field(uint8_t, elpe, 0x106);
+dv_field(uint8_t, npss, 0x107);
+dv_field(uint8_t, avscc, 0x108);
+dv_field(uint8_t, apsta, 0x109);
+dv_field(uint16_t, wctemp, 0x10A);
+dv_field(uint16_t, cctemp, 0x10C);
+dv_field(uint16_t, mtfa, 0x10E);
+dv_field(uint32_t, hmpre, 0x110);
+dv_field(uint32_t, hmmin, 0x114);
+dv_field(uint64_t[2], tnvmcap, 0x118);
+dv_field(uint64_t[2], unvmcap, 0x128);
+dv_field(uint32_t, rpmbs, 0x138);
+dv_field(uint16_t, edstt, 0x13C);
+dv_field(uint8_t, dsto, 0x13E);
+dv_field(uint8_t, fwug, 0x13F);
+dv_field(uint16_t, kas, 0x140);
+dv_field(uint16_t, hctma, 0x142);
+dv_field(uint16_t, mntmt, 0x144);
+dv_field(uint16_t, mxtmt, 0x146);
+dv_field(uint32_t, sanicap, 0x148);
+dv_field(uint8_t[180], rsvd228, 0x14C);
+dv_field(uint8_t, sqes, 0x200);
+dv_field(uint8_t, cqes, 0x201);
+#undef DV_STRUCT

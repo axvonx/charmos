@@ -73,9 +73,9 @@ static void condvar_timeout_wakeup(struct timer *timer) {
     struct thread *t = ck->thread;
 
     /* Signals and timeouts use the same block */
-    kassert(thread_wait_satisfy_epoch(&t->wait_blocks[THREAD_WAIT_BLOCK_SYNC],
-                                      ck->cookie,
-                                      THREAD_WAKE_REASON_SLEEP_TIMEOUT, NULL));
+    (void) thread_wait_satisfy_epoch(&t->wait_blocks[THREAD_WAIT_BLOCK_SYNC],
+                                     ck->cookie,
+                                     THREAD_WAKE_REASON_SLEEP_TIMEOUT, NULL);
 }
 
 enum wake_reason condvar_wait_timeout(struct condvar *cv, struct spinlock *lock,

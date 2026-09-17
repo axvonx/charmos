@@ -29,6 +29,11 @@ static void enqueue_request(struct nvme_device *dev, struct nvme_request *req) {
     list_add_tail(&req->list_node, &q->list);
 
     spin_unlock(&q->lock, irql);
+
+    /* Retry with nvme_send_waiters(), completion decrements
+     * total_outstanding before looking at the list */
+    if (atomic_load(&dev->total_outstanding) == 0)
+        nvme_send_waiters(dev);
 }
 
 static bool nvme_bio_fill_prps(struct nvme_bio_data *data, const void *buffer,
@@ -113,7 +118,8 @@ static bool rw_send_command(struct block_device *disk, struct nvme_request *req,
 
     struct nvme_queue *q = nvme->io_queues[qid];
 
-    if (atomic_load(&q->outstanding) >= q->sq_depth) {
+    /* sq_depth - 1, avoid the off by one */
+    if (atomic_load(&q->outstanding) >= q->sq_depth - 1) {
         enqueue_request(nvme, req);
 
         /* No room */
@@ -151,7 +157,18 @@ static bool rw_send_command(struct block_device *disk, struct nvme_request *req,
     req->done = false;
     req->status = -1;
 
-    nvme_submit_io_cmd(nvme, &cmd, qid, req);
+    if (!nvme_submit_io_cmd(nvme, &cmd, qid, req)) {
+        /* Queue filled up. Enqueue a request and a completion
+         * will hand it back */
+        if (data->prp_list_phys)
+            pmm_free_page(data->prp_list_phys);
+
+        kfree(data->prps);
+        kfree(data);
+        req->bio_data = NULL;
+
+        enqueue_request(nvme, req);
+    }
 
     return true;
 }

@@ -1,59 +1,75 @@
 /* TODO: spec citations per structure */
+
 #include <drivers/usb/usb.h>
 #include <drivers/verifier.h>
 
 /* USB specification, page 276 */
-dv_layout(usb_setup_packet, 0x8);
-dv_field(usb_setup_packet, bitmap_request_type, 0x0, 1);
-dv_field(usb_setup_packet, request, 0x1, 1);
-dv_field(usb_setup_packet, value, 0x2, 2);
-dv_field(usb_setup_packet, length, 0x6, 2);
+#define DV_STRUCT usb_setup_packet
+dv_size(0x08);
+dv_align(1);
+dv_field(uint8_t, bitmap_request_type, 0x00);
+dv_field(enum usb_rq_code, request, 0x01);
+dv_field(uint16_t, value, 0x02);
+dv_field(uint16_t, length, 0x06);
+#undef DV_STRUCT
 
 /* USB specification, page 290 */
-dv_layout(usb_device_descriptor, 0x12);
-dv_field(usb_device_descriptor, length, 0x0, 1);
-dv_field(usb_device_descriptor, type, 0x1, 1);
-dv_field(usb_device_descriptor, usb_num_bcd, 0x2, 2);
-dv_field(usb_device_descriptor, class, 0x4, 1);
-dv_field(usb_device_descriptor, subclass, 0x5, 1);
-dv_field(usb_device_descriptor, protocol, 0x6, 1);
-dv_field(usb_device_descriptor, max_packet_size, 0x7, 1);
-dv_field(usb_device_descriptor, vendor_id, 0x8, 2);
-dv_field(usb_device_descriptor, product_id, 0xa, 2);
-dv_field(usb_device_descriptor, device_num_bcd, 0xc, 2);
-dv_field(usb_device_descriptor, manufacturer, 0xe, 1);
-dv_field(usb_device_descriptor, product, 0xf, 1);
-dv_field(usb_device_descriptor, serial_num, 0x10, 1);
-dv_field(usb_device_descriptor, num_configs, 0x11, 1);
+#define DV_STRUCT usb_device_descriptor
+dv_size(0x12);
+dv_align(1);
+dv_field(uint8_t, length, 0x00);
+dv_field(uint8_t, type, 0x01);
+dv_field(uint16_t, usb_num_bcd, 0x02);
+dv_field(uint8_t, class, 0x04);
+dv_field(uint8_t, subclass, 0x05);
+dv_field(uint8_t, protocol, 0x06);
+dv_field(uint8_t, max_packet_size, 0x07);
+dv_field(uint16_t, vendor_id, 0x08);
+dv_field(uint16_t, product_id, 0x0A);
+dv_field(uint16_t, device_num_bcd, 0x0C);
+dv_field(uint8_t, manufacturer, 0x0E);
+dv_field(uint8_t, product, 0x0F);
+dv_field(uint8_t, serial_num, 0x10);
+dv_field(uint8_t, num_configs, 0x11);
+#undef DV_STRUCT
 
 /* TODO: spec citation */
-dv_layout(usb_interface_descriptor, 0x9);
-dv_field(usb_interface_descriptor, length, 0x0, 1);
-dv_field(usb_interface_descriptor, type, 0x1, 1);
-dv_field(usb_interface_descriptor, interface_number, 0x2, 1);
-dv_field(usb_interface_descriptor, alternate_setting, 0x3, 1);
-dv_field(usb_interface_descriptor, num_endpoints, 0x4, 1);
-dv_field(usb_interface_descriptor, class, 0x5, 1);
-dv_field(usb_interface_descriptor, subclass, 0x6, 1);
-dv_field(usb_interface_descriptor, protocol, 0x7, 1);
-dv_field(usb_interface_descriptor, interface, 0x8, 1);
+#define DV_STRUCT usb_interface_descriptor
+dv_size(0x09);
+dv_align(1);
+dv_field(uint8_t, length, 0x00);
+dv_field(uint8_t, type, 0x01);
+dv_field(uint8_t, interface_number, 0x02);
+dv_field(uint8_t, alternate_setting, 0x03);
+dv_field(uint8_t, num_endpoints, 0x04);
+dv_field(uint8_t, class, 0x05);
+dv_field(uint8_t, subclass, 0x06);
+dv_field(uint8_t, protocol, 0x07);
+dv_field(uint8_t, interface, 0x08);
+#undef DV_STRUCT
 
 /* TODO: spec citation */
-dv_layout(usb_config_descriptor, 0x9);
-dv_field(usb_config_descriptor, length, 0x0, 1);
-dv_field(usb_config_descriptor, descriptor_type, 0x1, 1);
-dv_field(usb_config_descriptor, total_length, 0x2, 2);
-dv_field(usb_config_descriptor, num_interfaces, 0x4, 1);
-dv_field(usb_config_descriptor, configuration_value, 0x5, 1);
-dv_field(usb_config_descriptor, configuration, 0x6, 1);
-dv_field(usb_config_descriptor, bitmap_attributes, 0x7, 1);
-dv_field(usb_config_descriptor, max_power, 0x8, 1);
+#define DV_STRUCT usb_config_descriptor
+dv_size(0x09);
+dv_align(1);
+dv_field(uint8_t, length, 0x00);
+dv_field(uint8_t, descriptor_type, 0x01);
+dv_field(uint16_t, total_length, 0x02);
+dv_field(uint8_t, num_interfaces, 0x04);
+dv_field(uint8_t, configuration_value, 0x05);
+dv_field(uint8_t, configuration, 0x06);
+dv_field(uint8_t, bitmap_attributes, 0x07);
+dv_field(uint8_t, max_power, 0x08);
+#undef DV_STRUCT
 
 /* TODO: spec citation */
-dv_layout(usb_endpoint_descriptor, 0x7);
-dv_field(usb_endpoint_descriptor, length, 0x0, 1);
-dv_field(usb_endpoint_descriptor, type, 0x1, 1);
-dv_field(usb_endpoint_descriptor, address, 0x2, 1);
-dv_field(usb_endpoint_descriptor, attributes, 0x3, 1);
-dv_field(usb_endpoint_descriptor, max_packet_size, 0x4, 2);
-dv_field(usb_endpoint_descriptor, interval, 0x6, 1);
+#define DV_STRUCT usb_endpoint_descriptor
+dv_size(0x07);
+dv_align(1);
+dv_field(uint8_t, length, 0x00);
+dv_field(uint8_t, type, 0x01);
+dv_field(uint8_t, address, 0x02);
+dv_field(uint8_t, attributes, 0x03);
+dv_field(uint16_t, max_packet_size, 0x04);
+dv_field(uint8_t, interval, 0x06);
+#undef DV_STRUCT

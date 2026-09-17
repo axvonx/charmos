@@ -126,8 +126,9 @@ void nvme_alloc_io_queues(struct nvme_device *nvme, uint32_t qid) {
     this_queue->sq_tail = 0;
     this_queue->cq_head = 0;
     this_queue->cq_phase = 1;
+    /* match sizes */
     this_queue->sq_depth = 64; // TODO: #define these or something
-    this_queue->cq_depth = 16;
+    this_queue->cq_depth = 64;
     this_queue->sq_db =
         (uint32_t *) ((uint8_t *) nvme->regs + NVME_DOORBELL_BASE +
                       (2 * qid * nvme->doorbell_stride));
@@ -146,7 +147,7 @@ void nvme_alloc_io_queues(struct nvme_device *nvme, uint32_t qid) {
     cq_cmd.opc = NVME_OP_ADMIN_CREATE_IOCQ;
     cq_cmd.prp1 = cq_phys;
 
-    cq_cmd.cdw10 = (15) << 16 | qid;
+    cq_cmd.cdw10 = (this_queue->cq_depth - 1) << 16 | qid;
 
     /* isr enabled, physicall contiguous */
     cq_cmd.cdw11 = this_isr << 16 | 0b11;
@@ -165,7 +166,7 @@ void nvme_alloc_io_queues(struct nvme_device *nvme, uint32_t qid) {
     sq_cmd.opc = NVME_OP_ADMIN_CREATE_IOSQ;
     sq_cmd.prp1 = sq_phys;
 
-    sq_cmd.cdw10 = (63) << 16 | qid;
+    sq_cmd.cdw10 = (this_queue->sq_depth - 1) << 16 | qid;
     sq_cmd.cdw11 = qid << 16 | 1;
 
     if (nvme_submit_admin_cmd(nvme, &sq_cmd, NULL) != 0) {

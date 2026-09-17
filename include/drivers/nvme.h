@@ -273,7 +273,7 @@ uint16_t nvme_submit_admin_cmd(struct nvme_device *nvme,
 uint32_t nvme_set_num_queues(struct nvme_device *nvme, uint16_t desired_sq,
                              uint16_t desired_cq);
 
-void nvme_submit_io_cmd(struct nvme_device *nvme, struct nvme_command *cmd,
+bool nvme_submit_io_cmd(struct nvme_device *nvme, struct nvme_command *cmd,
                         uint32_t qid, struct nvme_request *req);
 
 uint8_t *nvme_identify_controller(struct nvme_device *nvme);

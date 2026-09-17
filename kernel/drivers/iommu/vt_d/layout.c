@@ -1,50 +1,63 @@
 /* TODO: spec citations per structure */
+
 #include <drivers/iommu/vt_d.h>
 #include <drivers/verifier.h>
 
-dv_layout(vtd_regs, 0xc0);
-dv_field(vtd_regs, version, 0x0, 4);
-dv_field(vtd_regs, _res0, 0x4, 4);
-dv_field(vtd_regs, capabilities, 0x8, 8);
-dv_field(vtd_regs, extended_capabilities, 0x10, 8);
-dv_field(vtd_regs, global_command, 0x18, 4);
-dv_field(vtd_regs, global_status, 0x1c, 4);
-dv_field(vtd_regs, root_table_addr, 0x20, 8);
-dv_field(vtd_regs, context_command, 0x28, 8);
-dv_field(vtd_regs, _res1, 0x30, 4);
-dv_field(vtd_regs, fault_status, 0x34, 4);
-dv_field(vtd_regs, fault_event_control, 0x38, 4);
-dv_field(vtd_regs, fault_event_data, 0x3c, 4);
-dv_field(vtd_regs, fault_event_addr, 0x40, 4);
-dv_field(vtd_regs, fault_event_addr_upper, 0x44, 4);
-dv_field(vtd_regs, _res2, 0x48, 16);
-dv_field(vtd_regs, advanced_fault_log, 0x58, 8);
-dv_field(vtd_regs, _res3, 0x60, 4);
-dv_field(vtd_regs, protected_memory_enable, 0x64, 4);
-dv_field(vtd_regs, protected_low_mem_base, 0x68, 4);
-dv_field(vtd_regs, protected_low_mem_limit, 0x6c, 4);
-dv_field(vtd_regs, protected_high_mem_base, 0x70, 8);
-dv_field(vtd_regs, protected_high_mem_limit, 0x78, 8);
-dv_field(vtd_regs, invalidation_queue_head, 0x80, 8);
-dv_field(vtd_regs, invalidation_queue_tail, 0x88, 8);
-dv_field(vtd_regs, invalidation_queue_addr, 0x90, 8);
-dv_field(vtd_regs, _res4, 0x98, 4);
-dv_field(vtd_regs, invalidation_comp_status, 0x9c, 4);
-dv_field(vtd_regs, invalidation_event_ctrl, 0xa0, 4);
-dv_field(vtd_regs, invalidation_event_data, 0xa4, 4);
-dv_field(vtd_regs, invalidation_event_addr, 0xa8, 4);
-dv_field(vtd_regs, invalidation_event_addr_upper, 0xac, 4);
-dv_field(vtd_regs, invalidation_queue_error_record, 0xb0, 8);
-dv_field(vtd_regs, interrupt_remapping_table_addr, 0xb8, 8);
+#define DV_STRUCT vtd_regs
+dv_size(0xC0);
+dv_align(1);
+dv_field(uint32_t, version, 0x00);
+dv_field(uint32_t, _res0, 0x04);
+dv_field(uint64_t, capabilities, 0x08);
+dv_field(uint64_t, extended_capabilities, 0x10);
+dv_field(uint32_t, global_command, 0x18);
+dv_field(uint32_t, global_status, 0x1C);
+dv_field(uint64_t, root_table_addr, 0x20);
+dv_field(uint64_t, context_command, 0x28);
+dv_field(uint32_t, _res1, 0x30);
+dv_field(uint32_t, fault_status, 0x34);
+dv_field(uint32_t, fault_event_control, 0x38);
+dv_field(uint32_t, fault_event_data, 0x3C);
+dv_field(uint32_t, fault_event_addr, 0x40);
+dv_field(uint32_t, fault_event_addr_upper, 0x44);
+dv_field(uint64_t[2], _res2, 0x48);
+dv_field(uint64_t, advanced_fault_log, 0x58);
+dv_field(uint32_t, _res3, 0x60);
+dv_field(uint32_t, protected_memory_enable, 0x64);
+dv_field(uint32_t, protected_low_mem_base, 0x68);
+dv_field(uint32_t, protected_low_mem_limit, 0x6C);
+dv_field(uint64_t, protected_high_mem_base, 0x70);
+dv_field(uint64_t, protected_high_mem_limit, 0x78);
+dv_field(uint64_t, invalidation_queue_head, 0x80);
+dv_field(uint64_t, invalidation_queue_tail, 0x88);
+dv_field(uint64_t, invalidation_queue_addr, 0x90);
+dv_field(uint32_t, _res4, 0x98);
+dv_field(uint32_t, invalidation_comp_status, 0x9C);
+dv_field(uint32_t, invalidation_event_ctrl, 0xA0);
+dv_field(uint32_t, invalidation_event_data, 0xA4);
+dv_field(uint32_t, invalidation_event_addr, 0xA8);
+dv_field(uint32_t, invalidation_event_addr_upper, 0xAC);
+dv_field(uint64_t, invalidation_queue_error_record, 0xB0);
+dv_field(uint64_t, interrupt_remapping_table_addr, 0xB8);
+#undef DV_STRUCT
 
-dv_layout(vtd_root_entry, 0x10);
-dv_field(vtd_root_entry, lo, 0x0, 8);
-dv_field(vtd_root_entry, hi, 0x8, 8);
+#define DV_STRUCT vtd_root_entry
+dv_size(0x10);
+dv_align(1);
+dv_field(uint64_t, lo, 0x00);
+dv_field(uint64_t, hi, 0x08);
+#undef DV_STRUCT
 
-dv_layout(vtd_context_entry, 0x10);
-dv_field(vtd_context_entry, lo, 0x0, 8);
-dv_field(vtd_context_entry, hi, 0x8, 8);
+#define DV_STRUCT vtd_context_entry
+dv_size(0x10);
+dv_align(1);
+dv_field(uint64_t, lo, 0x00);
+dv_field(uint64_t, hi, 0x08);
+#undef DV_STRUCT
 
-dv_layout(vtd_inv_desc, 0x10);
-dv_field(vtd_inv_desc, lo, 0x0, 8);
-dv_field(vtd_inv_desc, hi, 0x8, 8);
+#define DV_STRUCT vtd_inv_desc
+dv_size(0x10);
+dv_align(1);
+dv_field(uint64_t, lo, 0x00);
+dv_field(uint64_t, hi, 0x08);
+#undef DV_STRUCT
