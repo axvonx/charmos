@@ -139,7 +139,7 @@ void mutex_init_chk_internal(struct mutex *mtx,
     mutex_chk_state_init(mtx, class, flags);
 }
 
-struct thread *mutex_get_owner(struct mutex *mtx) {
+struct thread *mutex_read_owner(struct mutex *mtx) {
     return (struct thread *) (MUTEX_READ_LOCK_WORD(mtx) & (~MUTEX_META_BITS));
 }
 
@@ -147,7 +147,7 @@ static struct thread *mutex_get_owner_ref(struct mutex *mutex) {
     struct thread *owner;
 
     rcu_read_lock();
-    owner = mutex_get_owner(mutex);
+    owner = mutex_read_owner(mutex);
     if (owner && !thread_get_rcu(owner))
         owner = NULL;
     rcu_read_unlock();
@@ -177,7 +177,7 @@ static bool mutex_owner_running(struct mutex *mutex) {
     return ret;
 }
 
-static void mutex_sanity_check() {
+static void mutex_sanity_check(void) {
     kassert(irq_not_in_interrupt());
     kassert(irql_get() <= IRQL_APC_LEVEL);
 }
@@ -201,7 +201,7 @@ void mutex_lock_subclass_internal(struct mutex *mutex, uint8_t subclass,
     }
 
     /* failed to spin_try_acquire... now we must do the funny business... */
-    struct thread *last_owner = mutex_get_owner(mutex);
+    struct thread *last_owner = mutex_read_owner(mutex);
     struct thread *current_owner = last_owner;
 
     /* we set a backoff to say how much we want to spin in between acquisition
@@ -218,7 +218,7 @@ void mutex_lock_subclass_internal(struct mutex *mutex, uint8_t subclass,
         lock_delay(backoff, MUTEX_BACKOFF_JITTER_PCT);
 
         /* owner is gone, let's try and get the lock */
-        if (!(current_owner = mutex_get_owner(mutex))) {
+        if (!(current_owner = mutex_read_owner(mutex))) {
             if (mutex_try_lock(mutex, current_thread))
                 break; /* got it */
 
@@ -241,8 +241,9 @@ void mutex_lock_subclass_internal(struct mutex *mutex, uint8_t subclass,
             owner_change_count = 0;
         }
 
-        /* keep trying to spin-acquire if the owner is still running */
-        if (mutex_owner_running(mutex))
+        /* keep trying to spin-acquire if the owner is still running,
+         * and the mutex owner still exists at all */
+        if (mutex_owner_running(mutex) && mutex_read_owner(mutex))
             continue;
 
         /* owner is now no longer running, might be in a ready queue
@@ -280,7 +281,7 @@ void mutex_lock_subclass_internal(struct mutex *mutex, uint8_t subclass,
     }
 
     /* hey ho! we got the mutex! */
-    kassert(mutex_get_owner(mutex) == current_thread);
+    kassert(mutex_read_owner(mutex) == current_thread);
     mutex_chk_locked(&chk_state);
     crash_unwind_enter_mutex(mutex);
 }
@@ -296,10 +297,10 @@ void mutex_unlock_internal(struct mutex *mutex,
 
     struct thread *current_thread = thread_get_current();
 
-    if (mutex_get_owner(mutex) != current_thread)
+    if (mutex_read_owner(mutex) != current_thread)
         panic("non-owner thread tried to unlock mutex. mutex owner is %p, "
               "current thread is %p",
-              mutex_get_owner(mutex), current_thread);
+              mutex_read_owner(mutex), current_thread);
 
     struct turnstile *ts;
     enum irql ts_lock_irql = turnstile_lookup(mutex, &ts);
@@ -333,7 +334,7 @@ void mutex_assert_held_internal(struct mutex *mtx,
 #else
     cc_var_unused(site);
 #endif
-    kassert(mutex_get_owner(mtx) == thread_get_current(),
+    kassert(mutex_read_owner(mtx) == thread_get_current(),
             "mutex not held by current thread");
 }
 
@@ -348,6 +349,6 @@ void mutex_assert_not_held_internal(struct mutex *mtx,
 #else
     cc_var_unused(site);
 #endif
-    kassert(mutex_get_owner(mtx) != thread_get_current(),
+    kassert(mutex_read_owner(mtx) != thread_get_current(),
             "mutex unexpectedly held by current thread");
 }

@@ -8,6 +8,7 @@
 #include <structures/bitmap.h>
 #include <structures/minheap.h>
 #include <structures/rbit.h>
+#include <structures/rbt.h>
 
 #include <structures/avl.h>
 #include <structures/bloom.h>
@@ -21,6 +22,7 @@
 #include <structures/spsc_fifo.h>
 
 TEST_GROUP_DEFINE(minheap);
+TEST_GROUP_DEFINE(rbt);
 TEST_GROUP_DEFINE(rbit);
 TEST_GROUP_DEFINE(bitmap);
 TEST_GROUP_DEFINE(radix);

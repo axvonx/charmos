@@ -46,7 +46,7 @@ void mutex_lock_subclass_internal(struct mutex *mutex, uint8_t subclass,
     TSA_ACQUIRES(mutex);
 
 bool mutex_locked(struct mutex *mtx);
-struct thread *mutex_get_owner(struct mutex *mtx);
+struct thread *mutex_read_owner(struct mutex *mtx);
 void mutex_assert_held_internal(struct mutex *mtx,
                                 const struct lock_chk_site *site)
     TSA_ASSERT_CAPABILITY(mtx);

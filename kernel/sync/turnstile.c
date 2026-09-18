@@ -7,8 +7,6 @@
 #include <sync/turnstile.h>
 #include <thread/thread.h>
 
-#include "mutex_internal.h"
-
 /* LOCK ORDERING: chain -> thread.wait_lock -> header / runqueues -> thread */
 
 SLAB_SIZE_REGISTER_FOR_STRUCT(turnstile, SLAB_OBJ_ALIGN_DEFAULT);
@@ -165,6 +163,47 @@ static void turnstile_remove(struct turnstile_hash_chain *chain,
     ts->lock_obj = NULL;
 }
 
+/* Turnstile owners are raw pointers.  Upgrade one under RCU before PI
+ * propagation follows blocked_ts, since a wake can otherwise let the owner
+ * reach the reaper while this code is still walking the chain. */
+static bool turnstile_get_thread_ref(struct thread *thread) {
+    rcu_read_lock();
+    bool got = thread_get_rcu(thread);
+    rcu_read_unlock();
+    return got;
+}
+
+static bool turnstile_snapshot_wait(struct thread *thread, void **lock_obj,
+                                    struct thread_wait_header **header) {
+    enum irql irql = spin_lock_irq_disable(&thread->wait_lock);
+    struct thread_wait_block *block = thread->active_wait_blocks;
+    bool valid =
+        block == thread->wait_blocks &&
+        thread->wait_block_count > THREAD_WAIT_BLOCK_SYNC &&
+        block[THREAD_WAIT_BLOCK_SYNC].state == THREAD_WAIT_BLOCK_ACTIVE;
+    if (valid) {
+        *lock_obj = block[THREAD_WAIT_BLOCK_SYNC].object;
+        *header = block[THREAD_WAIT_BLOCK_SYNC].header;
+    }
+    spin_unlock(&thread->wait_lock, irql);
+    return valid;
+}
+
+static void turnstile_requeue_waiter(struct turnstile *ts,
+                                     struct thread *thread) {
+    for (size_t queue = 0; queue < TURNSTILE_NUM_QUEUES; queue++) {
+        struct rbt *tree = &ts->queues[queue];
+        if (!rbt_has_node(tree, &thread->wq_tree_node))
+            continue;
+
+        /* The comparator reads the live priority, so remove and insert after
+         * PI changes instead of leaving a node under its old sort key. */
+        rbt_delete(tree, &thread->wq_tree_node);
+        rbt_insert(tree, &thread->wq_tree_node);
+        return;
+    }
+}
+
 static struct turnstile *turnstile_lookup_internal(void *obj) {
     struct turnstile_hash_chain *chain = turnstile_chain_for(obj);
     struct list_head *pos;
@@ -235,6 +274,8 @@ void turnstile_wake(struct turnstile *ts, size_t queue, size_t num_threads,
     /* un-inherit the priority we inherited */
     turnstile_pi_remove(ts);
 
+    ts->owner = NULL;
+
     /* yo, wake up */
     while (num_threads-- > 0) {
         /* wake the one of highest priority */
@@ -255,11 +296,13 @@ void turnstile_unlock(void *obj, enum irql irql) {
 void turnstile_propagate_boost(struct turnstile_hash_chain *locked_chain,
                                struct turnstile *ts) {
     struct turnstile *cur_ts = ts;
+    void *cur_obj = ts->lock_obj;
+    struct thread_wait_header *cur_header = NULL;
     struct thread *owner = NULL, *boosting_from = thread_get_current();
+    struct thread *boosting_ref = NULL;
 
     while (cur_ts) {
-        struct turnstile_hash_chain *chain =
-            turnstile_chain_for(cur_ts->lock_obj);
+        struct turnstile_hash_chain *chain = turnstile_chain_for(cur_obj);
 
         enum irql irql = IRQL_PASSIVE_LEVEL;
         bool unlock = false;
@@ -269,8 +312,17 @@ void turnstile_propagate_boost(struct turnstile_hash_chain *locked_chain,
             unlock = true;
         }
 
+        if (cur_ts->lock_obj != cur_obj ||
+            (cur_header && &cur_ts->wait != cur_header) ||
+            (boosting_ref &&
+             atomic_load(&boosting_ref->blocked_ts) != cur_ts)) {
+            if (unlock)
+                turnstile_hash_chain_unlock(chain, irql);
+            break;
+        }
+
         owner = cur_ts->owner;
-        if (!owner) {
+        if (!owner || !turnstile_get_thread_ref(owner)) {
             if (unlock)
                 turnstile_hash_chain_unlock(chain, irql);
             break;
@@ -279,13 +331,16 @@ void turnstile_propagate_boost(struct turnstile_hash_chain *locked_chain,
         /* Apply inheritance */
         enum thread_prio_class old_class;
         if (!thread_inherit_priority(owner, boosting_from, &old_class)) {
+            thread_put(owner);
             if (unlock)
                 turnstile_hash_chain_unlock(chain, irql);
             break;
         }
 
-        cur_ts->prio_class = old_class;
-        cur_ts->applied_pi_boost = true;
+        if (!cur_ts->applied_pi_boost) {
+            cur_ts->prio_class = old_class;
+            cur_ts->applied_pi_boost = true;
+        }
 
         /* Speculative next hop */
         struct turnstile *next = atomic_load(&owner->blocked_ts);
@@ -293,26 +348,52 @@ void turnstile_propagate_boost(struct turnstile_hash_chain *locked_chain,
         if (unlock)
             turnstile_hash_chain_unlock(chain, irql);
 
-        /* Revalidation step */
-        if (!next)
-            break;
-
-        struct turnstile_hash_chain *next_chain =
-            turnstile_chain_for(next->lock_obj);
-
-        enum irql nirql = turnstile_hash_chain_lock(next_chain);
-
-        if (owner->blocked_ts != next || !next->owner) {
-            turnstile_hash_chain_unlock(next_chain, nirql);
+        if (!next) {
+            thread_put(owner);
             break;
         }
 
-        /* Prepare next iteration */
+        void *next_obj;
+        struct thread_wait_header *next_header;
+        if (!turnstile_snapshot_wait(owner, &next_obj, &next_header)) {
+            thread_put(owner);
+            break;
+        }
+
+        struct turnstile_hash_chain *next_chain = turnstile_chain_for(next_obj);
+
+        bool next_unlock = next_chain != locked_chain;
+        enum irql nirql = IRQL_PASSIVE_LEVEL;
+        if (next_unlock)
+            nirql = turnstile_hash_chain_lock(next_chain);
+
+        if (owner->blocked_ts != next || next->lock_obj != next_obj ||
+            &next->wait != next_header || !next->owner) {
+            if (next_unlock)
+                turnstile_hash_chain_unlock(next_chain, nirql);
+
+            thread_put(owner);
+            break;
+        }
+
+        if (owner->perceived_prio_class != old_class)
+            turnstile_requeue_waiter(next, owner);
+
+        if (boosting_ref)
+            thread_put(boosting_ref);
+
+        boosting_ref = owner;
         boosting_from = owner;
 
-        turnstile_hash_chain_unlock(next_chain, nirql);
+        if (next_unlock)
+            turnstile_hash_chain_unlock(next_chain, nirql);
         cur_ts = next;
+        cur_obj = next_obj;
+        cur_header = next_header;
     }
+
+    if (boosting_ref)
+        thread_put(boosting_ref);
 }
 
 static void turnstile_block_on(struct turnstile *ts, size_t queue_num) {

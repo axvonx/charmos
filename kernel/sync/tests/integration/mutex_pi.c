@@ -23,7 +23,7 @@ static void pi_rt_thread(void *nothing) {
     cc_var_unused(nothing);
     mutex_lock(&pi_mutex);
     test_info("lock");
-    kassert(mutex_get_owner(&pi_mutex) == thread_get_current());
+    kassert(mutex_read_owner(&pi_mutex) == thread_get_current());
     mutex_unlock(&pi_mutex);
     test_info("unlock");
     atomic_fetch_add(&pi_done, 1);
@@ -39,7 +39,7 @@ static void pi_ts_thread(void *nothing) {
     while (thread_get_current()->perceived_prio_class != THREAD_PRIO_CLASS_RT)
         cpu_pause();
 
-    kassert(mutex_get_owner(&pi_mutex) == thread_get_current());
+    kassert(mutex_read_owner(&pi_mutex) == thread_get_current());
     test_info("boosted");
 
     test_info("unlock");
