@@ -144,6 +144,7 @@
     ct_assert_size(struct __struct, __want)
 
 /* Memory barriers */
+#define compiler_barrier() asm volatile("" ::: "memory")
 #define smp_mb() atomic_thread_fence(memory_order_seq_cst)
 #define smp_rmb() atomic_thread_fence(memory_order_acquire)
 #define smp_wmb() atomic_thread_fence(memory_order_release)

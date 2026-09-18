@@ -296,10 +296,10 @@ struct thread {
      * those are written under the leaf's lock,
      * either by us or the CPU switching us out
      */
-    _Atomic uint32_t rcu_nesting;  /* read section depth */
-    _Atomic uint64_t rcu_read_seq; /* GP sequence at the outermost lock */
-    struct rcu_node *rcu_leaf;     /* leaf we are registered on or NULL */
-    uint64_t rcu_blocked_seq;      /* GP we are counted against or 0 */
+    uint32_t rcu_nesting;      /* read section depth */
+    uint64_t rcu_read_seq;     /* GP sequence at the outermost lock */
+    struct rcu_node *rcu_leaf; /* leaf we are registered on or NULL */
+    uint64_t rcu_blocked_seq;  /* GP we are counted against or 0 */
     struct rcu_cb free_rcu;
 
     enum thread_state wait_state;

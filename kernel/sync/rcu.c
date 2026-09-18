@@ -31,6 +31,7 @@
 #include <math/min_max.h>
 #include <mem/alloc.h>
 #include <mem/alloc_or_die.h>
+#include <rw_once.h>
 #include <sch/sched.h>
 #include <smp/core.h>
 #include <stdatomic.h>
@@ -123,19 +124,18 @@ void rcu_read_lock(void) {
 
     kassert_debug(!irq_in_nmi(), "RCU read section in NMI context");
 
-    if (atomic_load_explicit(&t->rcu_nesting, memory_order_relaxed) == 0) {
+    uint32_t nesting = READ_ONCE(t->rcu_nesting);
+    kassert(nesting != UINT32_MAX, "RCU nesting overflow");
+
+    if (cc_likely(nesting != 0)) {
+        WRITE_ONCE(t->rcu_nesting, nesting + 1);
+    } else {
         uint64_t seq = atomic_load_explicit(&rcu.gp_seq, memory_order_acquire);
-        atomic_store_explicit(&t->rcu_read_seq, seq, memory_order_relaxed);
+        t->rcu_read_seq = seq;
+        WRITE_ONCE(t->rcu_nesting, 1);
     }
 
-    /* TODO: There should be a smart way that avoids seq_cst ordering...
-     *
-     * But we do this so that this can't come after the first
-     * rcu_dereference(), and because I will optimize later */
-    uint32_t old =
-        atomic_fetch_add_explicit(&t->rcu_nesting, 1, memory_order_seq_cst);
-
-    kassert(old != UINT32_MAX, "RCU nesting overflow");
+    compiler_barrier();
     crash_unwind_enter_rcu();
 }
 
@@ -171,21 +171,19 @@ void rcu_read_unlock(void) {
     if (cc_unlikely(!t))
         return;
 
-    uint32_t old =
-        atomic_fetch_sub_explicit(&t->rcu_nesting, 1, memory_order_seq_cst);
-    kassert(old != 0, "RCU nesting underflow");
+    uint32_t nesting = READ_ONCE(t->rcu_nesting);
+    kassert(nesting != 0, "RCU nesting underflow");
 
-    /* Nesting is zero, we're registered, unregister
-     *
-     * We do this AFTER decrement so if we get preempted in this window,
-     * the scheduler just sees an idle reader and moves on */
-    if (cc_unlikely(old == 1 && t->rcu_leaf))
-        rcu_unregister_reader(t); /* NOTE: This can potentially result in cross
-                                   * node traffic and cache unhappiness, but
-                                   * this is also the "very slow path"....
-                                   *
-                                   * Perhaps something can be done (?)
-                                   */
+    if (cc_likely(nesting > 1)) {
+        WRITE_ONCE(t->rcu_nesting, nesting - 1);
+    } else {
+        compiler_barrier();
+        WRITE_ONCE(t->rcu_nesting, 0);
+        compiler_barrier();
+
+        if (cc_unlikely(t->rcu_leaf))
+            rcu_unregister_reader(t);
+    }
 
     crash_unwind_exit_rcu();
 }
@@ -221,13 +219,12 @@ void rcu_note_context_switch(struct thread *outgoing,
     uint64_t lseq = leaf->gp_seq;
     bool leaf_active = leaf->completed_seq != lseq;
 
-    if (outgoing && atomic_load(&outgoing->rcu_nesting) &&
-        !outgoing->rcu_leaf) {
+    if (outgoing && READ_ONCE(outgoing->rcu_nesting) && !outgoing->rcu_leaf) {
         outgoing->rcu_leaf = leaf;
         outgoing->rcu_blocked_seq = 0;
         list_add_tail(&outgoing->rcu_list_node, &leaf->blocked);
 
-        uint64_t rseq = atomic_load(&outgoing->rcu_read_seq);
+        uint64_t rseq = outgoing->rcu_read_seq;
         if (leaf_active && rseq < lseq) {
             outgoing->rcu_blocked_seq = lseq;
             leaf->blocked_count++;
@@ -250,7 +247,7 @@ void rcu_note_irq_exit(void) TSA_NO_ANALYSIS {
     /* Just report when the interrupted context isn't holding an unregistered
      * read side critical section, as readers that are accounted in a leaf
      * don't need to be handled over here */
-    if (t && atomic_load(&t->rcu_nesting) && !t->rcu_leaf)
+    if (t && READ_ONCE(t->rcu_nesting) && !t->rcu_leaf)
         return;
 
     uint64_t gp_seq_seen = atomic_load(&rcu.gp_seq);
@@ -399,8 +396,7 @@ static void rcu_report_stall(uint64_t seq, time_ms_t elapsed) {
                 .id = t->id,
                 .name = t->name,
                 .state = (int) thread_get_state(t),
-                .read_seq = atomic_load_explicit(&t->rcu_read_seq,
-                                                 memory_order_relaxed),
+                .read_seq = t->rcu_read_seq,
             };
         }
 
@@ -446,8 +442,7 @@ static uint64_t rcu_gp_start(struct list_head *batch) TSA_NO_ANALYSIS {
             /* Everyone here began before the GP */
             struct thread *t;
             list_for_each_entry(t, &node->blocked, rcu_list_node) {
-                uint64_t rseq = atomic_load_explicit(&t->rcu_read_seq,
-                                                     memory_order_relaxed);
+                uint64_t rseq = t->rcu_read_seq;
                 if (rseq < seq) {
                     t->rcu_blocked_seq = seq;
                     node->blocked_count++;
@@ -535,8 +530,7 @@ void rcu_synchronize(void) {
 
     kassert(!irq_in_interrupt() && !irq_in_nmi());
     kassert(irql_get() <= IRQL_APC_LEVEL);
-    kassert(!t ||
-            atomic_load_explicit(&t->rcu_nesting, memory_order_relaxed) == 0);
+    kassert(!t || t->rcu_nesting == 0);
     kassert(!rcu.ready || t != rcu.worker);
 
     if (!rcu.ready)

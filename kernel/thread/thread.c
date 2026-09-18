@@ -80,8 +80,7 @@ void thread_exit_with_status(int status) {
     thread_lock_chk_exit(self);
 
     /* Can't be in a critical section  when we exit */
-    kassert(atomic_load_explicit(&self->rcu_nesting, memory_order_relaxed) == 0,
-            "thread exited inside an RCU read section");
+    kassert(self->rcu_nesting == 0, "thread exited inside an RCU read section");
 
     /* Public status and the ZOMBIE state under join_lock...
      *
@@ -106,6 +105,7 @@ void thread_exit_with_status(int status) {
     irql_lower(irql);
 
     scheduler_yield();
+    ci_unreachable();
 }
 
 void thread_entry_wrapper(void) TSA_NO_ANALYSIS {
