@@ -294,8 +294,17 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.manifest_artifact }}
-          path: runner-result/
-          if-no-files-found: warn
+          path: |
+            runner-result/identity.json
+            runner-result/manifest.json
+            runner-result/runner_result.json
+            runner-result/campaign_report.json
+            runner-result/campaign_summary.md
+            runner-result/**/cmdline.txt
+            runner-result/**/console.log
+            runner-result/**/machine.nd.log
+            runner-result/**/trace.log
+          if-no-files-found: error
           retention-days: 30
 
   aggregate:

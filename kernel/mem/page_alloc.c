@@ -50,7 +50,7 @@ static void *page_alloc_vas_mapped_pages(size_t n_pages, enum alloc_flags flags,
                 return NULL;
             }
 
-            enum errno e = vmm_map_page(virt + i * PAGE_SIZE, phys, page_flags);
+            enum err e = vmm_map_page(virt + i * PAGE_SIZE, phys, page_flags);
             if (e < 0) {
                 pmm_free_page(phys);
                 for (uint64_t j = 0; j < allocated; j++)
@@ -61,9 +61,9 @@ static void *page_alloc_vas_mapped_pages(size_t n_pages, enum alloc_flags flags,
 
             phys_pages[allocated++] = phys;
         } else {
-            enum errno e = vmm_mark_demand_page(virt + i * PAGE_SIZE,
-                                                DEMAND_PAGE_FLAG_ZERO_MEMORY |
-                                                    DEMAND_PAGE_FLAG_WRITABLE);
+            enum err e = vmm_mark_demand_page(virt + i * PAGE_SIZE,
+                                              DEMAND_PAGE_FLAG_ZERO_MEMORY |
+                                                  DEMAND_PAGE_FLAG_WRITABLE);
             if (e < 0) {
                 for (size_t i = 0; i < allocated; i++) {
                     vaddr_t v = virt + i * PAGE_SIZE;

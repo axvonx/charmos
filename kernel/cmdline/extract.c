@@ -1,6 +1,6 @@
 #include "internal.h"
 
-enum errno cmdline_extract_bool(struct cmdline_value *val, bool *out) {
+enum err cmdline_extract_bool(struct cmdline_value *val, bool *out) {
     if (!val || !out)
         return ERR_INVAL;
 
@@ -18,7 +18,7 @@ enum errno cmdline_extract_bool(struct cmdline_value *val, bool *out) {
     return ERR_INVAL;
 }
 
-enum errno cmdline_extract_u64(struct cmdline_value *val, uint64_t *out) {
+enum err cmdline_extract_u64(struct cmdline_value *val, uint64_t *out) {
     if (!val || !out)
         return ERR_INVAL;
 
@@ -76,7 +76,7 @@ enum errno cmdline_extract_u64(struct cmdline_value *val, uint64_t *out) {
     return ERR_INVAL;
 }
 
-enum errno cmdline_extract_i64(struct cmdline_value *val, int64_t *out) {
+enum err cmdline_extract_i64(struct cmdline_value *val, int64_t *out) {
     if (!val || !out)
         return ERR_INVAL;
 
@@ -116,7 +116,7 @@ enum errno cmdline_extract_i64(struct cmdline_value *val, int64_t *out) {
     return ERR_INVAL;
 }
 
-enum errno cmdline_extract_u32(struct cmdline_value *val, uint32_t *out) {
+enum err cmdline_extract_u32(struct cmdline_value *val, uint32_t *out) {
     if (!val || !out)
         return ERR_INVAL;
 
@@ -184,7 +184,7 @@ enum errno cmdline_extract_u32(struct cmdline_value *val, uint32_t *out) {
     return ERR_INVAL;
 }
 
-enum errno cmdline_extract_i32(struct cmdline_value *val, int32_t *out) {
+enum err cmdline_extract_i32(struct cmdline_value *val, int32_t *out) {
     if (!val || !out)
         return ERR_INVAL;
 
@@ -240,7 +240,7 @@ enum errno cmdline_extract_i32(struct cmdline_value *val, int32_t *out) {
     return ERR_INVAL;
 }
 
-enum errno cmdline_extract_fx(struct cmdline_value *val, fx32_32_t *out) {
+enum err cmdline_extract_fx(struct cmdline_value *val, fx32_32_t *out) {
     if (!val || !out)
         return ERR_INVAL;
 
@@ -252,7 +252,7 @@ enum errno cmdline_extract_fx(struct cmdline_value *val, fx32_32_t *out) {
     return ERR_INVAL;
 }
 
-enum errno cmdline_extract_duration(struct cmdline_value *val, time_ns_t *out) {
+enum err cmdline_extract_duration(struct cmdline_value *val, time_ns_t *out) {
     if (!val || !out)
         return ERR_INVAL;
 
@@ -264,7 +264,7 @@ enum errno cmdline_extract_duration(struct cmdline_value *val, time_ns_t *out) {
     return ERR_INVAL;
 }
 
-enum errno cmdline_extract_mac(struct cmdline_value *val, uint64_t *out) {
+enum err cmdline_extract_mac(struct cmdline_value *val, uint64_t *out) {
     if (!val || !out)
         return ERR_INVAL;
 
@@ -276,16 +276,16 @@ enum errno cmdline_extract_mac(struct cmdline_value *val, uint64_t *out) {
     return ERR_INVAL;
 }
 
-enum errno cmdline_extract_range(struct cmdline_value *val,
-                                 struct cmdline_range *out) {
+enum err cmdline_extract_range(struct cmdline_value *val,
+                               struct cmdline_range *out) {
     if (!val || !out || val->type != CMDLINE_TYPE_RANGE || !val->data)
         return ERR_INVAL;
     *out = *(struct cmdline_range *) val->data;
     return ERR_OK;
 }
 
-enum errno cmdline_extract_cpu_mask(struct cmdline_value *val,
-                                    struct cpu_mask *out) {
+enum err cmdline_extract_cpu_mask(struct cmdline_value *val,
+                                  struct cpu_mask *out) {
     if (!val || !out)
         return ERR_INVAL;
 
@@ -297,7 +297,7 @@ enum errno cmdline_extract_cpu_mask(struct cmdline_value *val,
     return ERR_INVAL;
 }
 
-enum errno cmdline_extract_string(struct cmdline_value *val, char **out) {
+enum err cmdline_extract_string(struct cmdline_value *val, char **out) {
     if (!val || !out)
         return ERR_INVAL;
 
@@ -309,13 +309,13 @@ enum errno cmdline_extract_string(struct cmdline_value *val, char **out) {
     return ERR_INVAL;
 }
 
-enum errno cmdline_extract_const_string(struct cmdline_value *val,
-                                        const char **out) {
+enum err cmdline_extract_const_string(struct cmdline_value *val,
+                                      const char **out) {
     return cmdline_extract_string(val, (char **) out);
 }
 
-enum errno cmdline_extract_list(struct cmdline_value *val,
-                                struct cmdline_list *out) {
+enum err cmdline_extract_list(struct cmdline_value *val,
+                              struct cmdline_list *out) {
     if (!val || !out)
         return ERR_INVAL;
 
@@ -327,11 +327,11 @@ enum errno cmdline_extract_list(struct cmdline_value *val,
     return ERR_INVAL;
 }
 
-enum errno cmdline_extract_u16(struct cmdline_value *val, uint16_t *out) {
+enum err cmdline_extract_u16(struct cmdline_value *val, uint16_t *out) {
     if (!val || !out)
         return ERR_INVAL;
     uint32_t v = 0;
-    enum errno err = cmdline_extract_u32(val, &v);
+    enum err err = cmdline_extract_u32(val, &v);
     if (err != ERR_OK)
         return err;
     if (v > UINT16_MAX)
@@ -340,11 +340,11 @@ enum errno cmdline_extract_u16(struct cmdline_value *val, uint16_t *out) {
     return ERR_OK;
 }
 
-enum errno cmdline_extract_i16(struct cmdline_value *val, int16_t *out) {
+enum err cmdline_extract_i16(struct cmdline_value *val, int16_t *out) {
     if (!val || !out)
         return ERR_INVAL;
     int32_t v = 0;
-    enum errno err = cmdline_extract_i32(val, &v);
+    enum err err = cmdline_extract_i32(val, &v);
     if (err != ERR_OK)
         return err;
     if (v < INT16_MIN || v > INT16_MAX)
@@ -353,11 +353,11 @@ enum errno cmdline_extract_i16(struct cmdline_value *val, int16_t *out) {
     return ERR_OK;
 }
 
-enum errno cmdline_extract_u8(struct cmdline_value *val, uint8_t *out) {
+enum err cmdline_extract_u8(struct cmdline_value *val, uint8_t *out) {
     if (!val || !out)
         return ERR_INVAL;
     uint32_t v = 0;
-    enum errno err = cmdline_extract_u32(val, &v);
+    enum err err = cmdline_extract_u32(val, &v);
     if (err != ERR_OK)
         return err;
     if (v > UINT8_MAX)
@@ -366,11 +366,11 @@ enum errno cmdline_extract_u8(struct cmdline_value *val, uint8_t *out) {
     return ERR_OK;
 }
 
-enum errno cmdline_extract_i8(struct cmdline_value *val, int8_t *out) {
+enum err cmdline_extract_i8(struct cmdline_value *val, int8_t *out) {
     if (!val || !out)
         return ERR_INVAL;
     int32_t v = 0;
-    enum errno err = cmdline_extract_i32(val, &v);
+    enum err err = cmdline_extract_i32(val, &v);
     if (err != ERR_OK)
         return err;
     if (v < INT8_MIN || v > INT8_MAX)

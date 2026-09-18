@@ -3,7 +3,7 @@
 #include <cmdline.h>
 #include <compiler/core.h>
 #include <console/printf.h>
-#include <errno.h>
+#include <err.h>
 #include <log.h>
 #include <math/fixed.h>
 #include <math/units.h>

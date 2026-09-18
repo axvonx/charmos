@@ -1,4 +1,4 @@
-#include <errno.h>
+#include <err.h>
 #include <fs/ext2.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -99,8 +99,8 @@ static void clear_block_pointer(struct ext2_fs *fs, struct ext2_inode *inode,
     }
 }
 
-enum errno ext2_truncate_file(struct ext2_fs *fs, struct ext2_full_inode *inode,
-                              uint32_t new_size) {
+enum err ext2_truncate_file(struct ext2_fs *fs, struct ext2_full_inode *inode,
+                            uint32_t new_size) {
     uint32_t old_block_count = DIV_ROUND_UP(inode->node.size, fs->block_size);
     uint32_t new_block_count = DIV_ROUND_UP(new_size, fs->block_size);
     uint32_t bpi = blocks_per_indirection(fs);

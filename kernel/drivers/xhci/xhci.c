@@ -854,7 +854,7 @@ void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
     xhci_info("Device initialized successfully");
 }
 
-static enum errno xhci_pci_init(struct device *d) {
+static enum err xhci_pci_init(struct device *d) {
     struct pci_device *dev = d->driver_data;
     switch (dev->prog_if) {
     case 0x30: xhci_init(dev->bus, dev->dev, dev->function, dev);

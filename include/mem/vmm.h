@@ -1,7 +1,7 @@
 /* @title: Virtual memory management */
 #pragma once
 #include <console/printf.h>
-#include <errno.h>
+#include <err.h>
 #include <mem/demand_page.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -63,33 +63,33 @@ void vmm_init(struct limine_memmap_response *memmap,
 
 bool vmm_phys_is_kernel_text(paddr_t phys);
 
-enum errno vmm_map_page_full(struct vmm_map_request *rq);
+enum err vmm_map_page_full(struct vmm_map_request *rq);
 void vmm_unmap_page_full(struct vmm_map_request *rq);
 
-enum errno vmm_map_aliased(vaddr_t virt, size_t len, paddr_t phys,
-                           page_flags_t leaf_flags, enum vmm_flags vflags);
-enum errno vmm_unshare_path(vaddr_t virt, enum vmm_map_page_size leaf_size,
-                            enum vmm_flags vflags);
+enum err vmm_map_aliased(vaddr_t virt, size_t len, paddr_t phys,
+                         page_flags_t leaf_flags, enum vmm_flags vflags);
+enum err vmm_unshare_path(vaddr_t virt, enum vmm_map_page_size leaf_size,
+                          enum vmm_flags vflags);
 
-enum errno vmm_map_page_internal(vaddr_t virt, paddr_t phys, page_flags_t flags,
-                                 enum vmm_flags vflags,
-                                 enum vmm_map_page_size size);
-enum errno vmm_map_page_user_internal(struct page_table *pml4, vaddr_t virt,
-                                      paddr_t phys, page_flags_t flags,
-                                      enum vmm_flags vflags,
-                                      enum vmm_map_page_size size);
+enum err vmm_map_page_internal(vaddr_t virt, paddr_t phys, page_flags_t flags,
+                               enum vmm_flags vflags,
+                               enum vmm_map_page_size size);
+enum err vmm_map_page_user_internal(struct page_table *pml4, vaddr_t virt,
+                                    paddr_t phys, page_flags_t flags,
+                                    enum vmm_flags vflags,
+                                    enum vmm_map_page_size size);
 void vmm_unmap_page_internal(vaddr_t virt, enum vmm_flags vflags,
                              enum vmm_map_page_size size);
-enum errno vmm_mark_demand_page_internal(vaddr_t virt,
-                                         enum demand_page_flags flags,
-                                         enum vmm_map_page_size size);
-enum errno vmm_mark_demand_page_user_internal(struct page_table *pml4,
-                                              vaddr_t virt,
-                                              enum demand_page_flags flags,
-                                              enum vmm_map_page_size size);
-enum errno vmm_map_demand_page_internal(vaddr_t virt, paddr_t phys,
-                                        enum demand_page_flags flags,
-                                        enum vmm_map_page_size size);
+enum err vmm_mark_demand_page_internal(vaddr_t virt,
+                                       enum demand_page_flags flags,
+                                       enum vmm_map_page_size size);
+enum err vmm_mark_demand_page_user_internal(struct page_table *pml4,
+                                            vaddr_t virt,
+                                            enum demand_page_flags flags,
+                                            enum vmm_map_page_size size);
+enum err vmm_map_demand_page_internal(vaddr_t virt, paddr_t phys,
+                                      enum demand_page_flags flags,
+                                      enum vmm_map_page_size size);
 
 paddr_t vmm_get_phys_internal(vaddr_t virt, enum vmm_flags flags);
 pte_t vmm_get_leaf_pte_internal(vaddr_t virt, enum vmm_flags flags);

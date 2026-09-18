@@ -260,7 +260,7 @@ class QemuInfrastructureRetryTests(unittest.TestCase):
                 patch(
                     "charm.nightmare.build_bundle.repack",
                     return_value=SimpleNamespace(iso_path=iso),
-                ),
+                ) as repack,
                 patch(
                     "charm.nightmare.build_bundle.qemu_command",
                     return_value=["qemu-system-x86_64"],
@@ -291,6 +291,70 @@ class QemuInfrastructureRetryTests(unittest.TestCase):
                 (second / "console.log").read_text(encoding="utf-8"),
                 "attempt 2\n",
             )
+            runtime_dir = repack.call_args.kwargs["out_dir"]
+            self.assertFalse(runtime_dir.exists())
+
+    def test_ordinary_boot_artifacts_are_pruned_after_the_result_is_parsed(
+        self,
+    ) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            boot_dir = Path(tmp) / "boot-0001"
+            boot_dir.mkdir()
+            console = boot_dir / "console.log"
+            machine = boot_dir / "machine.nd.log"
+            console.write_text("console", encoding="utf-8")
+            machine.write_text("machine", encoding="utf-8")
+            result = C.BootResult(
+                boot_index=1,
+                task_name="locks_storm",
+                cmdline="nightmare=locks_storm",
+                seed=1,
+                duration_ms=1,
+                exit_code=0,
+                status=C.BootStatus.OK.value,
+                reason="ok",
+                progress=1,
+                findings=[],
+                console_log=console,
+                machine_log=machine,
+            )
+
+            C._prune_uninteresting_boot(result)
+
+            self.assertFalse(boot_dir.exists())
+
+    def test_discovery_boot_artifacts_are_retained(self) -> None:
+        import tempfile
+
+        for status in (
+            C.BootStatus.FINDING.value,
+            C.BootStatus.STALL.value,
+            C.BootStatus.CRASH.value,
+        ):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as tmp:
+                boot_dir = Path(tmp) / "boot-0001"
+                boot_dir.mkdir()
+                console = boot_dir / "console.log"
+                console.write_text("evidence", encoding="utf-8")
+                result = C.BootResult(
+                    boot_index=1,
+                    task_name="locks_storm",
+                    cmdline="nightmare=locks_storm",
+                    seed=1,
+                    duration_ms=1,
+                    exit_code=1,
+                    status=status,
+                    reason="evidence",
+                    progress=1,
+                    findings=[],
+                    console_log=console,
+                )
+
+                C._prune_uninteresting_boot(result)
+
+                self.assertEqual(console.read_text(encoding="utf-8"), "evidence")
 
 
 if __name__ == "__main__":

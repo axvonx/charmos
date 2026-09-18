@@ -5,8 +5,8 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "errno.h"
 #include "fs/detect.h"
+#include <err.h>
 
 static struct vfs_mount **mount_table = NULL;
 static uint64_t mount_table_count = 0;
@@ -91,8 +91,8 @@ struct vfs_node *vfs_finddir(struct vfs_node *node, const char *fname) {
     return found;
 }
 
-enum errno vfs_mount(struct vfs_node *mountpoint, struct vfs_node *target,
-                     const char *name) {
+enum err vfs_mount(struct vfs_node *mountpoint, struct vfs_node *target,
+                   const char *name) {
     if (!mountpoint || !target)
         return ERR_INVAL;
 
@@ -117,7 +117,7 @@ enum errno vfs_mount(struct vfs_node *mountpoint, struct vfs_node *target,
     return ERR_OK;
 }
 
-enum errno vfs_unmount(struct vfs_mount *mnt) {
+enum err vfs_unmount(struct vfs_mount *mnt) {
     if (!mnt)
         return ERR_INVAL;
 

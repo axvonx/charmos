@@ -1,11 +1,11 @@
-#include <errno.h>
+#include <err.h>
 #include <fs/ext2.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 
-enum errno ext2_write_file(struct ext2_fs *fs, struct ext2_full_inode *inode,
-                           uint32_t offset, const uint8_t *src, uint32_t size) {
+enum err ext2_write_file(struct ext2_fs *fs, struct ext2_full_inode *inode,
+                         uint32_t offset, const uint8_t *src, uint32_t size) {
     if (!fs || !inode || !src)
         return ERR_INVAL;
 
@@ -110,8 +110,8 @@ static void file_read_visitor(struct ext2_fs *fs, struct ext2_inode *inode,
     bcache_ent_release(ent);
 }
 
-enum errno ext2_read_file(struct ext2_fs *fs, struct ext2_full_inode *inode,
-                          uint32_t offset, uint8_t *buffer, uint64_t length) {
+enum err ext2_read_file(struct ext2_fs *fs, struct ext2_full_inode *inode,
+                        uint32_t offset, uint8_t *buffer, uint64_t length) {
     if (!fs || !inode || !buffer || offset >= inode->node.size)
         return ERR_INVAL;
 
@@ -134,8 +134,8 @@ enum errno ext2_read_file(struct ext2_fs *fs, struct ext2_full_inode *inode,
     return ERR_OK;
 }
 
-enum errno ext2_chmod(struct ext2_fs *fs, struct ext2_full_inode *node,
-                      uint16_t new_mode) {
+enum err ext2_chmod(struct ext2_fs *fs, struct ext2_full_inode *node,
+                    uint16_t new_mode) {
     if (!fs || !node)
         return ERR_INVAL;
 
@@ -148,8 +148,8 @@ enum errno ext2_chmod(struct ext2_fs *fs, struct ext2_full_inode *node,
     return ERR_OK;
 }
 
-enum errno ext2_chown(struct ext2_fs *fs, struct ext2_full_inode *node,
-                      uint32_t new_uid, uint32_t new_gid) {
+enum err ext2_chown(struct ext2_fs *fs, struct ext2_full_inode *node,
+                    uint32_t new_uid, uint32_t new_gid) {
     if (!fs || !node)
         return ERR_INVAL;
 

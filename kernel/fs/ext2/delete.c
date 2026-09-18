@@ -1,5 +1,5 @@
 #include <block/bcache.h>
-#include <errno.h>
+#include <err.h>
 #include <fs/ext2.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -79,9 +79,9 @@ static inline void unlink_free_blocks(struct ext2_fs *fs,
     ext2_free_inode(fs, inode_num);
 }
 
-enum errno ext2_unlink_file(struct ext2_fs *fs,
-                            struct ext2_full_inode *dir_inode, const char *name,
-                            bool free_blocks, bool decrement_links) {
+enum err ext2_unlink_file(struct ext2_fs *fs, struct ext2_full_inode *dir_inode,
+                          const char *name, bool free_blocks,
+                          bool decrement_links) {
     if (!ext2_dir_contains_file(fs, dir_inode, name))
         return ERR_NO_ENT;
 

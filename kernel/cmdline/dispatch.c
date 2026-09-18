@@ -236,7 +236,7 @@ void dispatch_parse_value(struct cmdline_entry *e, const char *name,
 
     if (cmdline_value_is_typed(&e->value)) {
         if (e->value.parse) {
-            enum errno err = e->value.parse(e->value.write_to, val);
+            enum err err = e->value.parse(e->value.write_to, val);
             if (err != ERR_OK)
                 panic("cmdline entry '%s' failed to parse value '%s' (err: %d)",
                       name, val, err);
@@ -459,7 +459,7 @@ static bool schema_dispatch(const char *var, const char *val,
             };
             cmdline_write_typed_uint(&tmp_val, mask);
         } else if (matched_prop->parse) {
-            enum errno err = matched_prop->parse(target_ptr, val);
+            enum err err = matched_prop->parse(target_ptr, val);
             if (err != ERR_OK)
                 panic("cmdline '%s': parse failed for '%s' (err %d)", var, val,
                       err);

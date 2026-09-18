@@ -5,7 +5,7 @@
 #include <compiler/intrinsic.h>
 #include <console/panic.h>
 #include <console/printf.h>
-#include <errno.h>
+#include <err.h>
 #include <global.h>
 #include <kassert.h>
 #include <log.h>
@@ -73,7 +73,7 @@ static inline const char *cmdline_type_raw_hint(enum cmdline_type type) {
     }
 }
 
-typedef enum errno (*cmdline_parse_fn)(void *write_to, const char *text);
+typedef enum err (*cmdline_parse_fn)(void *write_to, const char *text);
 typedef bool (*cmdline_detect_fn)(const char *text, void *out_val);
 
 struct cmdline_type_parser {
@@ -271,16 +271,16 @@ bool cmdline_has_list_separator(const char *value);
 struct cmdline_value cmdline_parse_list(const char *value, uint64_t accepted);
 
 /* Parser functions */
-enum errno cmdline_parse_i64(void *write_to, const char *text);
-enum errno cmdline_parse_u64(void *write_to, const char *text);
-enum errno cmdline_parse_bool(void *write_to, const char *text);
-enum errno cmdline_parse_fx(void *write_to, const char *text);
-enum errno cmdline_parse_duration(void *write_to, const char *text);
-enum errno cmdline_parse_data_size(void *write_to, const char *text);
-enum errno cmdline_parse_cpu_mask(void *write_to, const char *text);
-enum errno cmdline_parse_mac(void *write_to, const char *text);
-enum errno cmdline_parse_range(void *write_to, const char *text);
-enum errno cmdline_parse_string(void *write_to, const char *text);
+enum err cmdline_parse_i64(void *write_to, const char *text);
+enum err cmdline_parse_u64(void *write_to, const char *text);
+enum err cmdline_parse_bool(void *write_to, const char *text);
+enum err cmdline_parse_fx(void *write_to, const char *text);
+enum err cmdline_parse_duration(void *write_to, const char *text);
+enum err cmdline_parse_data_size(void *write_to, const char *text);
+enum err cmdline_parse_cpu_mask(void *write_to, const char *text);
+enum err cmdline_parse_mac(void *write_to, const char *text);
+enum err cmdline_parse_range(void *write_to, const char *text);
+enum err cmdline_parse_string(void *write_to, const char *text);
 
 /* Dispatch & Validation prototypes */
 void cmdline_dispatch(const char *var, const char *val);

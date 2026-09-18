@@ -1,7 +1,7 @@
 /* @title: Command Line */
 #pragma once
 #include <compiler/core.h>
-#include <errno.h>
+#include <err.h>
 #include <linker/symbols.h>
 #include <math/bit.h>
 #include <math/fixed.h>
@@ -83,7 +83,7 @@ struct cmdline_value {
     };
 
     /* this is used when mode == CMDLINE_MODE_TYPED or CMDLINE_MODE_CUSTOM */
-    enum errno (*parse)(void *write_to, const char *text);
+    enum err (*parse)(void *write_to, const char *text);
 };
 
 /* The idea with parent-child relationships:
@@ -254,7 +254,7 @@ struct cmdline_schema_prop {
     size_t offset;
     enum type_enum c_type;
     uint64_t types;
-    enum errno (*parse)(void *dst, const char *text);
+    enum err (*parse)(void *dst, const char *text);
 
     struct range range;
 

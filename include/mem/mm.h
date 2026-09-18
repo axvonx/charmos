@@ -70,22 +70,21 @@ vaddr_t mm_map(struct mm *mm, vaddr_t hint, size_t len,
 
 /* tear down [start, start+len): split VMAs at the boundaries, unmap their
  * PTEs, drop rmap, free/trim the VMAs */
-enum errno mm_unmap(struct mm *mm, vaddr_t start, size_t len);
+enum err mm_unmap(struct mm *mm, vaddr_t start, size_t len);
 
 /* change protection over a range: split at boundaries, vma_range_set_prot each,
  * re-protect the live PTEs */
-enum errno mm_protect(struct mm *mm, vaddr_t start, size_t len,
-                      enum vma_range_protection prot);
+enum err mm_protect(struct mm *mm, vaddr_t start, size_t len,
+                    enum vma_range_protection prot);
 
-enum errno
-mm_pgtable_init(struct mm *mm); /* vmm_make_user_pml4() -> mm->pml4 */
+enum err mm_pgtable_init(struct mm *mm); /* vmm_make_user_pml4() -> mm->pml4 */
 
 void mm_pgtable_free(struct mm *mm); /* free user PT pages; never the
                                       * shared kernel higher-half */
 
 void mm_activate(struct mm *mm); /* load CR3 = mm->pml4 on switch */
 
-enum errno mm_map_page(struct mm *mm, vaddr_t va, paddr_t pa, uint64_t pflags);
+enum err mm_map_page(struct mm *mm, vaddr_t va, paddr_t pa, uint64_t pflags);
 void mm_unmap_page(struct mm *mm, vaddr_t va);
 paddr_t mm_query(struct mm *mm, vaddr_t va, uint64_t *pflags_out);
 

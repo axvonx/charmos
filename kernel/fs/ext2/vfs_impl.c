@@ -16,46 +16,46 @@
 // TODO: check if files already exist, update times, check if file types are
 // correct
 
-enum errno ext2_vfs_stat(struct vfs_node *v, struct vfs_stat *out);
-enum errno ext2_vfs_rename(struct vfs_node *old_parent, const char *old_name,
-                           struct vfs_node *new_parent, const char *new_name);
-enum errno ext2_vfs_chmod(struct vfs_node *n, mode_t mode);
+enum err ext2_vfs_stat(struct vfs_node *v, struct vfs_stat *out);
+enum err ext2_vfs_rename(struct vfs_node *old_parent, const char *old_name,
+                         struct vfs_node *new_parent, const char *new_name);
+enum err ext2_vfs_chmod(struct vfs_node *n, mode_t mode);
 
-enum errno ext2_vfs_chown(struct vfs_node *n, uid_t uid, gid_t gid);
-enum errno ext2_vfs_utime(struct vfs_node *n, uint64_t atime, uint64_t mtime);
+enum err ext2_vfs_chown(struct vfs_node *n, uid_t uid, gid_t gid);
+enum err ext2_vfs_utime(struct vfs_node *n, uint64_t atime, uint64_t mtime);
 
-enum errno ext2_vfs_read(struct vfs_node *n, void *buf, uint64_t size,
-                         uint64_t offset);
+enum err ext2_vfs_read(struct vfs_node *n, void *buf, uint64_t size,
+                       uint64_t offset);
 
-enum errno ext2_vfs_write(struct vfs_node *n, const void *buf, uint64_t size,
-                          uint64_t offset);
+enum err ext2_vfs_write(struct vfs_node *n, const void *buf, uint64_t size,
+                        uint64_t offset);
 
-enum errno ext2_vfs_truncate(struct vfs_node *n, uint64_t length);
+enum err ext2_vfs_truncate(struct vfs_node *n, uint64_t length);
 
-enum errno ext2_vfs_link(struct vfs_node *parent, struct vfs_node *target,
-                         const char *name);
+enum err ext2_vfs_link(struct vfs_node *parent, struct vfs_node *target,
+                       const char *name);
 
-enum errno ext2_vfs_create(struct vfs_node *n, const char *name, mode_t mode);
+enum err ext2_vfs_create(struct vfs_node *n, const char *name, mode_t mode);
 
-enum errno ext2_vfs_unlink(struct vfs_node *n, const char *name);
+enum err ext2_vfs_unlink(struct vfs_node *n, const char *name);
 
-enum errno ext2_vfs_symlink(struct vfs_node *parent, const char *target,
-                            const char *link_name);
-enum errno ext2_vfs_readlink(struct vfs_node *n, char *out_buf, uint64_t size);
+enum err ext2_vfs_symlink(struct vfs_node *parent, const char *target,
+                          const char *link_name);
+enum err ext2_vfs_readlink(struct vfs_node *n, char *out_buf, uint64_t size);
 
-enum errno ext2_vfs_finddir(struct vfs_node *node, const char *fname,
-                            struct vfs_dirent *out);
-enum errno ext2_vfs_mkdir(struct vfs_node *n, const char *name, mode_t mode);
-enum errno ext2_vfs_rmdir(struct vfs_node *n, const char *name);
-enum errno ext2_vfs_readdir(struct vfs_node *n, struct vfs_dirent *out,
-                            uint64_t index);
+enum err ext2_vfs_finddir(struct vfs_node *node, const char *fname,
+                          struct vfs_dirent *out);
+enum err ext2_vfs_mkdir(struct vfs_node *n, const char *name, mode_t mode);
+enum err ext2_vfs_rmdir(struct vfs_node *n, const char *name);
+enum err ext2_vfs_readdir(struct vfs_node *n, struct vfs_dirent *out,
+                          uint64_t index);
 
-enum errno vfs_dummy_open(struct vfs_node *a, uint32_t b) {
+enum err vfs_dummy_open(struct vfs_node *a, uint32_t b) {
     cc_var_unused(a, b);
     return ERR_OK;
 }
 
-enum errno vfs_dummy_close(struct vfs_node *a) {
+enum err vfs_dummy_close(struct vfs_node *a) {
     cc_var_unused(a);
     return ERR_OK;
 }
@@ -232,8 +232,8 @@ static uint16_t vfs_to_ext2_mode(uint16_t vfs_mode) {
 }
 TEST_EXPORT(vfs_to_ext2_mode);
 
-static enum errno ext2_to_vfs_stat(struct ext2_full_inode *node,
-                                   struct vfs_stat *out) {
+static enum err ext2_to_vfs_stat(struct ext2_full_inode *node,
+                                 struct vfs_stat *out) {
     if (!out || !node)
         return ERR_INVAL;
 
@@ -318,9 +318,9 @@ static bool dir_entry_rename_callback(struct ext2_fs *fs,
     return false;
 }
 
-static enum errno dir_entry_rename(struct ext2_fs *fs,
-                                   struct ext2_full_inode *node,
-                                   const char *old, const char *new) {
+static enum err dir_entry_rename(struct ext2_fs *fs,
+                                 struct ext2_full_inode *node, const char *old,
+                                 const char *new) {
     if (!ext2_dir_contains_file(fs, node, old))
         return ERR_NO_ENT;
 
@@ -342,8 +342,8 @@ static enum errno dir_entry_rename(struct ext2_fs *fs,
 //
 
 /* no locking necessary in mounting, duh */
-enum errno ext2_mount(struct partition *p, struct ext2_fs *fs,
-                      struct ext2_sblock *sblock, struct vfs_node *out_node) {
+enum err ext2_mount(struct partition *p, struct ext2_fs *fs,
+                    struct ext2_sblock *sblock, struct vfs_node *out_node) {
     if (!fs || !sblock)
         return ERR_INVAL;
 
@@ -412,8 +412,8 @@ enum errno ext2_mount(struct partition *p, struct ext2_fs *fs,
     return ERR_OK;
 }
 
-enum errno ext2_vfs_finddir(struct vfs_node *node, const char *fname,
-                            struct vfs_dirent *out) {
+enum err ext2_vfs_finddir(struct vfs_node *node, const char *fname,
+                          struct vfs_dirent *out) {
     if (!node || !fname || !out)
         return ERR_INVAL;
 
@@ -440,8 +440,8 @@ enum errno ext2_vfs_finddir(struct vfs_node *node, const char *fname,
     return ERR_OK;
 }
 
-enum errno ext2_vfs_readdir(struct vfs_node *node, struct vfs_dirent *out,
-                            uint64_t index) {
+enum err ext2_vfs_readdir(struct vfs_node *node, struct vfs_dirent *out,
+                          uint64_t index) {
     if (!node || !out)
         return ERR_INVAL;
 
@@ -454,7 +454,7 @@ enum errno ext2_vfs_readdir(struct vfs_node *node, struct vfs_dirent *out,
     if (cc_unlikely(!ext2_out))
         return ERR_NO_MEM;
 
-    enum errno e = ext2_readdir(fs, full_inode, ext2_out, index);
+    enum err e = ext2_readdir(fs, full_inode, ext2_out, index);
 
     if (ERR_IS_FATAL(e))
         return e;
@@ -466,8 +466,8 @@ enum errno ext2_vfs_readdir(struct vfs_node *node, struct vfs_dirent *out,
     return e;
 }
 
-enum errno ext2_vfs_rename(struct vfs_node *old_parent, const char *old_name,
-                           struct vfs_node *new_parent, const char *new_name) {
+enum err ext2_vfs_rename(struct vfs_node *old_parent, const char *old_name,
+                         struct vfs_node *new_parent, const char *new_name) {
     if (!old_parent || !old_name || !new_name || !new_name)
         return ERR_INVAL;
 
@@ -492,13 +492,13 @@ enum errno ext2_vfs_rename(struct vfs_node *old_parent, const char *old_name,
     return ext2_link_file(fs, new_node, this_inode, new_name, ftype, true);
 }
 
-enum errno ext2_vfs_stat(struct vfs_node *v, struct vfs_stat *out) {
+enum err ext2_vfs_stat(struct vfs_node *v, struct vfs_stat *out) {
     struct ext2_full_inode *node = v->fs_node_data;
     return ext2_to_vfs_stat(node, out);
 }
 
-enum errno ext2_vfs_link(struct vfs_node *parent, struct vfs_node *target,
-                         const char *name) {
+enum err ext2_vfs_link(struct vfs_node *parent, struct vfs_node *target,
+                       const char *name) {
     if (!parent || !target || !name)
         return ERR_INVAL;
 
@@ -514,8 +514,8 @@ enum errno ext2_vfs_link(struct vfs_node *parent, struct vfs_node *target,
                           true);
 }
 
-enum errno ext2_vfs_symlink(struct vfs_node *parent, const char *target,
-                            const char *link_name) {
+enum err ext2_vfs_symlink(struct vfs_node *parent, const char *target,
+                          const char *link_name) {
     if (!parent || !target || !link_name)
         return ERR_INVAL;
 
@@ -525,7 +525,7 @@ enum errno ext2_vfs_symlink(struct vfs_node *parent, const char *target,
     return ext2_symlink_file(fs, dir, link_name, target);
 }
 
-enum errno ext2_vfs_readlink(struct vfs_node *n, char *out_buf, uint64_t size) {
+enum err ext2_vfs_readlink(struct vfs_node *n, char *out_buf, uint64_t size) {
     if (!n || !out_buf || !size)
         return ERR_INVAL;
 
@@ -535,14 +535,14 @@ enum errno ext2_vfs_readlink(struct vfs_node *n, char *out_buf, uint64_t size) {
     return ext2_readlink(fs, node, out_buf, size);
 }
 
-enum errno ext2_vfs_chmod(struct vfs_node *n, mode_t mode) {
+enum err ext2_vfs_chmod(struct vfs_node *n, mode_t mode) {
     if (!n)
         return ERR_INVAL;
 
     struct ext2_fs *fs = n->fs_data;
     struct ext2_full_inode *node = n->fs_node_data;
     uint16_t new_mode = vfs_to_ext2_mode(mode);
-    enum errno e = ext2_chmod(fs, node, new_mode);
+    enum err e = ext2_chmod(fs, node, new_mode);
     if (e != ERR_OK)
         return e;
 
@@ -550,13 +550,13 @@ enum errno ext2_vfs_chmod(struct vfs_node *n, mode_t mode) {
     return ERR_OK;
 }
 
-enum errno ext2_vfs_chown(struct vfs_node *n, uid_t uid, gid_t gid) {
+enum err ext2_vfs_chown(struct vfs_node *n, uid_t uid, gid_t gid) {
     if (!n)
         return ERR_INVAL;
 
     struct ext2_fs *fs = n->fs_data;
     struct ext2_full_inode *node = n->fs_node_data;
-    enum errno e = ext2_chown(fs, node, uid, gid);
+    enum err e = ext2_chown(fs, node, uid, gid);
     if (e != ERR_OK)
         return e;
 
@@ -565,8 +565,8 @@ enum errno ext2_vfs_chown(struct vfs_node *n, uid_t uid, gid_t gid) {
     return ERR_OK;
 }
 
-enum errno ext2_vfs_read(struct vfs_node *n, void *buf, uint64_t size,
-                         uint64_t offset) {
+enum err ext2_vfs_read(struct vfs_node *n, void *buf, uint64_t size,
+                       uint64_t offset) {
     if (!n || !buf)
         return ERR_INVAL;
 
@@ -575,14 +575,14 @@ enum errno ext2_vfs_read(struct vfs_node *n, void *buf, uint64_t size,
     return ext2_read_file(fs, node, offset, buf, size);
 }
 
-enum errno ext2_vfs_write(struct vfs_node *n, const void *buf, uint64_t size,
-                          uint64_t offset) {
+enum err ext2_vfs_write(struct vfs_node *n, const void *buf, uint64_t size,
+                        uint64_t offset) {
     if (!n || !buf)
         return ERR_INVAL;
 
     struct ext2_fs *fs = n->fs_data;
     struct ext2_full_inode *node = n->fs_node_data;
-    enum errno e = ext2_write_file(fs, node, offset, buf, size);
+    enum err e = ext2_write_file(fs, node, offset, buf, size);
 
     if (e != ERR_OK)
         return e;
@@ -591,7 +591,7 @@ enum errno ext2_vfs_write(struct vfs_node *n, const void *buf, uint64_t size,
     return ERR_OK;
 }
 
-enum errno ext2_vfs_utime(struct vfs_node *n, uint64_t atime, uint64_t mtime) {
+enum err ext2_vfs_utime(struct vfs_node *n, uint64_t atime, uint64_t mtime) {
     if (!n)
         return ERR_INVAL;
 
@@ -608,7 +608,7 @@ enum errno ext2_vfs_utime(struct vfs_node *n, uint64_t atime, uint64_t mtime) {
     return ERR_OK;
 }
 
-enum errno ext2_vfs_truncate(struct vfs_node *n, uint64_t length) {
+enum err ext2_vfs_truncate(struct vfs_node *n, uint64_t length) {
     if (!n)
         return ERR_INVAL;
 
@@ -617,7 +617,7 @@ enum errno ext2_vfs_truncate(struct vfs_node *n, uint64_t length) {
     return ext2_truncate_file(fs, node, length);
 }
 
-enum errno ext2_vfs_unlink(struct vfs_node *n, const char *name) {
+enum err ext2_vfs_unlink(struct vfs_node *n, const char *name) {
     if (!n || !name)
         return ERR_INVAL;
 
@@ -626,7 +626,7 @@ enum errno ext2_vfs_unlink(struct vfs_node *n, const char *name) {
     return ext2_unlink_file(fs, node, name, true, false);
 }
 
-enum errno ext2_vfs_create(struct vfs_node *n, const char *name, mode_t mode) {
+enum err ext2_vfs_create(struct vfs_node *n, const char *name, mode_t mode) {
     if (!n || !name)
         return ERR_INVAL;
 
@@ -636,7 +636,7 @@ enum errno ext2_vfs_create(struct vfs_node *n, const char *name, mode_t mode) {
     return ext2_create_file(fs, node, name, new_mode, false);
 }
 
-enum errno ext2_vfs_mkdir(struct vfs_node *n, const char *name, mode_t mode) {
+enum err ext2_vfs_mkdir(struct vfs_node *n, const char *name, mode_t mode) {
     if (!n || !name)
         return ERR_INVAL;
 
@@ -646,7 +646,7 @@ enum errno ext2_vfs_mkdir(struct vfs_node *n, const char *name, mode_t mode) {
     return ext2_mkdir(fs, node, name, new_mode);
 }
 
-enum errno ext2_vfs_rmdir(struct vfs_node *n, const char *name) {
+enum err ext2_vfs_rmdir(struct vfs_node *n, const char *name) {
     if (!n || !name)
         return ERR_INVAL;
 

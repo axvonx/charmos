@@ -151,7 +151,7 @@ static inline vaddr_t asan_shadow_page_limit(vaddr_t base, size_t len) {
     return ALIGN_UP(ASAN_SHADOW_ADDR(base + len - 1) + 1, PAGE_SIZE);
 }
 
-enum errno asan_shadow_install(vaddr_t base, size_t len) {
+enum err asan_shadow_install(vaddr_t base, size_t len) {
     if (!asan_ready)
         return ERR_OK;
 
@@ -166,7 +166,7 @@ enum errno asan_shadow_install(vaddr_t base, size_t len) {
 
         /* Per page rather than once up front, so a range of any length works:
          * the walk is cheap and only happens for a page we are about to back */
-        enum errno err =
+        enum err err =
             vmm_unshare_path(v, VMM_MAP_PAGE_SIZE_4KB, VMM_FLAG_NONE);
         if (err < 0)
             return err;
@@ -234,8 +234,8 @@ static void asan_map_early_shadow(void) {
            PAGE_SIZE);
 
     /* Deliberately RO and aliased */
-    enum errno err = vmm_map_aliased(start, end - start, asan_zero_shadow_phys,
-                                     PAGE_PRESENT | PAGE_XD, VMM_FLAG_NONE);
+    enum err err = vmm_map_aliased(start, end - start, asan_zero_shadow_phys,
+                                   PAGE_PRESENT | PAGE_XD, VMM_FLAG_NONE);
     if (err < 0)
         kasan_panic("could not map the shared shadow window",
                     (const void *) start, end - start, false);

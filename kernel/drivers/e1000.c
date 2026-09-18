@@ -209,7 +209,7 @@ bool e1000_init(struct pci_device *pci, struct e1000_device *dev) {
     return true;
 }
 
-static enum errno e1000_pci_init(struct device *dev) {
+static enum err e1000_pci_init(struct device *dev) {
     struct pci_device *db = dev->driver_data;
     uint8_t bus = db->bus, d = db->dev, func = db->function;
     uint16_t did = db->device_id;

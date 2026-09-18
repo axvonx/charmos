@@ -1,7 +1,7 @@
 /* @title: Test Assertion Macros */
 #pragma once
 #include <compiler/core.h>
-#include <errno.h>
+#include <err.h>
 #include <math/bit.h>
 #include <stdbool.h>
 #include <stddef.h>

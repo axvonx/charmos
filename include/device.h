@@ -98,10 +98,10 @@ struct device_driver {
     const char *name;
     enum device_bus_type bus;
 
-    enum errno (*probe)(struct device *dev);
+    enum err (*probe)(struct device *dev);
     void (*remove)(struct device *dev);
-    enum errno (*suspend)(struct device *dev, enum device_power_state target);
-    enum errno (*resume)(struct device *dev);
+    enum err (*suspend)(struct device *dev, enum device_power_state target);
+    enum err (*resume)(struct device *dev);
 };
 
 enum device_resource_type {

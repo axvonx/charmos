@@ -218,32 +218,32 @@ struct cpu_mask;
                         .types = CMDLINE_TYPES(CMDLINE_TYPE_STRING),           \
                         ##__VA_ARGS__)
 
-enum errno cmdline_parse_bool(void *write_to, const char *text);
-enum errno cmdline_parse_fx(void *write_to, const char *text);
-enum errno cmdline_parse_duration(void *write_to, const char *text);
-enum errno cmdline_parse_data_size(void *write_to, const char *text);
-enum errno cmdline_parse_cpu_mask(void *write_to, const char *text);
-enum errno cmdline_parse_mac(void *write_to, const char *text);
-enum errno cmdline_parse_string(void *write_to, const char *text);
+enum err cmdline_parse_bool(void *write_to, const char *text);
+enum err cmdline_parse_fx(void *write_to, const char *text);
+enum err cmdline_parse_duration(void *write_to, const char *text);
+enum err cmdline_parse_data_size(void *write_to, const char *text);
+enum err cmdline_parse_cpu_mask(void *write_to, const char *text);
+enum err cmdline_parse_mac(void *write_to, const char *text);
+enum err cmdline_parse_string(void *write_to, const char *text);
 
-enum errno cmdline_extract_bool(struct cmdline_value *val, bool *out);
-enum errno cmdline_extract_u64(struct cmdline_value *val, uint64_t *out);
-enum errno cmdline_extract_i64(struct cmdline_value *val, int64_t *out);
-enum errno cmdline_extract_u32(struct cmdline_value *val, uint32_t *out);
-enum errno cmdline_extract_i32(struct cmdline_value *val, int32_t *out);
-enum errno cmdline_extract_u16(struct cmdline_value *val, uint16_t *out);
-enum errno cmdline_extract_i16(struct cmdline_value *val, int16_t *out);
-enum errno cmdline_extract_u8(struct cmdline_value *val, uint8_t *out);
-enum errno cmdline_extract_i8(struct cmdline_value *val, int8_t *out);
-enum errno cmdline_extract_fx(struct cmdline_value *val, fx32_32_t *out);
-enum errno cmdline_extract_duration(struct cmdline_value *val, time_ns_t *out);
-enum errno cmdline_extract_mac(struct cmdline_value *val, uint64_t *out);
-enum errno cmdline_extract_range(struct cmdline_value *val,
-                                 struct cmdline_range *out);
-enum errno cmdline_extract_cpu_mask(struct cmdline_value *val,
-                                    struct cpu_mask *out);
-enum errno cmdline_extract_string(struct cmdline_value *val, char **out);
-enum errno cmdline_extract_const_string(struct cmdline_value *val,
-                                        const char **out);
-enum errno cmdline_extract_list(struct cmdline_value *val,
-                                struct cmdline_list *out);
+enum err cmdline_extract_bool(struct cmdline_value *val, bool *out);
+enum err cmdline_extract_u64(struct cmdline_value *val, uint64_t *out);
+enum err cmdline_extract_i64(struct cmdline_value *val, int64_t *out);
+enum err cmdline_extract_u32(struct cmdline_value *val, uint32_t *out);
+enum err cmdline_extract_i32(struct cmdline_value *val, int32_t *out);
+enum err cmdline_extract_u16(struct cmdline_value *val, uint16_t *out);
+enum err cmdline_extract_i16(struct cmdline_value *val, int16_t *out);
+enum err cmdline_extract_u8(struct cmdline_value *val, uint8_t *out);
+enum err cmdline_extract_i8(struct cmdline_value *val, int8_t *out);
+enum err cmdline_extract_fx(struct cmdline_value *val, fx32_32_t *out);
+enum err cmdline_extract_duration(struct cmdline_value *val, time_ns_t *out);
+enum err cmdline_extract_mac(struct cmdline_value *val, uint64_t *out);
+enum err cmdline_extract_range(struct cmdline_value *val,
+                               struct cmdline_range *out);
+enum err cmdline_extract_cpu_mask(struct cmdline_value *val,
+                                  struct cpu_mask *out);
+enum err cmdline_extract_string(struct cmdline_value *val, char **out);
+enum err cmdline_extract_const_string(struct cmdline_value *val,
+                                      const char **out);
+enum err cmdline_extract_list(struct cmdline_value *val,
+                              struct cmdline_list *out);

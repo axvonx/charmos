@@ -1,6 +1,6 @@
 #include "internal.h"
 
-static enum errno cmdline_parse_i64_val(const char *text, int64_t *out) {
+static enum err cmdline_parse_i64_val(const char *text, int64_t *out) {
     int64_t v;
     if (parse_is_int(text, &v)) {
         *out = v;
@@ -18,7 +18,7 @@ static enum errno cmdline_parse_i64_val(const char *text, int64_t *out) {
     return ERR_INVAL;
 }
 
-static enum errno cmdline_parse_u64_val(const char *text, uint64_t *out) {
+static enum err cmdline_parse_u64_val(const char *text, uint64_t *out) {
     uint64_t v;
     if (parse_is_uint(text, &v)) {
         *out = v;
@@ -34,15 +34,15 @@ static enum errno cmdline_parse_u64_val(const char *text, uint64_t *out) {
     return ERR_INVAL;
 }
 
-enum errno cmdline_parse_i64(void *write_to, const char *text) {
+enum err cmdline_parse_i64(void *write_to, const char *text) {
     return cmdline_parse_i64_val(text, (int64_t *) write_to);
 }
 
-enum errno cmdline_parse_u64(void *write_to, const char *text) {
+enum err cmdline_parse_u64(void *write_to, const char *text) {
     return cmdline_parse_u64_val(text, (uint64_t *) write_to);
 }
 
-enum errno cmdline_parse_bool(void *write_to, const char *text) {
+enum err cmdline_parse_bool(void *write_to, const char *text) {
     bool out = false;
     if (!parse_is_bool(text, &out))
         return ERR_INVAL;
@@ -51,7 +51,7 @@ enum errno cmdline_parse_bool(void *write_to, const char *text) {
     return ERR_OK;
 }
 
-enum errno cmdline_parse_fx(void *write_to, const char *text) {
+enum err cmdline_parse_fx(void *write_to, const char *text) {
     fx32_32_t val = 0;
     if (!parse_is_fx(text, &val))
         return ERR_INVAL;
@@ -59,7 +59,7 @@ enum errno cmdline_parse_fx(void *write_to, const char *text) {
     return ERR_OK;
 }
 
-enum errno cmdline_parse_duration(void *write_to, const char *text) {
+enum err cmdline_parse_duration(void *write_to, const char *text) {
     time_ns_t val = 0;
     if (!parse_is_duration(text, &val))
         return ERR_INVAL;
@@ -67,7 +67,7 @@ enum errno cmdline_parse_duration(void *write_to, const char *text) {
     return ERR_OK;
 }
 
-enum errno cmdline_parse_data_size(void *write_to, const char *text) {
+enum err cmdline_parse_data_size(void *write_to, const char *text) {
     uint64_t val = 0;
     if (!parse_is_data_size(text, &val))
         return ERR_INVAL;
@@ -75,7 +75,7 @@ enum errno cmdline_parse_data_size(void *write_to, const char *text) {
     return ERR_OK;
 }
 
-enum errno cmdline_parse_cpu_mask(void *write_to, const char *text) {
+enum err cmdline_parse_cpu_mask(void *write_to, const char *text) {
     struct cpu_mask mask;
     if (!parse_is_cpu_mask(text, &mask, global.core_count))
         return ERR_INVAL;
@@ -83,7 +83,7 @@ enum errno cmdline_parse_cpu_mask(void *write_to, const char *text) {
     return ERR_OK;
 }
 
-enum errno cmdline_parse_mac(void *write_to, const char *text) {
+enum err cmdline_parse_mac(void *write_to, const char *text) {
     uint64_t val = 0;
     if (!parse_is_mac(text, &val))
         return ERR_INVAL;
@@ -91,7 +91,7 @@ enum errno cmdline_parse_mac(void *write_to, const char *text) {
     return ERR_OK;
 }
 
-enum errno cmdline_parse_range(void *write_to, const char *text) {
+enum err cmdline_parse_range(void *write_to, const char *text) {
     uint64_t start = 0, end = 0;
     if (!parse_is_range(text, &start, &end))
         return ERR_INVAL;
@@ -101,7 +101,7 @@ enum errno cmdline_parse_range(void *write_to, const char *text) {
     return ERR_OK;
 }
 
-enum errno cmdline_parse_string(void *write_to, const char *text) {
+enum err cmdline_parse_string(void *write_to, const char *text) {
     if (!text)
         return ERR_INVAL;
     size_t len = strlen(text);

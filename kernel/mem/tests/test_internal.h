@@ -2,7 +2,7 @@
 #include <test/test.h>
 
 #include <crypto/prng.h>
-#include <errno.h>
+#include <err.h>
 #include <math/align.h>
 #include <math/min_max.h>
 #include <mem/alloc.h>

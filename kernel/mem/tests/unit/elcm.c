@@ -17,7 +17,7 @@ TEST_DECLARE_UNIT(elcm, slab_geometry_and_bounds) {
             .metadata_bytes_per_page = 0,
         };
 
-        enum errno err = elcm(&params);
+        enum err err = elcm(&params);
         TEST_ASSERT_OK(err);
 
         struct elcm_candidate *out = &params.out;

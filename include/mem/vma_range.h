@@ -48,14 +48,14 @@ struct vma_range *vma_range_prev(struct vma_range *vma_range);
 
 /* fault path helper: write fault on an anon VMA, allocate anon_vma
  * and AVC, link, stash on vma_range->anon_vma */
-enum errno vma_range_anon_prepare(struct vma_range *vma_range);
+enum err vma_range_anon_prepare(struct vma_range *vma_range);
 
-enum errno vma_range_expand(struct vma_range *vma_range, vaddr_t new_start,
-                            vaddr_t new_end);
+enum err vma_range_expand(struct vma_range *vma_range, vaddr_t new_start,
+                          vaddr_t new_end);
 struct vma_range *vma_range_merge(struct mm *mm, struct vma_range *prev,
                                   struct vma_range *vma_range);
-enum errno vma_range_set_prot(struct vma_range *vma_range,
-                              enum vma_range_protection prot);
+enum err vma_range_set_prot(struct vma_range *vma_range,
+                            enum vma_range_protection prot);
 
 void vma_range_unmap_range(struct vma_range *vma_range, vaddr_t s, vaddr_t e);
 void vma_range_teardown(struct vma_range *vma_range);

@@ -13,7 +13,7 @@ TEST_DECLARE_SMOKE(slab, elcm_params) {
         .metadata_bytes_per_page = 0,
     };
 
-    enum errno err = elcm(&params);
+    enum err err = elcm(&params);
     TEST_ASSERT_OK(err);
     return TEST_SUCCESS;
 }

@@ -1,6 +1,6 @@
 /* @title: Radix Tree */
 #pragma once
-#include <errno.h>
+#include <err.h>
 #include <stdint.h>
 
 #define RADIX_BITS 6

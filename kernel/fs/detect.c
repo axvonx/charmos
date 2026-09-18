@@ -58,8 +58,8 @@ static void make_partition(struct partition *part, struct block_device *disk,
     part->mount = NULL;
 }
 
-static enum errno detect_mbr_partitions(struct block_device *disk,
-                                        uint8_t *sector) {
+static enum err detect_mbr_partitions(struct block_device *disk,
+                                      uint8_t *sector) {
     struct mbr *mbr = (struct mbr *) sector;
 
     /* no idea what to return here */
@@ -93,8 +93,8 @@ static enum errno detect_mbr_partitions(struct block_device *disk,
     return ERR_OK;
 }
 
-static enum errno detect_gpt_partitions(struct block_device *disk,
-                                        uint8_t *sector) {
+static enum err detect_gpt_partitions(struct block_device *disk,
+                                      uint8_t *sector) {
     if (!disk->read_sector(disk, 1, sector, 1))
         return ERR_NO_MEM;
 
@@ -218,7 +218,7 @@ enum fs_type detect_fs(struct block_device *disk) {
 
     fs_detect_info("read sector 0 of %s", disk->name);
 
-    enum errno found_partitions_err = ERR_NO_ENT;
+    enum err found_partitions_err = ERR_NO_ENT;
     struct mbr *mbr = (struct mbr *) sector;
 
     if (mbr->signature == 0xAA55) {

@@ -26,8 +26,8 @@ static bool write(struct block_device *d, struct bcache *cache,
                   struct bcache_entry *ent, uint64_t spb);
 
 /* prefetch is asynchronous */
-static enum errno prefetch(struct block_device *disk, struct bcache *cache,
-                           uint64_t lba, uint64_t block_size, uint64_t spb);
+static enum err prefetch(struct block_device *disk, struct bcache *cache,
+                         uint64_t lba, uint64_t block_size, uint64_t spb);
 
 /* eviction must be explicitly and separately called */
 static bool insert_locked(struct bcache *cache, uint64_t key,
@@ -170,8 +170,8 @@ static void prefetch_callback(struct bio_request *bio) {
     kfree(bio);
 }
 
-static enum errno prefetch(struct block_device *disk, struct bcache *cache,
-                           uint64_t lba, uint64_t block_size, uint64_t spb) {
+static enum err prefetch(struct block_device *disk, struct bcache *cache,
+                         uint64_t lba, uint64_t block_size, uint64_t spb) {
     uint64_t base_lba = ALIGN_DOWN(lba, spb);
 
     /* no need to re-fetch existing entry */
@@ -410,8 +410,8 @@ void *bcache_create_ent(struct block_device *disk, uint64_t lba,
     return ent->buffer + offset;
 }
 
-enum errno bcache_prefetch_async(struct block_device *disk, uint64_t lba,
-                                 uint64_t block_size, uint64_t spb) {
+enum err bcache_prefetch_async(struct block_device *disk, uint64_t lba,
+                               uint64_t block_size, uint64_t spb) {
     return prefetch(disk, disk->cache, ALIGN_DOWN(lba, spb), block_size, spb);
 }
 

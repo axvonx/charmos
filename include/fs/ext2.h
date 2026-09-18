@@ -2,7 +2,7 @@
 #include <block/bcache.h>
 #include <block/block.h>
 #include <compiler/core.h>
-#include <errno.h>
+#include <err.h>
 #include <fs/vfs.h>
 #include <math/align.h>
 #include <math/min_max.h>
@@ -268,8 +268,8 @@ bool ext2_read_superblock(struct partition *, struct ext2_sblock *sblock);
 bool ext2_write_superblock(struct ext2_fs *fs);
 bool ext2_write_group_desc(struct ext2_fs *fs);
 
-enum errno ext2_mount(struct partition *, struct ext2_fs *fs,
-                      struct ext2_sblock *sblock, struct vfs_node *out_node);
+enum err ext2_mount(struct partition *, struct ext2_fs *fs,
+                    struct ext2_sblock *sblock, struct vfs_node *out_node);
 
 struct vfs_node *ext2_g_mount(struct partition *);
 
@@ -353,40 +353,39 @@ static inline uint8_t *ext2_create_bcache_ent(struct ext2_fs *fs,
 //
 //
 
-enum errno ext2_link_file(struct ext2_fs *fs, struct ext2_full_inode *dir_inode,
-                          struct ext2_full_inode *inode, const char *name,
-                          uint8_t type, bool increment_links);
+enum err ext2_link_file(struct ext2_fs *fs, struct ext2_full_inode *dir_inode,
+                        struct ext2_full_inode *inode, const char *name,
+                        uint8_t type, bool increment_links);
 
-enum errno ext2_unlink_file(struct ext2_fs *fs,
-                            struct ext2_full_inode *dir_inode, const char *name,
-                            bool free_blocks, bool decrement_links);
+enum err ext2_unlink_file(struct ext2_fs *fs, struct ext2_full_inode *dir_inode,
+                          const char *name, bool free_blocks,
+                          bool decrement_links);
 
-enum errno ext2_create_file(struct ext2_fs *fs,
-                            struct ext2_full_inode *parent_dir,
-                            const char *name, mode_t mode,
-                            bool increment_links);
+enum err ext2_create_file(struct ext2_fs *fs,
+                          struct ext2_full_inode *parent_dir, const char *name,
+                          mode_t mode, bool increment_links);
 
-enum errno ext2_symlink_file(struct ext2_fs *fs,
-                             struct ext2_full_inode *dir_inode,
-                             const char *name, const char *target);
+enum err ext2_symlink_file(struct ext2_fs *fs,
+                           struct ext2_full_inode *dir_inode, const char *name,
+                           const char *target);
 
-enum errno ext2_write_file(struct ext2_fs *fs, struct ext2_full_inode *inode,
-                           uint32_t offset, const uint8_t *src, uint32_t size);
+enum err ext2_write_file(struct ext2_fs *fs, struct ext2_full_inode *inode,
+                         uint32_t offset, const uint8_t *src, uint32_t size);
 
-enum errno ext2_read_file(struct ext2_fs *fs, struct ext2_full_inode *inode,
-                          uint32_t offset, uint8_t *buffer, uint64_t length);
+enum err ext2_read_file(struct ext2_fs *fs, struct ext2_full_inode *inode,
+                        uint32_t offset, uint8_t *buffer, uint64_t length);
 
-enum errno ext2_truncate_file(struct ext2_fs *fs, struct ext2_full_inode *inode,
-                              uint32_t new_size);
+enum err ext2_truncate_file(struct ext2_fs *fs, struct ext2_full_inode *inode,
+                            uint32_t new_size);
 
-enum errno ext2_chmod(struct ext2_fs *fs, struct ext2_full_inode *node,
-                      mode_t new_mode);
+enum err ext2_chmod(struct ext2_fs *fs, struct ext2_full_inode *node,
+                    mode_t new_mode);
 
-enum errno ext2_chown(struct ext2_fs *fs, struct ext2_full_inode *node,
-                      uid_t new_uid, gid_t new_gid);
+enum err ext2_chown(struct ext2_fs *fs, struct ext2_full_inode *node,
+                    uid_t new_uid, gid_t new_gid);
 
-enum errno ext2_readlink(struct ext2_fs *fs, struct ext2_full_inode *node,
-                         char *buf, uint64_t size);
+enum err ext2_readlink(struct ext2_fs *fs, struct ext2_full_inode *node,
+                       char *buf, uint64_t size);
 
 struct ext2_full_inode *ext2_find_file_in_dir(struct ext2_fs *fs,
                                               struct ext2_full_inode *dir_inode,
@@ -397,14 +396,14 @@ bool ext2_dir_contains_file(struct ext2_fs *fs,
                             struct ext2_full_inode *dir_inode,
                             const char *fname);
 
-enum errno ext2_mkdir(struct ext2_fs *fs, struct ext2_full_inode *parent_dir,
-                      const char *name, mode_t mode);
+enum err ext2_mkdir(struct ext2_fs *fs, struct ext2_full_inode *parent_dir,
+                    const char *name, mode_t mode);
 
-enum errno ext2_rmdir(struct ext2_fs *fs, struct ext2_full_inode *parent_dir,
-                      const char *name);
+enum err ext2_rmdir(struct ext2_fs *fs, struct ext2_full_inode *parent_dir,
+                    const char *name);
 
-enum errno ext2_readdir(struct ext2_fs *fs, struct ext2_full_inode *dir_inode,
-                        struct ext2_dir_entry *out, uint32_t entry_offset);
+enum err ext2_readdir(struct ext2_fs *fs, struct ext2_full_inode *dir_inode,
+                      struct ext2_dir_entry *out, uint32_t entry_offset);
 
 //
 //

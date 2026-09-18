@@ -229,7 +229,7 @@ struct block_device *nvme_create_generic(struct nvme_device *nvme) {
 
 static uint64_t nvme_cnt = 1;
 
-static enum errno nvme_pci_init(struct device *d) {
+static enum err nvme_pci_init(struct device *d) {
     struct pci_device *dev = d->driver_data;
     uint8_t bus = dev->bus, device = dev->dev, function = dev->function;
 

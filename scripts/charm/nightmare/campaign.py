@@ -2,6 +2,7 @@ import json
 import shutil
 import signal
 import subprocess
+import tempfile
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
@@ -40,6 +41,13 @@ class BootStatus(StrEnum):
     TIMEOUT = "timeout"
     INFRA = "infra"
     UNKNOWN = "unknown"
+
+
+FULL_DIAGNOSTIC_STATUSES = {
+    BootStatus.FINDING.value,
+    BootStatus.STALL.value,
+    BootStatus.CRASH.value,
+}
 
 
 @dataclass(frozen=True)
@@ -551,6 +559,12 @@ def _is_retryable_qemu_crash(result: BootResult) -> bool:
     )
 
 
+def _prune_uninteresting_boot(result: BootResult) -> None:
+    if result.status in FULL_DIAGNOSTIC_STATUSES or result.console_log is None:
+        return
+    shutil.rmtree(result.console_log.parent, ignore_errors=True)
+
+
 class QemuBootRunner:
     """Executes QEMU boots"""
 
@@ -679,104 +693,108 @@ class BundleBootRunner:
         boot_dir.mkdir(parents=True, exist_ok=True)
         cmdline_path = boot_dir / "cmdline.txt"
         codec.write(cmdline_path, cmdline)
-        repacked = bundle_model.repack(
-            self.bundle,
-            cmdline=cmdline_path,
-            out_dir=boot_dir,
-            repo_root=self.repo_root,
-        )
-        disk_path = boot_dir / "disk.img"
         console_log_path = boot_dir / "console.log"
         machine_log_path = boot_dir / "machine.nd.log"
-        qmp_socket = boot_dir / "qmp.sock"
-        command = bundle_model.qemu_command(
-            self.bundle,
-            iso_path=repacked.iso_path,
-            disk_path=disk_path,
-            machine_log=machine_log_path,
-            trace_log=boot_dir / "trace.log",
-            qmp_socket=qmp_socket,
-        )
-
         attempts: list[BootAttempt] = []
         result: BootResult | None = None
 
-        for attempt in range(1, self.MAX_QEMU_ATTEMPTS + 1):
-            shutil.copy2(self.bundle.pristine_disk, disk_path)
-            machine_log_path.unlink(missing_ok=True)
-            qmp_socket.unlink(missing_ok=True)
-
-            started = time.monotonic()
-            timed_out = False
-            try:
-                completed = subprocess.run(
-                    command,
-                    cwd=boot_dir,
-                    capture_output=True,
-                    text=True,
-                    timeout=max(5.0, timeout_ms / 1000.0),
-                )
-                exit_code = self._DEBUG_EXIT.get(
-                    completed.returncode, completed.returncode
-                )
-                console_log_path.write_text(
-                    completed.stdout + completed.stderr, encoding="utf-8"
-                )
-            except subprocess.TimeoutExpired as error:
-                timed_out = True
-                exit_code = R.EXIT_TIMEOUT
-                stdout = (
-                    error.stdout
-                    if isinstance(error.stdout, str)
-                    else (error.stdout or b"").decode("utf-8", "replace")
-                )
-                stderr = (
-                    error.stderr
-                    if isinstance(error.stderr, str)
-                    else (error.stderr or b"").decode("utf-8", "replace")
-                )
-                console_log_path.write_text(stdout + stderr, encoding="utf-8")
-            except OSError as error:
-                exit_code = 127
-                console_log_path.write_text(
-                    f"Execution failed: {error}\n", encoding="utf-8"
-                )
-            duration_ms = int((time.monotonic() - started) * 1000)
-            if not machine_log_path.exists():
-                machine_log_path.write_text("", encoding="utf-8")
-
-            result = _result_from_logs(
-                boot_index=boot_index,
-                task_name=task.name,
-                cmdline=cmdline,
-                duration_ms=duration_ms,
-                exit_code=exit_code,
-                timed_out=timed_out,
-                console_log_path=console_log_path,
-                machine_log_path=machine_log_path,
+        # The ISO, writable disk and repack tree are reproducible files
+        # Keeping one copy per boot made result artifacts several gigabytes large
+        with tempfile.TemporaryDirectory(prefix="runtime-", dir=boot_dir) as temp:
+            runtime_dir = Path(temp)
+            repacked = bundle_model.repack(
+                self.bundle,
+                cmdline=cmdline_path,
+                out_dir=runtime_dir,
+                repo_root=self.repo_root,
             )
-            attempt_dir = boot_dir / "attempts" / f"attempt-{attempt:02d}"
-            attempt_dir.mkdir(parents=True, exist_ok=True)
-            attempt_console = attempt_dir / "console.log"
-            attempt_machine = attempt_dir / "machine.nd.log"
-            shutil.copy2(console_log_path, attempt_console)
-            shutil.copy2(machine_log_path, attempt_machine)
-            attempts.append(
-                BootAttempt(
-                    attempt=attempt,
+            disk_path = runtime_dir / "disk.img"
+            qmp_socket = runtime_dir / "qmp.sock"
+            command = bundle_model.qemu_command(
+                self.bundle,
+                iso_path=repacked.iso_path,
+                disk_path=disk_path,
+                machine_log=machine_log_path,
+                trace_log=boot_dir / "trace.log",
+                qmp_socket=qmp_socket,
+            )
+
+            for attempt in range(1, self.MAX_QEMU_ATTEMPTS + 1):
+                shutil.copy2(self.bundle.pristine_disk, disk_path)
+                machine_log_path.unlink(missing_ok=True)
+                qmp_socket.unlink(missing_ok=True)
+
+                started = time.monotonic()
+                timed_out = False
+                try:
+                    completed = subprocess.run(
+                        command,
+                        cwd=boot_dir,
+                        capture_output=True,
+                        text=True,
+                        timeout=max(5.0, timeout_ms / 1000.0),
+                    )
+                    exit_code = self._DEBUG_EXIT.get(
+                        completed.returncode, completed.returncode
+                    )
+                    console_log_path.write_text(
+                        completed.stdout + completed.stderr, encoding="utf-8"
+                    )
+                except subprocess.TimeoutExpired as error:
+                    timed_out = True
+                    exit_code = R.EXIT_TIMEOUT
+                    stdout = (
+                        error.stdout
+                        if isinstance(error.stdout, str)
+                        else (error.stdout or b"").decode("utf-8", "replace")
+                    )
+                    stderr = (
+                        error.stderr
+                        if isinstance(error.stderr, str)
+                        else (error.stderr or b"").decode("utf-8", "replace")
+                    )
+                    console_log_path.write_text(stdout + stderr, encoding="utf-8")
+                except OSError as error:
+                    exit_code = 127
+                    console_log_path.write_text(
+                        f"Execution failed: {error}\n", encoding="utf-8"
+                    )
+                duration_ms = int((time.monotonic() - started) * 1000)
+                if not machine_log_path.exists():
+                    machine_log_path.write_text("", encoding="utf-8")
+
+                result = _result_from_logs(
+                    boot_index=boot_index,
+                    task_name=task.name,
+                    cmdline=cmdline,
                     duration_ms=duration_ms,
                     exit_code=exit_code,
-                    status=result.status,
-                    reason=result.reason,
-                    console_log=attempt_console,
-                    machine_log=attempt_machine,
+                    timed_out=timed_out,
+                    console_log_path=console_log_path,
+                    machine_log_path=machine_log_path,
                 )
-            )
+                attempt_dir = boot_dir / "attempts" / f"attempt-{attempt:02d}"
+                attempt_dir.mkdir(parents=True, exist_ok=True)
+                attempt_console = attempt_dir / "console.log"
+                attempt_machine = attempt_dir / "machine.nd.log"
+                shutil.copy2(console_log_path, attempt_console)
+                shutil.copy2(machine_log_path, attempt_machine)
+                attempts.append(
+                    BootAttempt(
+                        attempt=attempt,
+                        duration_ms=duration_ms,
+                        exit_code=exit_code,
+                        status=result.status,
+                        reason=result.reason,
+                        console_log=attempt_console,
+                        machine_log=attempt_machine,
+                    )
+                )
 
-            # QEMU has very rarely crashed in CI. we should
-            # give it a shot and retry anyways though
-            if not _is_retryable_qemu_crash(result):
-                break
+                # QEMU has very rarely crashed in CI. we should
+                # give it a shot and retry anyways though
+                if not _is_retryable_qemu_crash(result):
+                    break
 
         if result is None:  # the bounded loop always executes at least once
             raise AssertionError("QEMU attempt loop did not execute")
@@ -849,6 +867,7 @@ class CampaignRunner:
                     findings=[],
                     trace=[],
                 )
+            _prune_uninteresting_boot(gate_res)
 
         scheduler = BootScheduler(
             manifest.suite.tasks,
@@ -912,6 +931,7 @@ class CampaignRunner:
                 stat_samples=b_res.stat_samples,
                 final_progress=b_res.progress,
             )
+            _prune_uninteresting_boot(b_res)
 
             self.clock.enforce_min_interval(
                 task.boot.min_interval_ms, boot_start_time_s

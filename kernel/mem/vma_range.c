@@ -1,4 +1,4 @@
-#include <errno.h>
+#include <err.h>
 #include <kassert.h>
 #include <mem/anon_vma.h>
 #include <mem/avc.h>
@@ -51,7 +51,7 @@ void vma_range_free(struct vma_range *vma_range) {
 
 /* NOTE: relies on caller holding mm->lock, when faults run concurrently
  * under read lock, needs double checked allocation against a per-mm lock */
-enum errno vma_range_anon_prepare(struct vma_range *vma_range) {
+enum err vma_range_anon_prepare(struct vma_range *vma_range) {
     if (vma_range->anon_vma)
         return ERR_OK;
 
@@ -71,8 +71,8 @@ enum errno vma_range_anon_prepare(struct vma_range *vma_range) {
     return ERR_OK;
 }
 
-enum errno vma_range_set_prot(struct vma_range *vma_range,
-                              enum vma_range_protection prot) {
+enum err vma_range_set_prot(struct vma_range *vma_range,
+                            enum vma_range_protection prot) {
     vma_range->prot = prot;
     /* TODO: walk [start,end) and rewrite the PTE permission bits to
      * match, then TLB-shootdown the range. Until page tables are wired, already

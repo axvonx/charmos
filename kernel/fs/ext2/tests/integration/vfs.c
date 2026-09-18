@@ -63,7 +63,7 @@ TEST_DECLARE_INTEGRATION(ext2, rename, TEST_INTENSITY(1, 1, 16)) {
     TEST_ASSERT(!ERR_IS_FATAL(node->ops->rename(root, "ext2_rename_test", root,
                                                 "ext2_rename_test2")));
 
-    enum errno e = root->ops->finddir(root, "ext2_rename_test", &out);
+    enum err e = root->ops->finddir(root, "ext2_rename_test", &out);
     TEST_ASSERT_EQ_S(e, ERR_NO_ENT);
 
     TEST_ASSERT(

@@ -1,5 +1,5 @@
 #include <block/bcache.h>
-#include <errno.h>
+#include <err.h>
 #include <fs/ext2.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -50,9 +50,9 @@ static bool link_callback(struct ext2_fs *fs, struct ext2_dir_entry *entry,
     return false;
 }
 
-enum errno ext2_link_file(struct ext2_fs *fs, struct ext2_full_inode *dir,
-                          struct ext2_full_inode *inode, const char *name,
-                          uint8_t type, bool increment_links) {
+enum err ext2_link_file(struct ext2_fs *fs, struct ext2_full_inode *dir,
+                        struct ext2_full_inode *inode, const char *name,
+                        uint8_t type, bool increment_links) {
     if (ext2_dir_contains_file(fs, dir, name))
         return ERR_EXIST;
 
@@ -98,9 +98,9 @@ done:
     return status ? ERR_OK : ERR_IO;
 }
 
-enum errno ext2_create_file(struct ext2_fs *fs,
-                            struct ext2_full_inode *parent_dir,
-                            const char *name, mode_t mode, bool increment) {
+enum err ext2_create_file(struct ext2_fs *fs,
+                          struct ext2_full_inode *parent_dir, const char *name,
+                          mode_t mode, bool increment) {
     inode_t new_inode_num = ext2_alloc_inode(fs);
     if (new_inode_num == 0)
         return ERR_NOSPC;
@@ -118,7 +118,7 @@ enum errno ext2_create_file(struct ext2_fs *fs,
 
     uint8_t ft = ext2_extract_ftype(mode);
 
-    enum errno err = ext2_link_file(fs, parent_dir, &tmp, name, ft, increment);
+    enum err err = ext2_link_file(fs, parent_dir, &tmp, name, ft, increment);
 
     if (err != ERR_OK) {
         ext2_free_inode(fs, new_inode_num);

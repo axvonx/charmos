@@ -1,6 +1,6 @@
 /* @title: Clocks */
 #pragma once
-#include <errno.h>
+#include <err.h>
 #include <math/fixed.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -52,7 +52,7 @@ struct clock {
     struct clock_base *base;
 
     /* these expect state changes from OFF/ON */
-    enum errno (*enable)(struct clock *);
+    enum err (*enable)(struct clock *);
     void (*disable)(struct clock *);
     void (*suspend)(struct clock *);
     void (*resume)(struct clock *);

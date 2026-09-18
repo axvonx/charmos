@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "errno.h"
+#include <err.h>
 
 struct search_ctx {
     const char *target;
@@ -134,8 +134,8 @@ bool ext2_dir_contains_file(struct ext2_fs *fs,
     return ctx.found;
 }
 
-enum errno ext2_readdir(struct ext2_fs *fs, struct ext2_full_inode *dir_inode,
-                        struct ext2_dir_entry *out, uint32_t entry_offset) {
+enum err ext2_readdir(struct ext2_fs *fs, struct ext2_full_inode *dir_inode,
+                      struct ext2_dir_entry *out, uint32_t entry_offset) {
     if (!fs || !dir_inode || !out)
         return ERR_INVAL;
 

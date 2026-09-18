@@ -1,5 +1,5 @@
 /* @title: VFS */
-#include <errno.h>
+#include <err.h>
 #include <fs/detect.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -108,83 +108,82 @@ struct vfs_node;
 struct vfs_ops {
 
     /* read data from file */
-    enum errno (*read)(struct vfs_node *node, void *buf, uint64_t size,
-                       uint64_t offset);
+    enum err (*read)(struct vfs_node *node, void *buf, uint64_t size,
+                     uint64_t offset);
 
     /* write data to file */
-    enum errno (*write)(struct vfs_node *node, const void *buf, uint64_t size,
-                        uint64_t offset);
+    enum err (*write)(struct vfs_node *node, const void *buf, uint64_t size,
+                      uint64_t offset);
 
     /* open file with flags */
-    enum errno (*open)(struct vfs_node *node, uint32_t flags);
+    enum err (*open)(struct vfs_node *node, uint32_t flags);
 
     /* close file */
-    enum errno (*close)(struct vfs_node *node);
+    enum err (*close)(struct vfs_node *node);
 
     /* create file with given name */
-    enum errno (*create)(struct vfs_node *parent, const char *name,
-                         mode_t mode);
+    enum err (*create)(struct vfs_node *parent, const char *name, mode_t mode);
 
     /* make node - special devices */
-    enum errno (*mknod)(struct vfs_node *parent, const char *name, mode_t mode,
-                        uint32_t dev);
+    enum err (*mknod)(struct vfs_node *parent, const char *name, mode_t mode,
+                      uint32_t dev);
 
     /* create symbolic link */
-    enum errno (*symlink)(struct vfs_node *parent, const char *target,
-                          const char *link_name);
+    enum err (*symlink)(struct vfs_node *parent, const char *target,
+                        const char *link_name);
 
     /* mount filesystem at mountpoint */
-    enum errno (*mount)(struct vfs_node *mountpoint, struct vfs_node *target,
-                        const char *name);
+    enum err (*mount)(struct vfs_node *mountpoint, struct vfs_node *target,
+                      const char *name);
 
     /* unmount filesystem at mountpoint */
-    enum errno (*unmount)(struct vfs_mount *mountpoint);
+    enum err (*unmount)(struct vfs_mount *mountpoint);
 
     /* get file metadata */
-    enum errno (*stat)(struct vfs_node *node, struct vfs_stat *out);
+    enum err (*stat)(struct vfs_node *node, struct vfs_stat *out);
 
     /* read directory entry at index */
-    enum errno (*readdir)(struct vfs_node *node, struct vfs_dirent *out,
-                          uint64_t index);
+    enum err (*readdir)(struct vfs_node *node, struct vfs_dirent *out,
+                        uint64_t index);
 
     /* create directory */
-    enum errno (*mkdir)(struct vfs_node *parent, const char *name, mode_t mode);
+    enum err (*mkdir)(struct vfs_node *parent, const char *name, mode_t mode);
 
     /* remove directory */
-    enum errno (*rmdir)(struct vfs_node *parent, const char *name);
+    enum err (*rmdir)(struct vfs_node *parent, const char *name);
 
     /* delete file */
-    enum errno (*unlink)(struct vfs_node *parent, const char *name);
+    enum err (*unlink)(struct vfs_node *parent, const char *name);
 
     /* rename/move file or directory */
-    enum errno (*rename)(struct vfs_node *old_parent, const char *old_name,
-                         struct vfs_node *new_parent, const char *new_name);
+    enum err (*rename)(struct vfs_node *old_parent, const char *old_name,
+                       struct vfs_node *new_parent, const char *new_name);
 
     /* resize file to given length */
-    enum errno (*truncate)(struct vfs_node *node, uint64_t length);
+    enum err (*truncate)(struct vfs_node *node, uint64_t length);
 
     /* read symlink into target buffer */
-    enum errno (*readlink)(struct vfs_node *node, char *buf, uint64_t size);
+    enum err (*readlink)(struct vfs_node *node, char *buf, uint64_t size);
 
     /* create hard link to target */
-    enum errno (*link)(struct vfs_node *parent, struct vfs_node *target,
-                       const char *link_name);
+    enum err (*link)(struct vfs_node *parent, struct vfs_node *target,
+                     const char *link_name);
 
     /* change file permissions */
-    enum errno (*chmod)(struct vfs_node *node, mode_t mode);
+    enum err (*chmod)(struct vfs_node *node, mode_t mode);
 
     /* change file ownership */
-    enum errno (*chown)(struct vfs_node *node, uid_t uid, gid_t gid);
+    enum err (*chown)(struct vfs_node *node, uid_t uid, gid_t gid);
 
     /* update access times, unix time */
-    enum errno (*utime)(struct vfs_node *node, uint64_t atime, uint64_t mtime);
+    enum err (*utime)(struct vfs_node *node, uint64_t atime, uint64_t mtime);
 
     /* deallocate node */
-    enum errno (*destroy)(struct vfs_node *node);
+    enum err (*destroy)(struct vfs_node *node);
 
     /* find node by name */
-    enum errno (*finddir)(struct vfs_node *node, const char *name,
-                          struct vfs_dirent *out);
+    enum err (*finddir)(struct vfs_node *node, const char *name,
+                        struct vfs_dirent *out);
 };
 
 struct vfs_mount {
@@ -216,7 +215,7 @@ struct vfs_node {
 };
 
 void vfs_node_print(const struct vfs_node *node);
-enum errno vfs_mount(struct vfs_node *mountpoint, struct vfs_node *target,
-                     const char *name);
-enum errno vfs_unmount(struct vfs_mount *mountpoint);
+enum err vfs_mount(struct vfs_node *mountpoint, struct vfs_node *target,
+                   const char *name);
+enum err vfs_unmount(struct vfs_mount *mountpoint);
 struct vfs_node *vfs_finddir(struct vfs_node *node, const char *fname);

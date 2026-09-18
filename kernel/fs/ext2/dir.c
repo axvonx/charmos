@@ -1,4 +1,4 @@
-#include <errno.h>
+#include <err.h>
 #include <fs/ext2.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -37,12 +37,12 @@ static void init_dot_ents(struct ext2_fs *fs, uint8_t *block,
     strcpy(dotdot->name, "..");
 }
 
-enum errno ext2_mkdir(struct ext2_fs *fs, struct ext2_full_inode *parent_dir,
-                      const char *name, mode_t mode) {
+enum err ext2_mkdir(struct ext2_fs *fs, struct ext2_full_inode *parent_dir,
+                    const char *name, mode_t mode) {
     if (!(mode & EXT2_S_IFDIR))
         mode |= EXT2_S_IFDIR;
 
-    enum errno err = ext2_create_file(fs, parent_dir, name, mode, true);
+    enum err err = ext2_create_file(fs, parent_dir, name, mode, true);
     if (err != ERR_OK)
         return err;
 
@@ -81,8 +81,8 @@ enum errno ext2_mkdir(struct ext2_fs *fs, struct ext2_full_inode *parent_dir,
     return ERR_OK;
 }
 
-enum errno ext2_rmdir(struct ext2_fs *fs, struct ext2_full_inode *parent_dir,
-                      const char *name) {
+enum err ext2_rmdir(struct ext2_fs *fs, struct ext2_full_inode *parent_dir,
+                    const char *name) {
     uint8_t type;
     struct ext2_full_inode *dir;
     dir = ext2_find_file_in_dir(fs, parent_dir, name, &type);
@@ -139,7 +139,7 @@ enum errno ext2_rmdir(struct ext2_fs *fs, struct ext2_full_inode *parent_dir,
     bool free_blocks = true;
     bool decrement_links = true;
 
-    enum errno err =
+    enum err err =
         ext2_unlink_file(fs, parent_dir, name, free_blocks, decrement_links);
 
     if (err != ERR_OK) {

@@ -232,7 +232,7 @@ create_candidate_for_pages(struct elcm_params *params, size_t pages) {
     };
 }
 
-enum errno elcm(struct elcm_params *params) {
+enum err elcm(struct elcm_params *params) {
     const struct elcm_candidate degenerate = {0};
     params->out = degenerate;
 

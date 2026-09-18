@@ -1,4 +1,4 @@
-#include <errno.h>
+#include <err.h>
 #include <math/sort.h>
 
 static int cmp_facility_prefix(const void *key, const void *elem) {
@@ -14,7 +14,7 @@ static struct err_facility *facility_for(uint16_t pref) {
                    sizeof(struct err_facility), cmp_facility_prefix);
 }
 
-const char *errno_facility_to_str(enum errno e) {
+const char *err_facility_to_str(enum err e) {
     uint16_t pref = ERR_GET_FACILITY(e);
     uint16_t del = ERR_GET_DELTA(e);
     kassert(pref && del);

@@ -218,8 +218,8 @@ void lapic_timer_init_bsp(void) {
     lapic_timer_init(0);
 }
 
-static enum errno lapic_evdev_set_next_event(struct clock_evdev *ced,
-                                             time_ns_t delta_ns) {
+static enum err lapic_evdev_set_next_event(struct clock_evdev *ced,
+                                           time_ns_t delta_ns) {
     cc_var_unused(ced);
 
     /* The timer context guarantees that set_next_event happens under HIGH */
@@ -243,8 +243,8 @@ static enum errno lapic_evdev_set_next_event(struct clock_evdev *ced,
     return 0;
 }
 
-static enum errno lapic_evdev_change_state(struct clock_evdev *ced,
-                                           enum clock_evdev_state state) {
+static enum err lapic_evdev_change_state(struct clock_evdev *ced,
+                                         enum clock_evdev_state state) {
     cc_var_unused(ced);
     uint32_t lvt = lapic_read(LAPIC_REG_LVT_TIMER);
 

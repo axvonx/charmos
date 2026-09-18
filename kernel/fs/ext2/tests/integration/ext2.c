@@ -75,7 +75,7 @@ TEST_DECLARE_INTEGRATION(ext2, file_lifecycle, TEST_INTENSITY(1, 4, 64)) {
 
         TEST_ASSERT(!ERR_IS_FATAL(node->ops->unlink(root, fname)));
 
-        enum errno e = root->ops->finddir(root, fname, &ent);
+        enum err e = root->ops->finddir(root, fname, &ent);
         TEST_ASSERT_EQ_S(e, ERR_NO_ENT);
     }
 

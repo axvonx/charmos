@@ -1,5 +1,5 @@
 /* @title: Address sanitization */
-#include <errno.h>
+#include <err.h>
 #include <log.h>
 #include <math/bit.h>
 #include <stdbool.h>
@@ -55,7 +55,7 @@ void asan_init(void);
 
 /* Shadow backing at the slab chunk granularity, which must happen before any
  * object in the chunk is handed off */
-enum errno asan_shadow_install(vaddr_t base, size_t len);
+enum err asan_shadow_install(vaddr_t base, size_t len);
 void asan_shadow_release(vaddr_t base, size_t len);
 
 void asan_alloc(void *addr, size_t requested, size_t slot);

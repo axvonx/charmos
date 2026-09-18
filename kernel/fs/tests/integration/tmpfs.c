@@ -52,7 +52,7 @@ TEST_DECLARE_INTEGRATION(tmpfs, file_lifecycle, TEST_INTENSITY(1, 16, 256)) {
         TEST_ASSERT(!ERR_IS_FATAL(node->ops->read(node, out_buf, len, 0)));
         TEST_ASSERT(!ERR_IS_FATAL(node->ops->unlink(root, fname)));
 
-        enum errno e = root->ops->finddir(root, fname, &ent);
+        enum err e = root->ops->finddir(root, fname, &ent);
         TEST_ASSERT_EQ(e, ERR_NO_ENT);
 
         TEST_ASSERT_EQ(strlen(out_buf), len / 2);
@@ -87,7 +87,7 @@ TEST_DECLARE_INTEGRATION(tmpfs, dir_ops, TEST_INTENSITY(1, 8, 128)) {
         dir = ent.node;
         TEST_ASSERT_NONNULL(dir);
 
-        enum errno e = dir->ops->write(dir, lstr, len, 0);
+        enum err e = dir->ops->write(dir, lstr, len, 0);
         TEST_ASSERT_EQ(e, ERR_IS_DIR);
 
         e = dir->ops->read(dir, out_buf, len, 0);

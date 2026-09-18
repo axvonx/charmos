@@ -1,6 +1,6 @@
 /* @title: Block Cache */
 #include <block/bio.h>
-#include <errno.h>
+#include <err.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -82,8 +82,8 @@ bool bcache_insert(struct block_device *disk, uint64_t lba,
 
 bool bcache_evict(struct block_device *disk, uint64_t spb);
 
-enum errno bcache_prefetch_async(struct block_device *disk, uint64_t lba,
-                                 uint64_t block_size, uint64_t spb);
+enum err bcache_prefetch_async(struct block_device *disk, uint64_t lba,
+                               uint64_t block_size, uint64_t spb);
 
 void *bcache_create_ent(struct block_device *disk, uint64_t lba,
                         uint64_t block_size, uint64_t sectors_per_block,

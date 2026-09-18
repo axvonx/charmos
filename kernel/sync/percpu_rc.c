@@ -1,4 +1,4 @@
-#include <errno.h>
+#include <err.h>
 #include <global.h>
 #include <kassert.h>
 #include <mem/alloc.h>

@@ -1,6 +1,6 @@
 /* @title: Anonymous Virtual Memory Area */
 #pragma once
-#include <errno.h>
+#include <err.h>
 #include <structures/rbit.h>
 #include <sync/rwlock.h>
 #include <types/refcount.h>
@@ -25,7 +25,7 @@ struct anon_vma {
 
 struct anon_vma *anon_vma_alloc(void);
 void anon_vma_free(struct anon_vma *av); /* refcount==0 only */
-enum errno anon_vma_fork(struct vma_range *child, struct vma_range *parent);
+enum err anon_vma_fork(struct vma_range *child, struct vma_range *parent);
 
 /* root->lock */
 static inline void anon_vma_read_lock(struct anon_vma *av)
@@ -43,7 +43,7 @@ static inline void anon_vma_write_lock(struct anon_vma *av)
     rw_write_lock(&av->root->lock);
 }
 
-enum errno anon_vma_clone(struct vma_range *dst, struct vma_range *src);
+enum err anon_vma_clone(struct vma_range *dst, struct vma_range *src);
 
 struct anon_vma_chain *anon_vma_itree_first(struct anon_vma *av, pgoff_t first,
                                             pgoff_t last);

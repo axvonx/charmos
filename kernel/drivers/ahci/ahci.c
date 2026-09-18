@@ -115,7 +115,7 @@ struct block_device *ahci_create_generic(struct ahci_disk *disk) {
 
 static uint64_t ahci_cnt = 1;
 
-static enum errno ahci_pci_init(struct device *device) {
+static enum err ahci_pci_init(struct device *device) {
     struct pci_device *dev = device->driver_data;
     uint8_t bus = dev->bus, slot = dev->dev, func = dev->function;
     uint32_t d_cnt = 0;

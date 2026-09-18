@@ -124,7 +124,7 @@ page_fault_sync_cb(struct exception_sync_cb *this, struct irq_context *irqc,
     if (zeroed_out)
         memset(hhdm_paddr_to_ptr(paddr), 0, PAGE_SIZE);
 
-    enum errno e = vmm_map_demand_page(vaddr, paddr, ptag.payload);
+    enum err e = vmm_map_demand_page(vaddr, paddr, ptag.payload);
     if (e == ERR_EXIST) {
         pmm_free_page(paddr);
         return EXCEPTION_SYNC_CB_OK;

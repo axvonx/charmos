@@ -1,4 +1,4 @@
-#include <errno.h>
+#include <err.h>
 #include <limits.h>
 #include <mem/alloc.h>
 #include <stdarg.h>

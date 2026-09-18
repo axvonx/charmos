@@ -97,7 +97,7 @@ static inline struct page_table *alloc_pt(void) {
     return virt;
 }
 
-static enum errno pte_init(pte_t *entry, uint64_t flags) {
+static enum err pte_init(pte_t *entry, uint64_t flags) {
     struct page_table *new_table = alloc_pt();
     if (!new_table)
         return ERR_NO_MEM;
@@ -288,7 +288,7 @@ void vmm_init(struct limine_memmap_response *memmap,
     uint8_t *dummy_virt = hhdm_paddr_to_ptr(dummy_phys);
     memset(dummy_virt, 0xFF, PAGE_SIZE);
 
-    enum errno e;
+    enum err e;
 
     uint64_t text_start = (uint64_t) &__stext;
     uint64_t text_end = (uint64_t) &__etext;
@@ -404,7 +404,7 @@ static inline pte_t build_leaf_pte(paddr_t phys, uint64_t flags,
     return leaf;
 }
 
-static enum errno vmm_pt_apply(struct vmm_map_request *rq) {
+static enum err vmm_pt_apply(struct vmm_map_request *rq) {
     bool reclaim = rq->is_unmap_internal;
     vaddr_t virt = rq->virt;
     if (virt == 0)
@@ -434,7 +434,7 @@ static enum errno vmm_pt_apply(struct vmm_map_request *rq) {
     enum irql walk_irql = irql_raise(IRQL_DISPATCH_LEVEL);
 
     pt_walk_enter();
-    enum errno err = ERR_OK;
+    enum err err = ERR_OK;
     struct page_table *tables[PT_LEVELS];
     enum irql irqls[PT_LEVELS - 1];
     pte_t *entries[PT_LEVELS - 1];
@@ -571,12 +571,12 @@ static struct page_table *alloc_uniform_pt(uint64_t entry) {
 }
 
 /* Point an entry at an already built subtree */
-static enum errno alias_install_one(struct page_table *pml4, vaddr_t virt,
-                                    int parent_level, uint64_t install) {
+static enum err alias_install_one(struct page_table *pml4, vaddr_t virt,
+                                  int parent_level, uint64_t install) {
     struct page_table *tables[PT_LEVELS];
     pte_t *entries[PT_LEVELS - 1];
     enum irql irqls[PT_LEVELS - 1];
-    enum errno err = ERR_OK;
+    enum err err = ERR_OK;
     int level = 0;
 
     tables[0] = pml4;
@@ -629,8 +629,8 @@ out:
 }
 
 /* Use shared subtrees to map every page in the len to one physical page */
-enum errno vmm_map_aliased(vaddr_t virt, size_t len, paddr_t phys,
-                           page_flags_t leaf_flags, enum vmm_flags vflags) {
+enum err vmm_map_aliased(vaddr_t virt, size_t len, paddr_t phys,
+                         page_flags_t leaf_flags, enum vmm_flags vflags) {
     if (!len)
         return ERR_OK;
 
@@ -683,7 +683,7 @@ enum errno vmm_map_aliased(vaddr_t virt, size_t len, paddr_t phys,
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
     pt_walk_enter();
 
-    enum errno err = ERR_OK;
+    enum err err = ERR_OK;
     vaddr_t v = virt;
     for (; v < virt + len; v += granule) {
         if ((err = alias_install_one(pml4, v, parent_level, install)) < 0)
@@ -789,14 +789,14 @@ static struct page_table *pt_clone_shared(struct page_table *src) {
  * Every SHARED entry on the path is replaced by a private copy of its child,
  * so the other 511 entries in the copy still point into the alias,
  * meaning unrelated addresses resolve through the shared tables */
-enum errno vmm_unshare_path(vaddr_t virt, enum vmm_map_page_size leaf_size,
-                            enum vmm_flags vflags) {
+enum err vmm_unshare_path(vaddr_t virt, enum vmm_map_page_size leaf_size,
+                          enum vmm_flags vflags) {
     int leaf_level = map_leaf_level(leaf_size);
 
     struct page_table *tables[PT_LEVELS];
     pte_t *entries[PT_LEVELS - 1];
     enum irql irqls[PT_LEVELS - 1];
-    enum errno err = ERR_OK;
+    enum err err = ERR_OK;
     bool unshared = false;
     int level = 0;
 
@@ -862,7 +862,7 @@ out:
     return err;
 }
 
-enum errno vmm_map_page_full(struct vmm_map_request *rq) {
+enum err vmm_map_page_full(struct vmm_map_request *rq) {
     if (cc_unlikely(text_phys_end && (rq->page_flags & PAGE_WRITE) &&
                     rq->phys < text_phys_end &&
                     rq->phys + map_page_bytes(rq->page_size) > text_phys_start))
@@ -882,9 +882,9 @@ void vmm_unmap_page_full(struct vmm_map_request *rq) {
     (void) vmm_pt_apply(&req);
 }
 
-enum errno vmm_map_page_internal(vaddr_t virt, paddr_t phys, page_flags_t flags,
-                                 enum vmm_flags vflags,
-                                 enum vmm_map_page_size size) {
+enum err vmm_map_page_internal(vaddr_t virt, paddr_t phys, page_flags_t flags,
+                               enum vmm_flags vflags,
+                               enum vmm_map_page_size size) {
     struct vmm_map_request rq = {
         .virt = virt,
         .phys = phys,
@@ -895,10 +895,10 @@ enum errno vmm_map_page_internal(vaddr_t virt, paddr_t phys, page_flags_t flags,
     return vmm_map_page_full(&rq);
 }
 
-enum errno vmm_map_page_user_internal(struct page_table *pml4, vaddr_t virt,
-                                      paddr_t phys, page_flags_t flags,
-                                      enum vmm_flags vflags,
-                                      enum vmm_map_page_size size) {
+enum err vmm_map_page_user_internal(struct page_table *pml4, vaddr_t virt,
+                                    paddr_t phys, page_flags_t flags,
+                                    enum vmm_flags vflags,
+                                    enum vmm_map_page_size size) {
     struct vmm_map_request rq = {
         .pml4 = pml4,
         .virt = virt,
@@ -910,9 +910,9 @@ enum errno vmm_map_page_user_internal(struct page_table *pml4, vaddr_t virt,
     return vmm_map_page_full(&rq);
 }
 
-enum errno vmm_mark_demand_page_internal(vaddr_t virt,
-                                         enum demand_page_flags flags,
-                                         enum vmm_map_page_size size) {
+enum err vmm_mark_demand_page_internal(vaddr_t virt,
+                                       enum demand_page_flags flags,
+                                       enum vmm_map_page_size size) {
     struct pte_tagged ptag = {
         .type = PTE_TAG_TYPE_DEMAND_PAGED,
         .payload = flags,
@@ -932,9 +932,9 @@ enum errno vmm_mark_demand_page_internal(vaddr_t virt,
     return vmm_map_page_full(&rq);
 }
 
-enum errno vmm_map_demand_page_internal(vaddr_t virt, paddr_t phys,
-                                        enum demand_page_flags flags,
-                                        enum vmm_map_page_size size) {
+enum err vmm_map_demand_page_internal(vaddr_t virt, paddr_t phys,
+                                      enum demand_page_flags flags,
+                                      enum vmm_map_page_size size) {
     uint64_t pflags = PAGE_PRESENT;
     if (flags & DEMAND_PAGE_FLAG_WRITABLE)
         pflags |= PAGE_WRITE;
@@ -955,10 +955,10 @@ enum errno vmm_map_demand_page_internal(vaddr_t virt, paddr_t phys,
     return vmm_map_page_full(&rq);
 }
 
-enum errno vmm_mark_demand_page_user_internal(struct page_table *pml4,
-                                              vaddr_t virt,
-                                              enum demand_page_flags flags,
-                                              enum vmm_map_page_size size) {
+enum err vmm_mark_demand_page_user_internal(struct page_table *pml4,
+                                            vaddr_t virt,
+                                            enum demand_page_flags flags,
+                                            enum vmm_map_page_size size) {
     struct pte_tagged ptag = {
         .type = PTE_TAG_TYPE_DEMAND_PAGED,
         .payload = flags,
@@ -1079,7 +1079,7 @@ void *vmm_map(paddr_t paddr, vaddr_t vaddr, uint64_t len, uint64_t flags,
     uint64_t total_len = len + offset;
     uint64_t total_pages = PAGES_NEEDED_FOR(total_len);
 
-    enum errno e = ERR_OK;
+    enum err e = ERR_OK;
     uint64_t mapped = 0;
 
     for (; mapped < total_pages; mapped++) {
@@ -1139,7 +1139,7 @@ void *vmm_map_bump_internal(uintptr_t addr, uint64_t len, uint64_t flags,
         &vmm_map_top, &virt_start, virt_start + span, memory_order_acq_rel,
         memory_order_relaxed));
 
-    enum errno e = ERR_OK;
+    enum err e = ERR_OK;
     uint64_t mapped = 0;
 
     for (; mapped < total_pages; mapped++) {

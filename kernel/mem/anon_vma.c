@@ -124,7 +124,7 @@ struct anon_vma_chain *anon_vma_itree_next(struct anon_vma_chain *avc,
  *
  * One fresh AVC per source link, each holds a reference on the
  * anon_vma it points at */
-enum errno anon_vma_clone(struct vma_range *dst, struct vma_range *src) {
+enum err anon_vma_clone(struct vma_range *dst, struct vma_range *src) {
     struct anon_vma_chain *src_avc;
     list_for_each_entry(src_avc, &src->anon_vma_chain, same_vma_range) {
         struct anon_vma *av = src_avc->anon_vma;
@@ -145,10 +145,10 @@ enomem:
     return ERR_NO_MEM;
 }
 
-enum errno anon_vma_fork(struct vma_range *child, struct vma_range *parent) {
+enum err anon_vma_fork(struct vma_range *child, struct vma_range *parent) {
     /* inherit parent's anon_vmas so already mapped (about
      * to be COW) pages stay reachable from the child */
-    enum errno err = anon_vma_clone(child, parent);
+    enum err err = anon_vma_clone(child, parent);
     if (err != ERR_OK)
         return err;
 

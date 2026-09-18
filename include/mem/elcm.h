@@ -1,5 +1,5 @@
 #pragma once
-#include <errno.h>
+#include <err.h>
 #include <math/fixed.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -36,4 +36,4 @@ struct elcm_params {
     struct elcm_candidate out;
 };
 
-enum errno elcm(struct elcm_params *params);
+enum err elcm(struct elcm_params *params);

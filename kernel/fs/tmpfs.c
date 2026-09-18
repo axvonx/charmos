@@ -40,14 +40,14 @@ static uint16_t tmpfs_to_vfs_mode(enum tmpfs_type mode) {
     return -1;
 }
 
-static enum errno tmpfs_mount(struct vfs_node *mountpoint, struct vfs_node *out,
-                              const char *name) {
+static enum err tmpfs_mount(struct vfs_node *mountpoint, struct vfs_node *out,
+                            const char *name) {
     cc_var_unused(mountpoint, out, name);
     return ERR_NOT_IMPL;
 }
 
-static enum errno tmpfs_read(struct vfs_node *node, void *buf, uint64_t size,
-                             uint64_t offset) {
+static enum err tmpfs_read(struct vfs_node *node, void *buf, uint64_t size,
+                           uint64_t offset) {
     struct tmpfs_node *tn = node->fs_node_data;
 
     if (tn->type != TMPFS_FILE)
@@ -79,8 +79,8 @@ static enum errno tmpfs_read(struct vfs_node *node, void *buf, uint64_t size,
     return ERR_OK;
 }
 
-static enum errno realloc_page_array(struct tmpfs_node *tn,
-                                     size_t required_pages) {
+static enum err realloc_page_array(struct tmpfs_node *tn,
+                                   size_t required_pages) {
     if (required_pages > tn->num_pages) {
         void **new_pages = krealloc(tn->pages, required_pages * sizeof(void *));
         if (!new_pages)
@@ -93,8 +93,8 @@ static enum errno realloc_page_array(struct tmpfs_node *tn,
     return ERR_OK;
 }
 
-static enum errno tmpfs_write(struct vfs_node *node, const void *buf,
-                              uint64_t size, uint64_t offset) {
+static enum err tmpfs_write(struct vfs_node *node, const void *buf,
+                            uint64_t size, uint64_t offset) {
     struct tmpfs_node *tn = node->fs_node_data;
     if (tn->type != TMPFS_FILE)
         return ERR_IS_DIR;
@@ -102,7 +102,7 @@ static enum errno tmpfs_write(struct vfs_node *node, const void *buf,
     uint64_t end = offset + size;
     size_t required_pages = (size_t) DIV_ROUND_UP(end, PAGE_SIZE);
 
-    enum errno e = realloc_page_array(tn, required_pages);
+    enum err e = realloc_page_array(tn, required_pages);
     if (e != ERR_OK)
         return e;
 
@@ -134,12 +134,12 @@ static enum errno tmpfs_write(struct vfs_node *node, const void *buf,
     return ERR_OK;
 }
 
-static enum errno tmpfs_open(struct vfs_node *node, uint32_t flags) {
+static enum err tmpfs_open(struct vfs_node *node, uint32_t flags) {
     cc_var_unused(node, flags);
     return ERR_NOT_IMPL; // no-op
 }
 
-static enum errno tmpfs_close(struct vfs_node *node) {
+static enum err tmpfs_close(struct vfs_node *node) {
     cc_var_unused(node);
     return ERR_NOT_IMPL; // no-op
 }
@@ -152,8 +152,8 @@ static struct tmpfs_node *tmpfs_find_child(struct tmpfs_node *dir,
     return NULL;
 }
 
-static enum errno tmpfs_add_child(struct tmpfs_node *parent,
-                                  struct tmpfs_node *child) {
+static enum err tmpfs_add_child(struct tmpfs_node *parent,
+                                struct tmpfs_node *child) {
     uint64_t needed_size = sizeof(void *) * (parent->child_count + 1);
 
     parent->children = krealloc(parent->children, needed_size);
@@ -163,9 +163,9 @@ static enum errno tmpfs_add_child(struct tmpfs_node *parent,
     return ERR_OK;
 }
 
-static enum errno tmpfs_create_common(struct vfs_node *parent, const char *name,
-                                      mode_t mode, enum tmpfs_type type,
-                                      struct tmpfs_node **out) {
+static enum err tmpfs_create_common(struct vfs_node *parent, const char *name,
+                                    mode_t mode, enum tmpfs_type type,
+                                    struct tmpfs_node **out) {
     struct tmpfs_node *pt = parent->fs_node_data;
     if (pt->type != TMPFS_DIR)
         return ERR_NOT_DIR;
@@ -193,23 +193,23 @@ static enum errno tmpfs_create_common(struct vfs_node *parent, const char *name,
     return ERR_OK;
 }
 
-static enum errno tmpfs_create(struct vfs_node *parent, const char *name,
-                               mode_t mode) {
+static enum err tmpfs_create(struct vfs_node *parent, const char *name,
+                             mode_t mode) {
     struct tmpfs_node *node;
     enum tmpfs_type type = (mode & VFS_MODE_DIR) ? TMPFS_DIR : TMPFS_FILE;
     return tmpfs_create_common(parent, name, mode, type, &node);
 }
 
-static enum errno tmpfs_mknod(struct vfs_node *parent, const char *name,
-                              mode_t mode, uint32_t dev) {
+static enum err tmpfs_mknod(struct vfs_node *parent, const char *name,
+                            mode_t mode, uint32_t dev) {
     cc_var_unused(parent, name, mode, dev);
     return ERR_NOT_IMPL;
 }
 
-static enum errno tmpfs_symlink(struct vfs_node *parent, const char *target,
-                                const char *link_name) {
+static enum err tmpfs_symlink(struct vfs_node *parent, const char *target,
+                              const char *link_name) {
     struct tmpfs_node *link;
-    enum errno err =
+    enum err err =
         tmpfs_create_common(parent, link_name, 0777, TMPFS_SYMLINK, &link);
 
     if (err != ERR_OK)
@@ -219,12 +219,12 @@ static enum errno tmpfs_symlink(struct vfs_node *parent, const char *target,
     return ERR_OK;
 }
 
-static enum errno tmpfs_unmount(struct vfs_mount *mountpoint) {
+static enum err tmpfs_unmount(struct vfs_mount *mountpoint) {
     cc_var_unused(mountpoint);
     return ERR_NOT_IMPL;
 }
 
-static enum errno tmpfs_stat(struct vfs_node *node, struct vfs_stat *out) {
+static enum err tmpfs_stat(struct vfs_node *node, struct vfs_stat *out) {
     struct tmpfs_node *tn = node->fs_node_data;
     out->mode = tn->mode;
     out->size = tn->size;
@@ -232,8 +232,8 @@ static enum errno tmpfs_stat(struct vfs_node *node, struct vfs_stat *out) {
     return ERR_OK;
 }
 
-static enum errno tmpfs_readdir(struct vfs_node *node, struct vfs_dirent *out,
-                                uint64_t index) {
+static enum err tmpfs_readdir(struct vfs_node *node, struct vfs_dirent *out,
+                              uint64_t index) {
     struct tmpfs_node *tn = node->fs_node_data;
     if (tn->type != TMPFS_DIR)
         return ERR_NOT_DIR;
@@ -247,12 +247,12 @@ static enum errno tmpfs_readdir(struct vfs_node *node, struct vfs_dirent *out,
     return ERR_OK;
 }
 
-static enum errno tmpfs_mkdir(struct vfs_node *parent, const char *name,
-                              mode_t mode) {
+static enum err tmpfs_mkdir(struct vfs_node *parent, const char *name,
+                            mode_t mode) {
     return tmpfs_create_common(parent, name, mode, TMPFS_DIR, NULL);
 }
 
-static enum errno tmpfs_rmdir(struct vfs_node *parent, const char *name) {
+static enum err tmpfs_rmdir(struct vfs_node *parent, const char *name) {
     struct tmpfs_node *pt = parent->fs_node_data;
     for (uint64_t i = 0; i < pt->child_count; i++) {
         struct tmpfs_node *c = pt->children[i];
@@ -280,7 +280,7 @@ static void tmpfs_free_node(struct tmpfs_node *tn) {
     kfree(tn->pages);
 }
 
-static enum errno tmpfs_unlink(struct vfs_node *parent, const char *name) {
+static enum err tmpfs_unlink(struct vfs_node *parent, const char *name) {
     struct tmpfs_node *pt = parent->fs_node_data;
     for (uint64_t i = 0; i < pt->child_count; i++) {
         struct tmpfs_node *c = pt->children[i];
@@ -297,10 +297,9 @@ static enum errno tmpfs_unlink(struct vfs_node *parent, const char *name) {
     return ERR_NO_ENT;
 }
 
-static enum errno tmpfs_rename(struct vfs_node *old_parent,
-                               const char *old_name,
-                               struct vfs_node *new_parent,
-                               const char *new_name) {
+static enum err tmpfs_rename(struct vfs_node *old_parent, const char *old_name,
+                             struct vfs_node *new_parent,
+                             const char *new_name) {
     struct tmpfs_node *old_pt = old_parent->fs_node_data;
     struct tmpfs_node *new_pt = new_parent->fs_node_data;
     struct tmpfs_node *node = tmpfs_find_child(old_pt, old_name);
@@ -322,7 +321,7 @@ static enum errno tmpfs_rename(struct vfs_node *old_parent,
     return ERR_OK;
 }
 
-static enum errno tmpfs_truncate(struct vfs_node *node, uint64_t length) {
+static enum err tmpfs_truncate(struct vfs_node *node, uint64_t length) {
     struct tmpfs_node *tn = node->fs_node_data;
     if (tn->type != TMPFS_FILE)
         return ERR_IS_DIR;
@@ -379,8 +378,8 @@ static enum errno tmpfs_truncate(struct vfs_node *node, uint64_t length) {
     return ERR_OK;
 }
 
-static enum errno tmpfs_readlink(struct vfs_node *node, char *buf,
-                                 uint64_t size) {
+static enum err tmpfs_readlink(struct vfs_node *node, char *buf,
+                               uint64_t size) {
     struct tmpfs_node *tn = node->fs_node_data;
 
     if (tn->type != TMPFS_SYMLINK)
@@ -390,21 +389,21 @@ static enum errno tmpfs_readlink(struct vfs_node *node, char *buf,
     return ERR_OK;
 }
 
-static enum errno tmpfs_link(struct vfs_node *parent, struct vfs_node *target,
-                             const char *link_name) {
+static enum err tmpfs_link(struct vfs_node *parent, struct vfs_node *target,
+                           const char *link_name) {
     cc_var_unused(parent, target, link_name);
     // tmpfs doesn't support hard links
     return ERR_NOT_IMPL;
 }
 
-static enum errno tmpfs_chmod(struct vfs_node *node, mode_t mode) {
+static enum err tmpfs_chmod(struct vfs_node *node, mode_t mode) {
     struct tmpfs_node *tn = node->fs_node_data;
     tn->mode = mode;
     node->mode = mode;
     return ERR_OK;
 }
 
-static enum errno tmpfs_chown(struct vfs_node *node, uid_t uid, gid_t gid) {
+static enum err tmpfs_chown(struct vfs_node *node, uid_t uid, gid_t gid) {
     struct tmpfs_node *n = node->fs_node_data;
     node->uid = uid;
     node->gid = gid;
@@ -413,8 +412,8 @@ static enum errno tmpfs_chown(struct vfs_node *node, uid_t uid, gid_t gid) {
     return ERR_OK;
 }
 
-static enum errno tmpfs_utime(struct vfs_node *node, uint64_t atime,
-                              uint64_t mtime) {
+static enum err tmpfs_utime(struct vfs_node *node, uint64_t atime,
+                            uint64_t mtime) {
     struct tmpfs_node *n = node->fs_node_data;
     node->atime = atime;
     node->mtime = mtime;
@@ -423,7 +422,7 @@ static enum errno tmpfs_utime(struct vfs_node *node, uint64_t atime,
     return ERR_OK;
 }
 
-static enum errno tmpfs_destroy(struct vfs_node *node) {
+static enum err tmpfs_destroy(struct vfs_node *node) {
     cc_var_unused(node);
     struct tmpfs_node *n = node->fs_node_data;
 
@@ -446,8 +445,8 @@ static enum errno tmpfs_destroy(struct vfs_node *node) {
     return ERR_OK;
 }
 
-static enum errno tmpfs_finddir(struct vfs_node *node, const char *name,
-                                struct vfs_dirent *out) {
+static enum err tmpfs_finddir(struct vfs_node *node, const char *name,
+                              struct vfs_dirent *out) {
     struct tmpfs_node *tn = node->fs_node_data;
 
     if (tn->type != TMPFS_DIR)

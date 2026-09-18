@@ -1,5 +1,5 @@
 #include <asm.h>
-#include <errno.h>
+#include <err.h>
 #include <kassert.h>
 #include <math/align.h>
 #include <mem/anon_vma.h>
@@ -70,7 +70,7 @@ static bool vma_range_tree_augment(struct rbit_node *n) {
     return mx != old_max || mn != old_min || gap != old_gap;
 }
 
-enum errno mm_pgtable_init(struct mm *mm) {
+enum err mm_pgtable_init(struct mm *mm) {
     mm->pml4 = vmm_make_user_pml4();
     return mm->pml4 ? ERR_OK : ERR_NO_MEM;
 }
@@ -83,7 +83,7 @@ void mm_activate(struct mm *mm) {
     cr3_write(mm->pml4);
 }
 
-enum errno mm_map_page(struct mm *mm, vaddr_t va, paddr_t pa, uint64_t pflags) {
+enum err mm_map_page(struct mm *mm, vaddr_t va, paddr_t pa, uint64_t pflags) {
     vmm_map_page_user(vmm_phys_to_pml4(mm->pml4), va, pa, pflags,
                       VMM_FLAG_USER);
     return ERR_OK;

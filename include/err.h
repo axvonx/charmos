@@ -35,7 +35,7 @@
 /* When this enum errno is negated, i.e. becomes positive, the upper 16 bits
  * indicate the *facility*. With 0, it's just one of these, but if it's > 0,
  * it came from a specific subsystem that defined a struct err_facility */
-enum errno {
+enum err {
     ERR_OK = 0,          // Success
     ERR_UNKNOWN = -1,    // Unknown or unspecified error
     ERR_NO_MEM = -2,     // Out of memory
@@ -96,10 +96,10 @@ struct err_facility {
 
 LINKER_SECTION_DEFINE(struct err_facility, err_facilities);
 
-const char *errno_facility_to_str(enum errno err);
+const char *err_facility_to_str(enum err err);
 void err_facilities_init();
 
-static inline const char *errno_to_str(enum errno err) {
+static inline const char *errno_to_str(enum err err) {
     switch (err) {
     case ERR_OK: return "No error";
     case ERR_UNKNOWN: return "Unknown error";
@@ -120,6 +120,6 @@ static inline const char *errno_to_str(enum errno err) {
     case ERR_OVERFLOW: return "Value too large";
     case ERR_NOT_EMPTY: return "Directory not empty";
 
-    default: return errno_facility_to_str(err);
+    default: return err_facility_to_str(err);
     }
 }

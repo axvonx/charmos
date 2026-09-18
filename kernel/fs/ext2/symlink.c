@@ -1,13 +1,13 @@
-#include <errno.h>
+#include <err.h>
 #include <fs/ext2.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 #include <time/time.h>
 
-enum errno ext2_symlink_file(struct ext2_fs *fs,
-                             struct ext2_full_inode *dir_inode,
-                             const char *name, const char *target) {
+enum err ext2_symlink_file(struct ext2_fs *fs,
+                           struct ext2_full_inode *dir_inode, const char *name,
+                           const char *target) {
     inode_t inode_num = ext2_alloc_inode(fs);
     if (inode_num == 0)
         return ERR(ext2, EXT2_ERR_NO_INODE);
@@ -52,13 +52,13 @@ enum errno ext2_symlink_file(struct ext2_fs *fs,
         .node = new_inode,
     };
 
-    enum errno ret = ext2_link_file(fs, dir_inode, &wrapped_inode,
-                                    (char *) name, EXT2_FT_SYMLINK, false);
+    enum err ret = ext2_link_file(fs, dir_inode, &wrapped_inode, (char *) name,
+                                  EXT2_FT_SYMLINK, false);
     return ret;
 }
 
-enum errno ext2_readlink(struct ext2_fs *fs, struct ext2_full_inode *node,
-                         char *buf, uint64_t size) {
+enum err ext2_readlink(struct ext2_fs *fs, struct ext2_full_inode *node,
+                       char *buf, uint64_t size) {
     if (!fs || !node || !buf)
         return ERR_INVAL;
 

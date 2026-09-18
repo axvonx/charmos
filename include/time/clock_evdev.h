@@ -1,6 +1,6 @@
 /* @title: Clock Event Device */
 #pragma once
-#include <errno.h>
+#include <err.h>
 #include <mem/alloc_or_die.h>
 #include <smp/domain.h>
 #include <structures/list.h>
@@ -31,7 +31,7 @@ struct clock_evdev {
     char *name;
 
     /* Guaranteed to be called at IRQL_HIGH_LEVEL */
-    enum errno (*set_next_event)(struct clock_evdev *, time_ns_t delta_ns);
+    enum err (*set_next_event)(struct clock_evdev *, time_ns_t delta_ns);
     timestamp_t next_event;
 
     time_ns_t min_delta_ns;
@@ -41,9 +41,9 @@ struct clock_evdev {
     enum clock_evdev_flags flags;
     enum clock_rating rating;
 
-    enum errno (*change_state)(struct clock_evdev *,
-                               enum clock_evdev_state state);
-    enum errno (*resume_tick)(struct clock_evdev *);
+    enum err (*change_state)(struct clock_evdev *,
+                             enum clock_evdev_state state);
+    enum err (*resume_tick)(struct clock_evdev *);
 
     size_t min_delta_ticks;
     size_t max_delta_ticks;
