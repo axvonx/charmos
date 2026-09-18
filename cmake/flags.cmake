@@ -129,6 +129,11 @@ if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
     endif ()
 endif ()
 
+# Exclude C compiler flags from the link rule
+# to avoid passing compiler-only options to the linker driver
+set(CMAKE_C_LINK_EXECUTABLE
+    "<CMAKE_C_COMPILER> <CMAKE_C_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+
 # DEBUG_ASAN itself is declared in features.cmake (included before this file) so the implication pass there can see it;
 # only its validation lives here.
 if (DEBUG_ASAN)
