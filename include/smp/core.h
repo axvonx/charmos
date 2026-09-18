@@ -137,6 +137,12 @@ void smp_caller_verify(enum topology_caller caller);
 
 #define smp_member_size(member) sizeof(typeof(((struct core *) 0)->member))
 
+#if defined(__clang__)
+#define _smp_read_type(member) (typeof(ct_decay(((struct core *) 0)->member)))
+#else
+#define _smp_read_type(member) (typeof(((struct core *) 0)->member))
+#endif
+
 #define smp_read(cond, member)                                                 \
     ({                                                                         \
         if (cond != TOPC_NONE)                                                 \
@@ -153,7 +159,7 @@ void smp_caller_verify(enum topology_caller caller);
         case 8: _raw = smp_read64(offsetof(struct core, member)); break;       \
         default: ci_unreachable();                                             \
         }                                                                      \
-        (typeof(ct_decay(((struct core *) 0)->member))) (uintptr_t) _raw;      \
+        _smp_read_type(member)(uintptr_t) _raw;                                \
     })
 
 #define smp_write8(off, v)                                                     \

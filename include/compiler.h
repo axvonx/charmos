@@ -167,7 +167,7 @@
 #define ct_const_max(a, b) __builtin_choose_expr((a) > (b), (a), (b))
 #define ct_const_clamp(val, min, max) ct_const_min(ct_const_max(val, min), max)
 
-#define ct_decay(x) __typeof__(0 ? (x) : ((void) 0, (x)))
+#define ct_decay(x) __typeof__(0 ? (x) : ((void) ++(int) {0}, (x)))
 #define ct_is_str(x)                                                           \
     (__builtin_types_compatible_p(ct_decay(x), char *) ||                      \
      __builtin_types_compatible_p(ct_decay(x), const char *))
