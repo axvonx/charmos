@@ -105,6 +105,7 @@ static void chaos_apc_spammer(void *arg) {
                                   memory_order_relaxed);
 
         if (pass++ % chaos_apc_period) {
+            thread_sleep_for_ms(10);
             scheduler_yield();
             continue;
         }
@@ -112,6 +113,7 @@ static void chaos_apc_spammer(void *arg) {
         int id = prng_next() % chaos_threads;
 
         if (!atomic_load(&states[id].alive)) {
+            thread_sleep_for_ms(10);
             scheduler_yield();
             continue;
         }
@@ -121,6 +123,7 @@ static void chaos_apc_spammer(void *arg) {
         rcu_read_unlock();
 
         if (!got) {
+            thread_sleep_for_ms(10);
             scheduler_yield();
             continue;
         }
@@ -134,6 +137,7 @@ static void chaos_apc_spammer(void *arg) {
         }
         thread_put(states[id].t);
 
+        thread_sleep_for_ms(10);
         scheduler_yield();
     }
 }
