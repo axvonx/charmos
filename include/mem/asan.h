@@ -67,7 +67,7 @@ void asan_unpoison(void *addr, size_t size);
 
 static inline void asan_init(void) {}
 
-static inline enum errno asan_shadow_install(vaddr_t base, size_t len) {
+static inline enum err asan_shadow_install(vaddr_t base, size_t len) {
     cc_var_unused(base, len);
     return ERR_OK;
 }

@@ -32,7 +32,7 @@
         _v;                                                                    \
     })
 
-/* When this enum errno is negated, i.e. becomes positive, the upper 16 bits
+/* When this enum err is negated, i.e. becomes positive, the upper 16 bits
  * indicate the *facility*. With 0, it's just one of these, but if it's > 0,
  * it came from a specific subsystem that defined a struct err_facility */
 enum err {
