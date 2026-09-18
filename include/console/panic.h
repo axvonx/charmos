@@ -1,11 +1,14 @@
 /* @title: Kernel Panic Interface */
 #pragma once
-#include <compiler_intrinsics.h>
+#include <compiler/core.h>
+#include <compiler/intrinsic.h>
 #include <console/crash.h>
 
-cc_noreturn void panic_impl_default(struct crash_payload payload,
-                                    const char *file, int line,
-                                    const char *func, const char *fmt, ...);
+cc_noreturn cc_cold cc_printf_like(5, 6)
+    cc_nonnull(2, 4, 5) void panic_impl_default(struct crash_payload payload,
+                                                const char *file, int line,
+                                                const char *func,
+                                                const char *fmt, ...);
 
 #define _panic_pick(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, NAME, ...)   \
     NAME
@@ -27,7 +30,7 @@ cc_noreturn void panic_impl_default(struct crash_payload payload,
         panic_impl_default(CRASH_CODE_TO_PAYLOAD(default), __FILE__, __LINE__, \
                            __func__, ct_as_str(x)),                            \
         panic_impl_default(CRASH_CODE_TO_PAYLOAD(_panic_as_code(x)), __FILE__, \
-                           __LINE__, __func__, "No message supplied"))
+                           __LINE__, __func__, "%s", "No message supplied"))
 /*
  * panic(CODE, "msg")
  * panic("msg %d", 12)
@@ -39,19 +42,14 @@ cc_noreturn void panic_impl_default(struct crash_payload payload,
                            __func__, ct_as_str(x),                             \
                            y), /* x is format, y is first vararg */            \
         panic_impl_default(CRASH_CODE_TO_PAYLOAD(_panic_as_code(x)), __FILE__, \
-                           __LINE__, __func__, ct_as_str(y)))
+                           __LINE__, __func__, "%s", ct_as_str(y)))
 
 /*
- * panic(CODE, "msg %d", 12)
  * panic("msg %d %d", 12, 13)
  */
-#define _panic_n(default, x, y, ...)                                           \
-    ci_choose_expr(                                                            \
-        ct_is_str(x),                                                          \
-        panic_impl_default(CRASH_CODE_TO_PAYLOAD(default), __FILE__, __LINE__, \
-                           __func__, ct_as_str(x), y, ##__VA_ARGS__),          \
-        panic_impl_default(CRASH_CODE_TO_PAYLOAD(_panic_as_code(x)), __FILE__, \
-                           __LINE__, __func__, ct_as_str(y), ##__VA_ARGS__))
+#define _panic_n(default, fmt, ...)                                            \
+    panic_impl_default(CRASH_CODE_TO_PAYLOAD(default), __FILE__, __LINE__,     \
+                       __func__, fmt, __VA_ARGS__)
 
 #define panic(...) _panic_dispatch(CRASH_CODE_GENERIC, _panic, __VA_ARGS__)
 #define panic_with(payload, fmt, ...)                                          \

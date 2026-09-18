@@ -1,5 +1,5 @@
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <math/bit.h>
 #include <math/min_max.h>
 #include <mem/bitmap.h>

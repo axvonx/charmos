@@ -1,7 +1,7 @@
 /* @title: PCI */
 #pragma once
 #include <asm.h>
-#include <compiler.h>
+#include <compiler/core.h>
 #include <device.h>
 #include <linker/symbols.h>
 #include <log.h>

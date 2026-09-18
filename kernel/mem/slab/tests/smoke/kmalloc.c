@@ -14,7 +14,7 @@ TEST_DECLARE_SMOKE(slab, alloc_free_smoke) {
     kfree_new(p, ALLOC_BEHAVIOR_NORMAL);
     ms = time_get_ms() - ms;
 
-    snprintf(hooray, 128, "allocated %p and free took %u ms", p, ms);
+    snprintf(hooray, 128, "allocated %p and free took %lu ms", p, ms);
 
     test_info(hooray);
     return TEST_SUCCESS;

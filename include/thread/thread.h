@@ -4,7 +4,7 @@
 
 #pragma once
 #include <asm.h>
-#include <compiler.h>
+#include <compiler/core.h>
 #include <log.h>
 #include <math/range.h>
 #include <mem/page.h>

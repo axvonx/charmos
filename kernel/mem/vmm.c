@@ -1,7 +1,7 @@
 #include <acpi/lapic.h>
 #include <cmdline.h>
-#include <compiler.h>
-#include <compiler_intrinsics.h>
+#include <compiler/core.h>
+#include <compiler/intrinsic.h>
 #include <console/printf.h>
 #include <global.h>
 #include <irq/idt.h>
@@ -256,7 +256,7 @@ static void vmm_free_user_subtree(struct page_table *pdpt) {
 }
 
 void vmm_unmap_all_user_pages(struct page_table *pml4, enum vmm_flags vflags) {
-    (void) vflags;
+    cc_var_unused(vflags);
 
     for (int i4 = 0; i4 < KERNEL_PML4_START_INDEX; i4++) {
         pte_t e4 = pml4->entries[i4];
@@ -1046,7 +1046,7 @@ out:
 }
 
 paddr_t vmm_get_phys_internal(vaddr_t virt, enum vmm_flags vflags) {
-    (void) vflags;
+    cc_var_unused(vflags);
 
     int level;
     uint64_t snap = vmm_walk_leaf(kernel_pml4, virt, &level);
@@ -1064,7 +1064,7 @@ paddr_t vmm_get_phys_internal(vaddr_t virt, enum vmm_flags vflags) {
 }
 
 pte_t vmm_get_leaf_pte_internal(vaddr_t virt, enum vmm_flags vflags) {
-    (void) vflags;
+    cc_var_unused(vflags);
     return vmm_walk_leaf(kernel_pml4, virt, NULL);
 }
 

@@ -1,5 +1,5 @@
 #include <asm.h>
-#include <compiler.h>
+#include <compiler/core.h>
 #include <drivers/pci.h>
 #include <drivers/usb/xhci.h>
 #include <mem/alloc.h>

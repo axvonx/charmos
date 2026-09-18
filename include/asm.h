@@ -1,6 +1,6 @@
 /* @title: Assembly Routines */
 #pragma once
-#include <compiler_intrinsics.h>
+#include <compiler/intrinsic.h>
 #include <stdbool.h>
 #include <stdint.h>
 

@@ -1,4 +1,4 @@
-#include <compiler.h>
+#include <compiler/core.h>
 #include <console/panic.h>
 #include <console/printf.h>
 #include <fs/tmpfs.h>
@@ -42,7 +42,7 @@ static uint16_t tmpfs_to_vfs_mode(enum tmpfs_type mode) {
 
 static enum errno tmpfs_mount(struct vfs_node *mountpoint, struct vfs_node *out,
                               const char *name) {
-    (void) mountpoint, (void) out, (void) name;
+    cc_var_unused(mountpoint, out, name);
     return ERR_NOT_IMPL;
 }
 
@@ -135,12 +135,12 @@ static enum errno tmpfs_write(struct vfs_node *node, const void *buf,
 }
 
 static enum errno tmpfs_open(struct vfs_node *node, uint32_t flags) {
-    (void) node, (void) flags;
+    cc_var_unused(node, flags);
     return ERR_NOT_IMPL; // no-op
 }
 
 static enum errno tmpfs_close(struct vfs_node *node) {
-    (void) node;
+    cc_var_unused(node);
     return ERR_NOT_IMPL; // no-op
 }
 
@@ -202,7 +202,7 @@ static enum errno tmpfs_create(struct vfs_node *parent, const char *name,
 
 static enum errno tmpfs_mknod(struct vfs_node *parent, const char *name,
                               mode_t mode, uint32_t dev) {
-    (void) parent, (void) name, (void) mode, (void) dev;
+    cc_var_unused(parent, name, mode, dev);
     return ERR_NOT_IMPL;
 }
 
@@ -220,7 +220,7 @@ static enum errno tmpfs_symlink(struct vfs_node *parent, const char *target,
 }
 
 static enum errno tmpfs_unmount(struct vfs_mount *mountpoint) {
-    (void) mountpoint;
+    cc_var_unused(mountpoint);
     return ERR_NOT_IMPL;
 }
 
@@ -392,7 +392,7 @@ static enum errno tmpfs_readlink(struct vfs_node *node, char *buf,
 
 static enum errno tmpfs_link(struct vfs_node *parent, struct vfs_node *target,
                              const char *link_name) {
-    (void) parent, (void) target, (void) link_name;
+    cc_var_unused(parent, target, link_name);
     // tmpfs doesn't support hard links
     return ERR_NOT_IMPL;
 }
@@ -424,7 +424,7 @@ static enum errno tmpfs_utime(struct vfs_node *node, uint64_t atime,
 }
 
 static enum errno tmpfs_destroy(struct vfs_node *node) {
-    (void) node;
+    cc_var_unused(node);
     struct tmpfs_node *n = node->fs_node_data;
 
     if (!n)

@@ -8,7 +8,7 @@
  *
  * The initialiser also keeps the section PROGBITS, an all zero array would be
  * moved to .bss, and there would be nothing on disk for objcopy to replace */
-#include <compiler.h>
+#include <compiler/core.h>
 #include <linker/symbol_table.h>
 
 cc_section(".kernel_syms") cc_used cc_aligned(16) const

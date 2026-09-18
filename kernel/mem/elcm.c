@@ -1,4 +1,5 @@
-#include <compiler_intrinsics.h>
+#include <compiler/core.h>
+#include <compiler/intrinsic.h>
 #include <kassert.h>
 #include <math/align.h>
 #include <math/arith.h>

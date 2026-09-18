@@ -8,7 +8,7 @@
 #include <boot/gdt.h>
 #include <bootstage.h>
 #include <cmdline.h>
-#include <compiler.h>
+#include <compiler/core.h>
 #include <console/printf.h>
 #include <console/term.h>
 #include <crypto/prng.h>
@@ -162,7 +162,7 @@ cc_no_sanitize_address void k_main(void) {
 }
 
 void k_sch_main(void *nop) {
-    (void) nop;
+    cc_var_unused(nop);
     /* make sure everyone else is idle before we
      * advance the bootstage here... */
     smp_wait_for_others_to_idle();

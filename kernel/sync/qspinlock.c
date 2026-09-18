@@ -1,4 +1,4 @@
-#include <compiler.h>
+#include <compiler/core.h>
 #include <kassert.h>
 #include <smp/core.h>
 #include <smp/percpu.h>
@@ -17,7 +17,7 @@ PERCPU_DECLARE(qnodes, struct qnode[QSPINLOCK_LEVEL_MAX], NULL);
  * If we acquire a HIGH lock, we can also have a DISPATCH
  * lock sitting on a queue, so we use the separate qspinlock_level
  * so we don't reuse the qnode */
-static enum qspinlock_level qspinlock_get_level() {
+static enum qspinlock_level qspinlock_get_level(void) {
     if (irql_get() == IRQL_DISPATCH_LEVEL)
         return QSPINLOCK_LEVEL_NORMAL;
 

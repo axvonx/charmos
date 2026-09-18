@@ -330,3 +330,84 @@ TEST_DECLARE_UNIT(bit_ops, bit_macros_preserve_operand_type) {
 
     return TEST_SUCCESS;
 }
+
+TEST_DECLARE_UNIT(bit_ops, compiler_wrappers_popcount_and_bswap) {
+    uint8_t u8 = 0b1011;
+    uint16_t u16 = 0x00FF;
+    uint32_t u32 = 0x00FF00FF;
+    uint64_t u64 = 0x5555555555555555ULL;
+
+    TEST_ASSERT_EQ(cw_popcount(u8), 3);
+    TEST_ASSERT_EQ(cw_popcount(u16), 8);
+    TEST_ASSERT_EQ(cw_popcount(u32), 16);
+    TEST_ASSERT_EQ(cw_popcount(u64), 32);
+
+    TEST_ASSERT_EQ(cw_bswap((uint16_t) 0x1234), 0x3412);
+    TEST_ASSERT_EQ(cw_bswap((uint32_t) 0x12345678), 0x78563412);
+    TEST_ASSERT_EQ(cw_bswap((uint64_t) 0x0102030405060708ULL),
+                   0x0807060504030201ULL);
+
+    return TEST_SUCCESS;
+}
+
+TEST_DECLARE_UNIT(bit_ops, compiler_wrappers_clz_ctz_ffs_fls) {
+    TEST_ASSERT_EQ(cw_clz((uint8_t) 0), 8);
+    TEST_ASSERT_EQ(cw_clz((uint8_t) 1), 7);
+    TEST_ASSERT_EQ(cw_clz((uint8_t) 0x80), 0);
+
+    TEST_ASSERT_EQ(cw_clz((uint32_t) 0), 32);
+    TEST_ASSERT_EQ(cw_clz((uint32_t) 1), 31);
+    TEST_ASSERT_EQ(cw_clz((uint32_t) 0x80000000), 0);
+
+    TEST_ASSERT_EQ(cw_clz((uint64_t) 0), 64);
+    TEST_ASSERT_EQ(cw_clz((uint64_t) 1), 63);
+
+    TEST_ASSERT_EQ(cw_ctz((uint8_t) 0), 8);
+    TEST_ASSERT_EQ(cw_ctz((uint8_t) 2), 1);
+    TEST_ASSERT_EQ(cw_ctz((uint32_t) 0), 32);
+    TEST_ASSERT_EQ(cw_ctz((uint32_t) 8), 3);
+    TEST_ASSERT_EQ(cw_ctz((uint64_t) 0), 64);
+    TEST_ASSERT_EQ(cw_ctz((uint64_t) 16), 4);
+
+    TEST_ASSERT_EQ(cw_ffs((uint32_t) 0), 0);
+    TEST_ASSERT_EQ(cw_ffs((uint32_t) 1), 1);
+    TEST_ASSERT_EQ(cw_ffs((uint32_t) 0x10), 5);
+
+    TEST_ASSERT_EQ(cw_fls((uint32_t) 0), 0);
+    TEST_ASSERT_EQ(cw_fls((uint32_t) 1), 1);
+    TEST_ASSERT_EQ(cw_fls((uint32_t) 0x10), 5);
+    TEST_ASSERT_EQ(cw_fls((uint32_t) 0x80000000), 32);
+
+    TEST_ASSERT_EQ(cw_parity((uint32_t) 0), 0);
+    TEST_ASSERT_EQ(cw_parity((uint32_t) 1), 1);
+    TEST_ASSERT_EQ(cw_parity((uint32_t) 3), 0);
+    TEST_ASSERT_EQ(cw_parity((uint32_t) 7), 1);
+
+    return TEST_SUCCESS;
+}
+
+TEST_DECLARE_UNIT(bit_ops, compiler_wrappers_rotations_and_saturation) {
+    uint32_t val32 = 0x12345678;
+    TEST_ASSERT_EQ(cw_rol(val32, 4), 0x23456781);
+    TEST_ASSERT_EQ(cw_ror(val32, 4), 0x81234567);
+    TEST_ASSERT_EQ(cw_rol(val32, 0), val32);
+    TEST_ASSERT_EQ(cw_ror(val32, 0), val32);
+
+    /* Saturating arithmetic */
+    TEST_ASSERT_EQ(cw_sat_add((uint32_t) 10, (uint32_t) 20), 30);
+    TEST_ASSERT_EQ(cw_sat_add((uint32_t) (UINT32_MAX - 5), (uint32_t) 10),
+                   UINT32_MAX);
+    TEST_ASSERT_EQ(cw_sat_sub((uint32_t) 10, (uint32_t) 20), 0);
+    TEST_ASSERT_EQ(cw_sat_sub((uint32_t) 20, (uint32_t) 10), 10);
+
+    TEST_ASSERT_EQ(cw_sat_add((int32_t) (INT32_MAX - 5), (int32_t) 10),
+                   INT32_MAX);
+    TEST_ASSERT_EQ(cw_sat_add((int32_t) (INT32_MIN + 5), (int32_t) -10),
+                   INT32_MIN);
+    TEST_ASSERT_EQ(cw_sat_sub((int32_t) (INT32_MIN + 5), (int32_t) 10),
+                   INT32_MIN);
+    TEST_ASSERT_EQ(cw_sat_sub((int32_t) (INT32_MAX - 5), (int32_t) -10),
+                   INT32_MAX);
+
+    return TEST_SUCCESS;
+}

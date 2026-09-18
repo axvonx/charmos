@@ -1,4 +1,4 @@
-#include <compiler_intrinsics.h>
+#include <compiler/intrinsic.h>
 #include <console/panic.h>
 #include <kassert.h>
 #include <math/align.h>
@@ -46,7 +46,7 @@ static bool magazines_enabled(struct vas *vas) {
     if (vas->magazines_disabled)
         return false;
 #else
-    (void) vas;
+    cc_var_unused(vas);
 #endif
     /* IRQL is a no-op during bootstrap */
     return global.current_bootstage >= BOOTSTAGE_LATE;
@@ -820,7 +820,7 @@ void vas_space_dump(struct vas *vas) {
     printf("  global:\n");
     arena_dump(&vas->global);
     for (cpu_id_t cpu = 0; cpu < global.core_count; cpu++) {
-        printf("  cpu[%u]:\n", cpu);
+        printf("  cpu[%zu]:\n", cpu);
         arena_dump(&vas->local[cpu]);
     }
 }

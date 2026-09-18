@@ -2,7 +2,7 @@
 
 /* defines linker sections for commonly accessed regions,
  * .text, .bss, .rodata, etc... */
-#include <compiler.h>
+#include <compiler/core.h>
 #include <stdint.h>
 
 extern uint64_t __stext, __etext;

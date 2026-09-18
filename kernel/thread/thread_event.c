@@ -56,11 +56,12 @@ static void print_ringbuffer(const struct thread *t, bool wake_reasons,
         if (e->associated_reason.reason != THREAD_ASSOCIATED_REASON_NONE) {
             if (!wake_reasons)
                 printf(
-                    ", assoc: { reason: %s, ts: %lld, cycle: %llu }",
+                    ", assoc: { reason: %s, ts: %llu, cycle: %llu }",
                     reason_str(t->activity_data
                                    ->wake_reasons[e->associated_reason.reason]
                                    .reason),
-                    t->activity_data->wake_reasons[e->associated_reason.reason]
+                    (unsigned long long) t->activity_data
+                        ->wake_reasons[e->associated_reason.reason]
                         .timestamp,
                     (unsigned long long) e->associated_reason.cycle);
         }
@@ -116,9 +117,9 @@ void thread_print(const struct thread *t) {
     /* profiling */
     printf("    context_switches: %zu,\n", t->context_switches);
     printf("    preemptions: %zu,\n", t->preemptions);
-    printf("    wakes: %zu, blocks: %zu, sleeps: %zu,\n", t->total_wake_count,
+    printf("    wakes: %u, blocks: %u, sleeps: %u,\n", t->total_wake_count,
            t->total_block_count, t->total_sleep_count);
-    printf("    apcs: %zu,\n", t->total_apcs_ran);
+    printf("    apcs: %u,\n", t->total_apcs_ran);
     printf("    creation_time: %lld ms,\n", (long long) t->creation_time_ms);
 
     /* APC state */

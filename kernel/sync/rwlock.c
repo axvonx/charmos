@@ -19,7 +19,7 @@ static inline void rwlock_chk_stamp(struct rwlock *lock) {
 #endif /* DEBUG_LOCK_CHK */
 
 /* for debugging purposes - upon panic we save data in here */
-static struct rwlock panic_rwlock;
+static cc_unused struct rwlock panic_rwlock;
 static _Atomic(struct rwlock *) panic_rwlock_addr;
 
 static void rwlock_panic(char *msg, struct rwlock *offending_lock) {
@@ -35,8 +35,8 @@ static void rwlock_panic(char *msg, struct rwlock *offending_lock) {
 
     uintptr_t v =
         atomic_load_explicit(&offending_lock->lock_word, memory_order_relaxed);
-    panic("%s, lock = %p, contents = %p, thread = %p", msg, offending_lock, v,
-          thread_get_current());
+    panic("%s, lock = %p, contents = %p, thread = %p", msg, offending_lock,
+          (void *) v, thread_get_current());
 }
 
 /* make sure no funny business happened after acquiring a lock */
@@ -175,6 +175,7 @@ void rwlock_init_chk_internal(struct rwlock *lock,
 void rw_lock_internal(struct rwlock *lock, enum rwlock_acquire_type acq_type,
                       uint8_t subclass,
                       const struct lock_chk_site *site) TSA_NO_ANALYSIS {
+    cc_var_unused(site);
     kassert(subclass < LOCK_CHK_MAX_SUBCLASSES);
     kassert(acq_type == RWLOCK_READ || acq_type == RWLOCK_WRITE);
 
@@ -369,6 +370,7 @@ static uintptr_t rwlock_unlock_get_val_to_sub(struct rwlock *lock) {
 
 void rw_unlock_internal(struct rwlock *lock,
                         const struct lock_chk_site *site) TSA_NO_ANALYSIS {
+    cc_var_unused(site);
     kassert(irq_not_in_interrupt());
     kassert(irql_get() <= IRQL_APC_LEVEL);
 

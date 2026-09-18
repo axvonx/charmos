@@ -1,6 +1,6 @@
 /* @title: Command Line */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <errno.h>
 #include <linker/symbols.h>
 #include <math/bit.h>
@@ -100,7 +100,7 @@ struct cmdline_value {
  * the "functional name" of apple is
  *
  * pineapple.orange.apple */
-struct cc_aligned(8) cmdline_entry {
+struct cmdline_entry {
     const char *name;
     const char *desc; /* human readable description */
     const char *arg;  /* value format hint e.g. "<hex bytes>", "<device>" */
@@ -121,7 +121,7 @@ struct cc_aligned(8) cmdline_entry {
     const char *const *choices;
     const struct cmdline_map *mappings;
     const struct cmdline_flag *flags_table;
-};
+} cc_aligned(8);
 
 struct cmdline_map {
     const char *name;
@@ -265,14 +265,14 @@ struct cmdline_schema_prop {
 
 typedef void *(*cmdline_instance_resolver_t)(const char *path, size_t path_len);
 
-struct cc_aligned(8) cmdline_schema {
+struct cmdline_schema {
     const char *prefix;
     const char *path_hint;
     const char *desc;
     cmdline_instance_resolver_t resolve;
     const struct cmdline_schema_prop *props;
     size_t prop_count;
-};
+} cc_aligned(8);
 
 #define CMDLINE_SCHEMA_PROP_PARSER(fn) .parse = (fn)
 

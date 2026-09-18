@@ -12,6 +12,7 @@
  * the individual per-cpu caches to see if we can sneak some of the
  * elements in there */
 static enum daemon_thread_command slab_background_work(void *a, void *b) {
+    cc_var_unused(a, b);
     /* TODO: */
     return DAEMON_THREAD_COMMAND_DEFAULT;
 }
@@ -29,7 +30,7 @@ static enum daemon_thread_command slab_background_work(void *a, void *b) {
  * able to pull off here.
  */
 static void slab_defer_free_dpc(void *unused_arg) {
-    (void) unused_arg;
+    cc_var_unused(unused_arg);
     struct slab_percpu_cache *c = slab_percpu_cache_local();
     /* Enter a loop here of stealing the defer free list,
      * and so long as we actually steal something, we

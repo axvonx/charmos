@@ -29,7 +29,7 @@ struct readdir_ctx {
 static bool search_callback(struct ext2_fs *fs, struct ext2_dir_entry *entry,
                             void *ctx_ptr, uint32_t b, uint32_t e_num,
                             uint32_t offset) TSA_NO_ANALYSIS {
-    (void) b;
+    cc_var_unused(b);
     struct search_ctx *ctx = (struct search_ctx *) ctx_ptr;
 
     if (!ext2_dirent_valid(entry))
@@ -64,8 +64,7 @@ static bool contains_callback(struct ext2_fs *fs, struct ext2_dir_entry *entry,
                               void *ctx_ptr, uint32_t b, uint32_t e,
                               uint32_t offset) {
     struct contains_ctx *ctx = (struct contains_ctx *) ctx_ptr;
-    (void) b;
-    (void) e;
+    cc_var_unused(b, e);
 
     if (!ext2_dirent_valid(entry))
         return false;
@@ -86,7 +85,7 @@ static bool contains_callback(struct ext2_fs *fs, struct ext2_dir_entry *entry,
 static bool readdir_callback(struct ext2_fs *fs, struct ext2_dir_entry *entry,
                              void *ctx_ptr, uint32_t block, uint32_t entry_num,
                              uint32_t entry_offset) {
-    (void) fs, (void) block, (void) entry_num, (void) entry_offset;
+    cc_var_unused(fs, block, entry_num, entry_offset);
 
     struct readdir_ctx *ctx = ctx_ptr;
 

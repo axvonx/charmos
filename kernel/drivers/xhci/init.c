@@ -1,5 +1,5 @@
 #include <asm.h>
-#include <compiler.h>
+#include <compiler/core.h>
 #include <drivers/mmio.h>
 #include <drivers/pci.h>
 #include <drivers/usb/xhci.h>
@@ -107,7 +107,7 @@ struct xhci_disable_slot_async {
 
 static void xhci_disable_slot_done(struct xhci_device *dev,
                                    struct xhci_request *req) {
-    (void) dev;
+    cc_var_unused(dev);
     kfree(container_of(req, struct xhci_disable_slot_async, req));
 }
 

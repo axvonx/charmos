@@ -1,8 +1,8 @@
 /* @title: Bit Spinlock */
 #pragma once
 #include <asm.h>
-#include <compiler.h>
-#include <compiler_intrinsics.h>
+#include <compiler/core.h>
+#include <compiler/intrinsic.h>
 #include <kassert.h>
 #include <math/bit.h>
 #include <sch/irql.h>

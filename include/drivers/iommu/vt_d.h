@@ -1,6 +1,6 @@
 /* @title: VT-d */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <console/panic.h>
 #include <console/printf.h>
 #include <drivers/iommu/iommu.h>

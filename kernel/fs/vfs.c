@@ -53,9 +53,9 @@ void vfs_node_print(const struct vfs_node *node) {
     printf("Flags    : 0x%08X\n", node->flags);
     printf("Mode     : 0%o\n", node->mode);
     printf("Size     : %llu bytes\n", (unsigned long long) node->size);
-    printf("FS Data  : 0x%llx\n", node->fs_data);
-    printf("FS Node  : 0x%llx\n", node->fs_node_data);
-    printf("Ops Table: 0x%llx\n", (void *) node->ops);
+    printf("FS Data  : %p\n", node->fs_data);
+    printf("FS Node  : %p\n", node->fs_node_data);
+    printf("Ops Table: %p\n", (const void *) node->ops);
     printf("=================\n");
 }
 

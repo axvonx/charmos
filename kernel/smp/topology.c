@@ -28,10 +28,11 @@ static struct topology_node machine_node;
 
 static void cpu_mask_print(const struct cpu_mask *m) {
 #if CPU_MASK_WORDS == 1
-    printf(BOLD_STR("0x%llx"), (uint64_t) m->bits[0]);
+    printf(BOLD_STR("0x%llx"), (unsigned long long) m->bits[0]);
 #else
     for (size_t i = 0; i < CPU_MASK_WORDS; i++)
-        printf(BOLD_STR("%016llx"), (uint64_t) m->bits[CPU_MASK_WORDS - 1 - i]);
+        printf(BOLD_STR("%016llx"),
+               (unsigned long long) m->bits[CPU_MASK_WORDS - 1 - i]);
 #endif
 }
 
@@ -56,7 +57,7 @@ static void print_topology_node(struct topology_node *node, int depth) {
 
     const char *level_str = topo_node_str[node->level];
 
-    printf("[%s] ID = " ANSI_BOLD "%d" ANSI_RESET ", CPUs = ", level_str,
+    printf("[%s] ID = " ANSI_BOLD "%lu" ANSI_RESET ", CPUs = ", level_str,
            node->id);
     cpu_mask_print(&node->cpus);
     printf("\n");

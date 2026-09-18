@@ -211,7 +211,7 @@ TEST_DECLARE_UNIT(nightmare_liveness, start_stop_stress) {
 
 static atomic_uint mock_probe_count = 0;
 static void mock_subject_probe(struct nightmare_ctx *ctx) {
-    (void) ctx;
+    cc_var_unused(ctx);
     atomic_fetch_add(&mock_probe_count, 1);
 }
 

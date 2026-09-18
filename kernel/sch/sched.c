@@ -346,7 +346,7 @@ void schedule(void) TSA_NO_ANALYSIS {
          * and in that ISR we can attempt to acquire this lock,
          * and then we are in a big pickle since we deadlock */
         enum irql irql = spin_lock_irq_disable(&sched->lock);
-        (void) irql;
+        cc_var_unused(irql);
 
         save_thread(sched, curr, time);
     }

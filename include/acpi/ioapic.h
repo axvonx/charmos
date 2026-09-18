@@ -1,6 +1,6 @@
 /* @title: I/O APIC */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <irq/irq.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -53,7 +53,7 @@ struct ioapic_info {
 
 union ioapic_redirection_entry {
     uint64_t raw;
-    struct cc_packed {
+    struct {
         uint8_t vector;              // bits 0-7
         uint8_t delivery_mode : 3;   // bits 8-10
         uint8_t dest_mode : 1;       // bit 11
@@ -64,7 +64,7 @@ union ioapic_redirection_entry {
         uint8_t mask : 1;            // bit 16
         uint64_t reserved : 39;      // bits 17-55
         uint8_t dest_apic_id;        // bits 56-63
-    };
+    } cc_packed;
 };
 
 void ioapic_init(void);

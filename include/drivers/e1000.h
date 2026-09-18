@@ -1,5 +1,5 @@
 /* @title: e1000 */
-#include <compiler.h>
+#include <compiler/core.h>
 #include <drivers/pci.h>
 #include <log.h>
 #include <math/bit.h>

@@ -1,7 +1,7 @@
 /* @title: Console report composer */
 #include <asm.h>
 #include <colors.h>
-#include <compiler.h>
+#include <compiler/core.h>
 #include <console/printf.h>
 #include <console/report.h>
 #include <console/term.h>

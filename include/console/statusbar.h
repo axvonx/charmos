@@ -1,6 +1,6 @@
 /* @title: Pinned status bar */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <console/report.h>
 #include <console/term.h>
 #include <stdarg.h>

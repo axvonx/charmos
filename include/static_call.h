@@ -1,6 +1,6 @@
 /* @title: Static Call */
 #pragma once
-#include <rw_once.h>
+#include <compiler/atomic.h>
 #include <stdint.h>
 #include <text_patch.h>
 
@@ -19,7 +19,7 @@ static inline void __static_call_update(void *trampoline, void *fn) {
     uint32_t rel = (uint32_t) ((uintptr_t) fn - (uintptr_t) trampoline - 5);
 
     struct text_patch_window window = text_patch_begin();
-    WRITE_ONCE(*(uint32_t *) (p + 1), rel);
+    ca_write_once(*(uint32_t *) (p + 1), rel);
     text_patch_end(window);
 }
 

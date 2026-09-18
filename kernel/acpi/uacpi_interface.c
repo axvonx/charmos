@@ -1,7 +1,7 @@
 #include <acpi/print.h>
 #include <acpi/uacpi_interface.h>
 #include <asm.h>
-#include <compiler.h>
+#include <compiler/core.h>
 #include <console/printf.h>
 #include <drivers/mmio.h>
 #include <irq/idt.h>
@@ -155,9 +155,8 @@ uacpi_status
 uacpi_kernel_uninstall_interrupt_handler(uacpi_interrupt_handler handler,
                                          uacpi_handle irq_handle) {
     uint32_t irq = (uint32_t) (uintptr_t) irq_handle;
-    irq += 32;
 
-    (void) handler;
+    cc_var_unused(handler);
 
     if (irq >= 256)
         return UACPI_STATUS_INVALID_ARGUMENT;
@@ -189,7 +188,7 @@ void uacpi_kernel_free_mutex(uacpi_handle a) {
 
 uacpi_status uacpi_kernel_acquire_mutex(uacpi_handle m,
                                         uacpi_u16 b) TSA_NO_ANALYSIS {
-    (void) b;
+    cc_var_unused(b);
     mutex_simple_lock(m);
     return UACPI_STATUS_OK;
 }
@@ -222,8 +221,10 @@ uacpi_thread_id uacpi_kernel_get_thread_id(void) {
 //
 //
 
-uacpi_status uacpi_kernel_schedule_work(uacpi_work_type, uacpi_work_handler,
-                                        uacpi_handle) {
+uacpi_status uacpi_kernel_schedule_work(uacpi_work_type type,
+                                        uacpi_work_handler handler,
+                                        uacpi_handle ctx) {
+    cc_var_unused(type, handler, ctx);
     return UACPI_STATUS_OK;
 }
 
@@ -241,14 +242,19 @@ void uacpi_kernel_free_event(uacpi_handle a) {
     kfree(a);
 }
 
-uacpi_bool uacpi_kernel_wait_for_event(uacpi_handle, uacpi_u16) {
+uacpi_bool uacpi_kernel_wait_for_event(uacpi_handle handle, uacpi_u16 timeout) {
+    cc_var_unused(handle, timeout);
     return false;
 }
-void uacpi_kernel_signal_event(uacpi_handle) {}
+void uacpi_kernel_signal_event(uacpi_handle handle) {
+    cc_var_unused(handle);
+}
 
-void uacpi_kernel_reset_event(uacpi_handle) {}
+void uacpi_kernel_reset_event(uacpi_handle handle) {
+    cc_var_unused(handle);
+}
 
-uacpi_status uacpi_kernel_handle_firmware_request(uacpi_firmware_request *) {
-
+uacpi_status uacpi_kernel_handle_firmware_request(uacpi_firmware_request *req) {
+    cc_var_unused(req);
     return UACPI_STATUS_UNIMPLEMENTED;
 }

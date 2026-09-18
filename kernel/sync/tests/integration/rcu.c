@@ -16,7 +16,8 @@ static _Atomic(struct rcu_test_data *) shared_ptr = NULL;
 static atomic_bool rcu_test_failed = false;
 static _Atomic uint32_t rcu_reads_done = 0;
 
-static void rcu_reader_thread(void *) {
+static void rcu_reader_thread(void *arg) {
+    cc_var_unused(arg);
     uint64_t end = time_get_ms() + rcu_test_duration_ms;
 
     while (time_get_ms() < end) {
@@ -48,7 +49,8 @@ static void rcu_free_fn(struct rcu_cb *cb, void *ptr) {
     kfree(cb);
 }
 
-static void rcu_writer_thread(void *) {
+static void rcu_writer_thread(void *arg) {
+    cc_var_unused(arg);
     sleep_spin_ms(30);
 
     struct rcu_test_data *old = shared_ptr;
@@ -134,7 +136,7 @@ static void stress_free_cb(struct rcu_cb *cb, void *ptr) {
 }
 
 static void rcu_stress_reader(void *arg) {
-    (void) arg;
+    cc_var_unused(arg);
 
     time_ms_t last_print = time_get_ms();
     size_t iter = 0;
@@ -150,7 +152,7 @@ static void rcu_stress_reader(void *arg) {
                 break;
             }
             volatile uint64_t seq = p->seq;
-            (void) seq;
+            cc_var_unused(seq);
         }
 
         rcu_read_unlock();
@@ -171,7 +173,7 @@ static void rcu_stress_reader(void *arg) {
 }
 
 static void rcu_stress_writer(void *arg) {
-    (void) arg;
+    cc_var_unused(arg);
     uint64_t local_iter = 0;
 
     while (!atomic_load(&stress_stop)) {
@@ -204,7 +206,7 @@ static void rcu_stress_writer(void *arg) {
 }
 
 static void rcu_stress_reclaimer(void *arg) {
-    (void) arg;
+    cc_var_unused(arg);
     while (!atomic_load(&stress_stop)) {
         rcu_synchronize();
         sleep_spin_ms(5);

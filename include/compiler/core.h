@@ -1,7 +1,12 @@
-/* @title: Compiler Functions */
+/* @title: Compiler Core & Compile-Time Metaprogramming */
 #pragma once
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
-#define cc_init /* Nothing for now, TODO: */
+/* ==== cc_ Attributes, Markers, and Compiler Directives ==== */
+
+#define cc_code_init /* Nothing for now, TODO: */
 
 #define cc_noinline __attribute__((noinline))
 #define cc_always_inline __attribute__((always_inline))
@@ -20,7 +25,17 @@
 #define cc_unlikely(x) __builtin_expect(!!(x), 0)
 #define cc_unreachable() __builtin_unreachable()
 
+#define cc_cold __attribute__((cold))
+#define cc_hot __attribute__((hot))
+#define cc_flatten __attribute__((flatten))
+#define cc_nodebug __attribute__((nodebug))
+
 #define cc_no_sanitize_address __attribute__((no_sanitize("address")))
+#define cc_no_sanitize_undefined __attribute__((no_sanitize("undefined")))
+#define cc_no_sanitize_thread __attribute__((no_sanitize("thread")))
+#define cc_no_sanitize_memory __attribute__((no_sanitize("memory")))
+#define cc_no_sanitize_coverage __attribute__((no_sanitize("coverage")))
+
 #define cc_deprecated __attribute__((deprecated))
 #define cc_deprecated_msg(msg) __attribute__((deprecated(msg)))
 #define cc_pure __attribute__((pure))
@@ -35,10 +50,34 @@
 #define cc_weak __attribute__((weak))
 #define cc_weakref(sym) __attribute__((weakref(#sym)))
 #define cc_alias(sym) __attribute__((alias(#sym)))
-#define cc_no_sanitize_undefined __attribute__((no_sanitize("undefined")))
-#define cc_no_sanitize_thread __attribute__((no_sanitize("thread")))
-#define cc_no_sanitize_memory __attribute__((no_sanitize("memory")))
-#define cc_no_sanitize_coverage __attribute__((no_sanitize("coverage")))
+
+#define cc_alloc_size(...) __attribute__((alloc_size(__VA_ARGS__)))
+#define cc_alloc_align(param_idx) __attribute__((alloc_align(param_idx)))
+
+#if defined(__GNUC__) && !defined(__clang__) && (__GNUC__ >= 11)
+# define cc_dealloc(fn, arg_idx) __attribute__((malloc(fn, arg_idx)))
+#else
+# define cc_dealloc(fn, arg_idx)
+#endif
+
+#define cc_error(msg) __attribute__((error(msg)))
+#define cc_warning(msg) __attribute__((warning(msg)))
+#define cc_nonnull(...) __attribute__((nonnull(__VA_ARGS__)))
+
+#if defined(__clang__)
+#define cc_counted_by(member) __attribute__((counted_by(member)))
+#elif defined(__GNUC__) && (__GNUC__ >= 14)
+#define cc_counted_by(member) __attribute__((counted_by(member)))
+#else
+#define cc_counted_by(member)
+#endif
+
+#if defined(__GNUC__) && !defined(__clang__)
+#define cc_access(mode, ...) __attribute__((access(mode, __VA_ARGS__)))
+#else
+#define cc_access(mode, ...)
+#endif
+
 #define cc_printf_like(fmt_idx, arg_idx)                                       \
     __attribute__((format(printf, fmt_idx, arg_idx)))
 #define cc_constructor(prio) __attribute__((constructor(prio)))
@@ -51,13 +90,6 @@
 #define cc_restrict
 #endif
 
-#define ct_strong_int(stem, STEM, base, max_)                                  \
-    typedef enum : base {                                                      \
-        STEM##_ZERO = 0,                                                       \
-        STEM##_MIN = 0,                                                        \
-        STEM##_MAX = (max_),                                                   \
-    } stem##_t
-
 #if defined(__clang__)
 #define cc_mem(n) __attribute__((address_space(n)))
 #else
@@ -66,10 +98,10 @@
 
 /* TODO: In the long run, we will need to add more and likely introduce
  * a cc_mem enum identifier. today we have just one */
-
 #define cc_mem_io cc_mem(1)
 
-/* Preprocessor Metaprogramming Helpers */
+/* ==== Preprocessor Metaprogramming ==== */
+
 #define PP_ARG_N(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14,  \
                  _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26,   \
                  _27, _28, _29, _30, _31, _32, _33, _34, _35, _36, _37, _38,   \
@@ -120,7 +152,7 @@
 
 #define cc_var_unused(...) PP_CALL(PP_CC_VAR_UNUSED, __VA_ARGS__)
 
-/* Compile-Time & Static Assertions */
+/* ==== ct_ Compile-Time & Static Assertions ==== */
 
 #define static_assert_1(cond) _Static_assert(cond, #cond)
 #define static_assert_2(cond, msg) _Static_assert(cond, msg)
@@ -143,13 +175,23 @@
 #define ct_assert_struct_size_eq(__struct, __want)                             \
     ct_assert_size(struct __struct, __want)
 
-/* Memory barriers */
-#define compiler_barrier() asm volatile("" ::: "memory")
-#define smp_mb() atomic_thread_fence(memory_order_seq_cst)
-#define smp_rmb() atomic_thread_fence(memory_order_acquire)
-#define smp_wmb() atomic_thread_fence(memory_order_release)
+#define ct_assert_power_of_two(n)                                              \
+    _Static_assert(((n) > 0 && (((n) & ((n) - 1)) == 0)),                      \
+                   #n " is not a power of two")
 
-/* Compile-Time Type System & Metaprogramming (ct_) */
+#define ct_assert_nonempty_str(s)                                              \
+    _Static_assert(sizeof(s) > 1, "empty string: " #s)
+
+#define ct_strong_int(stem, STEM, base, max_)                                  \
+    typedef enum : base {                                                      \
+        STEM##_ZERO = 0,                                                       \
+        STEM##_MIN = 0,                                                        \
+        STEM##_MAX = (max_),                                                   \
+    } stem##_t
+
+
+/* === ct_ Compile-Time Type System & Reflection ==== */
+
 #define ct_is_const(x) __builtin_constant_p(x)
 
 #define ct_raw(x) ((__typeof__((x) + 0)) (x))
@@ -176,6 +218,34 @@
 #define ct_as_str(x) ((const char *) (uintptr_t) (x))
 #define ct_as_type(T, x) ((T) (uintptr_t) (x))
 
+#define ct_bitsizeof(x) (sizeof(x) * __CHAR_BIT__)
+#define ct_type_bitsize(T) (sizeof(T) * __CHAR_BIT__)
+
+#define ct_field_sizeof(type, member) sizeof(((type *) 0)->member)
+#define ct_field_offset(type, member) __builtin_offsetof(type, member)
+
+#define ct_is_pointer(x) (__builtin_classify_type(x) == 5)
+#define ct_is_integral(x)                                                      \
+    (__builtin_classify_type(x) == 1 &&                                        \
+     !__builtin_types_compatible_p(__typeof__(x), _Bool))
+#define ct_is_bool(x) __builtin_types_compatible_p(__typeof__(x), _Bool)
+#define ct_is_struct(x) (__builtin_classify_type(x) == 12)
+#define ct_is_union(x) (__builtin_classify_type(x) == 13)
+
+#define ct_is_power_of_two(n) ((n) > 0 && (((n) & ((n) - 1)) == 0))
+
+#define ct_type_is_signed(x) ((__typeof__(x)) -1 < (__typeof__(x)) 1)
+
+#define ct_min_val(T)                                                          \
+    ((T) (ct_type_is_signed(T)                                                 \
+              ? (T) ((__UINTMAX_TYPE__) 1 << (ct_type_bitsize(T) - 1))         \
+              : (T) 0))
+
+#define ct_max_val(T)                                                          \
+    ((T) (ct_type_is_signed(T)                                                 \
+              ? (T) (((__UINTMAX_TYPE__) 1 << (ct_type_bitsize(T) - 1)) - 1)   \
+              : (T) ~(T) 0))
+
 /* Require expr to have the requested type, does not evaluate x */
 #define ct_typecheck(type, x)                                                  \
     ((void) sizeof(                                                            \
@@ -199,8 +269,6 @@
 #define ct_typecheck_unsigned(x)                                               \
     (ct_typecheck_integer(x),                                                  \
      (void) sizeof(char[((__typeof__(x)) -1 > (__typeof__(x)) 0) ? 1 : -1]))
-
-#define ct_type_is_signed(x) ((__typeof__(x)) -1 < (__typeof__(x)) 1)
 
 #define ct_typecheck_intmax_nonnegative(x)                                     \
     (((__UINTMAX_TYPE__) (__INTMAX_TYPE__) (x) >>                              \

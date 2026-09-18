@@ -118,7 +118,6 @@ static uint64_t ahci_cnt = 1;
 static enum errno ahci_pci_init(struct device *device) {
     struct pci_device *dev = device->driver_data;
     uint8_t bus = dev->bus, slot = dev->dev, func = dev->function;
-    (void) dev;
     uint32_t d_cnt = 0;
     struct ahci_disk *disks = ahci_discover_device(bus, slot, func, &d_cnt);
     for (uint32_t i = 0; i < d_cnt; i++) {

@@ -3,7 +3,8 @@
 static struct rwlock rw_two_writers = RWLOCK_INIT(THREAD_PRIO_CLASS_TIMESHARE);
 static atomic_bool rw_two_done = false;
 
-static void rw_two_writer_thread(void *) {
+static void rw_two_writer_thread(void *arg) {
+    cc_var_unused(arg);
     rw_lock(&rw_two_writers, RWLOCK_WRITE);
     rw_unlock(&rw_two_writers);
 
@@ -35,7 +36,8 @@ TEST_DECLARE_INTEGRATION(rwlock, two_writers) {
 static struct rwlock rw_readers = RWLOCK_INIT(THREAD_PRIO_CLASS_TIMESHARE);
 static _Atomic uint32_t rw_readers_left = 0;
 
-static void rw_reader_worker(void *) {
+static void rw_reader_worker(void *arg) {
+    cc_var_unused(arg);
     time_ms_t last_print = time_get_ms();
     for (size_t i = 0; i < RWLOCK_READER_COUNT_LOOPS; i++) {
         rw_lock(&rw_readers, RWLOCK_READ);
@@ -82,7 +84,8 @@ struct thread *mixed_threads[RWLOCK_MIXED_THREADS_MAX];
 static struct rwlock rw_mixed = RWLOCK_INIT(THREAD_PRIO_CLASS_TIMESHARE);
 static _Atomic uint32_t rw_mixed_left = 0;
 
-static void rw_mixed_worker(void *) {
+static void rw_mixed_worker(void *arg) {
+    cc_var_unused(arg);
     for (int i = 0; i < RWLOCK_MIXED_LOOPS; i++) {
         if (prng_next() & 1) {
             // Reader
@@ -130,7 +133,8 @@ TEST_DECLARE_INTEGRATION(rwlock, mixed_stress, TEST_INTENSITY(4, 24, 64)) {
 static struct rwlock rw_chaos = RWLOCK_INIT(THREAD_PRIO_CLASS_TIMESHARE);
 static _Atomic uint32_t rw_chaos_left = 0;
 
-static void rw_chaos_worker(void *) {
+static void rw_chaos_worker(void *arg) {
+    cc_var_unused(arg);
     for (int i = 0; i < RWLOCK_CHAOS_LOOPS; i++) {
         if (prng_next() & 1)
             rw_lock(&rw_chaos, RWLOCK_READ);
@@ -183,7 +187,8 @@ static atomic_bool correctness_ok = true;
 
 static atomic_uint correctness_left = 0;
 
-static void rw_correct_worker(void *) {
+static void rw_correct_worker(void *arg) {
+    cc_var_unused(arg);
     for (int i = 0; i < RWLOCK_CORRECT_LOOPS; i++) {
         if (prng_next() & 1) {
             // Reader

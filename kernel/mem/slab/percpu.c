@@ -6,8 +6,11 @@
 
 #include "internal.h"
 
-cc_no_sanitize_address static void
+static cc_no_sanitize_address void
 slab_magazine_zero_check(struct slab_magazine *mag) {
+#ifndef DEBUG_SLAB_DEEP
+    cc_var_unused(mag);
+#endif
 #ifdef DEBUG_SLAB_DEEP
     if (mag->type != SLAB_MAGAZINE_ZERO)
         return;

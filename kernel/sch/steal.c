@@ -1,4 +1,4 @@
-#include <compiler_intrinsics.h>
+#include <compiler/intrinsic.h>
 #include <math/bit.h>
 #include <sch/sched.h>
 #include <stdatomic.h>

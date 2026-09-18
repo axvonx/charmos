@@ -1,6 +1,6 @@
 /* @title: Assertions */
-#include <compiler.h>
-#include <compiler_intrinsics.h>
+#include <compiler/core.h>
+#include <compiler/intrinsic.h>
 #include <console/crash.h>
 #include <console/panic.h>
 

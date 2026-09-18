@@ -76,7 +76,6 @@ enum errno mm_pgtable_init(struct mm *mm) {
 }
 
 void mm_pgtable_free(struct mm *mm) {
-    (void) mm;
     vmm_unmap_all_user_pages(vmm_phys_to_pml4(mm->pml4), VMM_FLAG_NONE);
 }
 

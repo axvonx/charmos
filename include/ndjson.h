@@ -1,7 +1,7 @@
 /* @title: NDJSON */
 #pragma once
-#include <compiler.h>
-#include <compiler_intrinsics.h>
+#include <compiler/core.h>
+#include <compiler/intrinsic.h>
 #include <linker/symbols.h>
 #include <stdbool.h>
 #include <stddef.h>

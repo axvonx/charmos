@@ -1,5 +1,5 @@
 #include <bootstage_condition.h>
-#include <compiler_intrinsics.h>
+#include <compiler/intrinsic.h>
 #include <console/printf.h>
 #include <dbg.h>
 #include <linker/symbol_table.h>
@@ -764,12 +764,12 @@ void debug_print_stack(void) {
 
 void debug_print_memory(void *addr, uint64_t size) {
     uint8_t *ptr = (uint8_t *) addr;
-    printf("Memory at %p:\n", (uint64_t) addr);
+    printf("Memory at %p:\n", addr);
     for (uint64_t i = 0; i < size; i++) {
         if (i % 16 == 0) {
             if (i != 0)
                 printf("\n");
-            printf("%p: ", (uint64_t) (ptr + i));
+            printf("%p: ", (void *) (ptr + i));
         }
         printf("%02x ", ptr[i]);
     }
@@ -785,7 +785,7 @@ void debug_print_stack_from(uint64_t *start, size_t max_scan) {
 
     syms_warn_if_missing();
 
-    printf("Stack unwind from %p:\n", (uint64_t) start);
+    printf("Stack unwind from %p:\n", (void *) start);
 
     for (size_t offset = 0; offset < max_scan; offset += sizeof(uint64_t)) {
         uint8_t *addr = (uint8_t *) start + offset;

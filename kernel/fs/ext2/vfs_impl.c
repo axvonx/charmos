@@ -1,4 +1,4 @@
-#include <compiler.h>
+#include <compiler/core.h>
 #include <fs/ext2.h>
 #include <fs/vfs.h>
 #include <mem/alloc.h>
@@ -51,12 +51,12 @@ enum errno ext2_vfs_readdir(struct vfs_node *n, struct vfs_dirent *out,
                             uint64_t index);
 
 enum errno vfs_dummy_open(struct vfs_node *a, uint32_t b) {
-    (void) a, (void) b;
+    cc_var_unused(a, b);
     return ERR_OK;
 }
 
 enum errno vfs_dummy_close(struct vfs_node *a) {
-    (void) a;
+    cc_var_unused(a);
     return ERR_OK;
 }
 
@@ -299,7 +299,7 @@ static bool dir_entry_rename_callback(struct ext2_fs *fs,
                                       struct ext2_dir_entry *entry,
                                       void *ctx_ptr, uint32_t b, uint32_t e_num,
                                       uint32_t c) {
-    (void) c, (void) fs, (void) b, (void) e_num;
+    cc_var_unused(c, fs, b, e_num);
     struct rename_ctx *ctx = (struct rename_ctx *) ctx_ptr;
 
     if (!ext2_dirent_valid(entry))

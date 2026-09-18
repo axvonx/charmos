@@ -4,8 +4,7 @@
 #define MAKE_HANDLER(handler_name, message)                                    \
     enum irq_result handler_name##_handler(void *ctx, uint8_t vector,          \
                                            struct irq_context *rsp) {          \
-        (void) ctx;                                                            \
-        (void) vector;                                                         \
+        cc_var_unused(ctx, vector);                                            \
         struct crash_regs pregs;                                               \
         irq_context_to_crash_regs(rsp->regs, &pregs);                          \
         char msg[CRASH_MSG_MAX];                                               \
@@ -25,8 +24,7 @@
 
 enum irq_result gpf_handler(void *ctx, uint8_t vector,
                             struct irq_context *ictx) {
-    (void) ctx;
-    (void) vector;
+    cc_var_unused(ctx, vector);
 
     uint64_t core = smp_id_raw();
     struct irq_registers *rsp = ictx->regs;
@@ -90,7 +88,7 @@ MAKE_HANDLER(double_fault, "DOUBLE FAULT");
 
 enum irq_result panic_nmi_isr(void *ctx, uint8_t vector,
                               struct irq_context *rsp) {
-    (void) ctx, (void) vector, (void) rsp;
+    cc_var_unused(vector);
     if (atomic_load(&global.panicked)) {
         if (crash_cpu_is_owner(smp_id_raw()))
             return IRQ_HANDLED;

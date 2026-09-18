@@ -1,6 +1,6 @@
 /* @title: Profiling */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <global.h>
 #include <linker/symbols.h>
 #include <stdbool.h>

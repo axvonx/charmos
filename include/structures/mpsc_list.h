@@ -1,6 +1,6 @@
 /* @title: Lockless MPSC singly linked list */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <container_of.h>
 #include <stdatomic.h>
 #include <stdbool.h>

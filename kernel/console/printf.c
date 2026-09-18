@@ -75,7 +75,6 @@ void serial_puts(struct printf_cursor *csr, const char *str, int len) {
 
 void double_print(struct flanterm_context *f, struct printf_cursor *csr,
                   const char *str, int len) {
-    (void) f;
     serial_puts(csr, str, len);
 
     if (!csr && global.current_bootstage >= BOOTSTAGE_EARLY_FB)
@@ -83,7 +82,6 @@ void double_print(struct flanterm_context *f, struct printf_cursor *csr,
 }
 
 void printf_init(struct limine_framebuffer *fb) {
-    (void) fb;
     serial_init();
     ft_ctx = flanterm_fb_init(
         NULL, NULL, fb->address, fb->width, fb->height, fb->pitch,

@@ -1,5 +1,6 @@
 #include <asm.h>
-#include <compiler_intrinsics.h>
+#include <compiler/core.h>
+#include <compiler/intrinsic.h>
 #include <console/printf.h>
 #include <elf.h>
 #include <math/bit.h>

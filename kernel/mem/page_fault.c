@@ -31,7 +31,7 @@ static struct spinlock pf_lock = SPINLOCK_INIT;
 
 enum irq_result page_fault_isr(void *context, uint8_t vector,
                                struct irq_context *rsp) {
-    (void) context, (void) vector;
+    cc_var_unused(context, vector);
     /* Synchronization here is actually OK: we can only receive one
      * IRQ per CPU at any moment, and the caller passes the thread-local buffer
      * to the exception_sync_cb below, this is just how the ISR
@@ -51,6 +51,7 @@ enum irq_result page_fault_isr(void *context, uint8_t vector,
 static enum exception_sync_cb_result
 page_fault_sync_cb(struct exception_sync_cb *this, struct irq_context *irqc,
                    uint8_t buf[EXCEPTION_SYNC_CB_SCRATCH_BUFFER_SIZE]) {
+    cc_var_unused(this);
     struct page_fault_scratch_buffer *pfsb =
         (struct page_fault_scratch_buffer *) buf;
 
@@ -149,11 +150,11 @@ static void dump_slab_exec_fault(struct thread *curr, struct irq_context *ctx) {
     printf("\n=== SLAB EXEC FAULT DEBUG ===\n");
 
     struct irq_registers *rsp = ctx->regs;
-    printf("Faulting RIP (from CPU): %p\n", rsp->rip);
-    printf("Faulting RSP (from CPU): %p\n", rsp->rsp);
+    printf("Faulting RIP (from CPU): %p\n", (void *) rsp->rip);
+    printf("Faulting RSP (from CPU): %p\n", (void *) rsp->rsp);
 
     printf("\n--- Current thread struct ---\n");
-    printf("Thread struct addr: %p\n", (uint64_t) curr);
+    printf("Thread struct addr: %p\n", (void *) curr);
 
     if (!addr_is_mapped((uint64_t) curr)) {
         printf("  Thread pointer is NOT MAPPED - cannot dump\n");
@@ -161,27 +162,26 @@ static void dump_slab_exec_fault(struct thread *curr, struct irq_context *ctx) {
     }
 
     printf("  tid:   %lu\n", curr->id);
-    printf("  name:  %p", (uint64_t) curr->name);
+    printf("  name:  %p", (void *) curr->name);
     if (curr->name && addr_is_mapped((uint64_t) curr->name))
         printf(" -> \"%s\"", curr->name);
     printf("\n");
-    printf("  entry: %p\n", (uint64_t) curr->entry);
-    printf("  stack: %p (size %lu)\n", (uint64_t) curr->stack,
-           curr->stack_size);
+    printf("  entry: %p\n", (void *) curr->entry);
+    printf("  stack: %p (size %lu)\n", (void *) curr->stack, curr->stack_size);
     printf("  state: %u\n", (uint32_t) curr->state);
     printf("  core:  %u\n", (uint32_t) curr->curr_core);
     printf("  flags: 0x%lx\n", (uint64_t) thread_get_flags(curr));
     printf("  ref:   %lu\n", (uint64_t) refcount_read(&curr->refcount));
 
     printf("\n--- Saved regs (post-switch residual) ---\n");
-    printf("  rbx = %p\n", curr->regs.rbx);
-    printf("  rbp = %p\n", curr->regs.rbp);
-    printf("  r12 = %p\n", curr->regs.r12);
-    printf("  r13 = %p\n", curr->regs.r13);
-    printf("  r14 = %p\n", curr->regs.r14);
-    printf("  r15 = %p\n", curr->regs.r15);
-    printf("  rsp = %p\n", curr->regs.rsp);
-    printf("  rip = %p\n", curr->regs.rip);
+    printf("  rbx = %p\n", (void *) curr->regs.rbx);
+    printf("  rbp = %p\n", (void *) curr->regs.rbp);
+    printf("  r12 = %p\n", (void *) curr->regs.r12);
+    printf("  r13 = %p\n", (void *) curr->regs.r13);
+    printf("  r14 = %p\n", (void *) curr->regs.r14);
+    printf("  r15 = %p\n", (void *) curr->regs.r15);
+    printf("  rsp = %p\n", (void *) curr->regs.rsp);
+    printf("  rip = %p\n", (void *) curr->regs.rip);
 
     printf("\n--- Thread struct raw dump (992 bytes) ---\n");
     debug_print_memory((void *) curr, 992);
@@ -191,10 +191,10 @@ static void dump_slab_exec_fault(struct thread *curr, struct irq_context *ctx) {
     if (addr_is_mapped((uint64_t) prev_obj)) {
         debug_print_memory(prev_obj + 992 - 256, 256);
     } else {
-        printf("  Preceding object at %p is not mapped\n", (uint64_t) prev_obj);
+        printf("  Preceding object at %p is not mapped\n", (void *) prev_obj);
     }
 
-    printf("\n--- Stack at fault RSP (%p) ---\n", rsp->rsp);
+    printf("\n--- Stack at fault RSP (%p) ---\n", (void *) rsp->rsp);
     if (addr_is_mapped(rsp->rsp)) {
         debug_print_memory((void *) rsp->rsp, 256);
     } else {
@@ -202,32 +202,32 @@ static void dump_slab_exec_fault(struct thread *curr, struct irq_context *ctx) {
     }
 
     printf("\n--- ISR context (regs at fault time) ---\n");
-    printf("  rax=%p  rbx=%p\n", rsp->rax, rsp->rbx);
-    printf("  rcx=%p  rdx=%p\n", rsp->rcx, rsp->rdx);
-    printf("  rdi=%p  rsi=%p\n", rsp->rdi, rsp->rsi);
-    printf("  rbp=%p  rsp=%p\n", rsp->rbp, rsp->rsp);
-    printf("  r8 =%p  r9 =%p\n", rsp->r8, rsp->r9);
-    printf("  r10=%p  r11=%p\n", rsp->r10, rsp->r11);
-    printf("  r12=%p  r13=%p\n", rsp->r12, rsp->r13);
-    printf("  r14=%p  r15=%p\n", rsp->r14, rsp->r15);
-    printf("  rip=%p  rfl=%p\n", rsp->rip, rsp->rflags);
-    printf("  cs=%p   ss=%p\n", rsp->cs, rsp->ss);
+    printf("  rax=%p  rbx=%p\n", (void *) rsp->rax, (void *) rsp->rbx);
+    printf("  rcx=%p  rdx=%p\n", (void *) rsp->rcx, (void *) rsp->rdx);
+    printf("  rdi=%p  rsi=%p\n", (void *) rsp->rdi, (void *) rsp->rsi);
+    printf("  rbp=%p  rsp=%p\n", (void *) rsp->rbp, (void *) rsp->rsp);
+    printf("  r8 =%p  r9 =%p\n", (void *) rsp->r8, (void *) rsp->r9);
+    printf("  r10=%p  r11=%p\n", (void *) rsp->r10, (void *) rsp->r11);
+    printf("  r12=%p  r13=%p\n", (void *) rsp->r12, (void *) rsp->r13);
+    printf("  r14=%p  r15=%p\n", (void *) rsp->r14, (void *) rsp->r15);
+    printf("  rip=%p  rfl=%p\n", (void *) rsp->rip, (void *) rsp->rflags);
+    printf("  cs=%p   ss=%p\n", (void *) rsp->cs, (void *) rsp->ss);
 
     /* Crash: raw smp_id is fine */
     struct scheduler *sched = global.schedulers[smp_id_raw()];
-    printf("\n--- Scheduler state (core %u) ---\n", smp_id_raw());
-    printf("  sched->current = %p\n", (uint64_t) sched->current);
-    printf("  sched->drop_last_ref = %p\n", (uint64_t) sched->drop_last_ref);
-    printf("  sched->other_locked = %p\n", (uint64_t) sched->other_locked);
+    printf("\n--- Scheduler state (core %zu) ---\n", smp_id_raw());
+    printf("  sched->current = %p\n", (void *) sched->current);
+    printf("  sched->drop_last_ref = %p\n", (void *) sched->drop_last_ref);
+    printf("  sched->other_locked = %p\n", (void *) sched->other_locked);
     printf("  sched->stealing_work = %u\n", (uint32_t) sched->stealing_work);
 
     printf("\n--- Thread migration info ---\n");
     printf("  migrate_to = %ld\n", (int64_t) atomic_load(&curr->migrate_to));
     printf("  migration_gen = 0x%lx\n", curr->migration_generation);
-    printf("  scheduler = %p\n", (uint64_t) atomic_load(&curr->scheduler));
+    printf("  scheduler = %p\n", (void *) atomic_load(&curr->scheduler));
 }
 
-static void cc_noreturn page_fault_report_crash(vaddr_t fault_addr,
+static cc_noreturn void page_fault_report_crash(vaddr_t fault_addr,
                                                 uint64_t error_code,
                                                 struct irq_context *ctx) {
 
@@ -240,9 +240,9 @@ static void cc_noreturn page_fault_report_crash(vaddr_t fault_addr,
 
     spin_lock_raw(&pf_lock);
 
-    printf("\n=== PAGE FAULT === @ %p\n", irqc->rip);
-    printf("Faulting Address (CR2): %p (ar: %s)\n", fault_addr, name);
-    printf("Error Code: %p\n", error_code);
+    printf("\n=== PAGE FAULT === @ %p\n", (void *) irqc->rip);
+    printf("Faulting Address (CR2): %p (ar: %s)\n", (void *) fault_addr, name);
+    printf("Error Code: 0x%lx\n", error_code);
     printf("  - Page not Present (P): %s\n",
            (error_code & PAGE_FAULT_EC_PRESENT) ? "Yes" : "No");
     printf("  - Write Access (W/R): %s\n",
@@ -256,7 +256,7 @@ static void cc_noreturn page_fault_report_crash(vaddr_t fault_addr,
     printf("  - Protection Key Violation (PK): %s\n",
            (error_code & PAGE_FAULT_EC_PROTECTION_KEY) ? "Yes" : "No");
     printf("  - Kernel stack %p -> %p\n", curr->stack,
-           (uintptr_t) curr->stack + curr->stack_size);
+           (void *) ((uintptr_t) curr->stack + curr->stack_size));
 
     vaddr_t protector_base = (uintptr_t) curr->stack - PAGE_SIZE;
     vaddr_t protector_top = (uintptr_t) curr->stack;

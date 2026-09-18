@@ -2,7 +2,7 @@
 #pragma once
 #include <bootstage.h>
 #include <colors.h>
-#include <compiler_intrinsics.h>
+#include <compiler/intrinsic.h>
 #include <linker/symbols.h>
 #include <sch/irql.h>
 #include <stdbool.h>

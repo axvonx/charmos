@@ -1,6 +1,6 @@
 /* @title: Error Codes */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <console/panic.h>
 #include <kassert.h>
 #include <linker/symbols.h>

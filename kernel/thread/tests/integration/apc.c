@@ -8,7 +8,8 @@ TEST_GROUP_DECLARE(apc, .intensity_desc = {
 static atomic_bool apc_ran = false;
 static atomic_uint apc_destroyed = 0;
 
-static void the_apc(void *) {
+static void the_apc(void *arg) {
+    cc_var_unused(arg);
     atomic_store(&apc_ran, true);
 }
 
@@ -17,7 +18,8 @@ static void the_apc_destroy(struct apc *apc) {
     kfree(apc);
 }
 
-static void apc_thread(void *) {
+static void apc_thread(void *arg) {
+    cc_var_unused(arg);
     while (!atomic_load(&apc_ran))
         cpu_pause();
 }
@@ -55,7 +57,7 @@ TEST_DECLARE_INTEGRATION(apc, delivery) {
 static atomic_uint apc_ref_destroyed = 0;
 
 static void apc_ref_destroy(struct apc *apc) {
-    (void) apc;
+    cc_var_unused(apc);
     atomic_fetch_add(&apc_ref_destroyed, 1);
 }
 
@@ -85,7 +87,7 @@ static atomic_bool apc_cancel_ran = false;
 static atomic_uint apc_cancel_destroyed = 0;
 
 static void cancelled_apc(void *arg) {
-    (void) arg;
+    cc_var_unused(arg);
     atomic_store(&apc_cancel_ran, true);
 }
 
@@ -95,7 +97,7 @@ static void cancelled_apc_destroy(struct apc *apc) {
 }
 
 static void apc_cancel_target(void *arg) {
-    (void) arg;
+    cc_var_unused(arg);
     apc_disable_kernel();
     atomic_store(&apc_cancel_ready, true);
     while (!atomic_load(&apc_cancel_release))
@@ -139,7 +141,7 @@ static atomic_bool apc_rundown_ran = false;
 static atomic_uint apc_rundown_destroyed = 0;
 
 static void rundown_apc(void *arg) {
-    (void) arg;
+    cc_var_unused(arg);
     atomic_store(&apc_rundown_ran, true);
 }
 
@@ -149,7 +151,7 @@ static void rundown_apc_destroy(struct apc *apc) {
 }
 
 static void apc_rundown_target(void *arg) {
-    (void) arg;
+    cc_var_unused(arg);
     apc_disable_kernel();
     atomic_store(&apc_rundown_ready, true);
     while (!atomic_load(&apc_rundown_release))
@@ -189,17 +191,17 @@ static atomic_uint apc_reuse_ran = 0;
 static atomic_uint apc_reuse_destroyed = 0;
 
 static void reused_apc(void *arg) {
-    (void) arg;
+    cc_var_unused(arg);
     atomic_fetch_add(&apc_reuse_ran, 1);
 }
 
 static void reused_apc_destroy(struct apc *apc) {
-    (void) apc;
+    cc_var_unused(apc);
     atomic_fetch_add(&apc_reuse_destroyed, 1);
 }
 
 static void apc_reuse_target(void *arg) {
-    (void) arg;
+    cc_var_unused(arg);
     while (atomic_load(&apc_reuse_ran) < 2)
         scheduler_yield();
 }
@@ -240,7 +242,7 @@ static atomic_uint apc_race_ran = 0;
 static atomic_uint apc_race_destroyed = 0;
 
 static void raced_apc(void *arg) {
-    (void) arg;
+    cc_var_unused(arg);
     atomic_fetch_add(&apc_race_ran, 1);
 }
 
@@ -250,7 +252,7 @@ static void raced_apc_destroy(struct apc *apc) {
 }
 
 static void apc_race_target(void *arg) {
-    (void) arg;
+    cc_var_unused(arg);
     apc_disable_kernel();
     atomic_store(&apc_race_ready, true);
     while (!atomic_load(&apc_race_release))
@@ -294,12 +296,14 @@ TEST_DECLARE_INTEGRATION(apc, cancel_races_delivery) {
 static atomic_uint the_event_apc_ran_times = 0;
 static atomic_bool event_apc_test_ok = false;
 static void the_event_apc(void *pc) {
+    cc_var_unused(pc);
     atomic_fetch_add(&the_event_apc_ran_times, 1);
 }
 
 APC_EVENT_CREATE(apc_event_test, "TEST_EVENT");
 
-static void apc_event_test_thread(void *) TSA_NO_ANALYSIS {
+static void apc_event_test_thread(void *arg) TSA_NO_ANALYSIS {
+    cc_var_unused(arg);
     /* We want to enqueue an event APC, then raise to DISPATCH, trigger it a
      * few times, check that no APCs got triggered, and then lower from there,
      * and then check that APCs got triggered, and then test masking, etc. */

@@ -1,5 +1,5 @@
 /* @title: GUID Partition Table */
-#include <compiler.h>
+#include <compiler/core.h>
 #include <stdint.h>
 #pragma once
 

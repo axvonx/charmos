@@ -1,6 +1,6 @@
 /* @title: Console report composer */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <console/term.h>
 #include <stdarg.h>
 #include <stdbool.h>

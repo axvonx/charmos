@@ -265,12 +265,12 @@ nightmare_preflight(const struct nightmare *nm,
 }
 
 static void nightmare_soft_deadline(struct timer *timer) {
-    (void) timer;
+    cc_var_unused(timer);
     nightmare_publish_stop(NM_STOP_BUDGET);
 }
 
 static void nightmare_hard_deadline(struct timer *timer) {
-    (void) timer;
+    cc_var_unused(timer);
     bool expected = false;
     if (!atomic_compare_exchange_strong_explicit(
             &nightmare_runtime.terminal, &expected, true, memory_order_acq_rel,

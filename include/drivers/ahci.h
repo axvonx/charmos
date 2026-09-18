@@ -2,7 +2,7 @@
 #pragma once
 #include <block/block.h>
 #include <block/sched.h>
-#include <compiler.h>
+#include <compiler/core.h>
 #include <log.h>
 #include <math/bit.h>
 #include <stdbool.h>

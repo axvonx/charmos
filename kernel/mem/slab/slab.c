@@ -120,7 +120,8 @@
  *
  */
 
-#include <compiler_intrinsics.h>
+#include <compiler/core.h>
+#include <compiler/intrinsic.h>
 #include <console/printf.h>
 #include <kassert.h>
 #include <math/align.h>
@@ -297,7 +298,7 @@ void slab_cache_init(size_t order, struct slab_cache *cache,
     uint64_t available = NON_SLAB_SPACE(cache);
 
     if (cache->obj_size > available)
-        panic("Slab class too large, object size is %u with %u available "
+        panic("Slab class too large, object size is %lu with %lu available "
               "bytes -- insufficient",
               cache->obj_size, available);
 
@@ -475,6 +476,9 @@ struct slab *slab_create(struct slab_cache *cache,
 }
 static void *slab_alloc_from(struct slab_cache *cache, stack_handle_t handle,
                              struct slab *slab) {
+#ifndef DEBUG_SLAB_DEEP
+    cc_var_unused(handle);
+#endif
     slab_check_assert(slab);
 
     SPINLOCK_ASSERT_HELD(&cache->lock);
@@ -916,6 +920,9 @@ void *kmalloc_try_from_magazine(struct slab_domain *domain,
                                 struct slab_percpu_cache *pcpu,
                                 stack_handle_t handle, size_t size,
                                 enum alloc_flags flags) {
+#ifndef DEBUG_SLAB_DEEP
+    cc_var_unused(handle);
+#endif
     enum slab_magazine_type mtype = (flags & ALLOC_FLAG_ZERO_ON_ALLOC)
                                         ? SLAB_MAGAZINE_ZERO
                                         : SLAB_MAGAZINE_NORMAL;
@@ -1512,12 +1519,12 @@ done:
 }
 
 void *kmalloc_init(size_t size, enum alloc_flags f, enum alloc_behavior b) {
-    (void) b;
+    cc_var_unused(b);
     return kmalloc_old(size, f);
 }
 
 void kfree_init(void *p, enum alloc_behavior b) {
-    (void) b;
+    cc_var_unused(b);
     kfree_old(p);
 }
 

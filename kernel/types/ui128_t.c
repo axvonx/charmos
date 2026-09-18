@@ -1,4 +1,4 @@
-#include <compiler_intrinsics.h>
+#include <compiler/intrinsic.h>
 #include <console/panic.h>
 #include <types/types.h>
 

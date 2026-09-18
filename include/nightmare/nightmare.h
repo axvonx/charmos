@@ -1,7 +1,7 @@
 /* @title: Nightmare test harness */
 #pragma once
 #include <cmdline.h>
-#include <compiler.h>
+#include <compiler/core.h>
 #include <crypto/prng.h>
 #include <kassert.h>
 #include <linker/symbols.h>
@@ -173,8 +173,8 @@ LINKER_SECTION_DEFINE(struct nightmare, nightmares);
                        .unit = (unit_)}
 
 #define NIGHTMARE_WORKER(id)                                                   \
-    static void id(struct nightmare_ctx *NM_CTX,                               \
-                   struct nightmare_worker *NM_SELF)
+    static void id(struct nightmare_ctx *NM_CTX cc_unused,                     \
+                   struct nightmare_worker *NM_SELF cc_unused)
 
 #define NIGHTMARE_OPTIONS_DECLARE(id, struct_type, instance, ...)              \
     static void *__nightmare_options_resolve_##id(const char *path,            \

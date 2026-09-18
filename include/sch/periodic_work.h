@@ -1,6 +1,6 @@
 /* @title: Scheduler Periodic Work */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <linker/symbols.h>
 #include <structures/list.h>
 #include <structures/pairing_heap.h>
@@ -20,7 +20,7 @@ enum scheduler_periodic_work_type {
 
 struct scheduler_periodic_work_linker_object {
     char *name;
-    void (*fn)();
+    void (*fn)(void);
 
     union {
         time_ns_t time_interval;
@@ -36,7 +36,7 @@ struct scheduler_periodic_work {
     enum scheduler_periodic_work_type type;
     enum scheduler_periodic_work_prio prio;
     char *name;
-    void (*fn)();
+    void (*fn)(void);
     cpu_id_t cpu; /* for which CPU? */
 
     union {
@@ -106,4 +106,4 @@ void scheduler_periodic_work_init(void);
 void scheduler_periodic_work_execute(enum scheduler_periodic_work_type type);
 
 /* prevent irql_lower work execution recursion */
-bool scheduler_in_periodic_work();
+bool scheduler_in_periodic_work(void);

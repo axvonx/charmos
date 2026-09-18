@@ -96,7 +96,7 @@ void nightmare_thread_main(void *arg) {
 }
 
 void nightmare_heartbeat_main(void *arg) {
-    (void) arg;
+    cc_var_unused(arg);
     completion_wait(&nightmare_runtime.start);
 
     time_ms_t next = time_get_ms() + nightmare_runtime.stat_interval_ms;

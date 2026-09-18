@@ -1,6 +1,6 @@
 /* @title: Test Export */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <linker/symbols.h>
 #include <stddef.h>
 

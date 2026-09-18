@@ -9,7 +9,7 @@ void slab_domain_bucket_print(const struct slab_domain_bucket *bucket) {
     printf("    alloc_remote_hits: %zu,\n", bucket->alloc_remote_hits);
     printf("    alloc_gc_recycle_hits: %zu,\n", bucket->alloc_gc_recycle_hits);
     printf("    alloc_new_slab: %zu,\n", bucket->alloc_new_slab);
-    printf("    alloc_new_remote_slab: %u\n", bucket->alloc_new_remote_slab);
+    printf("    alloc_new_remote_slab: %zu\n", bucket->alloc_new_remote_slab);
     printf("    alloc_failures: %zu,\n", bucket->alloc_failures);
     printf("\n");
     printf("    free_calls: %zu,\n", bucket->free_calls);

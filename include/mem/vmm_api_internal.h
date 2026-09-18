@@ -1,7 +1,6 @@
 /* @title: VMM Mapping Macros */
 #pragma once
-#include <compiler.h>
-
+#include <compiler/core.h>
 /* Domain-first overloads for the page mapping API.
  *
  * Each "domain" whose signature genuinely differs (kernel, user, demand, ...)

@@ -1,9 +1,10 @@
 /* @title: Integer Arithmetic Functions */
 #pragma once
+#include <compiler/core.h>
 #include <stddef.h>
 #include <stdint.h>
 
-static inline size_t gcd(size_t a, size_t b) {
+static inline cc_constfn size_t gcd(size_t a, size_t b) {
     while (b) {
         size_t t = b;
         b = a % b;
@@ -12,11 +13,11 @@ static inline size_t gcd(size_t a, size_t b) {
     return a;
 }
 
-static inline size_t lcm(size_t a, size_t b) {
+static inline cc_constfn size_t lcm(size_t a, size_t b) {
     return (a / gcd(a, b)) * b;
 }
 
-static inline size_t ipow(size_t base, int32_t exp) {
+static inline cc_constfn size_t ipow(size_t base, int32_t exp) {
     size_t result = 1;
     while (exp > 0) {
         if (exp & 1)

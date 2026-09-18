@@ -1,6 +1,6 @@
 /* @title: Console terminal state */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <stdbool.h>
 #include <stdint.h>
 

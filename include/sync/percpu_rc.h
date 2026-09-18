@@ -1,6 +1,6 @@
 /* @title: Per-CPU Reference Counter */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <kassert.h>
 #include <math/bit.h>
 #include <smp/core.h>

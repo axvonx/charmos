@@ -123,29 +123,23 @@ static void print_help_range(const struct cmdline_entry *e) {
         uint64_t lo_frac = ((e->range.low & 0xFFFFFFFFULL) * 100) >> 32;
         int64_t hi_whole = ((int64_t) e->range.hi) >> 32;
         uint64_t hi_frac = ((e->range.hi & 0xFFFFFFFFULL) * 100) >> 32;
-        printf(", range: [%lld.%02llu..%lld.%02llu]", (long long) lo_whole,
-               (unsigned long long) lo_frac, (long long) hi_whole,
-               (unsigned long long) hi_frac);
+        printf(", range: [%ld.%02lu..%ld.%02lu]", lo_whole, lo_frac, hi_whole,
+               hi_frac);
     } else if (t == CMDLINE_TYPE_DURATION) {
         if (e->range.hi >= 1000000000ULL && e->range.hi % 1000000000ULL == 0)
-            printf(", range: [%lluns..%llus]",
-                   (unsigned long long) e->range.low,
-                   (unsigned long long) (e->range.hi / 1000000000ULL));
+            printf(", range: [%luns..%llus]", e->range.low,
+                   (e->range.hi / 1000000000ULL));
         else if (e->range.hi >= 1000000ULL && e->range.hi % 1000000ULL == 0)
-            printf(", range: [%lluns..%llums]",
-                   (unsigned long long) e->range.low,
-                   (unsigned long long) (e->range.hi / 1000000ULL));
+            printf(", range: [%luns..%llums]", e->range.low,
+                   (e->range.hi / 1000000ULL));
         else if (e->range.hi >= 1000ULL && e->range.hi % 1000ULL == 0)
-            printf(", range: [%lluns..%lluus]",
-                   (unsigned long long) e->range.low,
-                   (unsigned long long) (e->range.hi / 1000ULL));
+            printf(", range: [%luns..%lluus]", e->range.low,
+                   (e->range.hi / 1000ULL));
         else
-            printf(", range: [%lluns..%lluns]",
-                   (unsigned long long) e->range.low,
-                   (unsigned long long) e->range.hi);
+            printf(", range: [%luns..%luns]", e->range.low, e->range.hi);
     } else if (t == CMDLINE_TYPE_INT) {
-        printf(", range: [%lld..%lld]", (long long) (int64_t) e->range.low,
-               (long long) (int64_t) e->range.hi);
+        printf(", range: [%ld..%ld]", (int64_t) e->range.low,
+               (int64_t) e->range.hi);
     } else if (t == CMDLINE_TYPE_UINT || t == CMDLINE_TYPE_DATA_SIZE) {
         printf(", range: [%llu..%llu]", (unsigned long long) e->range.low,
                (unsigned long long) e->range.hi);
@@ -199,7 +193,8 @@ cc_noreturn void cmdline_dump_help(void) {
         printf("\n\n");
     }
 
-    if (__skernel_cmdline_schemas < __ekernel_cmdline_schemas) {
+    if ((uintptr_t) __skernel_cmdline_schemas <
+        (uintptr_t) __ekernel_cmdline_schemas) {
         printf("subsystem schemas:\n\n");
         for (struct cmdline_schema *s = __skernel_cmdline_schemas;
              s < __ekernel_cmdline_schemas; s++) {

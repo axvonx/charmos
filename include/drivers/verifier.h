@@ -1,8 +1,7 @@
 /* @title: Driver Verifier */
 #pragma once
-#include <compiler.h>
-#include <compiler_intrinsics.h>
-
+#include <compiler/core.h>
+#include <compiler/intrinsic.h>
 /* Comptime verification that structures matches spec
  *
  * Each macro here is a big wrapper around a `_Static_assert`,

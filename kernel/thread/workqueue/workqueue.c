@@ -1,4 +1,4 @@
-#include <compiler.h>
+#include <compiler/core.h>
 #include <kassert.h>
 #include <mem/alloc.h>
 #include <mem/alloc_or_die.h>
@@ -329,7 +329,7 @@ void workqueues_permanent_init(void) {
         global.workqueues[i]->core = i;
 
         if (!workqueue_spawn_permanent_worker(global.workqueues[i]))
-            panic("Failed to spawn initial worker on workqueue %u", i);
+            panic("Failed to spawn initial worker on workqueue %ld", i);
     }
 }
 

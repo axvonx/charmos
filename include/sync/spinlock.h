@@ -1,7 +1,7 @@
 #pragma once
 #include <asm.h>
 #include <bootstage.h>
-#include <compiler.h>
+#include <compiler/core.h>
 #include <console/panic.h>
 #include <irq/irq.h>
 #include <kassert.h>
@@ -326,7 +326,7 @@ static inline void spinlock_policy_set_internal(struct spinlock *lock,
 
 #endif /* DEBUG_LOCK_CHK */
 
-static inline bool cc_warn_unused_result
+static inline cc_warn_unused_result bool
 spin_trylock_physical(struct spinlock *lock) TSA_NO_ANALYSIS {
     return raw_spin_trylock(&lock->raw);
 }
@@ -354,8 +354,9 @@ static inline void spinlock_restore_interrupts(bool enabled) {
         irq_enable();
 }
 
-static inline bool cc_warn_unused_result spin_trylock_raw_internal(
-    struct spinlock *lock, const struct lock_chk_site *site)
+static inline cc_warn_unused_result bool
+spin_trylock_raw_internal(struct spinlock *lock,
+                          const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
     enum lock_op_flags flags =
         LOCK_OP_RAW | LOCK_OP_KIND_TRY | LOCK_OP_IRQ_NONE;
@@ -422,8 +423,9 @@ static inline void spin_unlock_internal(struct spinlock *lock, enum irql old,
     irql_lower(old);
 }
 
-static inline enum irql cc_warn_unused_result spin_lock_subclass_internal(
-    struct spinlock *lock, uint8_t subclass, const struct lock_chk_site *site)
+static inline cc_warn_unused_result enum irql
+spin_lock_subclass_internal(struct spinlock *lock, uint8_t subclass,
+                            const struct lock_chk_site *site)
     TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
     kassert(subclass < LOCK_CHK_MAX_SUBCLASSES);
     if (bootstage_get() >= BOOTSTAGE_MID_MP &&
@@ -454,14 +456,15 @@ static inline enum irql cc_warn_unused_result spin_lock_subclass_internal(
     return irql;
 }
 
-static inline enum irql cc_warn_unused_result
+static inline cc_warn_unused_result enum irql
 spin_lock_internal(struct spinlock *lock, const struct lock_chk_site *site)
     TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
     return spin_lock_subclass_internal(lock, 0, site);
 }
 
-static inline enum irql cc_warn_unused_result spin_lock_irq_disable_internal(
-    struct spinlock *lock, const struct lock_chk_site *site)
+static inline cc_warn_unused_result enum irql
+spin_lock_irq_disable_internal(struct spinlock *lock,
+                               const struct lock_chk_site *site)
     TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())
         panic("Attempted to take non-raw spinlock from an NMI");
@@ -486,8 +489,9 @@ static inline enum irql cc_warn_unused_result spin_lock_irq_disable_internal(
     return irql;
 }
 
-static inline bool cc_warn_unused_result spin_trylock_internal(
-    struct spinlock *lock, enum irql *out, const struct lock_chk_site *site)
+static inline cc_warn_unused_result bool
+spin_trylock_internal(struct spinlock *lock, enum irql *out,
+                      const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP &&
         (irq_in_interrupt() || irq_in_nmi()))
@@ -521,8 +525,9 @@ static inline bool cc_warn_unused_result spin_trylock_internal(
     return false;
 }
 
-static inline bool cc_warn_unused_result spin_trylock_irq_disable_internal(
-    struct spinlock *lock, enum irql *out, const struct lock_chk_site *site)
+static inline cc_warn_unused_result bool
+spin_trylock_irq_disable_internal(struct spinlock *lock, enum irql *out,
+                                  const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())
         panic("Attempted to take non-raw spinlock from an NMI");

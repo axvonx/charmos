@@ -7,7 +7,7 @@
  * allocations to the right node. this lives entirely separate
  * from our real page migration */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <container_of.h>
 #include <linker/symbols.h>
 #include <mem/vmm.h>

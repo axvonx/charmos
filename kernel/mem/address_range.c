@@ -1,4 +1,4 @@
-#include <compiler_intrinsics.h>
+#include <compiler/intrinsic.h>
 #include <log.h>
 #include <math/range.h>
 #include <math/units.h>
@@ -21,7 +21,7 @@ LOG_HANDLE_DECLARE_PRINT(address_range);
 
 static struct rbt ar_tree;
 
-static void print_bytes(uint64_t bytes) {
+static cc_unused void print_bytes(uint64_t bytes) {
     const uint64_t kib = KB(1);
     const uint64_t mib = MB(1);
     const uint64_t gib = GB(1);
@@ -38,36 +38,36 @@ static void print_bytes(uint64_t bytes) {
 
     v = bytes / eib;
     if (v)
-        printf("%llu eib", v);
+        printf("%lu eib", v);
     bytes %= eib;
 
     v = bytes / pib;
     if (v)
-        printf("%llu pib", v);
+        printf("%lu pib", v);
     bytes %= pib;
 
     v = bytes / tib;
     if (v)
-        printf("%llu tib", v);
+        printf("%lu tib", v);
     bytes %= tib;
 
     v = bytes / gib;
     if (v)
-        printf("%llu gib", v);
+        printf("%lu gib", v);
     bytes %= gib;
 
     v = bytes / mib;
     if (v)
-        printf("%llu mib", v);
+        printf("%lu mib", v);
     bytes %= mib;
 
     v = bytes / kib;
     if (v)
-        printf("%llu kib", v);
+        printf("%lu kib", v);
     bytes %= kib;
 
     if (bytes) {
-        printf("%llu bytes ", bytes);
+        printf("%lu bytes ", bytes);
     }
 
     printf("\n");
@@ -224,13 +224,13 @@ static void format_size(char *buf, size_t bufsz, size_t bytes) {
 
 #define AR_COL_ADDR 18
 #define AR_LINE "─────────────────────────"
-#define AR_SEP_TOP "0x%llx ┬───┬─────────────────────────"
-#define AR_SEP_BOTTOM "0x%llx ┴───┴─────────────────────────"
+#define AR_SEP_TOP "0x%lx ┬───┬─────────────────────────"
+#define AR_SEP_BOTTOM "0x%lx ┴───┴─────────────────────────"
 
 static void ar_print_gap(vaddr_t gap_size, vaddr_t end) {
     char gapbuf[32];
     format_size(gapbuf, sizeof(gapbuf), gap_size);
-    printf("0x%016llx ┼───┼" AR_LINE "\n", end);
+    printf("0x%016lx ┼───┼" AR_LINE "\n", end);
     printf("                   │ O │\n");
     printf("                   │ O │ gap: %-13s\n", gapbuf);
     printf("                   │ O │\n");
@@ -275,9 +275,9 @@ void address_ranges_print() {
 
         size_t name_len = strlen(ar->name);
 
-        printf("0x%016llx ┼───┼" AR_LINE "\n", end);
+        printf("0x%016lx ┼───┼" AR_LINE "\n", end);
         printf("%-*s │ X │ %s: %-*s\n", AR_COL_ADDR, "", ar->name,
-               AR_COL_ADDR - name_len - 2, szbuf);
+               (int) (AR_COL_ADDR - name_len - 2), szbuf);
 
         if (k + 1 < i) {
             vaddr_t next_end = ranges[k + 1]->base + ranges[k + 1]->size;

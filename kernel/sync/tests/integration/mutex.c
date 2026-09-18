@@ -10,7 +10,8 @@
 static struct mutex many_mtx = MUTEX_INIT;
 static _Atomic uint32_t many_waiter_done = 0;
 
-static void many_worker(void *) {
+static void many_worker(void *arg) {
+    cc_var_unused(arg);
     for (int i = 0; i < MUTEX_MANY_WAITER_LOOP_COUNT; i++) {
         mutex_lock(&many_mtx);
         scheduler_yield();
@@ -52,7 +53,8 @@ TEST_DECLARE_INTEGRATION(mutex, many_waiters, TEST_INTENSITY(2, 10, 32)) {
 static struct mutex chaos_mtx = MUTEX_INIT;
 static _Atomic uint32_t chaos_left = 0;
 
-static void chaos(void *) {
+static void chaos(void *arg) {
+    cc_var_unused(arg);
     for (int i = 0; i < CHAOS_LOOPS; i++) {
         mutex_lock(&chaos_mtx);
 

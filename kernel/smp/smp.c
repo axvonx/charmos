@@ -350,6 +350,7 @@ static uint8_t entry = 0;
 
 static enum irq_result tick_op_isr(void *ctx, uint8_t vector,
                                    struct irq_context *rsp) {
+    cc_var_unused(ctx, vector, rsp);
     if (enable) {
         scheduler_tick_enable();
     } else {

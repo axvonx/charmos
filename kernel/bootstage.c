@@ -1,9 +1,9 @@
 #include <bootstage.h>
 #include <bootstage_condition.h>
+#include <compiler/atomic.h>
 #include <console/printf.h>
 #include <global.h>
 #include <log.h>
-#include <rw_once.h>
 #include <string.h>
 #include <text_patch.h>
 
@@ -33,8 +33,8 @@ static void bootstage_write_jump(struct bootstage_condition_entry *ent) {
     uint32_t rel32 = vdest - vjump - 5; /* For the jump insn */
 
     /* Write 0xE9 to the jump place, then the rel32 dest one byte over LE */
-    WRITE_ONCE(*(uint8_t *) ent->code, (uint8_t) 0xE9);
-    WRITE_ONCE(*(uint32_t *) rel32ptr, (uint32_t) rel32);
+    ca_write_once(*(uint8_t *) ent->code, (uint8_t) 0xE9);
+    ca_write_once(*(uint32_t *) rel32ptr, (uint32_t) rel32);
 }
 
 static void bootstage_write_nop(struct bootstage_condition_entry *ent) {
@@ -79,7 +79,7 @@ void bootstage_advance(enum bootstage new) {
     bool ints = irq_disable_save();
 
     global.current_bootstage = new;
-    atomic_thread_fence(memory_order_seq_cst);
+    ca_mb();
 
     /* EARLY_FB leaves the kernel RO, we don't have patchability */
     if (new > BOOTSTAGE_EARLY_FB)

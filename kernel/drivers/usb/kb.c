@@ -46,8 +46,9 @@ static inline bool generic_keyboard_is_modifier(uint32_t keycode) {
            keycode < USB_HID_MODIFIER_BASE + 8;
 }
 
-static void generic_keyboard_dispatch(struct generic_keyboard *kbd,
-                                      uint32_t keycode, bool pressed) {
+static cc_unused void generic_keyboard_dispatch(struct generic_keyboard *kbd,
+                                                uint32_t keycode,
+                                                bool pressed) {
     if (generic_keyboard_is_modifier(keycode)) {
         uint8_t bit = keycode - USB_HID_MODIFIER_BASE;
         if (pressed)
@@ -231,8 +232,6 @@ void usb_keyboard_teardown(struct usb_device *dev) {
     struct usb_hid_keyboard *kb = dev->driver_private;
     while (atomic_load(&kb->worker_here))
         scheduler_yield();
-
-    (void) dev;
 }
 
 void usb_keyboard_free(struct usb_device *dev) {

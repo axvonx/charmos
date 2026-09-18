@@ -1,7 +1,7 @@
 /* @title: ACPI CPU */
 #pragma once
 #include <acpi/acpi.h>
-#include <compiler.h>
+#include <compiler/core.h>
 #include <types/types.h>
 
 /* This is the big struct we gotta declare in here: */

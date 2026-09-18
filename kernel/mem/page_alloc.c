@@ -86,6 +86,7 @@ static bool page_alloc_pf_valid(struct page_fault_info *pfi) {
 
 void *page_alloc_internal(size_t n_pages, enum alloc_flags flags,
                           enum alloc_behavior bh) {
+    cc_var_unused(bh);
     void *ret;
     if (n_pages == 1 || flags & ALLOC_FLAG_CONTIGUOUS) {
         paddr_t phys = pmm_alloc_pages(n_pages);
@@ -106,6 +107,7 @@ void *page_alloc_internal(size_t n_pages, enum alloc_flags flags,
 
 void *page_alloc_demand_internal(size_t n_pages, enum alloc_flags flags,
                                  enum alloc_behavior bh) {
+    cc_var_unused(bh);
     void *ret = page_alloc_vas_mapped_pages(n_pages, flags, true);
 
 #ifdef DEBUG_ASAN
@@ -118,6 +120,7 @@ void *page_alloc_demand_internal(size_t n_pages, enum alloc_flags flags,
 }
 
 void page_free_internal(void *ptr, size_t n_pages, enum alloc_behavior b) {
+    cc_var_unused(b);
 #ifdef DEBUG_ASAN
     if (ptr)
         asan_poison(ptr, n_pages * PAGE_SIZE);

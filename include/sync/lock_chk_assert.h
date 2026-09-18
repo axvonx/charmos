@@ -1,6 +1,6 @@
 /* @title: Lock Validator Assertions */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <sync/lock_general.h>
 #include <sync/mutex.h>
 #include <sync/mutex_simple.h>

@@ -2,7 +2,8 @@
 #include <acpi/lapic.h>
 #include <asm.h>
 #include <bootstage.h>
-#include <compiler_intrinsics.h>
+#include <compiler/core.h>
+#include <compiler/intrinsic.h>
 #include <console/crash.h>
 #include <console/panic_scene.h>
 #include <console/printf.h>
@@ -38,7 +39,7 @@ static struct raw_spinlock crash_lock = RAW_SPINLOCK_INIT;
 
 PERCPU_DECLARE(crash_quiesced, _Atomic uint32_t, NULL);
 PERCPU_DECLARE(crash_regs, struct crash_regs, NULL);
-static struct crash_regs boot_crash_regs = {0};
+static cc_unused struct crash_regs boot_crash_regs = {0};
 
 NDJSON_DECLARE(panic_at, NDJSON_SECTION_PANIC, NDJSON_KIND_AT, 1,
                NDJSON_STR(file), NDJSON_U64(line), NDJSON_STR(func),
@@ -58,7 +59,7 @@ bool crash_cpu_is_owner(uint64_t id) {
 }
 
 void crash_nmi_handoff(void *p, struct irq_registers *irqc) {
-    (void) p;
+    cc_var_unused(p);
     /* _NONE here for safety reasons (the validator could
      * crash again depending on why we crashed),
      * it's the crash context anyways */

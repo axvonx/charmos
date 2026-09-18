@@ -1,4 +1,5 @@
-#include <compiler_intrinsics.h>
+#include <compiler/core.h>
+#include <compiler/intrinsic.h>
 #include <math/align.h>
 #include <math/bit.h>
 #include <math/range.h>

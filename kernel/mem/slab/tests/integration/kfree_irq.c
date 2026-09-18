@@ -9,9 +9,7 @@ static atomic_size_t kfree_irq_test_consumed = 0;
 
 static enum irq_result kfree_irq_test_irq(void *ctx, uint8_t vector,
                                           struct irq_context *ictx) {
-    (void) ctx;
-    (void) vector;
-    (void) ictx;
+    cc_var_unused(ctx, vector, ictx);
     size_t total = kfree_irq_total_allocs;
     int midrange = total / 10;
     int delta = (prng_next() % (midrange * 2)) - midrange;

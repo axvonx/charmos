@@ -1,7 +1,7 @@
 /* @title: Per-CPU structure */
 #pragma once
-#include <compiler.h>
-#include <compiler_intrinsics.h>
+#include <compiler/core.h>
+#include <compiler/intrinsic.h>
 #include <console/panic.h>
 #include <math/bit.h>
 #include <sch/irql.h>

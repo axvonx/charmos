@@ -41,7 +41,7 @@ size_t reaper_get_reaped_thread_count(void) {
 }
 
 void reaper_thread_main(void *unused) {
-    (void) unused;
+    cc_var_unused(unused);
     struct reaper_thread *reaper = thread_get_current()->private;
     while (true) {
 

@@ -1,6 +1,7 @@
 /* @title: Bitmap */
 #pragma once
-#include <compiler_intrinsics.h>
+#include <compiler/core.h>
+#include <compiler/intrinsic.h>
 #include <math/align.h>
 #include <math/bit.h>
 #include <math/min_max.h>

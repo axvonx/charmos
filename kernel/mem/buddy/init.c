@@ -1,4 +1,4 @@
-#include <compiler_intrinsics.h>
+#include <compiler/intrinsic.h>
 #include <console/printf.h>
 #include <math/align.h>
 #include <math/bit.h>
@@ -56,6 +56,7 @@ static inline int order_base_2(uint64_t x) {
 
 void buddy_add_entry(struct page *page_array, struct limine_memmap_entry *entry,
                      struct buddy_free_area *farea) {
+    cc_var_unused(page_array);
     if (entry->type != LIMINE_MEMMAP_USABLE)
         return;
 

@@ -1,6 +1,6 @@
 #include <acpi/lapic.h>
 #include <asm.h>
-#include <compiler.h>
+#include <compiler/core.h>
 #include <console/printf.h>
 #include <drivers/pci.h>
 #include <drivers/usb/xhci.h>
@@ -676,12 +676,12 @@ static void xhci_scan_ports_locked(struct xhci_device *dev) {
 
 static void xhci_process_port_status_change(struct xhci_device *dev,
                                             struct xhci_trb *evt) {
-    (void) evt;
+    cc_var_unused(evt);
     /* Scan all ports */
     xhci_scan_ports_locked(dev);
 }
 
-static void xhci_scan_ports(struct xhci_device *dev) {
+static cc_unused void xhci_scan_ports(struct xhci_device *dev) {
     enum irql irql = spin_lock_irq_disable(&dev->lock);
     xhci_scan_ports_locked(dev);
     spin_unlock(&dev->lock, irql);
@@ -726,7 +726,7 @@ void xhci_process_event_ring(struct xhci_device *xhci) {
 }
 
 enum irq_result xhci_isr(void *ctx, uint8_t vector, struct irq_context *rsp) {
-    (void) vector, (void) rsp;
+    cc_var_unused(vector, rsp);
     xhci_trace("Interrupt caught");
     struct xhci_device *dev = ctx;
 

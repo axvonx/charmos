@@ -24,7 +24,7 @@ else ()
     list(APPEND KERNEL_WARNINGS -Wno-override-init)
 endif ()
 
-set(KERNEL_WARNINGS_RELEASE -Wunused -Wno-unused-parameter -Wvla -Wnull-dereference)
+set(KERNEL_WARNINGS_RELEASE -Wunused -Wvla -Wnull-dereference)
 
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     list(APPEND KERNEL_WARNINGS_RELEASE -Wshadow=local -Wlogical-op -Wduplicated-cond -Wduplicated-branches)
@@ -32,7 +32,7 @@ endif ()
 
 string(REPLACE ";" " " KERNEL_WARNINGS_RELEASE_STR "${KERNEL_WARNINGS_RELEASE}")
 
-set(KERNEL_WARNINGS_DEBUG -Wno-unused-parameter -Wno-unused-function)
+set(KERNEL_WARNINGS_DEBUG "")
 
 string(REPLACE ";" " " KERNEL_WARNINGS_DEBUG_STR "${KERNEL_WARNINGS_DEBUG}")
 

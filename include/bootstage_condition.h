@@ -1,7 +1,7 @@
 /* @title: Bootstage Runtime Patched Conditionals */
 #pragma once
 #include <bootstage.h>
-#include <compiler.h>
+#include <compiler/core.h>
 #include <linker/symbols.h>
 #include <stdbool.h>
 

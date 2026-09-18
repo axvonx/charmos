@@ -7,14 +7,12 @@
     }                                                                          \
     struct vfs_node *root = global.root_node;
 
-static bool done2 = false;
+static cc_unused bool done2 = false;
 static uint64_t avg_complete_time[BIO_SCHED_LEVELS] = {0};
 static uint64_t total_complete_time[BIO_SCHED_LEVELS] = {0};
 static _Atomic uint32_t runs = 0;
 
 static void bio_sch_callback(struct bio_request *req) {
-    (void) req;
-
     done2 = true;
     uint64_t q_ms = (uint64_t) req->user_data >> 12;
     uint64_t q_lvl = (uint64_t) req->user_data & 7;
@@ -96,7 +94,7 @@ TEST_DECLARE_INTEGRATION(bio_sched, delay_enqueue,
 
     char *msg = kmalloc(100);
     TEST_ASSERT_NONNULL(msg);
-    snprintf(msg, 100, "Total time spent enqueuing is %d ms", ms);
+    snprintf(msg, 100, "Total time spent enqueuing is %lu ms", ms);
     test_info(msg);
 
     bio_sched_dispatch_all(d);
@@ -111,7 +109,7 @@ TEST_DECLARE_INTEGRATION(bio_sched, delay_enqueue,
             avg_complete_time[i] = 0;
         char *lvl_msg = kmalloc(100, ALLOC_FLAGS_ZERO);
         TEST_ASSERT_NONNULL(lvl_msg);
-        snprintf(lvl_msg, 100, "Average completion time of level %d is %d ms",
+        snprintf(lvl_msg, 100, "Average completion time of level %lu is %lu ms",
                  i, avg_complete_time[i]);
         test_info(lvl_msg);
     }

@@ -1,6 +1,6 @@
 /* @title: Master Boot Record */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <stdint.h>
 
 struct mbr_partition_entry {

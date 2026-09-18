@@ -1,6 +1,7 @@
 /* @title: Sequence Lock */
 #pragma once
-#include <compiler.h>
+#include <compiler/atomic.h>
+#include <compiler/core.h>
 #include <kassert.h>
 #include <sch/irql.h>
 #include <stdatomic.h>
@@ -50,7 +51,7 @@ static inline uint32_t seqcount_read_raw(const struct seqcount *s) {
 
 static inline uint32_t seqcount_begin_read_raw(const struct seqcount *s) {
     uint32_t ret = seqcount_read_raw(s);
-    smp_rmb();
+    ca_rmb();
     return ret;
 }
 
@@ -62,7 +63,7 @@ static inline uint32_t seqcount_begin_read(const struct seqcount *s) {
     while (true) {
         uint32_t seq = seqcount_read_raw(s);
         if (cc_likely((seq & 1) == 0)) {
-            smp_rmb();
+            ca_rmb();
             return seq;
         }
         cpu_pause();
@@ -72,7 +73,7 @@ static inline uint32_t seqcount_begin_read(const struct seqcount *s) {
 /* Check for change since `start` */
 static inline bool seqcount_read_retry(const struct seqcount *s,
                                        uint32_t start) {
-    smp_rmb();
+    ca_rmb();
     return cc_unlikely(seqcount_read_raw(s) != start);
 }
 
@@ -85,12 +86,12 @@ static inline bool seqcount_read_retry(const struct seqcount *s,
 static inline void seqcount_begin_write(struct seqcount *s) {
     uint32_t seq = seqcount_read_raw(s);
     atomic_store_explicit(&s->sequence, seq + 1, memory_order_relaxed);
-    smp_wmb();
+    ca_wmb();
 }
 
 /* odd to even with wmb */
 static inline void seqcount_end_write(struct seqcount *s) {
-    smp_wmb();
+    ca_wmb();
     uint32_t seq = seqcount_read_raw(s);
     atomic_store_explicit(&s->sequence, seq + 1, memory_order_relaxed);
 }
@@ -109,6 +110,7 @@ typedef struct seqlock seqlock_t;
 static inline void seqlock_init_chk_internal(struct seqlock *sl,
                                              const struct lock_chk_class *class,
                                              enum lock_chk_flags flags) {
+    cc_var_unused(class, flags);
     seqcount_init(&sl->seqcount);
     spinlock_init_chk(&sl->lock, class, flags);
 }
@@ -167,7 +169,7 @@ static inline uint32_t seq_read_raw(const struct seqlock *sl) {
     return seqcount_read_raw(&sl->seqcount);
 }
 
-static inline enum irql cc_warn_unused_result seq_write_lock(struct seqlock *sl)
+static inline cc_warn_unused_result enum irql seq_write_lock(struct seqlock *sl)
     TSA_ACQUIRES(&sl->lock) {
     enum irql irql = spin_lock(&sl->lock);
     seqcount_begin_write(&sl->seqcount);
@@ -175,7 +177,7 @@ static inline enum irql cc_warn_unused_result seq_write_lock(struct seqlock *sl)
 }
 
 /* Writer APIs */
-static inline enum irql cc_warn_unused_result
+static inline cc_warn_unused_result enum irql
 seq_write_lock_irq_disable(struct seqlock *sl) TSA_ACQUIRES(&sl->lock) {
     enum irql irql = spin_lock_irq_disable(&sl->lock);
     seqcount_begin_write(&sl->seqcount);
@@ -202,7 +204,7 @@ static inline void seq_write_unlock_raw(struct seqlock *sl)
 }
 
 /* Trylock */
-static inline bool cc_warn_unused_result seq_try_write_lock(struct seqlock *sl,
+static inline cc_warn_unused_result bool seq_try_write_lock(struct seqlock *sl,
                                                             enum irql *out)
     TSA_TRY_ACQUIRES(true, &sl->lock) {
     if (spin_trylock(&sl->lock, out)) {
@@ -212,8 +214,9 @@ static inline bool cc_warn_unused_result seq_try_write_lock(struct seqlock *sl,
     return false;
 }
 
-static inline bool cc_warn_unused_result seq_try_write_lock_irq_disable(
-    struct seqlock *sl, enum irql *out) TSA_TRY_ACQUIRES(true, &sl->lock) {
+static inline cc_warn_unused_result bool
+seq_try_write_lock_irq_disable(struct seqlock *sl, enum irql *out)
+    TSA_TRY_ACQUIRES(true, &sl->lock) {
     if (spin_trylock_irq_disable(&sl->lock, out)) {
         seqcount_begin_write(&sl->seqcount);
         return true;
@@ -221,7 +224,7 @@ static inline bool cc_warn_unused_result seq_try_write_lock_irq_disable(
     return false;
 }
 
-static inline bool cc_warn_unused_result
+static inline cc_warn_unused_result bool
 seq_try_write_lock_raw(struct seqlock *sl) TSA_TRY_ACQUIRES(true, &sl->lock) {
     if (spin_trylock_raw(&sl->lock)) {
         seqcount_begin_write(&sl->seqcount);

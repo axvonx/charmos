@@ -47,7 +47,7 @@ static inline void inject_disarm(struct inject_site *s) {
 
 #ifdef INJECT_ENABLED
 void inject_delay_impl(struct inject_site *s);
-bool inject_fail_impl(struct inject_site *s) cc_warn_unused_result;
+cc_warn_unused_result bool inject_fail_impl(struct inject_site *s);
 
 #define INJECT_DELAY(id)                                                       \
     do {                                                                       \

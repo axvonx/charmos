@@ -1,6 +1,6 @@
 /* @title: Physical memory manager */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <mem/alloc.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -32,7 +32,7 @@ uint64_t pmm_get_usable_ram(void);
         pmm_alloc_pages_internal(count, ALLOC_FLAGS_DEFAULT);                  \
     })
 
-#define pmm_alloc_pages_2(count, f) pmm_alloc_pages_internal((count), (f));
+#define pmm_alloc_pages_2(count, f) pmm_alloc_pages_internal((count), (f))
 
 #define pmm_alloc_pages(...) PP_CALL(pmm_alloc_pages, __VA_ARGS__)
 

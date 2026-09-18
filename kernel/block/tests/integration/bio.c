@@ -22,7 +22,7 @@ TEST_GROUP_DECLARE(bio, .intensity_desc = {
 
 static atomic_bool done = false;
 static void bio_callback(struct bio_request *req) {
-    (void) req;
+    cc_var_unused(req);
     done = true;
 }
 

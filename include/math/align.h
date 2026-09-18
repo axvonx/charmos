@@ -1,7 +1,7 @@
 /* @title: Alignment and Rounding */
 #pragma once
-#include <compiler.h>
-#include <compiler_intrinsics.h>
+#include <compiler/core.h>
+#include <compiler/intrinsic.h>
 #include <kassert.h>
 #include <stdbool.h>
 #include <stdint.h>

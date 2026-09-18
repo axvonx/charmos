@@ -1,7 +1,7 @@
 /* @title: Crash Engine */
 #pragma once
 #include <asm.h>
-#include <compiler.h>
+#include <compiler/core.h>
 #include <linker/symbols.h>
 #include <sch/irql.h>
 #include <setjmp.h>

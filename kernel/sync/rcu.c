@@ -22,6 +22,7 @@
  */
 
 #include <acpi/lapic.h>
+#include <compiler/atomic.h>
 #include <console/printf.h>
 #include <global.h>
 #include <irq/irq.h>
@@ -31,7 +32,6 @@
 #include <math/min_max.h>
 #include <mem/alloc.h>
 #include <mem/alloc_or_die.h>
-#include <rw_once.h>
 #include <sch/sched.h>
 #include <smp/core.h>
 #include <stdatomic.h>
@@ -124,18 +124,18 @@ void rcu_read_lock(void) {
 
     kassert_debug(!irq_in_nmi(), "RCU read section in NMI context");
 
-    uint32_t nesting = READ_ONCE(t->rcu_nesting);
+    uint32_t nesting = ca_read_once(t->rcu_nesting);
     kassert(nesting != UINT32_MAX, "RCU nesting overflow");
 
     if (cc_likely(nesting != 0)) {
-        WRITE_ONCE(t->rcu_nesting, nesting + 1);
+        ca_write_once(t->rcu_nesting, nesting + 1);
     } else {
         uint64_t seq = atomic_load_explicit(&rcu.gp_seq, memory_order_acquire);
         t->rcu_read_seq = seq;
-        WRITE_ONCE(t->rcu_nesting, 1);
+        ca_write_once(t->rcu_nesting, 1);
     }
 
-    compiler_barrier();
+    ca_barrier();
     crash_unwind_enter_rcu();
 }
 
@@ -171,15 +171,15 @@ void rcu_read_unlock(void) {
     if (cc_unlikely(!t))
         return;
 
-    uint32_t nesting = READ_ONCE(t->rcu_nesting);
+    uint32_t nesting = ca_read_once(t->rcu_nesting);
     kassert(nesting != 0, "RCU nesting underflow");
 
     if (cc_likely(nesting > 1)) {
-        WRITE_ONCE(t->rcu_nesting, nesting - 1);
+        ca_write_once(t->rcu_nesting, nesting - 1);
     } else {
-        compiler_barrier();
-        WRITE_ONCE(t->rcu_nesting, 0);
-        compiler_barrier();
+        ca_barrier();
+        ca_write_once(t->rcu_nesting, 0);
+        ca_barrier();
 
         if (cc_unlikely(t->rcu_leaf))
             rcu_unregister_reader(t);
@@ -219,7 +219,8 @@ void rcu_note_context_switch(struct thread *outgoing,
     uint64_t lseq = leaf->gp_seq;
     bool leaf_active = leaf->completed_seq != lseq;
 
-    if (outgoing && READ_ONCE(outgoing->rcu_nesting) && !outgoing->rcu_leaf) {
+    if (outgoing && ca_read_once(outgoing->rcu_nesting) &&
+        !outgoing->rcu_leaf) {
         outgoing->rcu_leaf = leaf;
         outgoing->rcu_blocked_seq = 0;
         list_add_tail(&outgoing->rcu_list_node, &leaf->blocked);
@@ -247,7 +248,7 @@ void rcu_note_irq_exit(void) TSA_NO_ANALYSIS {
     /* Just report when the interrupted context isn't holding an unregistered
      * read side critical section, as readers that are accounted in a leaf
      * don't need to be handled over here */
-    if (t && READ_ONCE(t->rcu_nesting) && !t->rcu_leaf)
+    if (t && ca_read_once(t->rcu_nesting) && !t->rcu_leaf)
         return;
 
     uint64_t gp_seq_seen = atomic_load(&rcu.gp_seq);

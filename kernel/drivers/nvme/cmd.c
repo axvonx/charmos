@@ -57,7 +57,7 @@ done:
 
 static void nvme_process_one(struct nvme_device *dev,
                              struct nvme_request *req) {
-    (void) dev;
+    cc_var_unused(dev);
     bool has_waiter = req->has_waiter;
 
     if (--req->remaining_parts == 0) {
@@ -89,7 +89,7 @@ static struct nvme_request *nvme_finished_pop_front(struct nvme_device *dev) {
 }
 
 void nvme_work(void *dvoid, void *nothing) {
-    (void) nothing;
+    cc_var_unused(nothing);
 
     struct nvme_device *dev = dvoid;
     struct nvme_request *req;
@@ -163,7 +163,7 @@ void nvme_process_completions(struct nvme_device *dev, uint32_t qid) {
 
 enum irq_result nvme_isr_handler(void *ctx, uint8_t vector,
                                  struct irq_context *rsp) {
-    (void) vector, (void) rsp;
+    cc_var_unused(vector, rsp);
     struct nvme_device *dev = ctx;
     nvme_process_completions(dev, THIS_QID(dev));
     return IRQ_HANDLED;

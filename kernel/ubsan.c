@@ -191,8 +191,9 @@ void __ubsan_handle_mul_overflow(data_location_type_t *data, uintptr_t lhs,
 void __ubsan_handle_function_type_mismatch(void *data_raw, void *value_raw) {
     struct ubsan_function_type_mismatch_data *data =
         (struct ubsan_function_type_mismatch_data *) data_raw;
-    printf("UBSAN: function type mismatch @ %s:%u:%u", data->location.filename,
-           data->location.line, data->location.column);
+    printf("UBSAN: function type mismatch @ %s:%u:%u (callee: %p)\n",
+           data->location.filename, data->location.line, data->location.column,
+           value_raw);
     HALT
 }
 void __ubsan_handle_divrem_overflow(data_location_type_t *data, uintptr_t lhs,
@@ -308,13 +309,15 @@ void __ubsan_handle_type_mismatch_v1(data_type_mismatch_t *data,
     HALT
 }
 void __ubsan_handle_alignment_assumption(data_alignment_assumption_t *data,
-                                         void *, void *, void *) {
+                                         void *ptr, void *align, void *offset) {
+    cc_var_unused(ptr, align, offset);
     printf("UBSAN: alignment_assumption @ %s:%u:%u\n", data->location.filename,
            data->location.line, data->location.column);
     HALT
 }
 void __ubsan_handle_implicit_conversion(data_implicit_conversion_t *data,
-                                        void *, void *) {
+                                        void *src, void *dst) {
+    cc_var_unused(src, dst);
     printf("UBSAN: implicit_conversion @ %s:%u:%u\n", data->location.filename,
            data->location.line, data->location.column);
     HALT
@@ -324,8 +327,9 @@ void __ubsan_handle_invalid_builtin(data_invalid_builtin_t *data) {
            data->location.line, data->location.column);
     HALT
 }
-void __ubsan_handle_pointer_overflow(data_only_location_t *data, void *,
-                                     void *) {
+void __ubsan_handle_pointer_overflow(data_only_location_t *data, void *base,
+                                     void *result) {
+    cc_var_unused(base, result);
     printf("UBSAN: pointer_overflow @ %s:%u:%u\n", data->location.filename,
            data->location.line, data->location.column);
     HALT

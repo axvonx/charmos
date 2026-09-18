@@ -1,6 +1,6 @@
 /* @title: Static Assertions & Compile-Time Checks */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <stddef.h>
 #include <stdint.h>
 

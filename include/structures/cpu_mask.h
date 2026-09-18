@@ -30,13 +30,13 @@ struct cpu_mask {
     }
 
 static inline bool cpu_mask_init(struct cpu_mask *m, size_t nbits) {
-    (void) nbits;
+    cc_var_unused(nbits);
     memset(m->bits, 0, sizeof(m->bits));
     return true;
 }
 
 static inline void cpu_mask_deinit(struct cpu_mask *m) {
-    (void) m;
+    cc_var_unused(m);
 }
 
 struct cpu_mask *cpu_mask_create(void);

@@ -324,8 +324,8 @@ void domain_buddy_dump(void) {
     for (size_t i = 0; i < global.domain_count; i++) {
         struct domain_buddy *dom = &global.domain_buddies[i];
         struct domain_buddy_stats *stat = &dom->stats;
-        printf("Domain %u stats: %u allocs, %u failed, %u interleaved, %u "
-               "remote, %u frees, %u pages used, %u total pages\n",
+        printf("Domain %zu stats: %zu allocs, %zu failed, %zu interleaved, %zu "
+               "remote, %zu frees, %zu pages used, %zu total pages\n",
                i, stat->alloc_count, stat->failed_alloc_count,
                stat->interleaved_alloc_count, stat->remote_alloc_count,
                stat->free_count, dom->pages_used, dom->total_pages);
@@ -346,7 +346,7 @@ static void move_buddy(struct domain_buddy *buddy) {
 }
 
 static void domain_buddy_movealloc(void *a, void *b) {
-    (void) a, (void) b;
+    cc_var_unused(a, b);
     for (size_t i = 0; i < global.domain_count; i++)
         move_buddy(global.domains[i]->domain_buddy);
 }

@@ -1,6 +1,6 @@
 /* @title: Slab allocator */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <linker/symbols.h>
 #include <stdbool.h>
 #include <stddef.h>

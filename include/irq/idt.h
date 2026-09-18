@@ -1,6 +1,6 @@
 /* @title: Interrupt Descriptor Table */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <stdbool.h>
 #include <stdint.h>
 

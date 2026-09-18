@@ -129,7 +129,7 @@ static void daemon_wait(struct daemon *daemon, struct daemon_thread *self) {
 }
 
 void daemon_main(void *a) {
-    (void) a;
+    cc_var_unused(a);
 
     struct daemon_thread *self = current_daemon_thread();
     struct daemon *daemon = self->daemon;
@@ -391,11 +391,11 @@ void daemon_print(struct daemon *daemon) {
     struct daemon_attributes *attrs = &daemon->attrs;
     printf("struct daemon \"%s\" = {\n", daemon->name ? daemon->name : "NULL");
     printf("    .attrs = {\n");
-    printf("                  .max_timesharing_threads = %u\n",
+    printf("                  .max_timesharing_threads = %zu\n",
            attrs->max_timesharing_threads);
-    printf("                  .idle_timesharing_threads = %u\n",
+    printf("                  .idle_timesharing_threads = %zu\n",
            attrs->idle_timesharing_threads);
-    printf("                  .timesharing_threads = %u\n",
+    printf("                  .timesharing_threads = %zu\n",
            attrs->timesharing_threads);
     printf("                  .flags = 0b%b\n", attrs->flags);
     printf("             }\n");

@@ -1,6 +1,6 @@
 /* @title: Per-Domain dynamic objects */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <global.h>
 #include <linker/symbols.h>
 #include <smp/domain.h>

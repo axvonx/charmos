@@ -2,7 +2,7 @@
 #pragma once
 #include <block/block.h>
 #include <block/sched.h>
-#include <compiler.h>
+#include <compiler/core.h>
 #include <stdatomic.h>
 #include <stdint.h>
 #include <sync/semaphore.h>

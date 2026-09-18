@@ -15,7 +15,7 @@ TEST_GROUP_DECLARE(bio_sched, .intensity_desc = {
 static atomic_bool cb1d = false;
 
 static void bio_sch_callback1(struct bio_request *req) {
-    (void) req;
+    cc_var_unused(req);
 
     atomic_store(&cb1d, true);
     test_info("cb 1 success");
@@ -47,7 +47,7 @@ TEST_DECLARE_INTEGRATION(bio_sched, coalesce, TEST_INTENSITY(1, 2, 16)) {
 
     char *name = kmalloc(100);
     uint64_t t = time_get_us();
-    snprintf(name, 100, "enqueues took %d us", time_get_us() - t);
+    snprintf(name, 100, "enqueues took %lu us", time_get_us() - t);
     test_info(name);
 
     bio_sched_dispatch_all(d);

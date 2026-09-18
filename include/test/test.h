@@ -1,7 +1,7 @@
 /* @title: Tests */
 #pragma once
 #include <cmdline.h>
-#include <compiler.h>
+#include <compiler/core.h>
 #include <console/printf.h>
 #include <errno.h>
 #include <log.h>

@@ -167,6 +167,6 @@ void scheduler_periodic_work_execute(enum scheduler_periodic_work_type type) {
     pcpu->executing = false;
 }
 
-bool scheduler_in_periodic_work() {
+bool scheduler_in_periodic_work(void) {
     return PERCPU_READ(TOPC_IRQL, periodic_percpu).executing;
 }

@@ -1,4 +1,4 @@
-#include <compiler_intrinsics.h>
+#include <compiler/intrinsic.h>
 #include <sch/sched.h>
 #include <thread/apc.h>
 #include <thread/thread.h>

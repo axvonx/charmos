@@ -1,6 +1,6 @@
 /* @title: Range and Interval Operations */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <kassert.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -36,5 +36,15 @@ struct range {
         type hi;                                                               \
     } name
 
-#define RANGE_CONTAINS(r, val) ((val) >= (r).low && (val) <= (r).hi)
-#define RANGE_VALID(r) ((r).low <= (r).hi)
+#define RANGE_CONTAINS(r, val)                                                 \
+    ({                                                                         \
+        __auto_type __rc_r = (r);                                              \
+        __auto_type __rc_val = (val);                                          \
+        (__rc_val >= __rc_r.low && __rc_val <= __rc_r.hi);                     \
+    })
+
+#define RANGE_VALID(r)                                                         \
+    ({                                                                         \
+        __auto_type __rv_r = (r);                                              \
+        (__rv_r.low <= __rv_r.hi);                                             \
+    })

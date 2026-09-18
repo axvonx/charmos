@@ -1,5 +1,5 @@
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <mem/fixed_size_alloc.h>
 #include <mem/vas.h>
 #include <stdatomic.h>

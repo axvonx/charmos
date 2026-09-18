@@ -56,7 +56,8 @@ static struct qspinlock qspinlock_contention_lock = QSPINLOCK_INIT;
 static atomic_bool qspinlock_contention_start = false;
 static _Atomic size_t qspinlock_contention_count = 0;
 
-static void qspinlock_contention_worker(void *) {
+static void qspinlock_contention_worker(void *arg) {
+    cc_var_unused(arg);
     while (!atomic_load(&qspinlock_contention_start))
         cpu_pause();
 

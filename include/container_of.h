@@ -1,7 +1,7 @@
 /* @title: container_of macro */
 #pragma once
-#include <compiler.h>
-#include <compiler_intrinsics.h>
+#include <compiler/core.h>
+#include <compiler/intrinsic.h>
 #define container_of(ptr, type, member)                                        \
     ({                                                                         \
         static_assert(ci_types_compatible_p(typeof(*(ptr)),                    \

@@ -1,6 +1,6 @@
 #include <acpi/lapic.h>
 #include <asm.h>
-#include <compiler.h>
+#include <compiler/core.h>
 #include <console/printf.h>
 #include <dbg.h>
 #include <global.h>

@@ -1,7 +1,7 @@
 /* @title: Raw Spinlock */
 #pragma once
 #include <asm.h>
-#include <compiler.h>
+#include <compiler/core.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -18,8 +18,9 @@ static inline void raw_spinlock_init(struct raw_spinlock *lock) {
     atomic_store_explicit(&lock->state, 0, memory_order_relaxed);
 }
 
-static inline bool cc_warn_unused_result raw_spin_trylock(
-    struct raw_spinlock *lock) TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
+static inline cc_warn_unused_result bool
+raw_spin_trylock(struct raw_spinlock *lock)
+    TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
     uint8_t expected = 0;
     return atomic_compare_exchange_strong_explicit(
         &lock->state, &expected, 1, memory_order_acquire, memory_order_relaxed);
@@ -42,8 +43,9 @@ static inline void raw_spin_unlock(struct raw_spinlock *lock)
 }
 
 /* whether interrupts were enabled on entry */
-static inline bool cc_warn_unused_result raw_spin_lock_irq_disable(
-    struct raw_spinlock *lock) TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
+static inline cc_warn_unused_result bool
+raw_spin_lock_irq_disable(struct raw_spinlock *lock)
+    TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
     bool irqs_were_enabled = irq_disable_save();
     raw_spin_lock(lock);
     return irqs_were_enabled;

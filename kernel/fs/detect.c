@@ -1,5 +1,5 @@
 #include <block/block.h>
-#include <compiler.h>
+#include <compiler/core.h>
 #include <console/printf.h>
 #include <fs/detect.h>
 #include <fs/ext2.h>
@@ -35,7 +35,7 @@ const char *detect_fstr(enum fs_type type) {
 }
 
 struct vfs_node *dummy_mount(struct partition *p) {
-    (void) p;
+    cc_var_unused(p);
     return NULL;
 }
 

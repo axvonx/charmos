@@ -41,13 +41,14 @@ void condvar_init(struct condvar *cv, bool irq_disable) {
 }
 
 static void nop_callback(struct thread *unused) {
-    (void) unused;
+    cc_var_unused(unused);
 }
 
 struct thread *condvar_signal_callback(struct condvar *cv,
                                        thread_action_callback tac) {
     struct thread *t = thread_wait_header_satisfy(
         &cv->waiters, THREAD_WAKE_REASON_SLEEP_MANUAL, tac);
+
     if (!t)
         tac(NULL);
     return t;
@@ -73,9 +74,9 @@ static void condvar_timeout_wakeup(struct timer *timer) {
     struct thread *t = ck->thread;
 
     /* Signals and timeouts use the same block */
-    (void) thread_wait_satisfy_epoch(&t->wait_blocks[THREAD_WAIT_BLOCK_SYNC],
-                                     ck->cookie,
-                                     THREAD_WAKE_REASON_SLEEP_TIMEOUT, NULL);
+    thread_wait_satisfy_epoch(&t->wait_blocks[THREAD_WAIT_BLOCK_SYNC],
+                              ck->cookie, THREAD_WAKE_REASON_SLEEP_TIMEOUT,
+                              NULL);
 }
 
 enum wake_reason condvar_wait_timeout(struct condvar *cv, struct spinlock *lock,

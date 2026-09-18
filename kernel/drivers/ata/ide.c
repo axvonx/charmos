@@ -3,7 +3,7 @@
 #include <block/bcache.h>
 #include <block/block.h>
 #include <block/sched.h>
-#include <compiler.h>
+#include <compiler/core.h>
 #include <console/printf.h>
 #include <drivers/ata.h>
 #include <irq/idt.h>

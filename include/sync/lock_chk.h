@@ -1,6 +1,6 @@
 /* @title: Lock Validation */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <sch/irql.h>
 #include <stdatomic.h>
 #include <stdbool.h>

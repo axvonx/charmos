@@ -18,7 +18,7 @@ paddr_t bitmap_alloc_page() {
 }
 
 paddr_t bitmap_alloc_pages(uint64_t count, enum alloc_flags flags) {
-    (void) flags;
+    cc_var_unused(flags);
     if (count == 0)
         panic("Zero pages requested");
 

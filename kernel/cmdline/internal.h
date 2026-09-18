@@ -2,7 +2,7 @@
 
 #include <asm.h>
 #include <cmdline.h>
-#include <compiler_intrinsics.h>
+#include <compiler/intrinsic.h>
 #include <console/panic.h>
 #include <console/printf.h>
 #include <errno.h>

@@ -1,6 +1,6 @@
 /* @title: Command Line Macro Internals */
 #pragma once
-#include <compiler.h>
+#include <compiler/core.h>
 #include <math/bit.h>
 #include <types/type_enum.h>
 
