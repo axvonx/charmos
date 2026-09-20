@@ -49,7 +49,8 @@ void nightmare_finding_at(const struct nightmare_finding_site *site,
 
 void nightmare_request_external_fail(const char *kind, uint64_t discriminator,
                                      const char *fmt, ...) {
-    if (!atomic_load_explicit(&nightmare_runtime.active, memory_order_acquire))
+    if (!atomic_load_explicit(&nightmare_runtime.conc.active,
+                              memory_order_acquire))
         return;
 
     char msg[256];
@@ -67,7 +68,7 @@ void nightmare_request_external_fail(const char *kind, uint64_t discriminator,
         },
         discriminator, "%s", msg);
 
-    nightmare_publish_stop(NM_STOP_FAIL);
+    nightmare_publish_stop(TEST_STOP_FAIL);
 }
 #else
 void nightmare_request_external_fail(const char *kind, uint64_t discriminator,

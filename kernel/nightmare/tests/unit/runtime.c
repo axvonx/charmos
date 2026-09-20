@@ -33,25 +33,27 @@ TEST_DECLARE_UNIT(nightmare_harness, perturb_verdict_mailbox) {
 }
 
 TEST_DECLARE_UNIT(nightmare_harness, stop_priority) {
-    atomic_store_explicit(&nightmare_runtime.stop, NM_RUN,
+    atomic_store_explicit(&nightmare_runtime.conc.stop, TEST_RUN,
                           memory_order_relaxed);
 
-    nightmare_publish_stop(NM_STOP_BUDGET);
-    TEST_ASSERT_EQ(atomic_load(&nightmare_runtime.stop), NM_STOP_BUDGET);
+    nightmare_publish_stop(TEST_STOP_BUDGET);
+    TEST_ASSERT_EQ(atomic_load(&nightmare_runtime.conc.stop), TEST_STOP_BUDGET);
 
     nightmare_stop_after_finding();
-    TEST_ASSERT_EQ(atomic_load(&nightmare_runtime.stop), NM_STOP_FINDING);
+    TEST_ASSERT_EQ(atomic_load(&nightmare_runtime.conc.stop),
+                   TEST_STOP_FINDING);
 
-    nightmare_publish_stop(NM_STOP_BUDGET);
-    TEST_ASSERT_EQ(atomic_load(&nightmare_runtime.stop), NM_STOP_FINDING);
+    nightmare_publish_stop(TEST_STOP_BUDGET);
+    TEST_ASSERT_EQ(atomic_load(&nightmare_runtime.conc.stop),
+                   TEST_STOP_FINDING);
 
-    nightmare_publish_stop(NM_STOP_FAIL);
-    TEST_ASSERT_EQ(atomic_load(&nightmare_runtime.stop), NM_STOP_FAIL);
+    nightmare_publish_stop(TEST_STOP_FAIL);
+    TEST_ASSERT_EQ(atomic_load(&nightmare_runtime.conc.stop), TEST_STOP_FAIL);
 
-    nightmare_publish_stop(NM_STOP_STALL);
-    TEST_ASSERT_EQ(atomic_load(&nightmare_runtime.stop), NM_STOP_STALL);
+    nightmare_publish_stop(TEST_STOP_STALL);
+    TEST_ASSERT_EQ(atomic_load(&nightmare_runtime.conc.stop), TEST_STOP_STALL);
 
-    atomic_store_explicit(&nightmare_runtime.stop, NM_RUN,
+    atomic_store_explicit(&nightmare_runtime.conc.stop, TEST_RUN,
                           memory_order_relaxed);
     return TEST_SUCCESS;
 }
@@ -66,7 +68,7 @@ static void heartbeat_waiter(void *arg) {
 
 TEST_DECLARE_UNIT(nightmare_harness, first_stop_wakes_sleepers) {
     atomic_store_explicit(&stop_sleepers_waiting, 0, memory_order_relaxed);
-    atomic_store_explicit(&nightmare_runtime.stop, NM_RUN,
+    atomic_store_explicit(&nightmare_runtime.conc.stop, TEST_RUN,
                           memory_order_relaxed);
 
     struct thread *worker_thread =
@@ -76,19 +78,21 @@ TEST_DECLARE_UNIT(nightmare_harness, first_stop_wakes_sleepers) {
     TEST_ASSERT_NONNULL(worker_thread);
     TEST_ASSERT_NONNULL(heartbeat);
 
-    struct nightmare_worker worker = {0};
+    struct test_conc_worker worker = {0};
     atomic_store_explicit(&worker.th, worker_thread, memory_order_relaxed);
-    nightmare_runtime.workers = &worker;
-    nightmare_runtime.total_worker_count = 1;
-    nightmare_runtime.heartbeat = heartbeat;
+    nightmare_runtime.conc.workers = &worker;
+    nightmare_runtime.conc.worker_count = 1;
+    atomic_store_explicit(&nightmare_runtime.conc.aux, heartbeat,
+                          memory_order_relaxed);
     while (atomic_load_explicit(&stop_sleepers_waiting, memory_order_acquire) <
            2)
         scheduler_yield();
 
-    nightmare_publish_stop(NM_STOP_BUDGET);
-    nightmare_runtime.workers = NULL;
-    nightmare_runtime.total_worker_count = 0;
-    nightmare_runtime.heartbeat = NULL;
+    nightmare_publish_stop(TEST_STOP_BUDGET);
+    nightmare_runtime.conc.workers = NULL;
+    nightmare_runtime.conc.worker_count = 0;
+    atomic_store_explicit(&nightmare_runtime.conc.aux, NULL,
+                          memory_order_relaxed);
 
     bool worker_joined = thread_join_timeout(worker_thread, 250, NULL);
     if (!worker_joined) {
@@ -101,7 +105,7 @@ TEST_DECLARE_UNIT(nightmare_harness, first_stop_wakes_sleepers) {
         thread_join(heartbeat);
     }
 
-    atomic_store_explicit(&nightmare_runtime.stop, NM_RUN,
+    atomic_store_explicit(&nightmare_runtime.conc.stop, TEST_RUN,
                           memory_order_relaxed);
     TEST_ASSERT(worker_joined);
     TEST_ASSERT(heartbeat_joined);
@@ -110,7 +114,7 @@ TEST_DECLARE_UNIT(nightmare_harness, first_stop_wakes_sleepers) {
 
 TEST_DECLARE_UNIT(nightmare_harness, finding_stop_preserves_finding_verdict) {
     struct nightmare_verdict verdict =
-        nightmare_verdict_for_stop(NIGHTMARE_OK, NM_STOP_FINDING);
+        nightmare_verdict_for_stop(NIGHTMARE_OK, TEST_STOP_FINDING);
     TEST_ASSERT_EQ(verdict.result, NIGHTMARE_RESULT_OK);
     TEST_ASSERT_EQ(nightmare_result_with_findings(verdict.result, 1),
                    NIGHTMARE_RESULT_FINDING);
@@ -121,12 +125,12 @@ TEST_DECLARE_UNIT(nightmare_harness, finding_stop_preserves_finding_verdict) {
 
 TEST_DECLARE_UNIT(nightmare_harness, forced_stop_verdicts_override_ok) {
     struct nightmare_verdict failed =
-        nightmare_verdict_for_stop(NIGHTMARE_OK, NM_STOP_FAIL);
+        nightmare_verdict_for_stop(NIGHTMARE_OK, TEST_STOP_FAIL);
     TEST_ASSERT_EQ(failed.result, NIGHTMARE_RESULT_FAIL);
     TEST_ASSERT_STR_EQ(failed.reason, "harness");
 
     struct nightmare_verdict stalled =
-        nightmare_verdict_for_stop(NIGHTMARE_OK, NM_STOP_STALL);
+        nightmare_verdict_for_stop(NIGHTMARE_OK, TEST_STOP_STALL);
     TEST_ASSERT_EQ(stalled.result, NIGHTMARE_RESULT_STALL);
     TEST_ASSERT_STR_EQ(stalled.reason, "liveness");
     return TEST_SUCCESS;

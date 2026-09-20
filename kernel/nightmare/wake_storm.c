@@ -160,13 +160,13 @@ static void wake_report_failure(struct wake_storm_state *state) {
 }
 
 static void wake_storm_contend(struct wake_storm_state *state,
-                               struct nightmare_worker *self) {
+                               struct test_conc_worker *self) {
     mutex_lock(&state->mtx);
-    for (volatile int i = 0; i < (int) (nightmare_rand(&self->rng) & 0xF); i++)
+    for (volatile int i = 0; i < (int) (test_rng_next(&self->rng) & 0xF); i++)
         cpu_pause();
     mutex_unlock(&state->mtx);
 
-    if (nightmare_rand(&self->rng) & 1) {
+    if (test_rng_next(&self->rng) & 1) {
         rw_lock(&state->rw, RWLOCK_READ);
         for (volatile int i = 0; i < 4; i++)
             cpu_pause();
@@ -185,7 +185,7 @@ static void wake_storm_contend(struct wake_storm_state *state,
 }
 
 static void wake_storm_sleeper_main(struct nightmare_ctx *ctx,
-                                    struct nightmare_worker *self,
+                                    struct test_conc_worker *self,
                                     size_t slot) {
     struct wake_storm_state *state = wake_state(ctx);
     struct wake_storm_sleeper *me = &state->sleepers[slot];
@@ -267,7 +267,7 @@ static void wake_storm_release_all(struct wake_storm_state *state,
 }
 
 static void wake_storm_waker_main(struct nightmare_ctx *ctx,
-                                  struct nightmare_worker *self) {
+                                  struct test_conc_worker *self) {
     struct wake_storm_state *state = wake_state(ctx);
 
     while (!nightmare_must_stop()) {
@@ -283,7 +283,7 @@ static void wake_storm_waker_main(struct nightmare_ctx *ctx,
             continue;
         }
 
-        size_t slot = nightmare_rand(&self->rng) % state->sleeper_count;
+        size_t slot = test_rng_next(&self->rng) % state->sleeper_count;
         struct wake_storm_sleeper *target = &state->sleepers[slot];
         struct thread *t =
             atomic_load_explicit(&target->th, memory_order_acquire);

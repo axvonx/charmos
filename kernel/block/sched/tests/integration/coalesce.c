@@ -5,12 +5,7 @@ TEST_GROUP_DECLARE(bio_sched, .intensity_desc = {
                                   .unit = "requests",
                               });
 
-#define EXT2_INIT                                                              \
-    if (global.root_node->fs_type != FS_EXT2) {                                \
-        test_info("the mounted root is not ext2");                             \
-        return TEST_SKIP(TEST_SKIP_NONE);                                      \
-    }                                                                          \
-    struct vfs_node *root = global.root_node;
+#define EXT2_ROOT struct vfs_node *root = global.root_node
 
 static atomic_bool cb1d = false;
 
@@ -21,8 +16,9 @@ static void bio_sch_callback1(struct bio_request *req) {
     test_info("cb 1 success");
 }
 
-TEST_DECLARE_INTEGRATION(bio_sched, coalesce, TEST_INTENSITY(1, 2, 16)) {
-    EXT2_INIT;
+TEST_DECLARE_INTEGRATION(bio_sched, coalesce, TEST_INTENSITY(1, 2, 16),
+                         .required_fs = FS_EXT2) {
+    EXT2_ROOT;
     struct ext2_fs *fs = root->fs_data;
     struct block_device *d = fs->drive;
     size_t reqs = ctx->intensity_val ? ctx->intensity_val : 2;

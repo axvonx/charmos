@@ -9,6 +9,8 @@
 #include <sync/qspinlock.h>
 #include <sync/rwlock.h>
 #include <sync/spinlock.h>
+#include <test/fleet.h>
+#include <test/sync.h>
 #include <time/spin_sleep.h>
 
 LOCK_CHK_CLASS_DECLARE_LOCAL(assert_spin_class);
@@ -100,42 +102,58 @@ TEST_DECLARE_UNIT(lock_chk, assert_held_roundtrip_rwlock) {
     return TEST_SUCCESS;
 }
 
-static struct mutex assert_cross_thread_mutex;
-static _Atomic bool assert_cross_thread_held = false;
-static _Atomic bool assert_cross_thread_release = false;
+struct cross_thread_fix {
+    struct mutex lock;
+    struct test_latch held;
+    struct test_latch release;
+};
 
-static void assert_cross_thread_worker(void *arg) {
-    cc_var_unused(arg);
-    mutex_lock(&assert_cross_thread_mutex);
-    atomic_store_explicit(&assert_cross_thread_held, true,
-                          memory_order_release);
-    while (!atomic_load_explicit(&assert_cross_thread_release,
-                                 memory_order_acquire))
-        sleep_spin_ms(1);
-    mutex_unlock(&assert_cross_thread_mutex);
+static bool assert_cross_thread_worker(struct test_fleet *f,
+                                       struct test_conc_worker *w) {
+    struct cross_thread_fix *fix = w->arg;
+
+    mutex_lock(&fix->lock);
+    test_latch_set(&fix->held);
+    TEST_WORKER_CHECK_GOTO(f, test_latch_wait_timeout(&fix->release, 5000),
+                           out);
+    mutex_unlock(&fix->lock);
+    return true;
+
+out:
+    mutex_unlock(&fix->lock);
+    return false;
 }
 
 TEST_DECLARE_UNIT(lock_chk, assert_not_held_cross_thread_mutex) {
-    mutex_init_chk(&assert_cross_thread_mutex,
-                   LOCK_CHK_CLASS(assert_cross_thread_class), LOCK_CHKD_FULL);
+    struct test_fleet *fleet = test_fleet_init(ctx, NULL);
+    TEST_ASSERT_NONNULL(fleet);
 
-    struct thread *th = thread_spawn_joinable("assert_cross_thread_worker",
-                                              assert_cross_thread_worker, NULL);
+    struct cross_thread_fix *fix = test_fleet_alloc(fleet, sizeof(*fix));
+    TEST_ASSERT_NONNULL(fix);
 
-    while (
-        !atomic_load_explicit(&assert_cross_thread_held, memory_order_acquire))
-        sleep_spin_ms(1);
+    mutex_init_chk(&fix->lock, LOCK_CHK_CLASS(assert_cross_thread_class),
+                   LOCK_CHKD_FULL);
+    test_latch_init(&fix->held);
+    test_latch_init(&fix->release);
+
+    TEST_ASSERT_NONNULL(test_fleet_spawn(fleet, "cross_thread",
+                                         assert_cross_thread_worker, fix));
+    test_fleet_start_all(fleet);
+
+    /* Every assert below can return early */
+    TEST_ASSERT(test_latch_wait_timeout(&fix->held, 5000));
 
     /* Worker holds this right now */
-    TEST_ASSERT_TRUE(mutex_locked(&assert_cross_thread_mutex));
-    MUTEX_ASSERT_NOT_HELD(&assert_cross_thread_mutex);
+    TEST_ASSERT_TRUE(mutex_locked(&fix->lock));
+    MUTEX_ASSERT_NOT_HELD(&fix->lock);
 
-    atomic_store_explicit(&assert_cross_thread_release, true,
-                          memory_order_release);
-    thread_join(th);
+    test_latch_set(&fix->release);
 
-    MUTEX_ASSERT_NOT_HELD(&assert_cross_thread_mutex);
+    struct test_verdict v = test_fleet_join(fleet);
+    if (v.result != TEST_RESULT_OK)
+        return v;
 
+    MUTEX_ASSERT_NOT_HELD(&fix->lock);
     return TEST_SUCCESS;
 }
 

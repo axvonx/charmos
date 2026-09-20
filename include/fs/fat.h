@@ -75,8 +75,7 @@ struct fat32_ext_bpb {
     uint8_t reserved2[420];
 } cc_packed;
 
-_Static_assert(sizeof(struct fat12_16_ext_bpb) == sizeof(struct fat32_ext_bpb),
-               "");
+static_assert(sizeof(struct fat12_16_ext_bpb) == sizeof(struct fat32_ext_bpb));
 
 struct fat_bpb {
     uint8_t jump_boot[3];
@@ -126,7 +125,7 @@ struct fat_dirent {
     uint16_t low_cluster; // Low 16 bits of cluster number
     uint32_t filesize;
 } cc_packed;
-_Static_assert(sizeof(struct fat_dirent) == 32, "");
+static_assert(sizeof(struct fat_dirent) == 32);
 
 struct fat_fs {
     enum fat_fstype type;

@@ -14,13 +14,10 @@ static void sched_push_try(void *arg) {
     atomic_store(&at_least_one_migrated, true);
 }
 
-TEST_DECLARE_INTEGRATION(sched, push_target, TEST_INTENSITY(32, 256, 1024)) {
+TEST_DECLARE_INTEGRATION(sched, push_target, TEST_INTENSITY(32, 256, 1024),
+                         .min_cores = 2) {
     test_info("This test takes a bit. uncomment me to run it");
     return TEST_SKIP(TEST_SKIP_NONE);
-
-    if (global.core_count < 2) {
-        return TEST_SKIP(TEST_SKIP_NONE);
-    }
 
     size_t count = ctx->intensity_val ? ctx->intensity_val : 256;
     if (count > SCHED_PUSH_TEST_THREADS_MAX)

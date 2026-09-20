@@ -66,7 +66,7 @@ struct globals global = {0};
 
 #define BEHAVIOR /* avoids undefined behavior */
 
-cc_no_sanitize_address void k_main(void) {
+cc_no_asan void k_main(void) {
     irq_disable();
     global.core_count = mp_request.response->cpu_count;
     global.hhdm_offset = hhdm_request.response->offset;

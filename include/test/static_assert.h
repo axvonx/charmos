@@ -12,8 +12,8 @@
     ct_assert_offset(type, member, expected_offset)
 
 #define ct_assert_disjoint_masks(mask1, mask2)                                 \
-    _Static_assert(((mask1) & (mask2)) == 0,                                   \
-                   "masks " #mask1 " and " #mask2 " overlap")
+    static_assert(((mask1) & (mask2)) == 0,                                    \
+                  "masks " #mask1 " and " #mask2 " overlap")
 
 #define static_assert_disjoint_masks(mask1, mask2)                             \
     ct_assert_disjoint_masks(mask1, mask2)

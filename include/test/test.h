@@ -4,6 +4,7 @@
 #include <compiler/core.h>
 #include <console/printf.h>
 #include <err.h>
+#include <fs/detect.h>
 #include <log.h>
 #include <math/fixed.h>
 #include <math/units.h>
@@ -16,6 +17,7 @@
 
 typedef void (*test_fn_t)(void);
 struct test_context;
+struct test_fleet;
 
 enum test_tier {
     TEST_TIER_SMOKE,
@@ -58,6 +60,8 @@ enum test_skip_reason {
                                   failed */
     TEST_SKIP_DISABLED,        /* not the same as .enabled, just that the test
                                 * won't be getting run for some reason */
+    TEST_SKIP_INSUFFICIENT_CORES, /* fewer online cores than .min_cores */
+    TEST_SKIP_UNSUPPORTED_FS,     /* mounted root is not .required_fs */
 };
 
 enum test_state : uint8_t {
@@ -166,6 +170,11 @@ struct test {
 
     size_t run_times;
 
+    /* TODO: typed sz_*_t */
+    size_t min_cores;
+    size_t min_ram_mb;
+    enum fs_type required_fs;
+
     size_t inject_count;
     struct inject_site *inject[];
 };
@@ -178,6 +187,8 @@ struct test {
  * and the answer is that struct test_context gives us extensibility,
  * and allows a test to get run numerous different times with varied
  * contexts, seeds, etc. without having to fiddle around with struct test */
+#define TEST_FAIL_MSG_MAX 512
+
 struct test_context {
     struct log_site *site;
     struct log_handle handle;
@@ -189,12 +200,32 @@ struct test_context {
     time_ms_t duration_ms;
 
     uint64_t seed;
+
+    /* Workers put their data into here */
+    char fail_msg[TEST_FAIL_MSG_MAX];
+
+    /* Allocated by the runner */
+    struct test_fleet *fleet;
 };
 
 struct test_verdict {
     enum test_result result;
     enum test_skip_reason skip_reason;
     const char *msg; /* optional, e.g. the failed assertion  */
+};
+
+struct test_globals {
+    fx32_32_t global_intensity;
+    size_t total_tests_enabled;
+    size_t results[TEST_TIER_MAX][TEST_RESULT_MAX];
+    size_t results_agg[TEST_RESULT_MAX];
+    struct test_context *current_test;
+    time_ms_t total_time;
+    bool show_output;
+    bool group_opt_in;
+    bool test_opt_in;
+    bool no_exit;
+    bool no_progress;
 };
 
 #define TEST_EXIT_OK 0
@@ -211,20 +242,6 @@ struct test_verdict {
     (struct scaled_param) {                                                    \
         .min_val = SIZE_MAX, .def_val = SIZE_MAX, .max_val = SIZE_MAX          \
     }
-
-struct test_globals {
-    fx32_32_t global_intensity;
-    size_t total_tests_enabled;
-    size_t results[TEST_TIER_MAX][TEST_RESULT_MAX];
-    size_t results_agg[TEST_RESULT_MAX];
-    struct test_context *current_test;
-    time_ms_t total_time;
-    bool show_output;
-    bool group_opt_in;
-    bool test_opt_in;
-    bool no_exit;
-    bool no_progress;
-};
 
 #define TEST_GROUP_NONE test_group_orphan_parent
 #define TEST_GROUP(name) &(__test_group_##name)
@@ -251,6 +268,9 @@ struct test_globals {
                            .tier = TEST_TIER_UNIT,                             \
                            .intensity = TEST_INTENSITY_SENTINEL,               \
                            .intensity_desc = TEST_INTENSITY_DESC_SENTINEL,     \
+                           .min_cores = 0,                                     \
+                           .min_ram_mb = 0,                                    \
+                           .required_fs = FS_UNKNOWN,                          \
                            ##__VA_ARGS__};                                     \
                                                                                \
     static struct test_verdict __test_fn_##grp##_##id(                         \
@@ -336,7 +356,7 @@ static inline const char *test_result_to_str(enum test_result result) {
     }
 }
 
-static inline const char *test_result_plain(enum test_result result) {
+static inline const char *test_result_to_str_plain(enum test_result result) {
     switch (result) {
     case TEST_RESULT_OK: return "ok";
     case TEST_RESULT_FAILED: return "failed";
@@ -352,6 +372,8 @@ test_skip_reason_to_str(enum test_skip_reason reason) {
     case TEST_SKIP_RAM_LOW: return "RAM low";
     case TEST_SKIP_UPSTREAM_FAILED: return "upstream failed";
     case TEST_SKIP_DISABLED: return "disabled";
+    case TEST_SKIP_INSUFFICIENT_CORES: return "insufficient cores";
+    case TEST_SKIP_UNSUPPORTED_FS: return "unsupported fs";
     default: unreachable();
     }
 }

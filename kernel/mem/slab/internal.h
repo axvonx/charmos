@@ -811,8 +811,8 @@ static inline bool slab_cache_is_pageable(struct slab_cache *c) {
     return c->type == SLAB_TYPE_PAGEABLE || c->type == SLAB_TYPE_PAGEABLE_ZERO;
 }
 
-static inline cc_no_sanitize_address bool
-is_buffer_uniform(const void *ptr, size_t len, uint8_t value) {
+static inline cc_no_asan bool is_buffer_uniform(const void *ptr, size_t len,
+                                                uint8_t value) {
     const uint8_t *byte_ptr = (const uint8_t *) ptr;
 
     for (size_t i = 0; i < len; i++)

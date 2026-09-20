@@ -13,12 +13,7 @@ TEST_GROUP_DECLARE(bio, .intensity_desc = {
                             .unit = "ios",
                         });
 
-#define EXT2_INIT                                                              \
-    if (global.root_node->fs_type != FS_EXT2) {                                \
-        test_info("the mounted root is not ext2");                             \
-        return TEST_SKIP(TEST_SKIP_NONE);                                      \
-    }                                                                          \
-    struct vfs_node *root = global.root_node;
+#define EXT2_ROOT struct vfs_node *root = global.root_node
 
 static atomic_bool done = false;
 static void bio_callback(struct bio_request *req) {
@@ -26,8 +21,9 @@ static void bio_callback(struct bio_request *req) {
     done = true;
 }
 
-TEST_DECLARE_INTEGRATION(bio, async_submit, TEST_INTENSITY(1, 1, 16)) {
-    EXT2_INIT;
+TEST_DECLARE_INTEGRATION(bio, async_submit, TEST_INTENSITY(1, 1, 16),
+                         .required_fs = FS_EXT2) {
+    EXT2_ROOT;
     struct ext2_fs *fs = root->fs_data;
     struct block_device *d = fs->drive;
     uint64_t run_times = ctx->intensity_val ? ctx->intensity_val : 1;

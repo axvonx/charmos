@@ -38,10 +38,8 @@ static void handoff_free(void *arg) {
     h->valid &= !vas_vaddr_is_allocated(h->vas, h->addr);
 }
 
-TEST_DECLARE_INTEGRATION(vas, cross_cpu_free_without_any_free_gap) {
-    if (global.core_count < 2)
-        return TEST_SKIP(TEST_SKIP_NONE);
-
+TEST_DECLARE_INTEGRATION(vas, cross_cpu_free_without_any_free_gap,
+                         .min_cores = 2) {
     struct handoff h = {
         .vas = vas_create(SMP_VAS_BASE, SMP_VAS_BASE + VAS_CHUNK_SIZE),
         .size = VAS_CHUNK_SIZE,
@@ -99,10 +97,8 @@ static void concurrent_churn(void *arg) {
     }
 }
 
-TEST_DECLARE_INTEGRATION(vas, concurrent_import_query_and_reclaim) {
-    if (global.core_count < 2)
-        return TEST_SKIP(TEST_SKIP_NONE);
-
+TEST_DECLARE_INTEGRATION(vas, concurrent_import_query_and_reclaim,
+                         .min_cores = 2) {
     struct vas *vas =
         vas_create(SMP_VAS_BASE, SMP_VAS_BASE + 8 * VAS_CHUNK_SIZE);
 
@@ -146,10 +142,8 @@ static bool vas_run_on(size_t cpu, void (*entry)(void *), void *arg) {
     return true;
 }
 
-TEST_DECLARE_INTEGRATION(vas, magazine_remote_free_does_not_cache) {
-    if (global.core_count < 2)
-        return TEST_SKIP(TEST_SKIP_NONE);
-
+TEST_DECLARE_INTEGRATION(vas, magazine_remote_free_does_not_cache,
+                         .min_cores = 2) {
     struct handoff h = {
         .vas = vas_create(SMP_VAS_BASE, SMP_VAS_BASE + VAS_CHUNK_SIZE),
         .size = PAGE_SIZE,
@@ -233,9 +227,8 @@ static void visibility_observer(void *arg) {
     }
 }
 
-TEST_DECLARE_INTEGRATION(vas, magazine_remote_visibility_and_drain) {
-    if (global.core_count < 2)
-        return TEST_SKIP(TEST_SKIP_NONE);
+TEST_DECLARE_INTEGRATION(vas, magazine_remote_visibility_and_drain,
+                         .min_cores = 2) {
     struct magazine_visibility v = {
         .vas = vas_create(SMP_VAS_BASE, SMP_VAS_BASE + VAS_CHUNK_SIZE),
     };
@@ -272,9 +265,7 @@ static void budget_free(void *arg) {
             vas_free(w->vas, w->addresses[i], PAGE_2MB);
 }
 
-TEST_DECLARE_INTEGRATION(vas, magazine_per_vas_byte_budget) {
-    if (global.core_count < 2)
-        return TEST_SKIP(TEST_SKIP_NONE);
+TEST_DECLARE_INTEGRATION(vas, magazine_per_vas_byte_budget, .min_cores = 2) {
     struct vas *vas =
         vas_create(SMP_VAS_BASE, SMP_VAS_BASE + 4 * VAS_CHUNK_SIZE);
     TEST_ASSERT_NONNULL(vas);

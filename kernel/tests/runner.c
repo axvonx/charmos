@@ -5,6 +5,7 @@
 #include <console/statusbar.h>
 #include <console/term.h>
 #include <crypto/prng.h>
+#include <fs/vfs.h>
 #include <global.h>
 #include <irq/irq.h>
 #include <math/align.h>
@@ -18,6 +19,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <test/export.h>
+#include <test/fleet.h>
 #include <test/test.h>
 #include <time/spin_sleep.h>
 #include <time/time.h>
@@ -224,6 +226,20 @@ CMDLINE_SCHEMA_DECLARE(
         .desc = "Run tiers incrementally (smoke -> unit -> integration)"),
     CMDLINE_SCHEMA_PROP(struct test_group, exit_on_fail,
                         .desc = "Exit after first test fails"));
+
+static enum test_skip_reason test_check_preconditions(const struct test *t) {
+    if (t->min_cores && global.core_count < t->min_cores)
+        return TEST_SKIP_INSUFFICIENT_CORES;
+
+    if (t->min_ram_mb && pmm_get_usable_ram() < MB(t->min_ram_mb))
+        return TEST_SKIP_RAM_LOW;
+
+    if (t->required_fs != FS_UNKNOWN &&
+        (!global.root_node || global.root_node->fs_type != t->required_fs))
+        return TEST_SKIP_UNSUPPORTED_FS;
+
+    return TEST_SKIP_NONE;
+}
 
 static void tests_set_enabled_states() {
 #ifdef TEST_ENABLED
@@ -636,7 +652,8 @@ static void test_group_run(struct test_group *tg) {
 
             size_t result_times[TEST_RESULT_MAX] = {0}, run_times = 0;
 
-            struct test_verdict *verdicts = kmalloc_or_die(
+            /* TODO: allocation failure */
+            struct test_verdict *verdicts = kmalloc(
                 sizeof(struct test_verdict) * t->run_times, ALLOC_FLAGS_ZERO);
             struct test_verdict singular_verdict = {0};
 
@@ -653,8 +670,21 @@ static void test_group_run(struct test_group *tg) {
             test_ndjson_info("test start: %s:%s (%s)", tg->name, t->name,
                              test_tier_plain(i));
 
+            enum test_skip_reason precond = test_check_preconditions(t);
+
             for (; run_times < t->run_times; run_times++) {
-                struct test_verdict verdict = t->func(&tctx);
+                struct test_verdict verdict;
+                if (precond != TEST_SKIP_NONE) {
+                    verdict = TEST_SKIP(precond);
+                } else {
+                    verdict = t->func(&tctx);
+                }
+
+                if (test_fleet_teardown(&tctx) &&
+                    verdict.result != TEST_RESULT_FAILED) {
+                    verdict = TEST_FAIL("test returned without joining its "
+                                        "fleet");
+                }
                 singular_verdict = verdict;
                 verdicts[run_times] = verdict;
 
@@ -670,15 +700,16 @@ static void test_group_run(struct test_group *tg) {
                     break;
 
                 tctx.seed = !t->seed ? prng_next() : t->seed;
+                tctx.fail_msg[0] = '\0';
             }
             time_ms_t end_ms = time_get_ms();
             time_ms_t took = end_ms - start_ms;
             total_time += took;
             test_global.total_time += took;
 
-            test_ndjson_info("test finished: %s:%s -> %s in %zu ms", tg->name,
-                             t->name,
-                             test_result_plain(singular_verdict.result), took);
+            test_ndjson_info(
+                "test finished: %s:%s -> %s in %zu ms", tg->name, t->name,
+                test_result_to_str_plain(singular_verdict.result), took);
 
             size_t non_skipped = run_times - result_times[TEST_RESULT_SKIPPED];
 
@@ -862,21 +893,27 @@ static void test_global_aggregate_results() {
 
 static bool sig_str_equal(const char *s1, const char *s2) {
     while (*s1 && *s2) {
-        while (*s1 == ' ' || *s1 == '\t')
+        while (isspace(*s1))
             s1++;
-        while (*s2 == ' ' || *s2 == '\t')
+
+        while (isspace(*s2))
             s2++;
+
         if (*s1 != *s2)
             return false;
+
         if (*s1) {
             s1++;
             s2++;
         }
     }
-    while (*s1 == ' ' || *s1 == '\t')
+
+    while (isspace(*s1))
         s1++;
-    while (*s2 == ' ' || *s2 == '\t')
+
+    while (isspace(*s2))
         s2++;
+
     return *s1 == *s2;
 }
 

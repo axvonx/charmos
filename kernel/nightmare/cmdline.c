@@ -19,7 +19,7 @@ static time_ns_t nightmare_duration_ns;
 static time_ns_t nightmare_drain_grace_ns = SECONDS_TO_NS(20);
 static time_ns_t nightmare_stat_interval_ns = SECONDS_TO_NS(5);
 static time_ns_t nightmare_stall_threshold_ns = MS_TO_NS(3000);
-static enum nightmare_on_stall nightmare_on_stall = NIGHTMARE_ON_STALL_REPORT;
+static enum test_on_stall nightmare_on_stall = TEST_ON_STALL_REPORT;
 static uint64_t nightmare_boot_index;
 static const char *nightmare_campaign_id;
 
@@ -51,10 +51,10 @@ CMDLINE_CHILDREN_DECLARE(
                            .range = RANGE(MS_TO_NS(100), TIME_NS_MAX)),
     CMDLINE_INNER_VAR(on_stall, nightmare_on_stall, .desc = "Stall response",
                       .mappings = CMDLINE_MAPPINGS(
-                          CMDLINE_MAP("report", NIGHTMARE_ON_STALL_REPORT),
-                          CMDLINE_MAP("crash", NIGHTMARE_ON_STALL_CRASH),
-                          CMDLINE_MAP("snapshot", NIGHTMARE_ON_STALL_CRASH),
-                          CMDLINE_MAP("terminal", NIGHTMARE_ON_STALL_CRASH))),
+                          CMDLINE_MAP("report", TEST_ON_STALL_REPORT),
+                          CMDLINE_MAP("crash", TEST_ON_STALL_CRASH),
+                          CMDLINE_MAP("snapshot", TEST_ON_STALL_CRASH),
+                          CMDLINE_MAP("terminal", TEST_ON_STALL_CRASH))),
     CMDLINE_INNER_VAR(boot_index, nightmare_boot_index,
                       .desc = "Opaque campaign boot index"),
     CMDLINE_INNER_STRING(campaign_id, nightmare_campaign_id,

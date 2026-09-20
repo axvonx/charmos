@@ -5,6 +5,11 @@ struct scheduler *scheduler_select_best_for_thread(struct thread *t) {
     if (thread_test_flag(t, THREAD_FLAG_PINNED) && t->scheduler)
         return t->scheduler;
 
+    /* IMPORTANT NOTE: If a thread that was newly spawned as PINNED,
+     * we do NOT fail the selection. We select as if it's simply
+     * a non-pinned thread. We've got read consumers of this behavior,
+     * notably, in the testing infrastructure, so if we
+     * make changes, we'll need to preserve this */
     struct scheduler *sched = NULL;
     size_t i, min_load = SIZE_MAX;
     cpu_mask_for_each(i, t->allowed_cpus) {
@@ -20,7 +25,8 @@ struct scheduler *scheduler_select_best_for_thread(struct thread *t) {
         }
     }
 
-    return kassert(sched);
+    return kassert(
+        sched, "No scheduler was found, likely due to allowed_cpus being 0");
 }
 
 /* Only scheduler entries are object completion and APC execution */

@@ -32,9 +32,8 @@ static void mt_kmalloc_worker(void *arg) {
 }
 
 TEST_DECLARE_INTEGRATION(slab, multithreaded_alloc_free,
-                         TEST_INTENSITY_CORES(1, 2, 4, "threads/core")) {
-    ABORT_IF_RAM_LOW();
-
+                         TEST_INTENSITY_CORES(1, 2, 4, "threads/core"),
+                         .min_ram_mb = 8) {
     size_t nthreads = ctx->intensity_val ? ctx->intensity_val : 8;
     struct thread **threads = kmalloc(sizeof(struct thread *) * nthreads);
     TEST_ASSERT_NONNULL(threads);

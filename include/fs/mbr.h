@@ -17,4 +17,4 @@ struct mbr {
     struct mbr_partition_entry partitions[4];
     uint16_t signature;
 } cc_packed;
-_Static_assert(sizeof(struct mbr) == 512, "");
+static_assert(sizeof(struct mbr) == 512);

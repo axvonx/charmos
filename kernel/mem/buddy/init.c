@@ -96,7 +96,7 @@ void buddy_add_entry(struct page *page_array, struct limine_memmap_entry *entry,
     }
 }
 
-static void mid_init_buddy(size_t pages_needed) {
+static cc_no_asan void mid_init_buddy(size_t pages_needed) {
     bool found = false;
 
     for (uint64_t i = 0; i < memmap->entry_count && !found; i++) {

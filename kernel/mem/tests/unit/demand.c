@@ -73,9 +73,8 @@ static void dp_join(struct thread **t, size_t nthreads) {
 }
 
 /* 1 buffer, N threads, 1 CPU = serialized faults + preemption mid-handler */
-TEST_DECLARE_UNIT(mem, demand_single_buf_up, TEST_INTENSITY(2, 8, 32)) {
-    ABORT_IF_RAM_LOW();
-
+TEST_DECLARE_UNIT(mem, demand_single_buf_up, TEST_INTENSITY(2, 8, 32),
+                  .min_ram_mb = 8) {
     size_t nthreads =
         MIN(ctx->intensity_val ? ctx->intensity_val : 8, DP_MAX_THREADS);
     const size_t pages = DP_PAGES, nbuf = 1;

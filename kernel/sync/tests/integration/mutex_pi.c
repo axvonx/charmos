@@ -139,11 +139,7 @@ static void pi_chain_rt(void *arg) {
     atomic_fetch_add(&pi_chain_done, 1);
 }
 
-TEST_DECLARE_INTEGRATION(mutex, pi_chain) {
-    if (global.core_count < 2) {
-        return TEST_SKIP(TEST_SKIP_NONE);
-    }
-
+TEST_DECLARE_INTEGRATION(mutex, pi_chain, .min_cores = 2) {
     atomic_store(&pi_chain_done, 0);
     atomic_store(&ts1_grabbed_a, false);
     atomic_store(&ts2_grabbed_b, false);
@@ -211,11 +207,8 @@ static void pi_multi_rt(void *arg) {
 }
 
 TEST_DECLARE_INTEGRATION(mutex, pi_multi_waiters,
-                         TEST_INTENSITY_LINEAR(2, 2, 8, "rt_waiters")) {
-    if (global.core_count < 2) {
-        return TEST_SKIP(TEST_SKIP_NONE);
-    }
-
+                         TEST_INTENSITY_LINEAR(2, 2, 8, "rt_waiters"),
+                         .min_cores = 2) {
     size_t num_rt = ctx->intensity_val ? ctx->intensity_val : 2;
     if (num_rt < 1)
         num_rt = 1;
@@ -285,11 +278,7 @@ static void pi_revert_rt(void *arg) {
     atomic_fetch_add(&pi_reverted_done, 1);
 }
 
-TEST_DECLARE_INTEGRATION(mutex, pi_revert) {
-    if (global.core_count < 2) {
-        return TEST_SKIP(TEST_SKIP_NONE);
-    }
-
+TEST_DECLARE_INTEGRATION(mutex, pi_revert, .min_cores = 2) {
     atomic_store(&pi_reverted, false);
     atomic_store(&pi_revert_got, false);
     atomic_store(&pi_reverted_done, 0);

@@ -1,5 +1,7 @@
 #include "sync/tests/test_internal.h"
 
+#include <test/fleet.h>
+
 TEST_GROUP_DECLARE(qspinlock);
 
 TEST_DECLARE_UNIT(qspinlock, tail_encoding) {
@@ -52,42 +54,44 @@ TEST_DECLARE_UNIT(qspinlock, pending_to_locked_math) {
 #define QSPINLOCK_CONTENTION_THREADS 12
 #define QSPINLOCK_CONTENTION_ITERS 300
 
-static struct qspinlock qspinlock_contention_lock = QSPINLOCK_INIT;
-static atomic_bool qspinlock_contention_start = false;
-static _Atomic size_t qspinlock_contention_count = 0;
+struct qspin_contention_fix {
+    struct qspinlock lock;
+    _Atomic size_t count;
+};
 
-static void qspinlock_contention_worker(void *arg) {
-    cc_var_unused(arg);
-    while (!atomic_load(&qspinlock_contention_start))
-        cpu_pause();
+static bool qspinlock_contention_worker(struct test_fleet *f,
+                                        struct test_conc_worker *w) {
+    struct qspin_contention_fix *fix = w->arg;
+    cc_var_unused(f);
 
     for (size_t i = 0; i < QSPINLOCK_CONTENTION_ITERS; i++) {
-        enum irql irql = qspin_lock(&qspinlock_contention_lock);
-        atomic_fetch_add(&qspinlock_contention_count, 1);
-        qspin_unlock(&qspinlock_contention_lock, irql);
+        enum irql irql = qspin_lock(&fix->lock);
+        atomic_fetch_add(&fix->count, 1);
+        qspin_unlock(&fix->lock, irql);
     }
+
+    return true;
 }
 
-TEST_DECLARE_INTEGRATION(qspinlock, contended_handoff) {
-    if (global.core_count < 2)
-        return TEST_SKIP(TEST_SKIP_NONE);
+TEST_DECLARE_INTEGRATION(qspinlock, contended_handoff, .min_cores = 2) {
+    struct test_fleet *fleet = test_fleet_init(ctx, NULL);
+    TEST_ASSERT_NONNULL(fleet);
 
-    atomic_store(&qspinlock_contention_start, false);
-    atomic_store(&qspinlock_contention_count, 0);
-
-    struct thread *workers[QSPINLOCK_CONTENTION_THREADS];
-    for (size_t i = 0; i < QSPINLOCK_CONTENTION_THREADS; i++) {
-        workers[i] = thread_spawn_joinable("qspin_contend",
-                                           qspinlock_contention_worker, NULL);
-        TEST_ASSERT_NONNULL(workers[i]);
-    }
-
-    atomic_store(&qspinlock_contention_start, true);
+    struct qspin_contention_fix *fix = test_fleet_alloc(fleet, sizeof(*fix));
+    TEST_ASSERT_NONNULL(fix);
+    fix->lock = (struct qspinlock) QSPINLOCK_INIT;
 
     for (size_t i = 0; i < QSPINLOCK_CONTENTION_THREADS; i++)
-        thread_join(workers[i]);
+        TEST_ASSERT_NONNULL(test_fleet_spawn(fleet, "qspin_contend",
+                                             qspinlock_contention_worker, fix));
 
-    TEST_ASSERT_EQ(atomic_load(&qspinlock_contention_count),
+    test_fleet_start_all(fleet);
+
+    struct test_verdict v = test_fleet_join(fleet);
+    if (v.result != TEST_RESULT_OK)
+        return v;
+
+    TEST_ASSERT_EQ(atomic_load(&fix->count),
                    QSPINLOCK_CONTENTION_THREADS * QSPINLOCK_CONTENTION_ITERS);
 
     return TEST_SUCCESS;

@@ -73,7 +73,7 @@ struct page {
 struct page_table {
     pte_t entries[512];
 } cc_packed;
-_Static_assert(sizeof(struct page_table) == PAGE_SIZE, "");
+static_assert(sizeof(struct page_table) == PAGE_SIZE);
 
 static inline enum page_tag page_get_tag(const struct page *p) {
     return (enum page_tag)(p->meta & PAGE_TAG_MASK);

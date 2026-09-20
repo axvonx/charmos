@@ -13,10 +13,10 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <test/conc.h>
 #include <types/types.h>
 
 struct nightmare_ctx;
-struct nightmare_worker;
 struct thread;
 
 enum nightmare_exit_code {
@@ -26,9 +26,6 @@ enum nightmare_exit_code {
     NIGHTMARE_EXIT_STALL = 5,
     NIGHTMARE_EXIT_SKIP = 6,
 };
-
-#define NIGHTMARE_INTENSITY_SENTINEL ((fx32_32_t) - 1LL)
-#define NIGHTMARE_INTENSITY_DEFAULT FX(0.5)
 
 enum nightmare_seed_policy : uint8_t {
     NIGHTMARE_SEED_IGNORED = 0,
@@ -73,14 +70,6 @@ enum nightmare_skip_reason : uint8_t {
     NIGHTMARE_SKIP_PREPARE_REFUSED,
 };
 
-enum nightmare_stop : uint8_t {
-    NM_RUN = 0,
-    NM_STOP_BUDGET,
-    NM_STOP_FINDING,
-    NM_STOP_FAIL,
-    NM_STOP_STALL,
-};
-
 enum nightmare_finding_tier : uint8_t {
     NIGHTMARE_TIER_AMBIGUOUS = 0,
     NIGHTMARE_TIER_CONFIDENT,
@@ -93,25 +82,11 @@ struct nightmare_verdict {
     const char *msg;
 };
 
-#define NIGHTMARE_OK                                                           \
-    ((struct nightmare_verdict) {.result = NIGHTMARE_RESULT_OK})
-#define NIGHTMARE_FAIL(reason_, msg_)                                          \
-    ((struct nightmare_verdict) {                                              \
-        .result = NIGHTMARE_RESULT_FAIL, .reason = (reason_), .msg = (msg_)})
-#define NIGHTMARE_SKIP(reason_)                                                \
-    ((struct nightmare_verdict) {.result = NIGHTMARE_RESULT_SKIP,              \
-                                 .skip_reason = (reason_)})
-
-struct nightmare_rng {
-    uint64_t state;
-};
-
-struct nightmare_worker {
-    size_t index;
-    const char *role;
-    struct nightmare_rng rng;
-    _Atomic(struct thread *) th;
-    atomic_bool parked;
+struct nightmare_finding_site {
+    const char *kind;
+    enum nightmare_finding_tier tier;
+    const char *file;
+    uint32_t line;
 };
 
 struct nightmare_ctx {
@@ -129,7 +104,7 @@ struct nightmare_ctx {
 
 struct nightmare_ops {
     struct nightmare_verdict (*prepare)(struct nightmare_ctx *);
-    void (*worker)(struct nightmare_ctx *, struct nightmare_worker *);
+    void (*worker)(struct nightmare_ctx *, struct test_conc_worker *);
     struct nightmare_verdict (*quiesce_check)(struct nightmare_ctx *);
     void (*probe)(struct nightmare_ctx *);
     struct nightmare_verdict (*finish)(struct nightmare_ctx *);
@@ -165,6 +140,8 @@ LINKER_SECTION_DEFINE(struct nightmare, nightmares);
 #define NIGHTMARE_DEFINE(id) extern struct nightmare __nightmare_##id
 #define NIGHTMARE_PERTURB(...) ((const char *const[]) {__VA_ARGS__, NULL})
 
+#define NIGHTMARE_INTENSITY_SENTINEL ((fx32_32_t) - 1LL)
+#define NIGHTMARE_INTENSITY_DEFAULT FX(0.5)
 #define NIGHTMARE_INTENSITY_CORES(min_, def_, max_, unit_)                     \
     .intensity_desc = {.curve = SCALE_CORE_MULTIPLIER,                         \
                        .min_val = (min_),                                      \
@@ -174,7 +151,7 @@ LINKER_SECTION_DEFINE(struct nightmare, nightmares);
 
 #define NIGHTMARE_WORKER(id)                                                   \
     static void id(struct nightmare_ctx *NM_CTX cc_unused,                     \
-                   struct nightmare_worker *NM_SELF cc_unused)
+                   struct test_conc_worker *NM_SELF cc_unused)
 
 #define NIGHTMARE_OPTIONS_DECLARE(id, struct_type, instance, ...)              \
     static void *__nightmare_options_resolve_##id(const char *path,            \
@@ -188,27 +165,17 @@ LINKER_SECTION_DEFINE(struct nightmare, nightmares);
                            "Nightmare subject options",                        \
                            __nightmare_options_resolve_##id, __VA_ARGS__)
 
-struct nightmare_progress_counter {
-    _Atomic uint64_t count;
-};
+#define NIGHTMARE_OK                                                           \
+    ((struct nightmare_verdict) {.result = NIGHTMARE_RESULT_OK})
+#define NIGHTMARE_FAIL(reason_, msg_)                                          \
+    ((struct nightmare_verdict) {                                              \
+        .result = NIGHTMARE_RESULT_FAIL, .reason = (reason_), .msg = (msg_)})
+#define NIGHTMARE_SKIP(reason_)                                                \
+    ((struct nightmare_verdict) {.result = NIGHTMARE_RESULT_SKIP,              \
+                                 .skip_reason = (reason_)})
 
-PERCPU_DEFINE(nightmare_progress, struct nightmare_progress_counter);
-
-static inline void nightmare_progress_tick(void) {
-    /* No contract enforced at this level, tests do whatever,
-     * this is a heuristic anyways */
-    atomic_fetch_add_explicit(&PERCPU_PTR(TOPC_NONE, nightmare_progress)->count,
-                              1, memory_order_relaxed);
-}
-
-#define NIGHTMARE_PROGRESS() nightmare_progress_tick()
-
-struct nightmare_finding_site {
-    const char *kind;
-    enum nightmare_finding_tier tier;
-    const char *file;
-    uint32_t line;
-};
+/* Subjects keep their own spelling; the counter itself is shared. */
+#define NIGHTMARE_PROGRESS() TEST_PROGRESS()
 
 #define NIGHTMARE_FINDING(kind_, fmt, ...)                                     \
     nightmare_finding_at(                                                      \
@@ -227,25 +194,14 @@ struct nightmare_finding_site {
                                                 .line = __LINE__},             \
         (discriminator_), (fmt), ##__VA_ARGS__)
 
-struct nightmare_stall_evidence {
-    time_ms_t silent_ms;
-    uint64_t progress;
-    cpu_id_t observer_cpu;
-};
-
 void nightmare_run(void);
 bool nightmare_must_stop(void);
-bool nightmare_must_stop_irq(void);
 void nightmare_stop_after_finding(void);
 bool nightmare_must_park(void);
-void nightmare_park(struct nightmare_worker *worker);
-static inline uint64_t nightmare_rand(struct nightmare_rng *rng) {
-    return prng_splitmix64_next(&rng->state);
-}
-uint64_t nightmare_progress_sum_irq(void);
+void nightmare_park(struct test_conc_worker *worker);
 void nightmare_finding_at(const struct nightmare_finding_site *site,
                           uint64_t discriminator, const char *fmt, ...)
     cc_printf_like(3, 4);
 void nightmare_request_external_fail(const char *kind, uint64_t discriminator,
                                      const char *fmt, ...) cc_printf_like(3, 4);
-void nightmare_report_stall(const struct nightmare_stall_evidence *evidence);
+void nightmare_report_stall(const struct test_stall_evidence *evidence);

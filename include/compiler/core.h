@@ -30,11 +30,11 @@
 #define cc_flatten __attribute__((flatten))
 #define cc_nodebug __attribute__((nodebug))
 
-#define cc_no_sanitize_address __attribute__((no_sanitize("address")))
-#define cc_no_sanitize_undefined __attribute__((no_sanitize("undefined")))
-#define cc_no_sanitize_thread __attribute__((no_sanitize("thread")))
-#define cc_no_sanitize_memory __attribute__((no_sanitize("memory")))
-#define cc_no_sanitize_coverage __attribute__((no_sanitize("coverage")))
+#define cc_no_asan __attribute__((no_sanitize("address")))
+#define cc_no_ubsan __attribute__((no_sanitize("undefined")))
+#define cc_no_tsan __attribute__((no_sanitize("thread")))
+#define cc_no_msan __attribute__((no_sanitize("memory")))
+#define cc_no_csan __attribute__((no_sanitize("coverage")))
 
 #define cc_deprecated __attribute__((deprecated))
 #define cc_deprecated_msg(msg) __attribute__((deprecated(msg)))
@@ -55,9 +55,9 @@
 #define cc_alloc_align(param_idx) __attribute__((alloc_align(param_idx)))
 
 #if defined(__GNUC__) && !defined(__clang__) && (__GNUC__ >= 11)
-# define cc_dealloc(fn, arg_idx) __attribute__((malloc(fn, arg_idx)))
+#define cc_dealloc(fn, arg_idx) __attribute__((malloc(fn, arg_idx)))
 #else
-# define cc_dealloc(fn, arg_idx)
+#define cc_dealloc(fn, arg_idx)
 #endif
 
 #define cc_error(msg) __attribute__((error(msg)))
@@ -125,6 +125,16 @@
 #define PP_OVERLOAD(name, ...) PP_DISPATCH(name, PP_NARG(__VA_ARGS__))
 #define PP_CALL(name, ...) PP_OVERLOAD(name, __VA_ARGS__)(__VA_ARGS__)
 
+/* The 2 and 3 variants are used when a PP_CALL wants to expand
+ * a PP_CALL (first layer), and when a PP_CALL2 wants to expand
+ * a PP_CALL or PP_CALL2 (second layer). If anyone wants another
+ * layer, they should probably restructure their code */
+#define PP_OVERLOAD2(name, ...) PP_DISPATCH(name, PP_NARG(__VA_ARGS__))
+#define PP_CALL2(name, ...) PP_OVERLOAD2(name, __VA_ARGS__)(__VA_ARGS__)
+
+#define PP_OVERLOAD3(name, ...) PP_DISPATCH(name, PP_NARG(__VA_ARGS__))
+#define PP_CALL3(name, ...) PP_OVERLOAD3(name, __VA_ARGS__)(__VA_ARGS__)
+
 #define PP_CONCAT_(a, b) a##b
 #define PP_CONCAT(a, b) PP_CONCAT_(a, b)
 
@@ -156,31 +166,32 @@
 
 #define static_assert_1(cond) _Static_assert(cond, #cond)
 #define static_assert_2(cond, msg) _Static_assert(cond, msg)
-#define static_assert(...) PP_CALL(static_assert, __VA_ARGS__)
+
+#define static_assert(...) PP_CALL2(static_assert, __VA_ARGS__)
 
 #define ct_assert_size(type, size)                                             \
-    _Static_assert(sizeof(type) == (size), "sizeof(" #type ") != " #size)
+    static_assert(sizeof(type) == (size), "sizeof(" #type ") != " #size)
 
 #define ct_assert_align(type, align)                                           \
-    _Static_assert(_Alignof(type) == (align), "alignof(" #type ") != " #align)
+    static_assert(_Alignof(type) == (align), "alignof(" #type ") != " #align)
 
 #define ct_assert_offset(type, member, offset)                                 \
-    _Static_assert(__builtin_offsetof(type, member) == (offset),               \
-                   "offsetof(" #type ", " #member ") != " #offset)
+    static_assert(__builtin_offsetof(type, member) == (offset),                \
+                  "offsetof(" #type ", " #member ") != " #offset)
 
 #define ct_assert_same_size(type_a, type_b)                                    \
-    _Static_assert(sizeof(type_a) == sizeof(type_b),                           \
-                   "sizeof(" #type_a ") != sizeof(" #type_b ")")
+    static_assert(sizeof(type_a) == sizeof(type_b),                            \
+                  "sizeof(" #type_a ") != sizeof(" #type_b ")")
 
 #define ct_assert_struct_size_eq(__struct, __want)                             \
     ct_assert_size(struct __struct, __want)
 
 #define ct_assert_power_of_two(n)                                              \
-    _Static_assert(((n) > 0 && (((n) & ((n) - 1)) == 0)),                      \
-                   #n " is not a power of two")
+    static_assert(((n) > 0 && (((n) & ((n) - 1)) == 0)),                       \
+                  #n " is not a power of two")
 
 #define ct_assert_nonempty_str(s)                                              \
-    _Static_assert(sizeof(s) > 1, "empty string: " #s)
+    static_assert(sizeof(s) > 1, "empty string: " #s)
 
 #define ct_strong_int(stem, STEM, base, max_)                                  \
     typedef enum : base {                                                      \
@@ -188,7 +199,6 @@
         STEM##_MIN = 0,                                                        \
         STEM##_MAX = (max_),                                                   \
     } stem##_t
-
 
 /* === ct_ Compile-Time Type System & Reflection ==== */
 

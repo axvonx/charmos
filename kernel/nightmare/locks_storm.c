@@ -384,9 +384,9 @@ locks_run_rw_write(struct locks_storm_state *state, size_t worker) {
 
 static enum locks_storm_op_result
 locks_run_spin(struct locks_storm_state *state,
-               struct nightmare_worker *worker) {
+               struct test_conc_worker *worker) {
     enum irql old;
-    if ((nightmare_rand(&worker->rng) & 3) == 0) {
+    if ((test_rng_next(&worker->rng) & 3) == 0) {
         if (!spin_trylock(&state->spin, &old))
             return LOCKS_OP_RETRY;
     } else {
@@ -406,9 +406,9 @@ locks_run_spin(struct locks_storm_state *state,
 
 static enum locks_storm_op_result
 locks_run_qspin(struct locks_storm_state *state,
-                struct nightmare_worker *worker) {
+                struct test_conc_worker *worker) {
     enum irql old;
-    if ((nightmare_rand(&worker->rng) & 3) == 0) {
+    if ((test_rng_next(&worker->rng) & 3) == 0) {
         if (!qspin_trylock(&state->qspin, &old))
             return LOCKS_OP_RETRY;
     } else {
@@ -498,7 +498,7 @@ locks_run_nested(struct locks_storm_state *state, size_t worker) {
 
 static enum locks_storm_op_result
 locks_run_operation(struct locks_storm_state *state,
-                    struct nightmare_worker *worker, enum locks_storm_op op) {
+                    struct test_conc_worker *worker, enum locks_storm_op op) {
     switch (op) {
     case LOCKS_OP_MUTEX: return locks_run_mutex(state, worker->index);
     case LOCKS_OP_MUTEX_SIMPLE:
@@ -518,19 +518,19 @@ locks_run_operation(struct locks_storm_state *state,
 
 static enum locks_storm_op
 locks_choose_operation(struct locks_storm_state *state,
-                       struct nightmare_worker *worker) {
+                       struct test_conc_worker *worker) {
     if (locks_should_inject(state) ||
         (atomic_load_explicit(&state->corruption_injected,
                               memory_order_acquire) &&
          atomic_load_explicit(&state->failure.phase, memory_order_acquire) ==
              LOCKS_FAILURE_EMPTY))
         return LOCKS_OP_MUTEX;
-    return (enum locks_storm_op)(1 + nightmare_rand(&worker->rng) %
+    return (enum locks_storm_op)(1 + test_rng_next(&worker->rng) %
                                          (LOCKS_OP_COUNT - 1));
 }
 
 static void locks_storm_starve(struct locks_storm_state *state,
-                               struct nightmare_worker *worker) {
+                               struct test_conc_worker *worker) {
     struct locks_storm_worker_state *worker_state =
         &state->workers[worker->index];
     atomic_store_explicit(&worker_state->current_op, LOCKS_OP_MUTEX,
@@ -586,7 +586,7 @@ NIGHTMARE_WORKER(locks_storm_worker) {
                                   memory_order_relaxed);
         NIGHTMARE_PROGRESS();
 
-        if (nightmare_rand(&NM_SELF->rng) & 1)
+        if (test_rng_next(&NM_SELF->rng) & 1)
             scheduler_yield();
     }
 }

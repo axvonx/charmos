@@ -80,7 +80,7 @@ static inline void nightmare_perturb_delay(time_us_t interval_us) {
 }
 
 void nightmare_perturb_migrator(struct nightmare_ctx *ctx,
-                                struct nightmare_worker *worker) {
+                                struct test_conc_worker *worker) {
     const struct nightmare_perturb_config *cfg =
         nightmare_perturb_config_lookup("migrator");
     time_us_t interval_us =
@@ -93,14 +93,14 @@ void nightmare_perturb_migrator(struct nightmare_ctx *ctx,
         }
 
         if (ctx->worker_count > 0 && global.core_count > 1) {
-            size_t idx = nightmare_rand(&worker->rng) % ctx->worker_count;
-            struct nightmare_worker *target_worker =
-                &nightmare_runtime.workers[idx];
+            size_t idx = test_rng_next(&worker->rng) % ctx->worker_count;
+            struct test_conc_worker *target_worker =
+                &nightmare_runtime.conc.workers[idx];
             struct thread *target_th =
                 atomic_load_explicit(&target_worker->th, memory_order_acquire);
             if (target_th) {
                 uint64_t target_cpu =
-                    nightmare_rand(&worker->rng) % global.core_count;
+                    test_rng_next(&worker->rng) % global.core_count;
                 thread_set_migration_target(target_th, (int64_t) target_cpu);
             }
         }
@@ -110,7 +110,7 @@ void nightmare_perturb_migrator(struct nightmare_ctx *ctx,
 }
 
 void nightmare_perturb_waker(struct nightmare_ctx *ctx,
-                             struct nightmare_worker *worker) {
+                             struct test_conc_worker *worker) {
     const struct nightmare_perturb_config *cfg =
         nightmare_perturb_config_lookup("waker");
     time_us_t interval_us =
@@ -123,9 +123,9 @@ void nightmare_perturb_waker(struct nightmare_ctx *ctx,
         }
 
         if (ctx->worker_count > 0) {
-            size_t idx = nightmare_rand(&worker->rng) % ctx->worker_count;
-            struct nightmare_worker *target_worker =
-                &nightmare_runtime.workers[idx];
+            size_t idx = test_rng_next(&worker->rng) % ctx->worker_count;
+            struct test_conc_worker *target_worker =
+                &nightmare_runtime.conc.workers[idx];
             struct thread *target_th =
                 atomic_load_explicit(&target_worker->th, memory_order_acquire);
             if (target_th) {
@@ -142,7 +142,7 @@ static void nightmare_apc_probe(void *arg) {
 }
 
 void nightmare_perturb_apc_spammer(struct nightmare_ctx *ctx,
-                                   struct nightmare_worker *worker) {
+                                   struct test_conc_worker *worker) {
     const struct nightmare_perturb_config *cfg =
         nightmare_perturb_config_lookup("apc_spammer");
     time_us_t interval_us =
@@ -155,9 +155,9 @@ void nightmare_perturb_apc_spammer(struct nightmare_ctx *ctx,
         }
 
         if (ctx->worker_count > 0) {
-            size_t idx = nightmare_rand(&worker->rng) % ctx->worker_count;
-            struct nightmare_worker *target_worker =
-                &nightmare_runtime.workers[idx];
+            size_t idx = test_rng_next(&worker->rng) % ctx->worker_count;
+            struct test_conc_worker *target_worker =
+                &nightmare_runtime.conc.workers[idx];
             struct thread *target_th =
                 atomic_load_explicit(&target_worker->th, memory_order_acquire);
             if (target_th && thread_get(target_th)) {
@@ -176,7 +176,7 @@ void nightmare_perturb_apc_spammer(struct nightmare_ctx *ctx,
 }
 
 void nightmare_perturb_stutter(struct nightmare_ctx *ctx,
-                               struct nightmare_worker *worker) {
+                               struct test_conc_worker *worker) {
     cc_var_unused(worker);
     const struct nightmare_perturb_config *cfg =
         nightmare_perturb_config_lookup("stutter");
@@ -190,7 +190,7 @@ void nightmare_perturb_stutter(struct nightmare_ctx *ctx,
             break;
 
         /* Request quiesce */
-        atomic_store_explicit(&nightmare_runtime.quiesce_requested, true,
+        atomic_store_explicit(&nightmare_runtime.conc.quiesce_requested, true,
                               memory_order_release);
 
         /* Wait for all subject workers to park. */
@@ -199,8 +199,9 @@ void nightmare_perturb_stutter(struct nightmare_ctx *ctx,
         while (time_get_ms() < deadline && !nightmare_must_stop()) {
             all_subjects_parked = true;
             for (size_t i = 0; i < ctx->worker_count; i++) {
-                if (!atomic_load_explicit(&nightmare_runtime.workers[i].parked,
-                                          memory_order_acquire)) {
+                if (!atomic_load_explicit(
+                        &nightmare_runtime.conc.workers[i].parked,
+                        memory_order_acquire)) {
                     all_subjects_parked = false;
                     break;
                 }
@@ -215,8 +216,8 @@ void nightmare_perturb_stutter(struct nightmare_ctx *ctx,
                 .result = "aborted",
                 .checks = 0,
             });
-            atomic_store_explicit(&nightmare_runtime.quiesce_requested, false,
-                                  memory_order_release);
+            atomic_store_explicit(&nightmare_runtime.conc.quiesce_requested,
+                                  false, memory_order_release);
             break;
         }
 
@@ -232,7 +233,7 @@ void nightmare_perturb_stutter(struct nightmare_ctx *ctx,
         }
 
         nightmare_record_quiesce(&(struct nightmare_quiesce_record){
-            .result = nightmare_result_string(verdict.result),
+            .result = nightmare_result_to_str(verdict.result),
             .checks = checks,
         });
 
@@ -240,11 +241,11 @@ void nightmare_perturb_stutter(struct nightmare_ctx *ctx,
             nightmare_publish_perturb_verdict(verdict);
 
         /* Release the herd */
-        atomic_store_explicit(&nightmare_runtime.quiesce_requested, false,
+        atomic_store_explicit(&nightmare_runtime.conc.quiesce_requested, false,
                               memory_order_release);
 
         if (verdict.result != NIGHTMARE_RESULT_OK) {
-            nightmare_publish_stop(NM_STOP_FAIL);
+            nightmare_publish_stop(TEST_STOP_FAIL);
             break;
         }
     }
@@ -253,7 +254,7 @@ void nightmare_perturb_stutter(struct nightmare_ctx *ctx,
 #define ALLOC_PRESSURE_SLOTS 64
 
 void nightmare_perturb_alloc_pressure(struct nightmare_ctx *ctx,
-                                      struct nightmare_worker *worker) {
+                                      struct test_conc_worker *worker) {
     cc_var_unused(ctx);
     const struct nightmare_perturb_config *cfg =
         nightmare_perturb_config_lookup("alloc_pressure");
@@ -270,7 +271,7 @@ void nightmare_perturb_alloc_pressure(struct nightmare_ctx *ctx,
             continue;
         }
 
-        size_t slot = nightmare_rand(&worker->rng) % ALLOC_PRESSURE_SLOTS;
+        size_t slot = test_rng_next(&worker->rng) % ALLOC_PRESSURE_SLOTS;
         if (slots[slot]) {
             uint32_t *p = slots[slot];
             size_t words = slot_sizes[slot] / sizeof(uint32_t);
@@ -288,8 +289,8 @@ void nightmare_perturb_alloc_pressure(struct nightmare_ctx *ctx,
             slot_sizes[slot] = 0;
             slot_patterns[slot] = 0;
         } else {
-            size_t size = 16 + (nightmare_rand(&worker->rng) % 8176);
-            uint32_t pat = (uint32_t) nightmare_rand(&worker->rng);
+            size_t size = 16 + (test_rng_next(&worker->rng) % 8176);
+            uint32_t pat = (uint32_t) test_rng_next(&worker->rng);
             void *ptr = kmalloc(size, ALLOC_FLAGS_ZERO);
             if (ptr) {
                 uint32_t *p = ptr;
@@ -314,7 +315,7 @@ void nightmare_perturb_alloc_pressure(struct nightmare_ctx *ctx,
 }
 
 void nightmare_perturb_inject_armer(struct nightmare_ctx *ctx,
-                                    struct nightmare_worker *worker) {
+                                    struct test_conc_worker *worker) {
     cc_var_unused(ctx);
     const struct nightmare_perturb_config *cfg =
         nightmare_perturb_config_lookup("inject_armer");
@@ -339,10 +340,10 @@ void nightmare_perturb_inject_armer(struct nightmare_ctx *ctx,
             continue;
         }
 
-        size_t idx = nightmare_rand(&worker->rng) % site_count;
+        size_t idx = test_rng_next(&worker->rng) % site_count;
         struct inject_site *site = &__skernel_inject_sites[idx];
-        uint32_t seed = (uint32_t) nightmare_rand(&worker->rng);
-        uint32_t nth = 1 + (nightmare_rand(&worker->rng) % 10);
+        uint32_t seed = (uint32_t) test_rng_next(&worker->rng);
+        uint32_t nth = 1 + (test_rng_next(&worker->rng) % 10);
 
         inject_arm(site, seed, nth);
         nightmare_perturb_delay(interval_us);

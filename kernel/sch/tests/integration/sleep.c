@@ -118,12 +118,7 @@ static void waking_thread(void *arg) {
     thread_wait_header_satisfy(&si_wait, THREAD_WAKE_REASON_SLEEP_MANUAL, NULL);
 }
 
-TEST_DECLARE_INTEGRATION(sched, sleep_interruptible_apc) {
-    if (global.core_count < 4) {
-        test_info("too few cores");
-        return TEST_SKIP(TEST_SKIP_NONE);
-    }
-
+TEST_DECLARE_INTEGRATION(sched, sleep_interruptible_apc, .min_cores = 4) {
     thread_wait_header_init(&si_wait);
     atomic_store(&si_apc_ran, false);
     atomic_store(&si_ok, false);
@@ -188,12 +183,7 @@ static void sleeping_sub_thread(void *arg) {
     atomic_store(&sub_interrupted, true);
 }
 
-TEST_DECLARE_INTEGRATION(sched, wait_interruptible_substrate) {
-    if (global.core_count < 3) {
-        test_info("too few cores");
-        return TEST_SKIP(TEST_SKIP_NONE);
-    }
-
+TEST_DECLARE_INTEGRATION(sched, wait_interruptible_substrate, .min_cores = 3) {
     atomic_store(&sub_apc_ran, false);
     atomic_store(&sub_interrupted, false);
     atomic_store(&sub_started, false);
@@ -237,12 +227,7 @@ static void arbitrary_waking_thread(void *arg) {
     thread_alert(arb_t);
 }
 
-TEST_DECLARE_INTEGRATION(sched, park_alert) {
-    if (global.core_count < 3) {
-        test_info("too few cores");
-        return TEST_SKIP(TEST_SKIP_NONE);
-    }
-
+TEST_DECLARE_INTEGRATION(sched, park_alert, .min_cores = 3) {
     atomic_store(&arb_started, false);
     atomic_store(&arb_matched, false);
 

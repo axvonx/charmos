@@ -4,9 +4,8 @@
 #include "internal.h"
 #include <mem/alloc.h>
 
-_Static_assert(WORKQUEUE_DEFAULT_MAX_IDLE_CHECK / 4 >
-                   WORKQUEUE_DEFAULT_MIN_IDLE_CHECK,
-               "");
+static_assert(WORKQUEUE_DEFAULT_MAX_IDLE_CHECK / 4 >
+              WORKQUEUE_DEFAULT_MIN_IDLE_CHECK);
 
 static time_ms_t get_inactivity_timeout(struct workqueue *queue) {
     uint32_t num_workers = atomic_load(&queue->num_workers);

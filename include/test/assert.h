@@ -422,3 +422,80 @@
                 test_global.current_test->soft_fails++;                        \
         }                                                                      \
     } while (0)
+
+/* ==================== Worker versions ==================== */
+
+/* These versions are for workers, since TEST_ASSERT can't be used
+ * there. However, they're cooperative, so they don't
+ * end right away, and we have a TEST_WORKER_CHECK_GOTO variant
+ * so unwinding can happen */
+
+#define TEST_WORKER_CHECK_MSG(fleet, cond, fmt, ...)                           \
+    do {                                                                       \
+        if (cc_unlikely(!(cond))) {                                            \
+            test_fleet_report((fleet), __RELFILE__, __LINE__, #cond ": " fmt,  \
+                              ##__VA_ARGS__);                                  \
+            return false;                                                      \
+        }                                                                      \
+    } while (0)
+
+#define TEST_WORKER_CHECK(fleet, cond)                                         \
+    do {                                                                       \
+        if (cc_unlikely(!(cond))) {                                            \
+            test_fleet_report((fleet), __RELFILE__, __LINE__, "%s", #cond);    \
+            return false;                                                      \
+        }                                                                      \
+    } while (0)
+
+#define TEST_WORKER_CHECK_EQ(fleet, a, b)                                      \
+    do {                                                                       \
+        __typeof__(a) _wa = (a);                                               \
+        __typeof__(b) _wb = (b);                                               \
+        if (cc_unlikely((uint64_t) (_wa) != (uint64_t) (_wb))) {               \
+            test_fleet_report((fleet), __RELFILE__, __LINE__,                  \
+                              "%s == %s (%llu != %llu)", #a, #b,               \
+                              (unsigned long long) (uint64_t) (_wa),           \
+                              (unsigned long long) (uint64_t) (_wb));          \
+            return false;                                                      \
+        }                                                                      \
+    } while (0)
+
+#define TEST_WORKER_CHECK_NONNULL(fleet, ptr)                                  \
+    do {                                                                       \
+        if (cc_unlikely((const void *) (ptr) == NULL)) {                       \
+            test_fleet_report((fleet), __RELFILE__, __LINE__,                  \
+                              "%s != NULL (got NULL)", #ptr);                  \
+            return false;                                                      \
+        }                                                                      \
+    } while (0)
+
+/* Does not end the test */
+#define TEST_WORKER_EXPECT(fleet, cond)                                        \
+    do {                                                                       \
+        if (cc_unlikely(!(cond))) {                                            \
+            cc_var_unused(fleet);                                              \
+            test_err("worker expect \"%s\" failed", #cond);                    \
+            test_global.current_test->soft_fails++;                            \
+        }                                                                      \
+    } while (0)
+
+#define TEST_WORKER_CHECK_GOTO(fleet, cond, label)                             \
+    do {                                                                       \
+        if (cc_unlikely(!(cond))) {                                            \
+            test_fleet_report((fleet), __RELFILE__, __LINE__, "%s", #cond);    \
+            goto label;                                                        \
+        }                                                                      \
+    } while (0)
+
+#define TEST_WORKER_CHECK_EQ_GOTO(fleet, a, b, label)                          \
+    do {                                                                       \
+        __typeof__(a) _wa = (a);                                               \
+        __typeof__(b) _wb = (b);                                               \
+        if (cc_unlikely((uint64_t) (_wa) != (uint64_t) (_wb))) {               \
+            test_fleet_report((fleet), __RELFILE__, __LINE__,                  \
+                              "%s == %s (%llu != %llu)", #a, #b,               \
+                              (unsigned long long) (uint64_t) (_wa),           \
+                              (unsigned long long) (uint64_t) (_wb));          \
+            goto label;                                                        \
+        }                                                                      \
+    } while (0)

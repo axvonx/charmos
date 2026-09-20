@@ -42,12 +42,7 @@ static void yd_enqueue_main(void *arg) {
     apc_put(apc);
 }
 
-TEST_DECLARE_INTEGRATION(sched, yield_defers_kernel_apcs) {
-    if (global.core_count < 3) {
-        test_info("too few cores");
-        return TEST_SKIP(TEST_SKIP_NONE);
-    }
-
+TEST_DECLARE_INTEGRATION(sched, yield_defers_kernel_apcs, .min_cores = 3) {
     atomic_store(&yd_apc_ran, false);
     atomic_store(&yd_gave_up, false);
     atomic_store(&yd_nesting_at_delivery, YIELD_APC_NO_READING);

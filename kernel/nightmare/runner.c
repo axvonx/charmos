@@ -33,7 +33,7 @@ static void nightmare_exit(uint8_t code, const char *reason) {
         cpu_pause();
 }
 
-const char *nightmare_result_string(enum nightmare_result result) {
+const char *nightmare_result_to_str(enum nightmare_result result) {
     switch (result) {
     case NIGHTMARE_RESULT_OK: return "ok";
     case NIGHTMARE_RESULT_FINDING: return "finding";
@@ -44,7 +44,7 @@ const char *nightmare_result_string(enum nightmare_result result) {
     }
 }
 
-const char *nightmare_skip_string(enum nightmare_skip_reason reason) {
+const char *nightmare_skip_to_str(enum nightmare_skip_reason reason) {
     switch (reason) {
     case NIGHTMARE_SKIP_NONE: return "none";
     case NIGHTMARE_SKIP_NOT_COMPILED: return "not_compiled";
@@ -62,7 +62,7 @@ const char *nightmare_skip_string(enum nightmare_skip_reason reason) {
     }
 }
 
-const char *nightmare_seed_policy_string(enum nightmare_seed_policy policy) {
+const char *nightmare_seed_policy_to_str(enum nightmare_seed_policy policy) {
     switch (policy) {
     case NIGHTMARE_SEED_IGNORED: return "ignored";
     case NIGHTMARE_SEED_OPTIONAL: return "optional";
@@ -71,7 +71,7 @@ const char *nightmare_seed_policy_string(enum nightmare_seed_policy policy) {
     }
 }
 
-const char *nightmare_seed_mode_string(enum nightmare_seed_mode mode) {
+const char *nightmare_seed_mode_to_str(enum nightmare_seed_mode mode) {
     switch (mode) {
     case NIGHTMARE_SEED_SPLIT: return "split";
     case NIGHTMARE_SEED_SEEDFUL: return "seedful";
@@ -93,7 +93,7 @@ static uint8_t nightmare_exit_for_result(enum nightmare_result result) {
 
 static uint64_t nightmare_progress_snapshot(void) {
 #ifdef TEST_NIGHTMARE_ENABLED
-    return nightmare_progress_sum_irq();
+    return test_conc_progress_sum();
 #else
     return 0;
 #endif
@@ -149,8 +149,8 @@ nightmare_record_resolved_boot(const struct nightmare_cmdline_config *config,
         .test = nm ? nm->name : requested,
         .seed = config->seed,
         .seed_policy =
-            nm ? nightmare_seed_policy_string(nm->seed_policy) : "unknown",
-        .seed_mode = nightmare_seed_mode_string(config->seed_mode),
+            nm ? nightmare_seed_policy_to_str(nm->seed_policy) : "unknown",
+        .seed_mode = nightmare_seed_mode_to_str(config->seed_mode),
         .intensity = nightmare_runtime.ctx.intensity,
         .intensity_val = nightmare_runtime.ctx.intensity_val,
         .workers = nightmare_runtime.ctx.worker_count,
@@ -172,23 +172,25 @@ static void nightmare_emit_verdict(struct nightmare_verdict verdict,
 
     const char *reason = verdict.reason;
     if (result == NIGHTMARE_RESULT_SKIP)
-        reason = nightmare_skip_string(verdict.skip_reason);
+        reason = nightmare_skip_to_str(verdict.skip_reason);
     if (!reason)
         reason = fallback_reason;
 
     time_ms_t now = time_get_ms();
     uint64_t elapsed =
         nightmare_runtime.started_ms ? now - nightmare_runtime.started_ms : 0;
+
     nightmare_record_verdict(&(struct nightmare_verdict_record){
-        .result = nightmare_result_string(result),
+        .result = nightmare_result_to_str(result),
         .reason = reason ? reason : "unknown",
         .duration_ms = elapsed,
         .progress = nightmare_progress_snapshot(),
         .findings = findings,
         .msg = verdict.msg ? verdict.msg : "",
     });
+
     nightmare_exit(nightmare_exit_for_result(result),
-                   reason ? reason : nightmare_result_string(result));
+                   reason ? reason : nightmare_result_to_str(result));
 }
 
 enum nightmare_result
@@ -204,12 +206,15 @@ nightmare_seed_refusal(const struct nightmare *nm,
                        const struct nightmare_cmdline_config *config) {
     if (config->seed_mode != NIGHTMARE_SEED_SEEDLESS && !config->seed_present)
         return NIGHTMARE_SKIP_SEED_MISSING;
+
     if (nm->seed_policy == NIGHTMARE_SEED_IGNORED &&
         config->seed_mode == NIGHTMARE_SEED_SEEDFUL)
         return NIGHTMARE_SKIP_SEED_UNUSED;
+
     if (nm->seed_policy == NIGHTMARE_SEED_REQUIRED &&
         config->seed_mode != NIGHTMARE_SEED_SEEDFUL)
         return NIGHTMARE_SKIP_SEED_MISSING;
+
     return NIGHTMARE_SKIP_NONE;
 }
 
@@ -266,7 +271,7 @@ nightmare_preflight(const struct nightmare *nm,
 
 static void nightmare_soft_deadline(struct timer *timer) {
     cc_var_unused(timer);
-    nightmare_publish_stop(NM_STOP_BUDGET);
+    nightmare_publish_stop(TEST_STOP_BUDGET);
 }
 
 static void nightmare_hard_deadline(struct timer *timer) {
@@ -277,13 +282,13 @@ static void nightmare_hard_deadline(struct timer *timer) {
             memory_order_acquire))
         return;
 
-    nightmare_publish_stop(NM_STOP_STALL);
+    nightmare_publish_stop(TEST_STOP_STALL);
     ndjson_enter_panic();
     nightmare_record_verdict(&(struct nightmare_verdict_record){
         .result = "stall",
         .reason = "drain_timeout",
         .duration_ms = time_get_ms() - nightmare_runtime.started_ms,
-        .progress = nightmare_progress_sum_irq(),
+        .progress = test_conc_progress_sum(),
         .findings = atomic_load_explicit(&nightmare_runtime.finding_count,
                                          memory_order_relaxed),
         .msg = "hard deadline expired before teardown completed",
@@ -312,15 +317,13 @@ static uint64_t nightmare_worker_seed(const struct nightmare_ctx *ctx,
         ctx->seed_mode == NIGHTMARE_SEED_SEEDFUL ||
         (ctx->seed_mode == NIGHTMARE_SEED_SPLIT && index >= ctx->worker_count);
     uint64_t base = seeded ? ctx->seed : time_get_ns();
-    base ^= PRNG_SPLITMIX64_GAMMA * (index + 1);
-    struct nightmare_rng rng = {.state = base};
-    return nightmare_rand(&rng);
+    return test_rng_seed_for(base, index);
 }
 
 static bool nightmare_spawn_threads(void) {
     size_t created = 0;
-    for (size_t i = 0; i < nightmare_runtime.total_worker_count; i++) {
-        struct nightmare_worker *worker = &nightmare_runtime.workers[i];
+    for (size_t i = 0; i < nightmare_runtime.conc.worker_count; i++) {
+        struct test_conc_worker *worker = &nightmare_runtime.conc.workers[i];
         worker->index = i;
         if (i < nightmare_runtime.ctx.worker_count) {
             worker->role = "worker";
@@ -339,19 +342,22 @@ static bool nightmare_spawn_threads(void) {
         created++;
     }
 
-    nightmare_runtime.heartbeat = thread_spawn_joinable(
+    /* Not actually a worker, but store in conc.aux */
+    struct thread *heartbeat = thread_spawn_joinable(
         "nightmare_heartbeat", nightmare_heartbeat_main, NULL);
-    if (!nightmare_runtime.heartbeat)
+    if (!heartbeat)
         goto fail;
-    kassert(thread_get(nightmare_runtime.heartbeat));
+    kassert(thread_get(heartbeat));
+    atomic_store_explicit(&nightmare_runtime.conc.aux, heartbeat,
+                          memory_order_release);
     return true;
 
 fail:
-    nightmare_publish_stop(NM_STOP_FAIL);
-    complete_all(&nightmare_runtime.start);
+    nightmare_publish_stop(TEST_STOP_FAIL);
+    complete_all(&nightmare_runtime.conc.start);
     for (size_t i = created; i > 0; i--) {
         struct thread *th = atomic_load_explicit(
-            &nightmare_runtime.workers[i - 1].th, memory_order_acquire);
+            &nightmare_runtime.conc.workers[i - 1].th, memory_order_acquire);
         if (th)
             thread_join(th);
     }
@@ -360,34 +366,36 @@ fail:
 
 static void nightmare_join_threads(void) {
     for (size_t i = nightmare_runtime.ctx.worker_count;
-         i < nightmare_runtime.total_worker_count; i++) {
+         i < nightmare_runtime.conc.worker_count; i++) {
         struct thread *thread = atomic_load_explicit(
-            &nightmare_runtime.workers[i].th, memory_order_acquire);
+            &nightmare_runtime.conc.workers[i].th, memory_order_acquire);
         if (thread)
             thread_join(thread);
     }
     for (size_t i = 0; i < nightmare_runtime.ctx.worker_count; i++) {
         struct thread *thread = atomic_load_explicit(
-            &nightmare_runtime.workers[i].th, memory_order_acquire);
+            &nightmare_runtime.conc.workers[i].th, memory_order_acquire);
         if (thread)
             thread_join(thread);
     }
-    if (nightmare_runtime.heartbeat)
-        thread_join(nightmare_runtime.heartbeat);
+    struct thread *heartbeat =
+        atomic_load_explicit(&nightmare_runtime.conc.aux, memory_order_acquire);
+    if (heartbeat)
+        thread_join(heartbeat);
 }
 
 /* All workers are joined and timer/probe callbacks are quiescent */
 static void nightmare_release_threads(void) {
-    for (size_t i = 0; i < nightmare_runtime.total_worker_count; i++) {
+    for (size_t i = 0; i < nightmare_runtime.conc.worker_count; i++) {
         struct thread *thread = atomic_exchange_explicit(
-            &nightmare_runtime.workers[i].th, NULL, memory_order_acq_rel);
+            &nightmare_runtime.conc.workers[i].th, NULL, memory_order_acq_rel);
         if (thread)
             thread_put(thread);
     }
-    if (nightmare_runtime.heartbeat) {
-        thread_put(nightmare_runtime.heartbeat);
-        nightmare_runtime.heartbeat = NULL;
-    }
+    struct thread *heartbeat = atomic_exchange_explicit(
+        &nightmare_runtime.conc.aux, NULL, memory_order_acq_rel);
+    if (heartbeat)
+        thread_put(heartbeat);
 }
 
 void nightmare_publish_perturb_verdict(struct nightmare_verdict verdict) {
@@ -456,29 +464,32 @@ nightmare_finalize_verdict(const struct nightmare *nm) {
     if (nm->ops && nm->ops->quiesce_check) {
         final = nm->ops->quiesce_check(&nightmare_runtime.ctx);
         nightmare_record_quiesce(&(struct nightmare_quiesce_record){
-            .result = nightmare_result_string(final.result),
+            .result = nightmare_result_to_str(final.result),
             .checks = 1,
         });
     }
-    if (has_perturb_verdict)
-        final = perturb_verdict;
-    else if (final.result == NIGHTMARE_RESULT_OK && nm->ops && nm->ops->finish)
-        final = nm->ops->finish(&nightmare_runtime.ctx);
 
-    enum nightmare_stop stop =
-        atomic_load_explicit(&nightmare_runtime.stop, memory_order_acquire);
+    if (has_perturb_verdict) {
+        final = perturb_verdict;
+    } else if (final.result == NIGHTMARE_RESULT_OK && nm->ops &&
+               nm->ops->finish) {
+        final = nm->ops->finish(&nightmare_runtime.ctx);
+    }
+
+    enum test_stop stop = atomic_load_explicit(&nightmare_runtime.conc.stop,
+                                               memory_order_acquire);
     return nightmare_verdict_for_stop(final, stop);
 }
 
 struct nightmare_verdict
 nightmare_verdict_for_stop(struct nightmare_verdict final,
-                           enum nightmare_stop stop) {
-    if (stop == NM_STOP_STALL)
+                           enum test_stop stop) {
+    if (stop == TEST_STOP_STALL)
         final = (struct nightmare_verdict){
             .result = NIGHTMARE_RESULT_STALL,
             .reason = "liveness",
         };
-    else if (stop == NM_STOP_FAIL && final.result == NIGHTMARE_RESULT_OK)
+    else if (stop == TEST_STOP_FAIL && final.result == NIGHTMARE_RESULT_OK)
         final = NIGHTMARE_FAIL("harness", "harness requested termination");
 
     return final;
@@ -495,10 +506,6 @@ void nightmare_run(void) {
         .ctx = {.seed = config.seed,
                 .seed_present = config.seed_present,
                 .seed_mode = config.seed_mode},
-        .active = ATOMIC_VAR_INIT(false),
-        .stop = ATOMIC_VAR_INIT(NM_RUN),
-        .quiesce_requested = ATOMIC_VAR_INIT(false),
-        .parked_count = ATOMIC_VAR_INIT(0),
         .finding_count = ATOMIC_VAR_INIT(0),
         .terminal = ATOMIC_VAR_INIT(false),
         .perturb_verdict_ready = ATOMIC_VAR_INIT(false),
@@ -507,7 +514,9 @@ void nightmare_run(void) {
         .campaign_id = config.campaign_id,
         .boot_index = config.boot_index,
     };
-    completion_init(&nightmare_runtime.start, COMPLETION_INIT_NORMAL);
+    /* Worker slots don't get sized until perturbers get collected,
+     * so we init empty and re-point once perturbers arrive */
+    test_conc_init(&nightmare_runtime.conc, NULL, 0);
     nightmare_runtime.started_ms = time_get_ms();
     nightmare_build_caps();
 
@@ -524,28 +533,35 @@ void nightmare_run(void) {
                                "no_such_nightmare");
     }
 
-    nightmare_runtime.ctx.intensity =
-        config.intensity != NIGHTMARE_INTENSITY_SENTINEL
-            ? config.intensity
-            : (nm->intensity != NIGHTMARE_INTENSITY_SENTINEL
-                   ? nm->intensity
-                   : NIGHTMARE_INTENSITY_DEFAULT);
+    nightmare_runtime.ctx.intensity = NIGHTMARE_INTENSITY_DEFAULT;
+
+    if (config.intensity != NIGHTMARE_INTENSITY_SENTINEL) {
+        nightmare_runtime.ctx.intensity = config.intensity;
+    } else if (nm->intensity != NIGHTMARE_INTENSITY_SENTINEL) {
+        nightmare_runtime.ctx.intensity = nm->intensity;
+    }
+
     nightmare_runtime.ctx.intensity_val =
         scaled_param_eval(&nm->intensity_desc, nightmare_runtime.ctx.intensity);
+
     nightmare_runtime.ctx.worker_count =
         nightmare_runtime.ctx.intensity_val
             ? nightmare_runtime.ctx.intensity_val
             : 1;
 
-    time_ms_t duration_ms =
-        config.duration_ms
-            ? config.duration_ms
-            : (nm->default_duration_ms ? nm->default_duration_ms
-                                       : NIGHTMARE_DEFAULT_DURATION_MS);
+    time_ms_t duration_ms = NIGHTMARE_DEFAULT_DURATION_MS;
+
+    if (config.duration_ms) {
+        duration_ms = config.duration_ms;
+    } else if (nm->default_duration_ms) {
+        duration_ms = nm->default_duration_ms;
+    }
+
     time_ms_t drain_ms = config.drain_grace_ms ? config.drain_grace_ms
                                                : NIGHTMARE_DEFAULT_DRAIN_MS;
     nightmare_runtime.ctx.soft_deadline_ms =
         nightmare_runtime.started_ms + duration_ms;
+
     nightmare_runtime.ctx.hard_deadline_ms =
         nightmare_runtime.ctx.soft_deadline_ms + drain_ms;
 
@@ -554,9 +570,9 @@ void nightmare_run(void) {
     enum nightmare_skip_reason refusal = nightmare_preflight(nm, &config);
     if (refusal != NIGHTMARE_SKIP_NONE)
         nightmare_emit_verdict(NIGHTMARE_SKIP(refusal),
-                               nightmare_skip_string(refusal));
+                               nightmare_skip_to_str(refusal));
 
-    atomic_store_explicit(&nightmare_runtime.active, true,
+    atomic_store_explicit(&nightmare_runtime.conc.active, true,
                           memory_order_release);
     nightmare_arm_deadlines(duration_ms, drain_ms);
 
@@ -573,13 +589,15 @@ void nightmare_run(void) {
 
     nightmare_collect_perturbers(nm, &config);
 
-    nightmare_runtime.total_worker_count =
+    size_t worker_count =
         nightmare_runtime.ctx.worker_count + nightmare_runtime.perturber_count;
+    struct test_conc_worker *workers =
+        kmalloc(worker_count * sizeof(*workers), ALLOC_FLAGS_ZERO);
 
-    nightmare_runtime.workers = kmalloc(nightmare_runtime.total_worker_count *
-                                            sizeof(*nightmare_runtime.workers),
-                                        ALLOC_FLAGS_ZERO);
-    if (!nightmare_runtime.workers) {
+    nightmare_runtime.conc.workers = workers;
+    nightmare_runtime.conc.worker_count = worker_count;
+
+    if (!nightmare_runtime.conc.workers) {
         timer_shutdown_sync(&nightmare_runtime.soft_timer);
         timer_shutdown_sync(&nightmare_runtime.hard_timer);
         nightmare_emit_verdict(
@@ -598,22 +616,22 @@ void nightmare_run(void) {
 
     if (!nightmare_liveness_start(config.stall_threshold_ms, config.on_stall))
         nightmare_panic("could not start liveness detector");
-    complete_all(&nightmare_runtime.start);
+    complete_all(&nightmare_runtime.conc.start);
     nightmare_join_threads();
     nightmare_liveness_stop();
-    nightmare_publish_stop(NM_STOP_BUDGET);
+    nightmare_publish_stop(TEST_STOP_BUDGET);
 
     timer_shutdown_sync(&nightmare_runtime.soft_timer);
     timer_shutdown_sync(&nightmare_runtime.hard_timer);
 
     struct nightmare_verdict final = nightmare_finalize_verdict(nm);
-    atomic_store_explicit(&nightmare_runtime.active, false,
+    atomic_store_explicit(&nightmare_runtime.conc.active, false,
                           memory_order_release);
 
     nightmare_release_threads();
 
-    kfree(nightmare_runtime.workers);
-    nightmare_runtime.workers = NULL;
+    kfree(nightmare_runtime.conc.workers);
+    nightmare_runtime.conc.workers = NULL;
     if (nightmare_runtime.ctx.private) {
         kfree(nightmare_runtime.ctx.private);
         nightmare_runtime.ctx.private = NULL;

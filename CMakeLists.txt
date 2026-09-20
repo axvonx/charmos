@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.19)
 project(charmOS C ASM_NASM)
 
+set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS ON)
 set(ARCH "x86_64")
 set(IMAGE_NAME "charmos-${ARCH}")
 

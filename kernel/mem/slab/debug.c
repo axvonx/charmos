@@ -91,9 +91,9 @@ void slab_debug_assert_not_already_free(vaddr_t v, int32_t class) {
     }
 }
 
-cc_no_sanitize_address void
-slab_dump_corruption(void *obj, struct slab_magazine *popped_mag,
-                     size_t obj_size) {
+cc_no_asan void slab_dump_corruption(void *obj,
+                                     struct slab_magazine *popped_mag,
+                                     size_t obj_size) {
     crash_broadcast_nmi(); /* Get everyone to stop yapping
                             * so we have a clean view */
     vaddr_t v = (vaddr_t) obj;

@@ -1,11 +1,6 @@
 #include "fs/ext2/tests/test_internal.h"
 
-#define EXT2_INIT                                                              \
-    if (global.root_node->fs_type != FS_EXT2) {                                \
-        test_info("the mounted root is not ext2");                             \
-        return TEST_SKIP(TEST_SKIP_NONE);                                      \
-    }                                                                          \
-    struct vfs_node *root = global.root_node;
+#define EXT2_ROOT struct vfs_node *root = global.root_node
 
 /*
 static void check_bcache(void) {
@@ -37,9 +32,9 @@ static void flush() {
     check_bcache();*/
 }
 
-TEST_DECLARE_INTEGRATION(ext2, file_lifecycle, TEST_INTENSITY(1, 4, 64)) {
-    EXT2_INIT;
-
+TEST_DECLARE_INTEGRATION(ext2, file_lifecycle, TEST_INTENSITY(1, 4, 64),
+                         .required_fs = FS_EXT2) {
+    EXT2_ROOT;
     size_t ops = ctx->intensity_val ? ctx->intensity_val : 4;
     const char *lstr = large_test_string;
     uint64_t len = strlen(lstr);

@@ -3,7 +3,7 @@
 #include <types/types.h>
 
 struct nightmare_ctx;
-struct nightmare_worker;
+struct test_conc_worker;
 
 struct nightmare_perturb_config {
     const char *name;
@@ -14,7 +14,7 @@ struct nightmare_perturb_config {
 
 struct nightmare_perturb_desc {
     const char *name;
-    void (*thread)(struct nightmare_ctx *, struct nightmare_worker *);
+    void (*thread)(struct nightmare_ctx *, struct test_conc_worker *);
 };
 
 const struct nightmare_perturb_config *
@@ -22,14 +22,14 @@ nightmare_perturb_config_lookup(const char *name);
 const struct nightmare_perturb_desc *nightmare_perturb_lookup(const char *name);
 
 void nightmare_perturb_migrator(struct nightmare_ctx *ctx,
-                                struct nightmare_worker *worker);
+                                struct test_conc_worker *worker);
 void nightmare_perturb_waker(struct nightmare_ctx *ctx,
-                             struct nightmare_worker *worker);
+                             struct test_conc_worker *worker);
 void nightmare_perturb_apc_spammer(struct nightmare_ctx *ctx,
-                                   struct nightmare_worker *worker);
+                                   struct test_conc_worker *worker);
 void nightmare_perturb_stutter(struct nightmare_ctx *ctx,
-                               struct nightmare_worker *worker);
+                               struct test_conc_worker *worker);
 void nightmare_perturb_alloc_pressure(struct nightmare_ctx *ctx,
-                                      struct nightmare_worker *worker);
+                                      struct test_conc_worker *worker);
 void nightmare_perturb_inject_armer(struct nightmare_ctx *ctx,
-                                    struct nightmare_worker *worker);
+                                    struct test_conc_worker *worker);

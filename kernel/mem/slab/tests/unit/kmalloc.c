@@ -1,8 +1,7 @@
 #include "mem/slab/tests/test_internal.h"
 
-TEST_DECLARE_UNIT(slab, random_free_stress, TEST_INTENSITY(256, 2048, 32768)) {
-    ABORT_IF_RAM_LOW();
-
+TEST_DECLARE_UNIT(slab, random_free_stress, TEST_INTENSITY(256, 2048, 32768),
+                  .min_ram_mb = 8) {
     size_t n = ctx->intensity_val ? ctx->intensity_val : 2048;
     void **stress_alloc_free_ptrs =
         kmalloc(sizeof(void *) * n, ALLOC_FLAGS_ZERO);
@@ -32,9 +31,7 @@ TEST_DECLARE_UNIT(slab, random_free_stress, TEST_INTENSITY(256, 2048, 32768)) {
 }
 
 TEST_DECLARE_UNIT(slab, bulk_alloc_free_stress,
-                  TEST_INTENSITY(256, 2048, 16384)) {
-    ABORT_IF_RAM_LOW();
-
+                  TEST_INTENSITY(256, 2048, 16384), .min_ram_mb = 8) {
     size_t n = ctx->intensity_val ? ctx->intensity_val : 2048;
     void **mixed_stress_test_ptrs = kmalloc(sizeof(void *) * n);
     TEST_ASSERT_NONNULL(mixed_stress_test_ptrs);
