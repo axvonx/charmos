@@ -13,7 +13,7 @@
 #include <smp/percpu.h>
 #include <smp/smp.h>
 #include <string.h>
-#include <sync/once_token.h>
+#include <sync/once_latch.h>
 #include <sync/spinlock.h>
 #include <thread/dpc.h>
 #include <thread/thread.h>
@@ -27,9 +27,12 @@
 static volatile uint64_t cr3 = 0;
 static atomic_uint32_t cores_awake = 0;
 
+/* CPUs initialized elsewhere */
+static struct once_latch dpc_latch = ONCE_LATCH_INIT(0);
 static void timer_init_dpc_fn(void *f) {
     cc_var_unused(f);
     timers_init_ap(smp_id_raw());
+    once_latch_count_down(&dpc_latch);
 }
 
 static void timer_init_dpc_ctor(struct dpc *d, cpu_id_t c) {
@@ -304,9 +307,12 @@ void smp_init(void) {
 
 void smp_timer_init(void) {
     struct dpc *dpc;
+    once_latch_init(&dpc_latch, global.core_count);
     percpu_for_each(timer_init_dpc, dpc, cpu) {
         dpc_enqueue_on_cpu(cpu, dpc);
     }
+
+    once_latch_spin_wait(&dpc_latch);
 }
 
 void smp_wait_for_others_to_idle(void) {
