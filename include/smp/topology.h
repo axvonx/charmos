@@ -37,7 +37,6 @@ enum topology_caller {
     TOPC_NONE = 0,
     TOPC_IRQL = 1 << 0,
 
-    /* NOTE: PINNED and IRQ are mutually exclusive */
     TOPC_PINNED = 1 << 1,
     TOPC_IRQ = 1 << 2,
     TOPC_IFLAG = 1 << 3,

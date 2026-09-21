@@ -573,8 +573,7 @@ bool topology_contract_verify(struct topology_contract c) {
         if (caller & TOPC_IRQL)
             valid = valid || irql_get() >= IRQL_DISPATCH_LEVEL;
 
-        if (caller & TOPC_PINNED) {
-            kassert(irq_not_in_interrupt());
+        if (caller & TOPC_PINNED && irq_not_in_interrupt()) {
             valid = valid || (thread_get_flags(thread_get_current()) &
                               THREAD_FLAG_PINNED);
             if (!valid) {

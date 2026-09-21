@@ -26,8 +26,6 @@ jobs:
             path: kernel/uACPI
           - name: flanterm
             path: kernel/flanterm
-          - name: limine
-            path: limine
     container:
       image: ghcr.io/axvonx/charmos-x86-env@sha256:5a15823fa602f60da3d2819181db0729237eba7d812baaab0d27d59e9c4ebdc3
       credentials:
@@ -67,7 +65,7 @@ jobs:
         id: build
         if: steps.diff.outputs.changed == 'true'
         continue-on-error: true
-        run: ./scripts/build.sh -t Debug --compiler gcc -C
+        run: ./scripts/build.sh -t Debug --compiler gcc -C --no-sync
 
       - name: Test
         id: test
@@ -111,7 +109,7 @@ jobs:
 
             ${{ steps.status.outputs.result != 'passed' && 'This bump failed the check' || 'Build and tests passed' }}
 
-            Compare: https://github.com/${{ github.repository_owner }}/${{ matrix.path == 'kernel/uACPI' && 'uACPI/uACPI' || matrix.path == 'kernel/flanterm' && 'Mintsuki/Flanterm' || 'limine-bootloader/limine' }}/compare/${{ steps.before.outputs.sha }}...${{ steps.diff.outputs.sha }}
+            Compare: https://github.com/${{ matrix.path == 'kernel/uACPI' && 'uACPI/uACPI' || 'Mintsuki/Flanterm' }}/compare/${{ steps.before.outputs.sha }}...${{ steps.diff.outputs.sha }}
           branch: chore/bump-${{ matrix.name }}
           delete-branch: true
           labels: |

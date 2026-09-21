@@ -19,6 +19,7 @@ fi
 QUIET=false
 CLEAN=false
 COMPDB=false
+NO_SYNC=false
 BUILD_TYPE="Debug"
 BUILD_TYPE_EXPLICIT=false
 COMPILER="gcc"
@@ -43,6 +44,7 @@ ${BOLD}Options:${NC}
   -q, -s, --quiet         Suppress command output
   -c, --clean             Remove build directory before building
   -C, --compdb            Generate compile_commands.json in project root
+      --no-sync           Do not sync or update git submodules
   -t, --type TYPE         Build type: Debug, Release, RelWithDebInfo, MinSizeRel
                           (default: Debug)
   -k, --compiler COMP     Compiler toolchain: gcc or clang (default: gcc)
@@ -88,6 +90,7 @@ while [[ $# -gt 0 ]]; do
         -q|-s|--quiet)         QUIET=true; shift ;;
         -c|--clean)            CLEAN=true; shift ;;
         -C|--compdb)           COMPDB=true; shift ;;
+        --no-sync)             NO_SYNC=true; shift ;;
         -t|--type)             BUILD_TYPE="$2"; BUILD_TYPE_EXPLICIT=true; shift 2 ;;
         -k|--compiler)         COMPILER="$2"; shift 2 ;;
         --clang)               COMPILER="clang"; shift ;;
@@ -303,9 +306,10 @@ build_targets() {
 check_required_tools
 check_compiler_toolchain
 
-log "syncing submodules"
-run_cmd git submodule update --init --recursive
-rm -rf kernel/uACPI/tests 2>/dev/null || true
+if ! $NO_SYNC && [[ "${SKIP_SUBMODULE_SYNC:-0}" != "1" ]]; then
+    log "syncing submodules"
+    run_cmd git submodule update --init --recursive
+fi
 
 if [[ ! -d "limine" ]]; then
     warn "fetching limine bootloader"
