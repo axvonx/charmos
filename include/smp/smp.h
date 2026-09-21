@@ -5,13 +5,13 @@
 #include <stdbool.h>
 
 struct core;
-void smp_wakeup();
-void smp_init();
+void smp_init(void);
+void smp_timer_init(void);
 void smp_wake(struct limine_mp_response *mpr);
-void smp_setup_bsp();
-void smp_wait_for_others_to_idle();
+void smp_setup_bsp(void);
+void smp_wait_for_others_to_idle(void);
 void topology_init(void);
-void smp_disable_all_ticks();
-void smp_enable_all_ticks();
+void smp_disable_all_ticks(void);
+void smp_enable_all_ticks(void);
 void smp_dump_core(struct core *c);
-void smp_move_everyone();
+void smp_move_everyone(void);

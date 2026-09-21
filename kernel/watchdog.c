@@ -780,7 +780,7 @@ void watchdog_start(void) {
     }
 
     struct watchdog_percpu *pcpu;
-    percpu_for_each(watchdog_percpu, pcpu, cpu) {
+    percpu_for_each(watchdog_percpu, pcpu) {
         timer_modify(&pcpu->timer,
                      timer_delta_us(NS_TO_US(config.master_tick_interval)));
     }

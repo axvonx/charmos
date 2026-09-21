@@ -1,10 +1,6 @@
 /* @title: Atomic Operations, Types & Primitives */
 #pragma once
 
-#ifndef asm
-#define asm __asm__
-#endif
-
 #include <compiler/atomic.h>
 #include <compiler/core.h>
 #include <stdatomic.h>

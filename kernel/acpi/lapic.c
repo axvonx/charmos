@@ -30,7 +30,8 @@ void lapic_timer_init(cpu_id_t core_id) {
 
     lapic_write(LAPIC_REG_SVR, LAPIC_ENABLE | 0xFF);
     lapic_write(LAPIC_REG_TIMER_DIV, 0b0011);
-    lapic_write(LAPIC_REG_LVT_TIMER, IRQ_TIMER | LAPIC_LVT_MASK);
+    lapic_write(LAPIC_REG_LVT_TIMER,
+                IRQ_TIMER | LAPIC_LVT_MASK | TIMER_MODE_ONESHOT);
     lapic_write(LAPIC_REG_TIMER_INIT, 0xFFFFFFFF);
 
     sleep_spin_ms(calibration_sleep_ms);

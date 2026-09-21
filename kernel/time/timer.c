@@ -602,15 +602,22 @@ enum irq_result timer_isr(void *ctx, uint8_t vec, struct irq_context *rsp) {
     return IRQ_HANDLED;
 }
 
-void timers_init() {
+static void timers_init(cpu_id_t cpu) {
     struct clock_evdev_group *cedg =
         kassert(clock_evdev_group_search_for(clock_global.timer_clock_evdev));
-    struct timer_percpu *iter;
 
-    percpu_for_each(timer_percpu, iter, cpu) {
-        struct clock_evdev *ced = clock_evdev_for_cpu(cedg, cpu);
-        iter->active_evdev = ced;
-        if (ced->change_state)
-            ced->change_state(ced, CLOCK_EVDEV_STATE_ONESHOT);
-    }
+    /* Called in early boot */
+    struct timer_percpu *this = PERCPU_PTR_FOR_CPU(timer_percpu, cpu);
+    struct clock_evdev *ced = clock_evdev_for_cpu(cedg, cpu);
+    this->active_evdev = ced;
+    if (ced->change_state)
+        ced->change_state(ced, CLOCK_EVDEV_STATE_ONESHOT);
+}
+
+void timers_init_bsp(void) {
+    timers_init(0);
+}
+
+void timers_init_ap(cpu_id_t cpu) {
+    timers_init(cpu);
 }

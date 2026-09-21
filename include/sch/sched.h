@@ -200,7 +200,7 @@ static inline bool scheduler_core_idle(struct core *c) {
 
 static inline void scheduler_force_resched(struct scheduler *sched) {
     scheduler_mark_core_needs_resched(global.cores[sched->core_id], true);
-    (void) ipi_send_try(sched->core_id, IRQ_SCHEDULER);
+    ipi_send_try(sched->core_id, IRQ_SCHEDULER);
 }
 
 enum irql thread_lock_scheduler(struct thread *t, struct scheduler **out_sched)

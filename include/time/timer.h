@@ -104,7 +104,8 @@ bool timer_shutdown_sync(struct timer *timer);
 
 struct irq_context;
 enum irq_result timer_isr(void *ctx, irq_t vec, struct irq_context *);
-void timers_init(void);
+void timers_init_bsp(void);
+void timers_init_ap(cpu_id_t cpu);
 
 static inline time_us_t timer_delta_us(time_us_t delta_us) {
     return time_get_us() + delta_us;

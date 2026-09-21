@@ -152,7 +152,7 @@ cc_no_asan void k_main(void) {
     pernode_obj_init();
 
     lapic_clock_evdev_group_init();
-    timers_init();
+    timers_init_bsp();
 
     scheduler_periodic_work_init();
     movealloc_exec_all();
@@ -177,6 +177,7 @@ void k_sch_main(void *nop) {
     smp_disable_all_ticks();
 
     bootstage_advance(BOOTSTAGE_LATE);
+    smp_timer_init();
     lock_chk_init();
 
     smp_enable_all_ticks();

@@ -13,6 +13,7 @@
 #include <smp/percpu.h>
 #include <smp/smp.h>
 #include <string.h>
+#include <sync/once_token.h>
 #include <sync/spinlock.h>
 #include <thread/dpc.h>
 #include <thread/thread.h>
@@ -25,6 +26,18 @@
 
 static volatile uint64_t cr3 = 0;
 static atomic_uint32_t cores_awake = 0;
+
+static void timer_init_dpc_fn(void *f) {
+    cc_var_unused(f);
+    timers_init_ap(smp_id_raw());
+}
+
+static void timer_init_dpc_ctor(struct dpc *d, cpu_id_t c) {
+    cc_var_unused(c);
+    dpc_init(d, timer_init_dpc_fn, NULL);
+}
+
+PERCPU_DECLARE(timer_init_dpc, struct dpc, timer_init_dpc_ctor);
 #define CPUID_LEAF_HYBRID 0x1A
 
 static void detect_cpu_features(struct cpu_capability *cap) {
@@ -251,7 +264,8 @@ static inline void set_core_awake(void) {
     }
 }
 
-void smp_wakeup() {
+void smp_wakeup(struct limine_mp_info *info) {
+    cc_var_unused(info);
     irq_disable();
 
     asm volatile("mov %0, %%cr3" ::"r"(cr3));
@@ -271,7 +285,7 @@ void smp_wakeup() {
     scheduler_yield();
 }
 
-void smp_init() {
+void smp_init(void) {
     for (size_t i = 0; i < global.core_count; i++) {
         size_t d = domain_for_cpu(i);
 
@@ -288,7 +302,14 @@ void smp_init() {
     }
 }
 
-void smp_wait_for_others_to_idle() {
+void smp_timer_init(void) {
+    struct dpc *dpc;
+    percpu_for_each(timer_init_dpc, dpc, cpu) {
+        dpc_enqueue_on_cpu(cpu, dpc);
+    }
+}
+
+void smp_wait_for_others_to_idle(void) {
     /* wait for them to enter idle threads */
     size_t expected_idle = global.core_count - 1;
     while (atomic_load(&global.idle_core_count) < expected_idle) {
@@ -311,8 +332,6 @@ void smp_wake(struct limine_mp_response *mpr) {
      * atomics here is problematic */
     while (global.current_bootstage != BOOTSTAGE_MID_MP)
         cpu_pause();
-
-    smp_wait_for_others_to_idle();
 }
 
 void smp_setup_bsp(void) {
