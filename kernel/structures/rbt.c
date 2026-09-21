@@ -222,6 +222,10 @@ static void fix_deletion(struct rbt *tree, struct rbt_node *x,
 }
 
 void rbt_delete(struct rbt *tree, struct rbt_node *z) {
+    kassert(z->parent != NULL || z == tree->root,
+            "rbt_delete: node %p is not linked into tree %p (root %p)", z, tree,
+            tree->root);
+
     struct rbt_node *y = z;
     struct rbt_node *x = NULL;
     struct rbt_node *x_parent = NULL;

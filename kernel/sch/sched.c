@@ -107,6 +107,8 @@ static inline void re_enqueue_thread(struct scheduler *sched,
     if (thread_done_for_period(thread)) {
         thread->virtual_runtime_left = thread->virtual_budget;
         thread->completed_period = sched->current_period;
+        /* thread_done_for_period() already established it as timesharing */
+        thread->queued_prio_class = THREAD_PRIO_CLASS_TIMESHARE;
         retire_thread(sched, thread);
         scheduler_increment_thread_count(sched, thread);
     } else {
@@ -207,6 +209,9 @@ static struct thread *pick_thread(struct scheduler *sched, time_ms_t now_ms) {
     }
 
     kassert(next); /* cannot be NULL - if it is the bitmap is lying */
+    kassert(next->queued_prio_class == prio,
+            "picked a %d thread off the %d queue",
+            (int) next->queued_prio_class, (int) prio);
     scheduler_decrement_thread_count(sched, next);
 
     /* make sure we are not idle */

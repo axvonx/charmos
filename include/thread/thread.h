@@ -268,6 +268,12 @@ struct thread {
     enum thread_prio_class base_prio_class; /* for class boosts */
     enum thread_prio_class perceived_prio_class;
 
+    /* We have this because perceived_prio_class can change arbitrarily,
+     * which can corrupt state if it's in a different runqueue.
+     *
+     * Only meaningful when queued to run though */
+    enum thread_prio_class queued_prio_class;
+
     /* Activity data */
     struct thread_activity_data *activity_data;
     struct thread_activity_stats *activity_stats;

@@ -177,8 +177,8 @@ void k_sch_main(void *nop) {
     smp_disable_all_ticks();
 
     bootstage_advance(BOOTSTAGE_LATE);
-    smp_timer_init();
     lock_chk_init();
+    smp_timer_init();
 
     smp_enable_all_ticks();
     watchdog_start();

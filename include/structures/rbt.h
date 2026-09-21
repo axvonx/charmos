@@ -118,6 +118,8 @@ struct rbt *rbt_init(struct rbt *t, rbt_get_data get_data, rbt_compare compare);
 struct rbt *rbt_create(rbt_get_data get, rbt_compare compare);
 struct rbt_node *rbt_find_min(struct rbt_node *node);
 struct rbt_node *rbt_find_max(struct rbt_node *node);
+
+/* `z` must be linked into `tree` */
 void rbt_delete(struct rbt *tree, struct rbt_node *z);
 struct rbt_node *rbt_search(struct rbt *tree, uint64_t data);
 void rbt_remove(struct rbt *tree, uint64_t data);

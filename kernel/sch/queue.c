@@ -14,7 +14,9 @@
 void scheduler_add_thread_locked(struct scheduler *sched, struct thread *task) {
     kassert(atomic_load_relaxed(&task->state) != THREAD_STATE_IDLE_THREAD);
 
+    /* Runqueue logic uses queued_prio_class */
     enum thread_prio_class prio = task->perceived_prio_class;
+    task->queued_prio_class = prio;
 
     /* Put it on the tree since this is timesharing */
     if (prio == THREAD_PRIO_CLASS_TIMESHARE) {
@@ -50,7 +52,7 @@ void scheduler_add_thread(struct scheduler *sched, struct thread *task) {
 void scheduler_remove_thread_locked(struct scheduler *sched, struct thread *t) {
     kassert(thread_get_state(t) == THREAD_STATE_READY);
 
-    if (t->perceived_prio_class == THREAD_PRIO_CLASS_TIMESHARE) {
+    if (t->queued_prio_class == THREAD_PRIO_CLASS_TIMESHARE) {
         dequeue_from_tree(sched, t);
     } else {
         list_del_init(&t->rq_list_node);

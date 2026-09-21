@@ -41,10 +41,10 @@ static inline bool thread_exhausted_period(struct scheduler *sched,
 static inline void scheduler_decrement_thread_count(struct scheduler *sched,
                                                     struct thread *t) {
     sched->total_thread_count--;
-    sched->thread_count[t->perceived_prio_class]--;
+    sched->thread_count[t->queued_prio_class]--;
 
-    if (sched->thread_count[t->perceived_prio_class] == 0)
-        scheduler_clear_queue_bitmap(sched, t->perceived_prio_class);
+    if (sched->thread_count[t->queued_prio_class] == 0)
+        scheduler_clear_queue_bitmap(sched, t->queued_prio_class);
 
     if (t->effective_priority == THREAD_PRIO_CLASS_TIMESHARE)
         sched->total_weight -= t->weight;
@@ -55,8 +55,8 @@ static inline void scheduler_decrement_thread_count(struct scheduler *sched,
 static inline void scheduler_increment_thread_count(struct scheduler *sched,
                                                     struct thread *t) {
     sched->total_thread_count++;
-    sched->thread_count[t->perceived_prio_class]++;
-    scheduler_set_queue_bitmap(sched, t->perceived_prio_class);
+    sched->thread_count[t->queued_prio_class]++;
+    scheduler_set_queue_bitmap(sched, t->queued_prio_class);
 
     if (t->effective_priority == THREAD_PRIO_CLASS_TIMESHARE)
         sched->total_weight += t->weight;

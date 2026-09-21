@@ -70,6 +70,7 @@ static void move_ts_thread_raw(struct scheduler *dest, struct scheduler *source,
     rbt_delete(tree, &thread->rq_tree_node);
     scheduler_decrement_thread_count(source, thread);
 
+    thread->queued_prio_class = THREAD_PRIO_CLASS_TIMESHARE;
     rbt_insert(&dest->thread_rbt, &thread->rq_tree_node);
     scheduler_increment_thread_count(dest, thread);
     thread_set_runqueue(thread, dest);
@@ -88,7 +89,9 @@ static size_t migrate_from_tree(struct scheduler *to,
      * it cannot be migrated, we will opt to migrate the current thread instead,
      * even if it slightly breaks our "every other thread" rule. */
     bool prev_migrated = false;
-    rbt_for_each(rb, from) {
+    struct rbt_node *tmp;
+
+    rbt_for_each_safe(rb, tmp, from) {
         if (migrated >= target)
             break;
 
