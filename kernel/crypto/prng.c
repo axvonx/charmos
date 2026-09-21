@@ -9,7 +9,7 @@ struct prng_core {
     size_t pos;
 };
 
-PERCPU_DECLARE(pcs, struct prng_core, NULL);
+PERCPU_DECLARE(struct prng_core, pcs, NULL);
 #define prng_core_state PERCPU_READ(TOPC_IRQL, pcs)
 
 static void prng_seed_core(uint64_t seed) {

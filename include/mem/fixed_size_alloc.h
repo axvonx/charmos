@@ -82,7 +82,7 @@ void fixed_size_range_init(struct fixed_size_range *fsr,
         if (__domain == global.domain_count - 1)                               \
             __fsr_##name##_enabled = true;                                     \
     }                                                                          \
-    PERDOMAIN_DECLARE(__##name##_fsr, struct fixed_size_range,                 \
+    PERDOMAIN_DECLARE(struct fixed_size_range, __##name##_fsr,                 \
                       __##name##_fsr_init)
 
 #define FSR_PERDOMAIN_ENABLED(name) __fsr_##name##_enabled

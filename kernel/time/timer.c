@@ -38,7 +38,7 @@ static void timer_percpu_ctor(struct timer_percpu *p, cpu_id_t cpu) {
     dpc_init(&p->timer_dpc, timer_dpc, p);
 }
 
-PERCPU_DECLARE(timer_percpu, struct timer_percpu, timer_percpu_ctor);
+PERCPU_DECLARE(struct timer_percpu, timer_percpu, timer_percpu_ctor);
 
 static uint32_t wheel_index_for_level(time_us_t expiration, uint32_t level,
                                       time_us_t *bucket_expiration) {

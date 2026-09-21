@@ -8,7 +8,7 @@
 
 #include "internal.h"
 
-PERCPU_DECLARE(lock_debug_cpu, struct lock_debug_cpu, NULL);
+PERCPU_DECLARE(struct lock_debug_cpu, lock_debug_cpu, NULL);
 
 static bool debug_is_active(void) {
     return lock_chk_state_active(&lock_chk_global.debug);

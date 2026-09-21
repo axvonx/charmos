@@ -53,7 +53,7 @@ static struct watchdog_globals watchdog_global = {0};
 LOG_SITE_DECLARE(watchdog_master);
 LOG_HANDLE_DECLARE(watchdog_master);
 
-PERCPU_DECLARE(watchdog_percpu, struct watchdog_percpu, watchdog_percpu_ctor);
+PERCPU_DECLARE(struct watchdog_percpu, watchdog_percpu, watchdog_percpu_ctor);
 static CMDLINE_DECLARE(watchdog, .flags = CMDLINE_ENTRY_SYMBOLIC,
                        .desc = "Watchdog command line namespace");
 

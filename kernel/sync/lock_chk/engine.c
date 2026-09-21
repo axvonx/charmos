@@ -13,7 +13,7 @@
 
 #include "internal.h"
 
-PERCPU_DECLARE(lock_chk_recursion_depth, uint8_t, NULL);
+PERCPU_DECLARE(uint8_t, lock_chk_recursion_depth, NULL);
 
 struct lock_chk_guard lock_chk_enter(void) {
     struct lock_chk_guard guard = {

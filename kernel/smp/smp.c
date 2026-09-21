@@ -37,7 +37,7 @@ static void timer_init_dpc_ctor(struct dpc *d, cpu_id_t c) {
     dpc_init(d, timer_init_dpc_fn, NULL);
 }
 
-PERCPU_DECLARE(timer_init_dpc, struct dpc, timer_init_dpc_ctor);
+PERCPU_DECLARE(struct dpc, timer_init_dpc, timer_init_dpc_ctor);
 #define CPUID_LEAF_HYBRID 0x1A
 
 static void detect_cpu_features(struct cpu_capability *cap) {

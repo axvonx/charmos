@@ -12,11 +12,19 @@
 #define cc_always_inline __attribute__((always_inline))
 #define cc_noreturn __attribute__((noreturn))
 #define cc_unused __attribute__((unused))
+#define cc_maybe_unused __attribute__((unused))
 #define cc_warn_unused_result __attribute__((warn_unused_result))
+#define cc_nodiscard __attribute__((warn_unused_result))
 #define cc_packed __attribute__((__packed__))
 #define cc_aligned(x) __attribute__((aligned(x)))
 #define cc_cache_aligned __attribute__((aligned(64)))
 #define cc_used __attribute__((used))
+#if (defined(__GNUC__) && __GNUC__ >= 11) ||                                   \
+    (defined(__clang__) && __clang_major__ >= 13)
+#define cc_retain __attribute__((retain))
+#else
+#define cc_retain
+#endif
 #define cc_section(x) __attribute__((section(x)))
 #define cc_hidden __attribute__((visibility("hidden")))
 #define cc_export __attribute__((visibility("default")))
@@ -24,6 +32,15 @@
 #define cc_likely(x) __builtin_expect(!!(x), 1)
 #define cc_unlikely(x) __builtin_expect(!!(x), 0)
 #define cc_unreachable() __builtin_unreachable()
+#if defined(__clang__)
+#define cc_assume(expr) __builtin_assume(expr)
+#else
+#define cc_assume(expr)                                                        \
+    do {                                                                       \
+        if (!(expr))                                                           \
+            __builtin_unreachable();                                           \
+    } while (0)
+#endif
 
 #define cc_cold __attribute__((cold))
 #define cc_hot __attribute__((hot))
@@ -35,6 +52,9 @@
 #define cc_no_tsan __attribute__((no_sanitize("thread")))
 #define cc_no_msan __attribute__((no_sanitize("memory")))
 #define cc_no_csan __attribute__((no_sanitize("coverage")))
+#define cc_no_sanitize(...) __attribute__((no_sanitize(__VA_ARGS__)))
+#define cc_no_stack_protector __attribute__((no_stack_protector))
+#define cc_no_instrument __attribute__((no_instrument_function))
 
 #define cc_deprecated __attribute__((deprecated))
 #define cc_deprecated_msg(msg) __attribute__((deprecated(msg)))
@@ -44,6 +64,8 @@
 #define cc_malloc_like __attribute__((malloc))
 #define cc_nullable __attribute__((nullable))
 #define cc_naked __attribute__((naked))
+#define cc_interrupt __attribute__((interrupt))
+#define cc_no_caller_saved_registers __attribute__((no_caller_saved_registers))
 #define cc_returns_nonnull __attribute__((returns_nonnull))
 #define cc_returns_twice __attribute__((returns_twice))
 #define cc_may_alias __attribute__((__may_alias__))
@@ -83,6 +105,22 @@
 #define cc_constructor(prio) __attribute__((constructor(prio)))
 #define cc_destructor(prio) __attribute__((destructor(prio)))
 #define cc_fallthrough __attribute__((fallthrough))
+#define cc_cleanup(fn) __attribute__((cleanup(fn)))
+#define cc_target(...) __attribute__((target(__VA_ARGS__)))
+#define cc_optimize(...) __attribute__((optimize(__VA_ARGS__)))
+#define cc_designated_init __attribute__((designated_init))
+
+#if defined(__clang__) || (defined(__GNUC__) && __GNUC__ >= 12)
+#define cc_uninitialized __attribute__((uninitialized))
+#else
+#define cc_uninitialized
+#endif
+
+#if defined(__GNUC__) && !defined(__clang__) && (__GNUC__ >= 8)
+#define cc_nonstring __attribute__((nonstring))
+#else
+#define cc_nonstring
+#endif
 
 #if defined(__GNUC__)
 #define cc_restrict __restrict__

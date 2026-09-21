@@ -7,7 +7,7 @@
 
 #if defined(TEST_ENABLED) || defined(TEST_NIGHTMARE_ENABLED)
 
-PERCPU_DECLARE(test_progress_store, struct test_progress_counter, NULL);
+PERCPU_DECLARE(struct test_progress_counter, test_progress_store, NULL);
 PERCPU_EXPORT_AS(test_progress, test_progress_store);
 
 uint64_t test_conc_progress_sum(void) {

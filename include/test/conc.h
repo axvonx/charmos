@@ -127,7 +127,7 @@ void test_liveness_stop(struct test_liveness_state *state);
 bool test_liveness_take(struct test_liveness_state *state,
                         struct test_stall_evidence *out);
 
-PERCPU_DEFINE(test_progress, struct test_progress_counter);
+PERCPU_DEFINE(struct test_progress_counter, test_progress);
 static inline void test_conc_progress_tick(void) {
     atomic_inc_relaxed(&PERCPU_PTR(TOPC_NONE, test_progress)->count);
 }

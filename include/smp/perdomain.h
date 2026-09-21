@@ -21,7 +21,7 @@ struct perdomain_descriptor {
 
 LINKER_SECTION_DEFINE(struct perdomain_descriptor, perdomain_desc);
 
-#define PERDOMAIN_DECLARE(__n, __type, __ctor)                                 \
+#define PERDOMAIN_DECLARE(__type, __n, __ctor)                                 \
     static typeof(__type) __perdomain_##__n cc_unused;                         \
     static struct perdomain_descriptor __perdomain_desc_##__n;                 \
     static void __perdomain_ctor_##__n(void *inst, size_t domain) {            \
@@ -49,13 +49,13 @@ LINKER_SECTION_DEFINE(struct perdomain_descriptor, perdomain_desc);
 
 #define PERDOMAIN_EXPORT(name) PERDOMAIN_EXPORT_AS(name, name)
 
-#define PERDOMAIN_DEFINE_AS(name, sym_name, type)                              \
+#define PERDOMAIN_DEFINE_AS(type, name, sym_name)                              \
     extern struct perdomain_descriptor __perdomain_desc_sym_##sym_name;        \
     static typeof(type) __perdomain_##name cc_unused;                          \
     static struct perdomain_descriptor *const __perdomain_desc_ref_##name      \
         cc_unused = &__perdomain_desc_sym_##sym_name
 
-#define PERDOMAIN_DEFINE(name, type) PERDOMAIN_DEFINE_AS(name, name, type)
+#define PERDOMAIN_DEFINE(type, name) PERDOMAIN_DEFINE_AS(type, name, name)
 
 #define PERDOMAIN(name) &(__perdomain_##name)
 #define PERDOMAIN_READY(name)                                                  \
