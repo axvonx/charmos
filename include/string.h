@@ -1,5 +1,6 @@
 #pragma once
 #include <compiler/core.h>
+#include <compiler/wrapper.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -132,8 +133,8 @@ int isxdigit(int c) cc_constfn;
 int toupper(int c) cc_constfn;
 int tolower(int c) cc_constfn;
 
-char *strdup(const char *str) cc_malloc_like cc_warn_unused_result;
-char *strndup(const char *str, size_t n) cc_malloc_like cc_warn_unused_result;
+char *strdup(const char *str) cw_alloc() cc_warn_unused_result;
+char *strndup(const char *str, size_t n) cw_alloc() cc_warn_unused_result;
 int strcasecmp(const char *s1, const char *s2) cc_pure cc_nonnull(1, 2);
 int strncasecmp(const char *s1, const char *s2, size_t n) cc_pure
     cc_nonnull(1, 2);

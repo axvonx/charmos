@@ -1,5 +1,6 @@
 /* @title: Memory Descriptor */
 #pragma once
+#include <compiler/wrapper.h>
 #include <mem/vma_range.h>
 #include <structures/rbit.h>
 #include <sync/rwlock.h>
@@ -44,7 +45,7 @@ struct mm {
     refcount_t refcount; /* keep the struct alive past last user */
 };
 
-struct mm *mm_alloc(void);
+struct mm *mm_alloc(void) cw_alloc();
 void mm_free(struct mm *mm);
 struct mm *mm_fork(struct mm *src); /* clone VMAs + anon_vma_fork each */
 

@@ -57,7 +57,7 @@ struct fixed_size_range {
 
 static_assert(sizeof(struct fixed_size_range) < PAGE_SIZE);
 
-void *fixed_size_alloc(struct fixed_size_range *fsr);
+void *fixed_size_alloc(struct fixed_size_range *fsr) cw_alloc();
 void fixed_size_free(struct fixed_size_range *fsr, void *obj);
 void fixed_size_reclaim_freelist_pages(struct fixed_size_range *fsr);
 struct fixed_size_range *

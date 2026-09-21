@@ -29,9 +29,9 @@
 #define page_free(...) PP_CALL(page_free, __VA_ARGS__)
 
 void *page_alloc_internal(size_t n_pages, enum alloc_flags flags,
-                          enum alloc_behavior bh);
+                          enum alloc_behavior bh) cw_alloc();
 void *page_alloc_demand_internal(size_t n_pages, enum alloc_flags flags,
-                                 enum alloc_behavior bh);
+                                 enum alloc_behavior bh) cw_alloc();
 void page_free_internal(void *ptr, size_t n_pages,
                         enum alloc_behavior behavior);
 bool page_alloc_vaddr_in_vas(vaddr_t vaddr);

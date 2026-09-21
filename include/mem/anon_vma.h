@@ -1,5 +1,6 @@
 /* @title: Anonymous Virtual Memory Area */
 #pragma once
+#include <compiler/wrapper.h>
 #include <err.h>
 #include <structures/rbit.h>
 #include <sync/rwlock.h>
@@ -23,7 +24,7 @@ struct anon_vma {
     refcount_t refcount;     /* # AVCs + folios referencing this object */
 };
 
-struct anon_vma *anon_vma_alloc(void);
+struct anon_vma *anon_vma_alloc(void) cw_alloc();
 void anon_vma_free(struct anon_vma *av); /* refcount==0 only */
 enum err anon_vma_fork(struct vma_range *child, struct vma_range *parent);
 

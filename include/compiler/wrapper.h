@@ -3,6 +3,26 @@
 #include <compiler/core.h>
 #include <compiler/intrinsic.h>
 
+/* ==== cw_alloc: Allocator Attribute Wrapper ====
+ *
+ * Collapses the cc_malloc_like / cc_alloc_size / cc_alloc_align attribute
+ * trio into a single overloaded call:
+ *
+ *   cw_alloc()         - malloc-like, no tracked size param
+ *                         (e.g. kmalloc_pages)
+ *   cw_alloc(sz)        - malloc-like, size is parameter index `sz`
+ *                         (e.g. kmalloc_internal)
+ *   cw_alloc(sz, align) - malloc-like, size is `sz`, alignment is
+ *                         parameter index `align`
+ *                         (e.g. kmalloc_aligned_internal)
+ */
+#define cw_alloc_0() cc_malloc_like
+#define cw_alloc_1(sz) cc_malloc_like cc_alloc_size(sz)
+#define cw_alloc_2(sz, align)                                                  \
+    cc_malloc_like cc_alloc_size(sz) cc_alloc_align(align)
+
+#define cw_alloc(...) PP_CALL2(cw_alloc, __VA_ARGS__)
+
 #define cw_popcount(x)                                                         \
     _Generic((x),                                                              \
         unsigned char: ci_popcount((unsigned int) (x)),                        \

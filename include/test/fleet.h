@@ -1,6 +1,7 @@
 /* @title: Test worker fleet */
 #pragma once
 #include <compiler/core.h>
+#include <compiler/wrapper.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -96,7 +97,7 @@ struct test_fleet {
 struct test_fleet *test_fleet_init(struct test_context *ctx,
                                    const struct test_fleet_opts *opts);
 
-void *test_fleet_alloc(struct test_fleet *f, size_t size);
+void *test_fleet_alloc(struct test_fleet *f, size_t size) cw_alloc(2);
 
 struct test_conc_worker *test_fleet_spawn(struct test_fleet *f,
                                           const char *role, test_worker_fn body,

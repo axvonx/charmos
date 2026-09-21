@@ -1,5 +1,6 @@
 /* @title: Virtual Memory Area */
 #pragma once
+#include <compiler/wrapper.h>
 #include <mem/page.h>
 #include <structures/list.h>
 #include <structures/rbit.h>
@@ -34,7 +35,7 @@ static inline vaddr_t vma_range_end(const struct vma_range *vma_range) {
 }
 
 struct vma_range *vma_range_alloc(struct mm *mm, vaddr_t start, vaddr_t end,
-                                  enum vma_range_protection prot);
+                                  enum vma_range_protection prot) cw_alloc();
 void vma_range_free(struct vma_range *vma_range);
 
 void vma_range_init(struct vma_range *vma_range, struct mm *mm, vaddr_t start,

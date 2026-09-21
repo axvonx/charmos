@@ -62,11 +62,11 @@ struct folio {
 uint32_t page_get_folio_index(struct page *p);
 bool page_is_folio_head(struct page *p);
 
-struct folio *folio_alloc_folio_struct();
+struct folio *folio_alloc_folio_struct() cw_alloc();
 void folio_free_folio_struct(struct folio *f);
 
 struct folio *folio_alloc_internal(uint8_t order, enum alloc_flags flags,
-                                   enum alloc_behavior bh);
+                                   enum alloc_behavior bh) cw_alloc();
 void folio_free(struct folio *folio);
 
 /* page <-> folio backptrs, give every struct page
