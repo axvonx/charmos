@@ -50,4 +50,4 @@ max_runners = 4
 
     [tasks.nightmare.perturb_opts.stutter]
     period_ms = 3000
-    gap_ms    = 1000
+    gap_ms    = 10000
