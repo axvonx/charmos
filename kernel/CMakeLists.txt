@@ -8,7 +8,7 @@ file(GLOB_RECURSE C_SOURCES CONFIGURE_DEPENDS *.c)
 
 # Disabled test directories are dropped from the source list, and TEST_DIRS_DISABLED comes from cmake/tests.cmake
 foreach (FILE_PATH ${C_SOURCES})
-    if (FILE_PATH MATCHES "syms/")
+    if (FILE_PATH MATCHES "syms/" OR FILE_PATH MATCHES "uACPI/")
         list(REMOVE_ITEM C_SOURCES ${FILE_PATH})
         continue()
     endif ()
