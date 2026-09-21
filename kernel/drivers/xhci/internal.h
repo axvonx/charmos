@@ -244,12 +244,12 @@ static inline struct xhci_slot *xhci_get_slot(struct xhci_device *dev,
 }
 
 static inline enum xhci_slot_state xhci_slot_get_state(struct xhci_slot *slot) {
-    return atomic_load_explicit(&slot->state, memory_order_acquire);
+    return atomic_load_acq(&slot->state);
 }
 
 static inline void xhci_slot_set_state(struct xhci_slot *slot,
                                        enum xhci_slot_state new) {
-    atomic_store_explicit(&slot->state, new, memory_order_release);
+    atomic_store_release(&slot->state, new);
 }
 
 /* A request is OK if it is CC_SUCCESS and PROCESSED */

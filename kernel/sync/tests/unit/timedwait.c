@@ -51,7 +51,7 @@ static void condvar_timeout_race_worker(void *arg) {
 
         if (reason != WAKE_REASON_TIMEOUT)
             atomic_store(&race->wrong_reason, true);
-        atomic_fetch_add(&race->completed, 1);
+        atomic_inc(&race->completed);
     }
 }
 
@@ -105,13 +105,13 @@ TEST_DECLARE_UNIT(semaphore, timedwait) {
     semaphore_init(&s, 1, false);
 
     TEST_ASSERT(semaphore_timedwait(&s, 50));
-    TEST_ASSERT_EQ(s.count, 0);
+    TEST_ASSERT_EQ(atomic_load_relaxed(&s.count), 0);
 
     time_ms_t t0 = time_get_ms();
     TEST_ASSERT(!semaphore_timedwait(&s, 30));
     time_ms_t elapsed = time_get_ms() - t0;
     TEST_ASSERT_GE(elapsed, 25);
-    TEST_ASSERT_EQ(s.count, 0);
+    TEST_ASSERT_EQ(atomic_load_relaxed(&s.count), 0);
 
     struct timed_helper_args a = {
         .sem = &s,
@@ -122,7 +122,7 @@ TEST_DECLARE_UNIT(semaphore, timedwait) {
     thread_enqueue(t);
 
     TEST_ASSERT(semaphore_timedwait(&s, 200));
-    TEST_ASSERT_EQ(s.count, 0);
+    TEST_ASSERT_EQ(atomic_load_relaxed(&s.count), 0);
 
     return TEST_SUCCESS;
 }

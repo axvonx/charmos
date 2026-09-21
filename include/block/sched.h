@@ -1,11 +1,11 @@
 /* @title: I/O Request Scheduling */
 #pragma once
+#include <atomic.h>
 #include <block/bcache.h>
 #include <block/bio.h>
 #include <block/block.h>
 #include <fs/detect.h>
 #include <sch/sched.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <sync/lock_general.h>

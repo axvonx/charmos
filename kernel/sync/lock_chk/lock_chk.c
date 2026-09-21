@@ -1,7 +1,7 @@
+#include <atomic.h>
 #include <bootstage.h>
 #include <cmdline.h>
 #include <kassert.h>
-#include <stdatomic.h>
 #include <sync/lock_chk.h>
 
 #ifdef DEBUG_LOCK_CHK
@@ -28,8 +28,7 @@ void lock_chk_init(void) {
     kassert(bootstage_get() >= BOOTSTAGE_LATE);
     lock_chk_deep_activate();
     lock_debug_activate();
-    atomic_store_explicit(&lock_chk_global.state, LOCK_CHK_ACTIVE,
-                          memory_order_release);
+    atomic_store_release(&lock_chk_global.state, LOCK_CHK_ACTIVE);
 }
 
 bool lock_chk_tracking_active(void) {
@@ -48,7 +47,7 @@ void lock_chk_note_use(struct lock_chk_lock *lock, enum lock_op_flags flags) {
         kassert((lock->flags & LOCK_CHKD_THREAD) == 0 ||
                 (lock->flags & LOCK_CHKD_ORDER) != 0);
 
-    atomic_store_explicit(&lock->used, true, memory_order_release);
+    atomic_store_release(&lock->used, true);
 }
 
 #else /* !defined(DEBUG_LOCK_CHK) */

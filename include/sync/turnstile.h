@@ -1,4 +1,4 @@
-#include <stdatomic.h>
+#include <atomic.h>
 #include <structures/pairing_heap.h>
 #include <structures/rbt.h>
 #include <thread/queue.h>

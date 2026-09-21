@@ -4,6 +4,7 @@
 
 #pragma once
 #include <asm.h>
+#include <atomic.h>
 #include <compiler/core.h>
 #include <log.h>
 #include <math/range.h>
@@ -11,7 +12,6 @@
 #include <sch/climb.h>
 #include <sch/rt_sched_types.h>
 #include <stdarg.h>
-#include <stdatomic.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <structures/list.h>
@@ -208,7 +208,7 @@ struct thread {
     /* ========== State ========== */
 
     /* State */
-    _Atomic enum thread_state state;
+    atomic(enum thread_state) state;
 
     /* Who is running us? */
     cpu_id_t curr_core; /* -1 if not being ran */
@@ -217,18 +217,18 @@ struct thread {
                                * -1 if the scheduler should select the most
                                * optimal core */
 
-    _Atomic(struct scheduler *) scheduler;
+    atomic(struct scheduler *) scheduler;
 
     time_ms_t run_start_time; /* When did we start running */
 
     /* Who is allowed to run us? */
     struct cpu_mask allowed_cpus;
-    _Atomic int64_t migrate_to; /* -1 if no migration target */
+    atomic_int64_t migrate_to; /* -1 if no migration target */
 
     /* Flags */
     enum rt_scheduler_capability accepted_rt_caps;
-    _Atomic enum thread_flags flags;
-    _Atomic size_t migration_generation;
+    atomic(enum thread_flags) flags;
+    atomic_size_t migration_generation;
 
     /* ======== Raw priority + timeslice data ======== */
 
@@ -320,13 +320,13 @@ struct thread {
     bool alert_pending;
     bool object_wait;
 
-    _Atomic enum thread_wait_type wait_type;
+    atomic(enum thread_wait_type) wait_type;
 
     struct condvar_with_cb cv_cb_object; /* wait object */
     struct list_head io_wait_tokens;     /* list of tokens */
 
-    struct turnstile *turnstile;            /* my turnstile */
-    _Atomic(struct turnstile *) blocked_ts; /* what am I blocked on */
+    struct turnstile *turnstile;           /* my turnstile */
+    atomic(struct turnstile *) blocked_ts; /* what am I blocked on */
 
     struct climb_thread_state climb_state;
 
@@ -341,7 +341,7 @@ struct thread {
     struct apc_queue apc_head[APC_TYPE_COUNT];
 
     /* Any APC pending */
-    _Atomic uint8_t apc_pending_mask; /* bitmask of APC_TYPE_* pending */
+    atomic_uint8_t apc_pending_mask; /* bitmask of APC_TYPE_* pending */
 
     /* APC disable counts */
     uint32_t special_apc_disable;
@@ -580,19 +580,17 @@ static inline bool thread_test_flag(struct thread *t, enum thread_flags flag) {
 }
 
 static inline size_t thread_get_migration_generation(struct thread *t) {
-    return atomic_load_explicit(&t->migration_generation, memory_order_acquire);
+    return atomic_load_acq(&t->migration_generation);
 }
 
 static inline struct scheduler *thread_get_scheduler_unsafe(struct thread *t) {
-    return atomic_load_explicit(&t->scheduler, memory_order_acquire);
+    return atomic_load_acq(&t->scheduler);
 }
 
 static inline void thread_set_runqueue(struct thread *t, struct scheduler *s) {
-    atomic_fetch_add_explicit(&t->migration_generation, 1,
-                              memory_order_release);
-    atomic_store_explicit(&t->scheduler, s, memory_order_release);
-    atomic_fetch_add_explicit(&t->migration_generation, 1,
-                              memory_order_release);
+    atomic_inc_release(&t->migration_generation);
+    atomic_store_release(&t->scheduler, s);
+    atomic_inc_release(&t->migration_generation);
 }
 
 /* RCU keeps the thread memory allocated so we inc_not_zero here
@@ -646,7 +644,7 @@ static inline bool thread_is_rt(struct thread *t) {
 }
 
 static inline enum thread_wait_type thread_get_wait_type(struct thread *t) {
-    return atomic_load_explicit(&t->wait_type, memory_order_acquire);
+    return atomic_load_acq(&t->wait_type);
 }
 
 static inline struct thread *thread_spawn(char *name, void (*entry)(void *),

@@ -1,8 +1,8 @@
 #pragma once
+#include <atomic.h>
 #include <compiler/core.h>
 #include <mem/fixed_size_alloc.h>
 #include <mem/vas.h>
-#include <stdatomic.h>
 #include <structures/list.h>
 #include <structures/rbt.h>
 
@@ -33,7 +33,7 @@ static inline uintptr_t vas_token_make(vaddr_t addr, enum vas_mag_state state) {
 }
 
 struct vas_mag_slot {
-    _Atomic uintptr_t token;
+    atomic_uintptr_t token;
     struct vas_segment *segment;
 };
 
@@ -49,7 +49,7 @@ struct vas_segment {
 
     /* Zero in global, local segments can coalesce */
     vaddr_t span_start;
-    _Atomic enum vas_segment_type type;
+    atomic(enum vas_segment_type) type;
     struct vas_mag_slot *mag_slot; /* Immutable while LIVE/CACHED */
     struct rbt_node node;
     struct list_head seg_node;
@@ -81,11 +81,11 @@ struct vas {
     size_t owner_count;
     size_t bootstrap_pages; /* Zero for non-bootstrap ones */
     struct vas_arena *local;
-    _Atomic cpu_id_t *chunk_owner;
+    atomic(cpu_id_t) * chunk_owner;
 
     /* Charged whilst enrolled, including LIVE slots,
      * this is a bound on retained VA */
-    _Atomic size_t mag_reserved_bytes;
+    atomic_size_t mag_reserved_bytes;
 #ifdef TEST_ENABLED
     bool magazines_disabled;
 #endif

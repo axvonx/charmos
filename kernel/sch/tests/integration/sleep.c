@@ -43,7 +43,7 @@ static void short_sleep_entry(void *arg) {
     cc_var_unused(arg);
     for (size_t i = 0; i < 200 && !atomic_load(&short_sleep_stop); i++) {
         thread_sleep_for_us(1);
-        atomic_fetch_add(&short_sleep_count, 1);
+        atomic_inc(&short_sleep_count);
     }
 }
 

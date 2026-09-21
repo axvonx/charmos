@@ -1,5 +1,6 @@
 /* @title: Nightmare test harness */
 #pragma once
+#include <atomic.h>
 #include <cmdline.h>
 #include <compiler/core.h>
 #include <crypto/prng.h>
@@ -8,7 +9,6 @@
 #include <math/fixed.h>
 #include <scaled_param.h>
 #include <smp/percpu.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>

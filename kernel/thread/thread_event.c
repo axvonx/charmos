@@ -124,7 +124,9 @@ void thread_print(const struct thread *t) {
 
     /* APC state */
     printf("    executing_apc: %s,\n",
-           (t->flags & THREAD_FLAG_EXECUTING_APC) ? "true" : "false");
+           (atomic_load_relaxed(&t->flags) & THREAD_FLAG_EXECUTING_APC)
+               ? "true"
+               : "false");
     printf("    special_apc_disable: %u, kernel_apc_disable: %u,\n",
            t->special_apc_disable, t->kernel_apc_disable);
 

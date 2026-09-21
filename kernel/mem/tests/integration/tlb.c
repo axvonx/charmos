@@ -15,7 +15,7 @@ static void tlb_reader(void *arg) {
     volatile uint64_t *va = thread_get_current()->private;
     tlb_seen[id] = *va;
 
-    atomic_fetch_add(&tlb_threads_done, 1);
+    atomic_inc(&tlb_threads_done);
 }
 
 TEST_DECLARE_INTEGRATION(mem, tlb_shootdown_sync,

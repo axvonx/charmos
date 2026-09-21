@@ -9,8 +9,7 @@ enum mutex_bits : uintptr_t {
 #define MUTEX_META_BITS (MUTEX_HELD_BIT)
 
 #define MUTEX_READ_LOCK_WORD(__mtx)                                            \
-    (atomic_load_explicit(&((struct mutex *) (__mtx))->lock_word,              \
-                          memory_order_acquire))
+    atomic_load_acq(&((struct mutex *) (__mtx))->lock_word)
 #define MUTEX_BACKOFF_DEFAULT 4
 #define MUTEX_BACKOFF_MAX ((size_t) 32768)
 #define MUTEX_BACKOFF_SHIFT 1
@@ -25,7 +24,7 @@ static inline uintptr_t mutex_make_unlocked_word(void) {
 }
 
 static inline bool mutex_try_lock(struct mutex *mtx, struct thread *self) {
-    uintptr_t old = atomic_load_explicit(&mtx->lock_word, memory_order_acquire);
+    uintptr_t old = atomic_load_acq(&mtx->lock_word);
     uintptr_t newval = mutex_make_lock_word(self);
 
     while (true) {
@@ -35,10 +34,10 @@ static inline bool mutex_try_lock(struct mutex *mtx, struct thread *self) {
 
         /* We want to preserve other bits */
 
-        if (atomic_compare_exchange_weak_explicit(
+        if (atomic_cas_weak(
                 &mtx->lock_word,
                 &old, /* If CAS fails, 'old' is updated to current value */
-                newval, memory_order_acquire, memory_order_relaxed)) {
+                newval, mo_acquire, mo_relaxed)) {
             return true;
         }
 
@@ -48,6 +47,5 @@ static inline bool mutex_try_lock(struct mutex *mtx, struct thread *self) {
 }
 
 static inline void mutex_lock_word_unlock(struct mutex *mtx) {
-    atomic_store_explicit(&mtx->lock_word, mutex_make_unlocked_word(),
-                          memory_order_release);
+    atomic_store_release(&mtx->lock_word, mutex_make_unlocked_word());
 }

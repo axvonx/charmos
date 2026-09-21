@@ -227,11 +227,11 @@ struct watchdog_percpu {
                         * or modified outside of it, no need for atomics */
     struct seqcount pets_seq;
 
-    _Atomic size_t pets;
-    _Atomic size_t anti_pets;
+    atomic_size_t pets;
+    atomic_size_t anti_pets;
 
     /* Monotonic count of heartbeats the CPU has emitted */
-    _Atomic uint64_t heartbeat_seq;
+    atomic_uint64_t heartbeat_seq;
 
     struct watchdog_percpu_response response;
     struct watchdog_buckets buckets;

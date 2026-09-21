@@ -168,7 +168,7 @@ static void dump_slab_exec_fault(struct thread *curr, struct irq_context *ctx) {
     printf("\n");
     printf("  entry: %p\n", (void *) curr->entry);
     printf("  stack: %p (size %lu)\n", (void *) curr->stack, curr->stack_size);
-    printf("  state: %u\n", (uint32_t) curr->state);
+    printf("  state: %u\n", (uint32_t) atomic_load_relaxed(&curr->state));
     printf("  core:  %u\n", (uint32_t) curr->curr_core);
     printf("  flags: 0x%lx\n", (uint64_t) thread_get_flags(curr));
     printf("  ref:   %lu\n", (uint64_t) refcount_read(&curr->refcount));
@@ -219,11 +219,13 @@ static void dump_slab_exec_fault(struct thread *curr, struct irq_context *ctx) {
     printf("  sched->current = %p\n", (void *) sched->current);
     printf("  sched->drop_last_ref = %p\n", (void *) sched->drop_last_ref);
     printf("  sched->other_locked = %p\n", (void *) sched->other_locked);
-    printf("  sched->stealing_work = %u\n", (uint32_t) sched->stealing_work);
+    printf("  sched->stealing_work = %u\n",
+           (uint32_t) atomic_load_relaxed(&sched->stealing_work));
 
     printf("\n--- Thread migration info ---\n");
     printf("  migrate_to = %ld\n", (int64_t) atomic_load(&curr->migrate_to));
-    printf("  migration_gen = 0x%lx\n", curr->migration_generation);
+    printf("  migration_gen = 0x%lx\n",
+           atomic_load_relaxed(&curr->migration_generation));
     printf("  scheduler = %p\n", (void *) atomic_load(&curr->scheduler));
 }
 

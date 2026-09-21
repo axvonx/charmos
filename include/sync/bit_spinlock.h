@@ -1,12 +1,12 @@
 /* @title: Bit Spinlock */
 #pragma once
 #include <asm.h>
+#include <atomic.h>
 #include <compiler/core.h>
 #include <compiler/intrinsic.h>
 #include <kassert.h>
 #include <math/bit.h>
 #include <sch/irql.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -28,24 +28,20 @@
 #define bit_spin_is_locked_raw(bit, ptr)                                       \
     ({                                                                         \
         BIT_SPINLOCK_CHECK(bit, ptr);                                          \
-        typeof(*(ptr)) __m = BIT_SPINLOCK_MASK(bit, ptr);                      \
-        (atomic_load_explicit((_Atomic typeof(*(ptr)) *) (ptr),                \
-                              memory_order_relaxed) &                          \
-         __m) != 0;                                                            \
+        atomic_test_bit_relaxed((atomic(typeof(*(ptr))) *) (ptr), bit);        \
     })
 
 #define bit_spin_trylock_raw(bit, ptr)                                         \
     ({                                                                         \
         BIT_SPINLOCK_CHECK(bit, ptr);                                          \
         typeof(*(ptr)) __m = BIT_SPINLOCK_MASK(bit, ptr);                      \
-        typeof(*(ptr)) __old = atomic_load_explicit(                           \
-            (_Atomic typeof(*(ptr)) *) (ptr), memory_order_relaxed);           \
+        typeof(*(ptr)) __old =                                                 \
+            atomic_load_relaxed((atomic(typeof(*(ptr))) *) (ptr));             \
         bool __acquired = false;                                               \
         if (!(__old & __m)) {                                                  \
-            __acquired = atomic_compare_exchange_weak_explicit(                \
-                (_Atomic typeof(*(ptr)) *) (ptr), &__old,                      \
-                (typeof(*(ptr))) (__old | __m), memory_order_acquire,          \
-                memory_order_relaxed);                                         \
+            __acquired = atomic_cas_weak(                                      \
+                (atomic(typeof(*(ptr))) *) (ptr), &__old,                      \
+                (typeof(*(ptr))) (__old | __m), mo_acquire, mo_relaxed);       \
         }                                                                      \
         __acquired;                                                            \
     })
@@ -55,16 +51,15 @@
         BIT_SPINLOCK_CHECK(bit, ptr);                                          \
         typeof(*(ptr)) __m = BIT_SPINLOCK_MASK(bit, ptr);                      \
         while (true) {                                                         \
-            typeof(*(ptr)) __old = atomic_load_explicit(                       \
-                (_Atomic typeof(*(ptr)) *) (ptr), memory_order_relaxed);       \
+            typeof(*(ptr)) __old =                                             \
+                atomic_load_relaxed((atomic(typeof(*(ptr))) *) (ptr));         \
             if (__old & __m) {                                                 \
                 cpu_pause();                                                   \
                 continue;                                                      \
             }                                                                  \
-            if (atomic_compare_exchange_weak_explicit(                         \
-                    (_Atomic typeof(*(ptr)) *) (ptr), &__old,                  \
-                    (typeof(*(ptr))) (__old | __m), memory_order_acquire,      \
-                    memory_order_relaxed))                                     \
+            if (atomic_cas_weak((atomic(typeof(*(ptr))) *) (ptr), &__old,      \
+                                (typeof(*(ptr))) (__old | __m), mo_acquire,    \
+                                mo_relaxed))                                   \
                 break;                                                         \
             cpu_pause();                                                       \
         }                                                                      \
@@ -73,11 +68,8 @@
 #define bit_spin_unlock_raw(bit, ptr)                                          \
     do {                                                                       \
         BIT_SPINLOCK_CHECK(bit, ptr);                                          \
-        typeof(*(ptr)) __m = BIT_SPINLOCK_MASK(bit, ptr);                      \
-        typeof(*(ptr)) __not_m = (typeof(*(ptr))) (~__m);                      \
-        kassert(atomic_fetch_and_explicit((_Atomic typeof(*(ptr)) *) (ptr),    \
-                                          __not_m, memory_order_release) &     \
-                    __m,                                                       \
+        kassert(atomic_test_and_clear_bit_release(                             \
+                    (atomic(typeof(*(ptr))) *) (ptr), bit),                    \
                 "bit spinlock unlock on unheld lock");                         \
     } while (0)
 

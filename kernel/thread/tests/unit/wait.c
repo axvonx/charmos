@@ -62,7 +62,7 @@ static void race_satisfy(void *arg) {
         scheduler_yield();
     if (thread_wait_header_satisfy(r->header,
                                    THREAD_WAKE_REASON_BLOCKING_MANUAL, NULL))
-        atomic_fetch_add(r->wins, 1);
+        atomic_inc(r->wins);
 }
 
 TEST_DECLARE_UNIT(wait_block, concurrent_wait_any) {
@@ -136,7 +136,7 @@ TEST_DECLARE_UNIT(wait_block, apc_preserves_registration) {
         scheduler_yield();
     for (size_t i = 0; i < 5; i++) {
         kassert(apc_enqueue(t, &apc, APC_TYPE_KERNEL));
-        while (atomic_load(&apc.state) != APC_STATE_IDLE)
+        while (atomic_load_acq(&apc.state) != APC_STATE_IDLE)
             scheduler_yield();
     }
     thread_join(t);

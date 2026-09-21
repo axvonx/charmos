@@ -1,4 +1,5 @@
 #include <asm.h>
+#include <atomic.h>
 #include <bootstage.h>
 #include <crypto/prng.h>
 #include <irq/idt.h>
@@ -8,7 +9,6 @@
 #include <registry.h>
 #include <sch/sched.h>
 #include <smp/smp.h>
-#include <stdatomic.h>
 #include <stdint.h>
 
 #include "internal.h"

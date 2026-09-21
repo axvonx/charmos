@@ -85,13 +85,13 @@ rt_scheduler_release_two_locks(struct rt_scheduler *a, struct rt_scheduler *b,
 
 static inline enum rt_scheduler_static_state
 rt_scheduler_static_get_state(struct rt_scheduler_static *rts) {
-    return atomic_load_explicit(&rts->state, memory_order_acquire);
+    return atomic_load_acq(&rts->state);
 }
 
 static inline void
 rt_scheduler_static_set_state(struct rt_scheduler_static *rts,
                               enum rt_scheduler_static_state new) {
-    atomic_store_explicit(&rts->state, new, memory_order_release);
+    atomic_store_release(&rts->state, new);
 }
 
 REFCOUNT_GENERATE_GET_FOR_STRUCT_WITH_FAILURE_COND(

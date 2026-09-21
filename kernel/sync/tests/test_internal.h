@@ -1,12 +1,12 @@
 #pragma once
 #include <test/test.h>
 
+#include <atomic.h>
 #include <crypto/prng.h>
 #include <log.h>
 #include <mem/alloc.h>
 #include <sch/sched.h>
 #include <smp/core.h>
-#include <stdatomic.h>
 #include <string.h>
 #include <sync/mutex.h>
 #include <sync/mutex_simple.h>

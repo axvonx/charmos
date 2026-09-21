@@ -2,9 +2,9 @@
 
 #ifdef DEBUG_LOCK_CHK
 
+#include <atomic.h>
 #include <math/hash.h>
 #include <stdarg.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
@@ -120,14 +120,14 @@ struct lock_chk_fault {
 struct lock_chk_globals {
     struct lock_chk_graph graph;
 
-    _Atomic enum lock_chk_engine_state state;
-    _Atomic enum lock_chk_engine_state deep;
-    _Atomic enum lock_chk_engine_state debug;
+    atomic(enum lock_chk_engine_state) state;
+    atomic(enum lock_chk_engine_state) deep;
+    atomic(enum lock_chk_engine_state) debug;
 
     bool panic_on_exhaustion;
 
     /* for claiming the report */
-    _Atomic bool report_busy;
+    atomic_bool report_busy;
     struct lock_chk_report report;
 };
 
@@ -210,8 +210,7 @@ static inline bool lock_chk_modes_conflict(enum lock_chk_mode a,
 }
 
 static inline struct lock_chk_report *lock_chk_report_claim(void) {
-    if (atomic_exchange_explicit(&lock_chk_global.report_busy, true,
-                                 memory_order_acq_rel))
+    if (atomic_xchg_acq_rel(&lock_chk_global.report_busy, true))
         return NULL;
 
     struct lock_chk_report *report = &lock_chk_global.report;
@@ -223,8 +222,7 @@ static inline struct lock_chk_report *lock_chk_report_claim(void) {
 }
 
 static inline void lock_chk_report_release(void) {
-    atomic_store_explicit(&lock_chk_global.report_busy, false,
-                          memory_order_release);
+    atomic_store_release(&lock_chk_global.report_busy, false);
 }
 
 static inline void lock_chk_fail(struct lock_chk_fault *fault, const char *fmt,
@@ -290,8 +288,8 @@ static inline uint64_t lock_chk_hash_str(uint64_t hash, const char *str) {
 }
 
 static inline bool
-lock_chk_state_active(const _Atomic enum lock_chk_engine_state *state) {
-    return atomic_load_explicit(state, memory_order_acquire) == LOCK_CHK_ACTIVE;
+lock_chk_state_active(const atomic(enum lock_chk_engine_state) * state) {
+    return atomic_load_acq(state) == LOCK_CHK_ACTIVE;
 }
 
 static inline const struct lock_chk_class *

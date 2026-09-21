@@ -1,8 +1,8 @@
 /* @title: Lock Validation */
 #pragma once
+#include <atomic.h>
 #include <compiler/core.h>
 #include <sch/irql.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -112,7 +112,7 @@ struct lock_chk_class {
  */
 #ifdef DEBUG_LOCK_CHK
 
-void lock_debug_spin_classify(_Atomic enum lock_op_flags *usage,
+void lock_debug_spin_classify(atomic(enum lock_op_flags) * usage,
                               enum lock_op_flags requested,
                               struct lock_chk_lock *lock,
                               const struct lock_chk_site *site);

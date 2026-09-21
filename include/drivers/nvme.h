@@ -1,9 +1,9 @@
 /* @title: nVME */
 #pragma once
+#include <atomic.h>
 #include <block/block.h>
 #include <block/sched.h>
 #include <compiler/core.h>
-#include <stdatomic.h>
 #include <stdint.h>
 #include <sync/semaphore.h>
 #include <sync/spinlock.h>
@@ -122,7 +122,7 @@ struct nvme_queue {
     uint32_t cc_mem_io *cq_db;
 
     struct nvme_request **sq_requests;
-    _Atomic uint16_t outstanding;
+    atomic_uint16_t outstanding;
 
     struct spinlock lock;
 };
@@ -163,7 +163,7 @@ struct nvme_device {
     uint64_t max_transfer_size;
     struct block_device *generic_disk;
 
-    _Atomic uint64_t total_outstanding;
+    atomic_uint64_t total_outstanding;
 
     struct workqueue *workqueue;
 };

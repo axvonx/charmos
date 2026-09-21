@@ -1,13 +1,13 @@
 /* @title: One-time atomic countdown latches */
 #pragma once
 #include <asm.h>
-#include <stdatomic.h>
+#include <atomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <time/time.h>
 
 struct once_latch {
-    _Atomic uint64_t count;
+    atomic_uint64_t count;
 };
 
 #define ONCE_LATCH_INIT(n) {.count = ATOMIC_VAR_INIT(n)}
@@ -17,16 +17,15 @@ static inline void once_latch_init(struct once_latch *latch, uint64_t count) {
 }
 
 static inline bool once_latch_count_down(struct once_latch *latch) {
-    return atomic_fetch_sub_explicit(&latch->count, 1, memory_order_acq_rel) ==
-           1;
+    return atomic_dec_and_test(&latch->count);
 }
 
 static inline bool once_latch_is_ready(const struct once_latch *latch) {
-    return atomic_load_explicit(&latch->count, memory_order_acquire) == 0;
+    return atomic_load_acq(&latch->count) == 0;
 }
 
 static inline uint64_t once_latch_count(const struct once_latch *latch) {
-    return atomic_load_explicit(&latch->count, memory_order_acquire);
+    return atomic_load_acq(&latch->count);
 }
 
 static inline void once_latch_spin_wait(const struct once_latch *latch) {

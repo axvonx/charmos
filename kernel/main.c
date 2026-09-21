@@ -70,7 +70,7 @@ cc_no_asan void k_main(void) {
     irq_disable();
     global.core_count = mp_request.response->cpu_count;
     global.hhdm_offset = hhdm_request.response->offset;
-    global.pt_epoch = 1;
+    atomic_init(&global.pt_epoch, 1);
 
     printf_init(framebuffer_request.response->framebuffers[0]);
     err_facilities_init();

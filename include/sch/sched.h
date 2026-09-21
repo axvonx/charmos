@@ -22,7 +22,7 @@
 #define SCHEDULER_DEFAULT_WORK_STEAL_MIN_DIFF 130
 
 struct idle_thread_data {
-    _Atomic uint64_t last_entry_ms;
+    atomic_uint64_t last_entry_ms;
     uint64_t last_exit_ms;
 };
 
@@ -42,7 +42,7 @@ struct scheduler {
 
     struct rbt climb_threads; /* threads on this CPU participating in CLIMB */
 
-    _Atomic uint8_t queue_bitmap;
+    atomic_uint8_t queue_bitmap;
 
     struct thread *current;
     struct thread *drop_last_ref;
@@ -135,9 +135,9 @@ enum irq_result scheduler_timer_isr(void *ctx, uint8_t vector,
 /* For a global structure containing central scheduler data */
 struct scheduler_data {
     uint32_t max_concurrent_stealers;
-    _Atomic uint32_t active_stealers;
-    _Atomic uint32_t total_threads;
-    _Atomic int64_t steal_min_diff;
+    atomic_uint32_t active_stealers;
+    atomic_uint32_t total_threads;
+    atomic_int64_t steal_min_diff;
 };
 
 extern struct scheduler_data scheduler_data;
@@ -174,16 +174,14 @@ static inline void scheduler_mark_self_idle(bool new) {
     struct core *c = smp_core(TOPC_IRQL); /* Only ever called from
                                            * the reschedule routine */
 
-    if (c->idle != new) {
-        c->idle = new;
+    if (atomic_load_relaxed(&c->idle) != new) {
+        atomic_store_relaxed(&c->idle, new);
         topology_mark_core_idle(c->id, new);
         scheduler_domain_mark_self_idle(new);
         if (new) {
-            atomic_fetch_add_explicit(&global.idle_core_count, 1,
-                                      memory_order_acq_rel);
+            atomic_inc_acq_rel(&global.idle_core_count);
         } else {
-            atomic_fetch_sub_explicit(&global.idle_core_count, 1,
-                                      memory_order_acq_rel);
+            atomic_dec_acq_rel(&global.idle_core_count);
         }
     }
 }

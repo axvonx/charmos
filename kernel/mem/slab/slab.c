@@ -275,8 +275,9 @@ static void slab_free_virt_and_phys(struct slab *slab) {
 
     for (size_t i = 0; i < slab->page_count; i++) {
         size_t virt = virt_base + i * PAGE_SIZE;
-        if (slab->backing_pages[i]) {
-            paddr_t phys = page_get_paddr(slab->backing_pages[i]);
+        struct page *bp = atomic_load_relaxed(&slab->backing_pages[i]);
+        if (bp) {
+            paddr_t phys = page_get_paddr(bp);
             pmm_free_page(phys);
         }
 
@@ -428,9 +429,10 @@ static struct slab *slab_create_new(struct slab_cache *cache) {
 
     for (size_t i = 0; i < cache->pages_per_slab; i++) {
         if (phys[i]) {
-            slab->backing_pages[i] = page_for_paddr(phys[i]);
+            atomic_store_relaxed(&slab->backing_pages[i],
+                                 page_for_paddr(phys[i]));
         } else {
-            slab->backing_pages[i] = NULL;
+            atomic_store_relaxed(&slab->backing_pages[i], NULL);
         }
     }
 
@@ -1345,8 +1347,10 @@ void *kmalloc_from_domain(domain_id_t domain, size_t size) {
 
 bool slab_domain_busy(struct slab_domain *domain) {
     bool idle = domain_idle(domain->domain);
-    struct slab_domain_bucket *curr = &domain->buckets[domain->stats->current];
-    bool recent_call = curr->alloc_calls && curr->free_calls;
+    struct slab_domain_bucket *curr =
+        &domain->buckets[atomic_load_relaxed(&domain->stats->current)];
+    bool recent_call = atomic_load_relaxed(&curr->alloc_calls) &&
+                       atomic_load_relaxed(&curr->free_calls);
 
     return recent_call && !idle;
 }

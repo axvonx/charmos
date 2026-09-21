@@ -18,13 +18,12 @@ struct slab_track {
     uint8_t live;
 };
 static struct slab_track slab_track_table[SLAB_TRACK_SLOTS];
-static _Atomic uint32_t slab_track_seq;
+static atomic_uint32_t slab_track_seq;
 
 void slab_track_event(vaddr_t addr, uint64_t ra0, uint64_t ra1, bool is_alloc) {
     struct slab_track *e = &slab_track_table[(addr >> 6) % SLAB_TRACK_SLOTS];
     e->addr = addr;
-    e->seq =
-        atomic_fetch_add_explicit(&slab_track_seq, 1, memory_order_relaxed);
+    e->seq = atomic_fetch_add_relaxed(&slab_track_seq, 1);
     if (is_alloc) {
         e->alloc_ra[0] = ra0;
         e->alloc_ra[1] = ra1;
@@ -78,10 +77,8 @@ void slab_debug_assert_not_already_free(vaddr_t v, int32_t class) {
 
         struct slab_free_queue *fq = &sd->free_queue;
         if (fq->mpmc.slots) {
-            uint64_t tail =
-                atomic_load_explicit(&fq->mpmc.tail, memory_order_acquire);
-            uint64_t head =
-                atomic_load_explicit(&fq->mpmc.head, memory_order_acquire);
+            uint64_t tail = atomic_load_acq(&fq->mpmc.tail);
+            uint64_t head = atomic_load_acq(&fq->mpmc.head);
             for (uint64_t pos = tail; pos != head; pos++)
                 if (fq->mpmc.slots[pos % fq->mpmc.capacity].data == v)
                     panic(
@@ -196,10 +193,8 @@ cc_no_asan void slab_dump_corruption(void *obj,
 
         struct slab_free_queue *fq = &sd->free_queue;
         if (fq->mpmc.slots) {
-            uint64_t tail =
-                atomic_load_explicit(&fq->mpmc.tail, memory_order_acquire);
-            uint64_t head =
-                atomic_load_explicit(&fq->mpmc.head, memory_order_acquire);
+            uint64_t tail = atomic_load_acq(&fq->mpmc.tail);
+            uint64_t head = atomic_load_acq(&fq->mpmc.head);
             for (size_t i = 0; i < fq->mpmc.capacity; i++) {
                 if (fq->mpmc.slots[i].data != v)
                     continue;

@@ -14,7 +14,7 @@ static void the_apc(void *arg) {
 }
 
 static void the_apc_destroy(struct apc *apc) {
-    atomic_fetch_add(&apc_destroyed, 1);
+    atomic_inc(&apc_destroyed);
     kfree(apc);
 }
 
@@ -58,7 +58,7 @@ static atomic_uint apc_ref_destroyed = 0;
 
 static void apc_ref_destroy(struct apc *apc) {
     cc_var_unused(apc);
-    atomic_fetch_add(&apc_ref_destroyed, 1);
+    atomic_inc(&apc_ref_destroyed);
 }
 
 TEST_DECLARE_INTEGRATION(apc, refcount_finalizes_at_zero) {
@@ -92,7 +92,7 @@ static void cancelled_apc(void *arg) {
 }
 
 static void cancelled_apc_destroy(struct apc *apc) {
-    atomic_fetch_add(&apc_cancel_destroyed, 1);
+    atomic_inc(&apc_cancel_destroyed);
     kfree(apc);
 }
 
@@ -146,7 +146,7 @@ static void rundown_apc(void *arg) {
 }
 
 static void rundown_apc_destroy(struct apc *apc) {
-    atomic_fetch_add(&apc_rundown_destroyed, 1);
+    atomic_inc(&apc_rundown_destroyed);
     kfree(apc);
 }
 
@@ -192,12 +192,12 @@ static atomic_uint apc_reuse_destroyed = 0;
 
 static void reused_apc(void *arg) {
     cc_var_unused(arg);
-    atomic_fetch_add(&apc_reuse_ran, 1);
+    atomic_inc(&apc_reuse_ran);
 }
 
 static void reused_apc_destroy(struct apc *apc) {
     cc_var_unused(apc);
-    atomic_fetch_add(&apc_reuse_destroyed, 1);
+    atomic_inc(&apc_reuse_destroyed);
 }
 
 static void apc_reuse_target(void *arg) {
@@ -222,8 +222,7 @@ TEST_DECLARE_INTEGRATION(apc, caller_ref_allows_reuse) {
         thread_put(target);
         while (atomic_load(&apc_reuse_ran) < expected)
             scheduler_yield();
-        while (atomic_load_explicit(&apc.state, memory_order_acquire) !=
-               APC_STATE_IDLE)
+        while (atomic_load_acq(&apc.state) != APC_STATE_IDLE)
             scheduler_yield();
     }
 
@@ -243,11 +242,11 @@ static atomic_uint apc_race_destroyed = 0;
 
 static void raced_apc(void *arg) {
     cc_var_unused(arg);
-    atomic_fetch_add(&apc_race_ran, 1);
+    atomic_inc(&apc_race_ran);
 }
 
 static void raced_apc_destroy(struct apc *apc) {
-    atomic_fetch_add(&apc_race_destroyed, 1);
+    atomic_inc(&apc_race_destroyed);
     kfree(apc);
 }
 
@@ -297,7 +296,7 @@ static atomic_uint the_event_apc_ran_times = 0;
 static atomic_bool event_apc_test_ok = false;
 static void the_event_apc(void *pc) {
     cc_var_unused(pc);
-    atomic_fetch_add(&the_event_apc_ran_times, 1);
+    atomic_inc(&the_event_apc_ran_times);
 }
 
 APC_EVENT_CREATE(apc_event_test, "TEST_EVENT");

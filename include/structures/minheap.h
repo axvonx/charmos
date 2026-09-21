@@ -1,6 +1,6 @@
 /* @title: Minheap */
 #pragma once
-#include <stdatomic.h>
+#include <atomic.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <sync/spinlock.h>
@@ -12,14 +12,14 @@
          (node_ptr = ((heap)->nodes[__i]), __i < (heap)->size); __i++)
 
 struct minheap_node {
-    _Atomic uint64_t key;
-    _Atomic uint32_t index;
+    atomic_uint64_t key;
+    atomic_uint32_t index;
 };
 
 struct minheap {
     struct minheap_node **nodes;
-    _Atomic uint32_t capacity;
-    _Atomic uint32_t size;
+    atomic_uint32_t capacity;
+    atomic_uint32_t size;
     struct spinlock lock;
 };
 

@@ -121,7 +121,7 @@ stack_handle_t stack_depot_save(uintptr_t *entries, size_t num_entries,
     list_add_tail(&rec->hash_list, &this_chain->list);
     spin_unlock(&this_chain->lock, irql);
 
-    atomic_fetch_add(&stack_depot_global.num_records, 1);
+    atomic_inc(&stack_depot_global.num_records);
 
 out:
 
@@ -165,7 +165,7 @@ void stack_depot_put(stack_handle_t key) {
 
     if (free_it) {
         record_free(rec);
-        atomic_fetch_sub(&stack_depot_global.num_records, 1);
+        atomic_dec(&stack_depot_global.num_records);
     }
 }
 

@@ -1,7 +1,7 @@
 /* @title: Reader writer lock */
 #pragma once
+#include <atomic.h>
 #include <compiler/core.h>
-#include <stdatomic.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <sync/lock_chk_types.h>
@@ -30,7 +30,7 @@
  *
  */
 struct TSA_CAPABILITY("rwlock") rwlock {
-    _Atomic(uintptr_t) lock_word;
+    atomic_uintptr_t lock_word;
 
 #ifdef DEBUG_LOCK_CHK
     struct lock_chk_lock chk;

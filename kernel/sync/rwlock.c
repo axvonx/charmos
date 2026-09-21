@@ -20,21 +20,19 @@ static inline void rwlock_chk_stamp(struct rwlock *lock) {
 
 /* for debugging purposes - upon panic we save data in here */
 static cc_unused struct rwlock panic_rwlock;
-static _Atomic(struct rwlock *) panic_rwlock_addr;
+static atomic(struct rwlock *) panic_rwlock_addr;
 
 static void rwlock_panic(char *msg, struct rwlock *offending_lock) {
 
     struct rwlock *panic_expected = NULL;
-    if (atomic_compare_exchange_weak_explicit(
-            &panic_rwlock_addr, &panic_expected, offending_lock,
-            memory_order_acquire, memory_order_relaxed))
+    if (atomic_cas_weak(&panic_rwlock_addr, &panic_expected, offending_lock,
+                        mo_acquire, mo_relaxed))
         panic_rwlock = *offending_lock;
 
     if (offending_lock)
         panic_rwlock = *offending_lock;
 
-    uintptr_t v =
-        atomic_load_explicit(&offending_lock->lock_word, memory_order_relaxed);
+    uintptr_t v = atomic_load_relaxed(&offending_lock->lock_word);
     panic("%s, lock = %p, contents = %p, thread = %p", msg, offending_lock,
           (void *) v, thread_get_current());
 }
@@ -114,7 +112,7 @@ static void rwlock_chk_state_init(struct rwlock *lock,
     kassert(flags == LOCK_UNCHKD || class != NULL);
     lock->chk.flags = flags;
     lock->chk.initialized = true;
-    atomic_store_explicit(&lock->chk.used, false, memory_order_relaxed);
+    atomic_store_relaxed(&lock->chk.used, false);
     lock_chk_map_runtime_init(&lock->chk.map, class);
 }
 
@@ -128,7 +126,7 @@ static bool rwlock_idle_for_reconfiguration(struct rwlock *lock) {
 void rwlock_set_chk_flags(struct rwlock *lock, enum lock_chk_flags flags) {
     kassert(lock->chk.initialized);
     kassert(rwlock_idle_for_reconfiguration(lock));
-    kassert(!atomic_load_explicit(&lock->chk.used, memory_order_relaxed));
+    kassert(!atomic_load_relaxed(&lock->chk.used));
     kassert((flags & ~LOCK_CHKD_FULL) == 0);
     lock->chk.flags = flags;
 }
@@ -165,10 +163,9 @@ void rwlock_init_chk_internal(struct rwlock *lock,
                               enum thread_prio_class ceiling,
                               const struct lock_chk_class *class,
                               enum lock_chk_flags flags) {
-    atomic_store_explicit(&lock->lock_word,
-                          ((uintptr_t) ceiling << RWLOCK_PRIO_CEIL_SHIFT) &
-                              RWLOCK_PRIO_CEIL_MASK,
-                          memory_order_relaxed);
+    atomic_store_relaxed(&lock->lock_word,
+                         ((uintptr_t) ceiling << RWLOCK_PRIO_CEIL_SHIFT) &
+                             RWLOCK_PRIO_CEIL_MASK);
     rwlock_chk_state_init(lock, class, flags);
 }
 
@@ -266,9 +263,8 @@ void rw_lock_internal(struct rwlock *lock, enum rwlock_acquire_type acq_type,
 
             new = old | wait_bits;
 
-            if (atomic_compare_exchange_weak_explicit(&lock->lock_word, &old,
-                                                      new, memory_order_acq_rel,
-                                                      memory_order_acquire))
+            if (atomic_cas_weak(&lock->lock_word, &old, new, mo_acq_rel,
+                                mo_acquire))
                 break;
 
             if (!RWLOCK_BUSY(old, busy_mask))
@@ -407,9 +403,8 @@ void rw_unlock_internal(struct rwlock *lock,
         if ((new & (RWLOCK_READER_COUNT_MASK | RWLOCK_WAITER_BIT)) !=
             RWLOCK_WAITER_BIT) {
             /* successful swap, we're all good */
-            if (atomic_compare_exchange_weak_explicit(&lock->lock_word, &old,
-                                                      new, memory_order_release,
-                                                      memory_order_relaxed))
+            if (atomic_cas_weak(&lock->lock_word, &old, new, mo_release,
+                                mo_relaxed))
                 break;
 
             /* unsuccessful... try again */

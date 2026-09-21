@@ -16,7 +16,7 @@ void slab_free_queue_init(struct slab_domain *domain, struct slab_free_queue *q,
     }
 
     q->parent = domain;
-    q->count = 0;
+    atomic_init(&q->count, 0);
 }
 
 bool slab_free_queue_ringbuffer_enqueue(struct slab_free_queue *q,

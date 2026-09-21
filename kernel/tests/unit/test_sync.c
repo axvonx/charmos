@@ -9,8 +9,8 @@ TEST_GROUP_DECLARE(test_sync);
 
 struct latch_fix {
     struct test_latch latch;
-    _Atomic bool worker_returned;
-    _Atomic bool worker_saw_set;
+    atomic_bool worker_returned;
+    atomic_bool worker_saw_set;
 };
 
 TEST_DECLARE_UNIT(test_sync, latch_spin_at_raised_irql) {
@@ -30,18 +30,18 @@ TEST_DECLARE_UNIT(test_sync, latch_spin_at_raised_irql) {
 
 struct phase_fix {
     struct test_phase phase;
-    _Atomic uint32_t reached;
-    _Atomic uint32_t failed;
+    atomic_uint32_t reached;
+    atomic_uint32_t failed;
 };
 
 static void phase_climber(void *arg) {
     struct phase_fix *f = arg;
 
     if (!test_phase_wait(&f->phase, 1, 5000)) {
-        atomic_fetch_add(&f->failed, 1);
+        atomic_inc(&f->failed);
         return;
     }
-    atomic_fetch_add(&f->reached, 1);
+    atomic_inc(&f->reached);
 }
 
 static void phase_forever_waiter(void *arg) {
@@ -49,9 +49,9 @@ static void phase_forever_waiter(void *arg) {
 
     /* Phase 99 is never published */
     if (!test_phase_wait(&f->phase, 99, 5000))
-        atomic_fetch_add(&f->failed, 1);
+        atomic_inc(&f->failed);
     else
-        atomic_fetch_add(&f->reached, 1);
+        atomic_inc(&f->reached);
 }
 
 TEST_DECLARE_UNIT(test_sync, phase_advance_wakes_waiters) {
@@ -137,6 +137,7 @@ enum test_sync_token_state {
 
 TEST_DECLARE_UNIT(test_sync, once_token_typechecked_ops) {
     ONCE_TOKEN_DEFINE(bool, btok);
+    once_token_init(&btok);
     once_token_typecheck_internal(&btok);
     once_token_typecheck_internal_bool(&btok);
 
@@ -147,7 +148,8 @@ TEST_DECLARE_UNIT(test_sync, once_token_typechecked_ops) {
     once_token_reset(&btok);
     TEST_ASSERT(!once_token_claimed(&btok));
 
-    ONCE_TOKEN_DEFINE(enum test_sync_token_state, stok) = {0};
+    ONCE_TOKEN_DEFINE(enum test_sync_token_state, stok);
+    once_token_init(&stok, TOKEN_INIT);
     once_token_typecheck_internal(&stok);
     once_token_typecheck_internal_type(&stok, enum test_sync_token_state);
 

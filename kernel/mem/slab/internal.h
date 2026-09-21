@@ -1,4 +1,5 @@
 #pragma once
+#include <atomic.h>
 #include <container_of.h>
 #include <kassert.h>
 #include <math/align.h>
@@ -13,7 +14,6 @@
 #include <mem/vmm.h>
 #include <smp/domain.h>
 #include <stat_series.h>
-#include <stdatomic.h>
 #include <stdint.h>
 #include <structures/list.h>
 #include <structures/mpmc_queue.h>
@@ -247,7 +247,7 @@ struct slab {
                            * recycled from the GC list? */
 
     size_t page_count;
-    _Atomic(struct page *) backing_pages[];
+    atomic(struct page *) backing_pages[];
 };
 
 #define SLAB_LIVE_MAGIC 0x51AB1AED51AB1AEDULL
@@ -533,7 +533,7 @@ struct slab_globals {
     struct slab_caches caches;
     struct slab_size_constant *class_sizes;
     size_t num_sizes;
-    _Atomic uint8_t *order_map;
+    atomic_uint8_t *order_map;
 };
 
 static inline struct domain_buddy *
@@ -652,7 +652,7 @@ extern struct page_fault_handler slab_page_fault_handler;
  * where r is the value that we are scaling with
  */
 static inline void slab_gc_update_ewma(struct slab_cache *cache) {
-    size_t free_slabs = cache->slabs_count[SLAB_FREE];
+    size_t free_slabs = atomic_load_relaxed(&cache->slabs_count[SLAB_FREE]);
 
     if (cache->ewma_free_slabs == 0) {
         cache->ewma_free_slabs = free_slabs;
@@ -706,8 +706,8 @@ static inline void slab_list_del(struct slab *slab) {
         if (state == SLAB_FREE)
             slab_gc_update_ewma(slab->parent_cache);
 
-        atomic_fetch_sub(&slab->parent_cache->slabs_count[state], 1);
-        atomic_fetch_sub(&slab->parent_cache->parent->slabs_count[state], 1);
+        atomic_dec(&slab->parent_cache->slabs_count[state]);
+        atomic_dec(&slab->parent_cache->parent->slabs_count[state]);
     }
 }
 
@@ -719,8 +719,8 @@ static inline void slab_list_add(struct slab_cache *cache, struct slab *slab) {
     if (state == SLAB_FREE)
         slab_gc_update_ewma(cache);
 
-    atomic_fetch_add(&slab->parent_cache->slabs_count[state], 1);
-    atomic_fetch_add(&slab->parent_cache->parent->slabs_count[state], 1);
+    atomic_inc(&slab->parent_cache->slabs_count[state]);
+    atomic_inc(&slab->parent_cache->parent->slabs_count[state]);
 }
 
 static inline void slab_move(struct slab_cache *c, struct slab *slab,

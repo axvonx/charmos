@@ -1,10 +1,10 @@
 /* @title: Sequence Lock */
 #pragma once
+#include <atomic.h>
 #include <compiler/atomic.h>
 #include <compiler/core.h>
 #include <kassert.h>
 #include <sch/irql.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <sync/spinlock.h>
@@ -32,7 +32,7 @@
  * a sequence counter, just not with this API. someday we can change it over
  */
 struct seqcount {
-    _Atomic uint32_t sequence;
+    atomic_uint32_t sequence;
 };
 typedef struct seqcount seqcount_t;
 
@@ -42,11 +42,11 @@ typedef struct seqcount seqcount_t;
     }
 
 static inline void seqcount_init(struct seqcount *s) {
-    atomic_store_explicit(&s->sequence, 0, memory_order_relaxed);
+    atomic_store_relaxed(&s->sequence, 0);
 }
 
 static inline uint32_t seqcount_read_raw(const struct seqcount *s) {
-    return atomic_load_explicit(&s->sequence, memory_order_relaxed);
+    return atomic_load_relaxed(&s->sequence);
 }
 
 static inline uint32_t seqcount_begin_read_raw(const struct seqcount *s) {
@@ -85,7 +85,7 @@ static inline bool seqcount_read_retry(const struct seqcount *s,
 /* even to odd with wmb */
 static inline void seqcount_begin_write(struct seqcount *s) {
     uint32_t seq = seqcount_read_raw(s);
-    atomic_store_explicit(&s->sequence, seq + 1, memory_order_relaxed);
+    atomic_store_relaxed(&s->sequence, seq + 1);
     ca_wmb();
 }
 
@@ -93,7 +93,7 @@ static inline void seqcount_begin_write(struct seqcount *s) {
 static inline void seqcount_end_write(struct seqcount *s) {
     ca_wmb();
     uint32_t seq = seqcount_read_raw(s);
-    atomic_store_explicit(&s->sequence, seq + 1, memory_order_relaxed);
+    atomic_store_relaxed(&s->sequence, seq + 1);
 }
 
 /*

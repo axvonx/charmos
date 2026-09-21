@@ -5,7 +5,7 @@
 static cc_unused bool done2 = false;
 static uint64_t avg_complete_time[BIO_SCHED_LEVELS] = {0};
 static uint64_t total_complete_time[BIO_SCHED_LEVELS] = {0};
-static _Atomic uint32_t runs = 0;
+static atomic_uint32_t runs = 0;
 
 static void bio_sch_callback(struct bio_request *req) {
     done2 = true;
@@ -14,7 +14,7 @@ static void bio_sch_callback(struct bio_request *req) {
     time_ms_t time = time_get_ms() - q_ms;
     total_complete_time[q_lvl] += time;
     req->user_data = NULL;
-    atomic_fetch_add(&runs, 1);
+    atomic_inc(&runs);
     TEST_ASSERT_VOID(req->status == BIO_STATUS_OK);
 }
 

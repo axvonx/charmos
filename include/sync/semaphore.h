@@ -8,7 +8,7 @@
 #define SEMAPHORE_INIT_NORMAL false
 
 struct semaphore {
-    _Atomic int32_t count;
+    atomic_int32_t count;
     bool irq_disable;
 
     struct spinlock lock;

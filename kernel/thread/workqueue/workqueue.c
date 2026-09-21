@@ -159,11 +159,10 @@ struct workqueue *workqueue_create_internal(struct workqueue_attributes *attrs,
     INIT_LIST_HEAD(&wq->works);
 
     for (uint64_t i = 0; i < attrs->capacity; i++)
-        atomic_store_explicit(&wq->oneshot_works[i].seq, i,
-                              memory_order_relaxed);
+        atomic_store_relaxed(&wq->oneshot_works[i].seq, i);
 
     refcount_init(&wq->refcount, 1);
-    wq->state = WORKQUEUE_STATE_ACTIVE;
+    atomic_store_relaxed(&wq->state, WORKQUEUE_STATE_ACTIVE);
 
     return wq;
 
@@ -293,7 +292,7 @@ struct worker *workqueue_spawn_permanent_worker(struct workqueue *queue) {
     thread_enqueue(thread);
 
     workqueue_add_worker(queue, worker);
-    atomic_fetch_add(&queue->num_workers, 1);
+    atomic_inc(&queue->num_workers);
 
     return worker;
 }
@@ -336,9 +335,9 @@ void workqueues_permanent_init(void) {
 struct work *work_init(struct work *work, work_function fn,
                        struct work_args args) {
     work->args = args;
-    work->active = false;
-    work->enqueued = false;
-    work->seq = 0;
+    atomic_init(&work->active, false);
+    atomic_init(&work->enqueued, false);
+    atomic_init(&work->seq, 0);
     work->func = fn;
     INIT_LIST_HEAD(&work->list_node);
     return work;

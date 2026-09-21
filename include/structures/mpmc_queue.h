@@ -1,20 +1,20 @@
 /* @title: Multi-Producer Multi-Consumer Queue */
 #pragma once
-#include <stdatomic.h>
+#include <atomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
 struct mpmc_slot {
-    _Atomic uint64_t seq;
+    atomic_uint64_t seq;
     uintptr_t data;
 };
 
 struct mpmc_queue {
     size_t capacity;
     size_t mask;
-    _Atomic uint64_t head;
-    _Atomic uint64_t tail;
+    atomic_uint64_t head;
+    atomic_uint64_t tail;
     struct mpmc_slot *slots;
 };
 
@@ -37,8 +37,8 @@ bool mpmc_queue_dequeue(struct mpmc_queue *q, void **out_ptr);
 bool mpmc_queue_dequeue_uintptr(struct mpmc_queue *q, uintptr_t *out_val);
 
 static inline bool mpmc_queue_empty(const struct mpmc_queue *q) {
-    uint64_t h = atomic_load_explicit(&q->head, memory_order_relaxed);
-    uint64_t t = atomic_load_explicit(&q->tail, memory_order_relaxed);
+    uint64_t h = atomic_load_relaxed(&q->head);
+    uint64_t t = atomic_load_relaxed(&q->tail);
     return h == t;
 }
 

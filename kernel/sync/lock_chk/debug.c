@@ -1,9 +1,9 @@
 #ifdef DEBUG_LOCK_CHK
 
 #include <asm.h>
+#include <atomic.h>
 #include <kassert.h>
 #include <smp/percpu.h>
-#include <stdatomic.h>
 #include <sync/lock_chk.h>
 
 #include "internal.h"
@@ -21,11 +21,10 @@ static struct lock_debug_cpu *debug_cpu_here(void) {
 
 void lock_debug_activate(void) {
     kassert(PERCPU_READY(lock_debug_cpu));
-    atomic_store_explicit(&lock_chk_global.debug, LOCK_CHK_ACTIVE,
-                          memory_order_release);
+    atomic_store_release(&lock_chk_global.debug, LOCK_CHK_ACTIVE);
 }
 
-void lock_debug_spin_classify(_Atomic enum lock_op_flags *usage,
+void lock_debug_spin_classify(atomic(enum lock_op_flags) * usage,
                               enum lock_op_flags requested,
                               struct lock_chk_lock *lock,
                               const struct lock_chk_site *site) {
@@ -33,9 +32,7 @@ void lock_debug_spin_classify(_Atomic enum lock_op_flags *usage,
         return;
 
     uint8_t expected = LOCK_OP_IRQ_NONE;
-    if (atomic_compare_exchange_strong_explicit(usage, &expected, requested,
-                                                memory_order_relaxed,
-                                                memory_order_relaxed))
+    if (atomic_cas_strong(usage, &expected, requested, mo_relaxed, mo_relaxed))
         return;
 
     if ((expected & LOCK_OP_IRQ_MASK) != (requested & LOCK_OP_IRQ_MASK)) {
@@ -60,8 +57,7 @@ bool lock_debug_spin_push(struct lock_chk_lock *lock, enum irql prev_irql,
         fail.capacity_limit = LOCK_CHK_MAX_SPIN_DEPTH;
         lock_chk_fail(&fail, "Shallow spin stack capacity exhausted (%u/%u)",
                       LOCK_CHK_MAX_SPIN_DEPTH, LOCK_CHK_MAX_SPIN_DEPTH);
-        atomic_store_explicit(&lock_chk_global.debug, LOCK_CHK_DEGRADED,
-                              memory_order_release);
+        atomic_store_release(&lock_chk_global.debug, LOCK_CHK_DEGRADED);
         return false;
     }
 

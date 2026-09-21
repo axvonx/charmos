@@ -19,7 +19,7 @@ set(KERNEL_WARNINGS
     -Werror=shift-negative-value)
 
 if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
-    list(APPEND KERNEL_WARNINGS -Wno-initializer-overrides -Wthread-safety -Werror=thread-safety)
+    list(APPEND KERNEL_WARNINGS -Wno-initializer-overrides -Wthread-safety -Werror=thread-safety -Watomic-implicit-seq-cst)
 else ()
     list(APPEND KERNEL_WARNINGS -Wno-override-init)
 endif ()
@@ -58,7 +58,8 @@ set(KERNEL_TARGET_ARCH
     -mno-sse3
     -mno-3dnow
     -mno-red-zone
-    -mgeneral-regs-only)
+    -mgeneral-regs-only
+    -mcx16)
 
 set(KERNEL_DEFINES -DLIMINE_API_REVISION=2 -DUACPI_DEFAULT_LOG_LEVEL=4)
 

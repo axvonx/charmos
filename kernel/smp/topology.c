@@ -1,4 +1,5 @@
 #include <asm.h>
+#include <atomic.h>
 #include <console/printf.h>
 #include <global.h>
 #include <irq/idt.h>
@@ -13,7 +14,6 @@
 #include <smp/domain.h>
 #include <smp/smp.h>
 #include <smp/topology.h>
-#include <stdatomic.h>
 #include <sync/spinlock.h>
 #include <thread/thread.h>
 

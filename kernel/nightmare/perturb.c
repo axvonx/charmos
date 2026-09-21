@@ -96,8 +96,7 @@ void nightmare_perturb_migrator(struct nightmare_ctx *ctx,
             size_t idx = test_rng_next(&worker->rng) % ctx->worker_count;
             struct test_conc_worker *target_worker =
                 &nightmare_runtime.conc.workers[idx];
-            struct thread *target_th =
-                atomic_load_explicit(&target_worker->th, memory_order_acquire);
+            struct thread *target_th = atomic_load_acq(&target_worker->th);
             if (target_th) {
                 uint64_t target_cpu =
                     test_rng_next(&worker->rng) % global.core_count;
@@ -126,8 +125,7 @@ void nightmare_perturb_waker(struct nightmare_ctx *ctx,
             size_t idx = test_rng_next(&worker->rng) % ctx->worker_count;
             struct test_conc_worker *target_worker =
                 &nightmare_runtime.conc.workers[idx];
-            struct thread *target_th =
-                atomic_load_explicit(&target_worker->th, memory_order_acquire);
+            struct thread *target_th = atomic_load_acq(&target_worker->th);
             if (target_th) {
                 thread_alert(target_th);
             }
@@ -158,8 +156,7 @@ void nightmare_perturb_apc_spammer(struct nightmare_ctx *ctx,
             size_t idx = test_rng_next(&worker->rng) % ctx->worker_count;
             struct test_conc_worker *target_worker =
                 &nightmare_runtime.conc.workers[idx];
-            struct thread *target_th =
-                atomic_load_explicit(&target_worker->th, memory_order_acquire);
+            struct thread *target_th = atomic_load_acq(&target_worker->th);
             if (target_th && thread_get(target_th)) {
                 struct apc *apc = apc_create();
                 if (apc) {
@@ -190,8 +187,7 @@ void nightmare_perturb_stutter(struct nightmare_ctx *ctx,
             break;
 
         /* Request quiesce */
-        atomic_store_explicit(&nightmare_runtime.conc.quiesce_requested, true,
-                              memory_order_release);
+        atomic_store_release(&nightmare_runtime.conc.quiesce_requested, true);
 
         /* Wait for all subject workers to park. */
         time_ms_t deadline = time_get_ms() + (gap_ms ? gap_ms : 10);
@@ -199,9 +195,8 @@ void nightmare_perturb_stutter(struct nightmare_ctx *ctx,
         while (time_get_ms() < deadline && !nightmare_must_stop()) {
             all_subjects_parked = true;
             for (size_t i = 0; i < ctx->worker_count; i++) {
-                if (!atomic_load_explicit(
-                        &nightmare_runtime.conc.workers[i].parked,
-                        memory_order_acquire)) {
+                if (!atomic_load_acq(
+                        &nightmare_runtime.conc.workers[i].parked)) {
                     all_subjects_parked = false;
                     break;
                 }
@@ -216,8 +211,8 @@ void nightmare_perturb_stutter(struct nightmare_ctx *ctx,
                 .result = "aborted",
                 .checks = 0,
             });
-            atomic_store_explicit(&nightmare_runtime.conc.quiesce_requested,
-                                  false, memory_order_release);
+            atomic_store_release(&nightmare_runtime.conc.quiesce_requested,
+                                 false);
             break;
         }
 
@@ -241,8 +236,7 @@ void nightmare_perturb_stutter(struct nightmare_ctx *ctx,
             nightmare_publish_perturb_verdict(verdict);
 
         /* Release the herd */
-        atomic_store_explicit(&nightmare_runtime.conc.quiesce_requested, false,
-                              memory_order_release);
+        atomic_store_release(&nightmare_runtime.conc.quiesce_requested, false);
 
         if (verdict.result != NIGHTMARE_RESULT_OK) {
             nightmare_publish_stop(TEST_STOP_FAIL);

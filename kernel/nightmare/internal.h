@@ -1,8 +1,8 @@
 #pragma once
+#include <atomic.h>
 #include <console/crash.h>
 #include <nightmare/nightmare.h>
 #include <nightmare/perturb.h>
-#include <stdatomic.h>
 #include <sync/completion.h>
 #include <test/conc.h>
 #include <thread/queue.h>

@@ -11,8 +11,7 @@ TEST_DECLARE_UNIT(nightmare_harness, perturb_verdict_mailbox) {
     char msg[] = "first message";
     struct nightmare_verdict first = NIGHTMARE_FAIL(reason, msg);
 
-    atomic_store_explicit(&nightmare_runtime.perturb_verdict_ready, false,
-                          memory_order_relaxed);
+    atomic_store_relaxed(&nightmare_runtime.perturb_verdict_ready, false);
     TEST_ASSERT(!nightmare_load_perturb_verdict(&first));
 
     nightmare_publish_perturb_verdict(NIGHTMARE_FAIL(reason, msg));
@@ -27,14 +26,12 @@ TEST_DECLARE_UNIT(nightmare_harness, perturb_verdict_mailbox) {
     TEST_ASSERT_STR_EQ(loaded.reason, "first_reason");
     TEST_ASSERT_STR_EQ(loaded.msg, "first message");
 
-    atomic_store_explicit(&nightmare_runtime.perturb_verdict_ready, false,
-                          memory_order_relaxed);
+    atomic_store_relaxed(&nightmare_runtime.perturb_verdict_ready, false);
     return TEST_SUCCESS;
 }
 
 TEST_DECLARE_UNIT(nightmare_harness, stop_priority) {
-    atomic_store_explicit(&nightmare_runtime.conc.stop, TEST_RUN,
-                          memory_order_relaxed);
+    atomic_store_relaxed(&nightmare_runtime.conc.stop, TEST_RUN);
 
     nightmare_publish_stop(TEST_STOP_BUDGET);
     TEST_ASSERT_EQ(atomic_load(&nightmare_runtime.conc.stop), TEST_STOP_BUDGET);
@@ -53,8 +50,7 @@ TEST_DECLARE_UNIT(nightmare_harness, stop_priority) {
     nightmare_publish_stop(TEST_STOP_STALL);
     TEST_ASSERT_EQ(atomic_load(&nightmare_runtime.conc.stop), TEST_STOP_STALL);
 
-    atomic_store_explicit(&nightmare_runtime.conc.stop, TEST_RUN,
-                          memory_order_relaxed);
+    atomic_store_relaxed(&nightmare_runtime.conc.stop, TEST_RUN);
     return TEST_SUCCESS;
 }
 
@@ -62,14 +58,13 @@ static atomic_size_t stop_sleepers_waiting;
 
 static void heartbeat_waiter(void *arg) {
     cc_var_unused(arg);
-    atomic_fetch_add_explicit(&stop_sleepers_waiting, 1, memory_order_release);
+    atomic_inc_release(&stop_sleepers_waiting);
     thread_park();
 }
 
 TEST_DECLARE_UNIT(nightmare_harness, first_stop_wakes_sleepers) {
-    atomic_store_explicit(&stop_sleepers_waiting, 0, memory_order_relaxed);
-    atomic_store_explicit(&nightmare_runtime.conc.stop, TEST_RUN,
-                          memory_order_relaxed);
+    atomic_store_relaxed(&stop_sleepers_waiting, 0);
+    atomic_store_relaxed(&nightmare_runtime.conc.stop, TEST_RUN);
 
     struct thread *worker_thread =
         thread_spawn_joinable("nightmare_stop_worker", heartbeat_waiter, NULL);
@@ -79,20 +74,17 @@ TEST_DECLARE_UNIT(nightmare_harness, first_stop_wakes_sleepers) {
     TEST_ASSERT_NONNULL(heartbeat);
 
     struct test_conc_worker worker = {0};
-    atomic_store_explicit(&worker.th, worker_thread, memory_order_relaxed);
+    atomic_store_relaxed(&worker.th, worker_thread);
     nightmare_runtime.conc.workers = &worker;
     nightmare_runtime.conc.worker_count = 1;
-    atomic_store_explicit(&nightmare_runtime.conc.aux, heartbeat,
-                          memory_order_relaxed);
-    while (atomic_load_explicit(&stop_sleepers_waiting, memory_order_acquire) <
-           2)
+    atomic_store_relaxed(&nightmare_runtime.conc.aux, heartbeat);
+    while (atomic_load_acq(&stop_sleepers_waiting) < 2)
         scheduler_yield();
 
     nightmare_publish_stop(TEST_STOP_BUDGET);
     nightmare_runtime.conc.workers = NULL;
     nightmare_runtime.conc.worker_count = 0;
-    atomic_store_explicit(&nightmare_runtime.conc.aux, NULL,
-                          memory_order_relaxed);
+    atomic_store_relaxed(&nightmare_runtime.conc.aux, NULL);
 
     bool worker_joined = thread_join_timeout(worker_thread, 250, NULL);
     if (!worker_joined) {
@@ -105,8 +97,7 @@ TEST_DECLARE_UNIT(nightmare_harness, first_stop_wakes_sleepers) {
         thread_join(heartbeat);
     }
 
-    atomic_store_explicit(&nightmare_runtime.conc.stop, TEST_RUN,
-                          memory_order_relaxed);
+    atomic_store_relaxed(&nightmare_runtime.conc.stop, TEST_RUN);
     TEST_ASSERT(worker_joined);
     TEST_ASSERT(heartbeat_joined);
     return TEST_SUCCESS;

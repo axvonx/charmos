@@ -1,7 +1,7 @@
 /* @title: Type aliases */
 #pragma once
+#include <atomic.h>
 #include <compiler/core.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -29,8 +29,8 @@ typedef uint32_t uid_t;
 typedef struct stack_depot_record *stack_handle_t;
 
 /* Refcount */
-typedef _Atomic uint32_t refcount_t;
-typedef _Atomic uint32_t mapcount_t;
+typedef atomic_uint32_t refcount_t;
+typedef atomic_uint32_t mapcount_t;
 
 /* Addresses and memory */
 ct_strong_int(paddr, PADDR, uintptr_t, UINTPTR_MAX);

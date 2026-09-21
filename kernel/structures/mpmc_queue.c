@@ -11,11 +11,11 @@ void mpmc_queue_init_static(struct mpmc_queue *q, struct mpmc_slot *slots,
     q->mask = capacity - 1;
     q->slots = slots;
 
-    atomic_store_explicit(&q->head, 0, memory_order_relaxed);
-    atomic_store_explicit(&q->tail, 0, memory_order_relaxed);
+    atomic_store_relaxed(&q->head, 0);
+    atomic_store_relaxed(&q->tail, 0);
 
     for (size_t i = 0; i < capacity; i++) {
-        atomic_store_explicit(&q->slots[i].seq, i, memory_order_relaxed);
+        atomic_store_relaxed(&q->slots[i].seq, i);
         q->slots[i].data = 0;
     }
 }
@@ -49,18 +49,16 @@ bool mpmc_queue_enqueue_uintptr(struct mpmc_queue *q, uintptr_t val) {
     int64_t diff;
 
     while (true) {
-        pos = atomic_load_explicit(&q->head, memory_order_relaxed);
+        pos = atomic_load_relaxed(&q->head);
         slot = &q->slots[pos & q->mask];
-        seq = atomic_load_explicit(&slot->seq, memory_order_acquire);
+        seq = atomic_load_acq(&slot->seq);
         diff = (int64_t) seq - (int64_t) pos;
 
         if (diff == 0) {
-            if (atomic_compare_exchange_weak_explicit(&q->head, &pos, pos + 1,
-                                                      memory_order_acq_rel,
-                                                      memory_order_relaxed)) {
+            if (atomic_cas_weak(&q->head, &pos, pos + 1, mo_acq_rel,
+                                mo_relaxed)) {
                 slot->data = val;
-                atomic_store_explicit(&slot->seq, pos + 1,
-                                      memory_order_release);
+                atomic_store_release(&slot->seq, pos + 1);
                 return true;
             }
         } else if (diff < 0) {
@@ -80,21 +78,19 @@ bool mpmc_queue_dequeue_uintptr(struct mpmc_queue *q, uintptr_t *out_val) {
     int64_t diff;
 
     while (true) {
-        pos = atomic_load_explicit(&q->tail, memory_order_relaxed);
+        pos = atomic_load_relaxed(&q->tail);
         slot = &q->slots[pos & q->mask];
-        seq = atomic_load_explicit(&slot->seq, memory_order_acquire);
+        seq = atomic_load_acq(&slot->seq);
         diff = (int64_t) seq - (int64_t) (pos + 1);
 
         if (diff == 0) {
-            if (atomic_compare_exchange_weak_explicit(&q->tail, &pos, pos + 1,
-                                                      memory_order_acq_rel,
-                                                      memory_order_relaxed)) {
+            if (atomic_cas_weak(&q->tail, &pos, pos + 1, mo_acq_rel,
+                                mo_relaxed)) {
                 if (out_val) {
                     *out_val = slot->data;
                 }
                 slot->data = 0;
-                atomic_store_explicit(&slot->seq, pos + q->capacity,
-                                      memory_order_release);
+                atomic_store_release(&slot->seq, pos + q->capacity);
                 return true;
             }
         } else if (diff < 0) {

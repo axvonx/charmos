@@ -28,7 +28,7 @@ static void mt_kmalloc_worker(void *arg) {
         }
     }
 
-    atomic_fetch_add(&kmalloc_done, 1);
+    atomic_inc(&kmalloc_done);
 }
 
 TEST_DECLARE_INTEGRATION(slab, multithreaded_alloc_free,
@@ -73,7 +73,7 @@ static void stress_worker(void *arg) {
     while (!(a = thread_get_current()->private))
         ;
 
-    while (!all_ready)
+    while (!atomic_load_acq(&all_ready))
         ;
 
     /* allocate small tracking table dynamically */
@@ -143,7 +143,7 @@ static char msg[128];
 TEST_DECLARE_INTEGRATION(slab, concurrency_stress,
                          TEST_INTENSITY(5000, 50000, 200000)) {
     memset((void *) done, 0, sizeof(done));
-    all_ready = false;
+    atomic_store_relaxed(&all_ready, false);
 
     struct thread *workers[STRESS_THREADS];
     size_t iters = ctx->intensity_val ? ctx->intensity_val : 50000;
@@ -160,7 +160,7 @@ TEST_DECLARE_INTEGRATION(slab, concurrency_stress,
     }
     irql_lower(irql);
 
-    all_ready = true;
+    atomic_store_release(&all_ready, true);
 
     const time_ms_t timeout_ms = 90 * 1000;
     time_ms_t start = time_get_ms();

@@ -7,15 +7,15 @@
 TEST_GROUP_DECLARE(test_fleet);
 
 struct counting_fix {
-    _Atomic uint32_t ran;
-    _Atomic uint32_t saw_gate_open;
+    atomic_uint32_t ran;
+    atomic_uint32_t saw_gate_open;
 };
 
 static bool counting_worker(struct test_fleet *f, struct test_conc_worker *w) {
     struct counting_fix *fix = w->arg;
     cc_var_unused(f);
 
-    atomic_fetch_add(&fix->ran, 1);
+    atomic_inc(&fix->ran);
     return true;
 }
 
@@ -43,9 +43,9 @@ TEST_DECLARE_INTEGRATION(test_fleet, spawn_join_clean,
 }
 
 struct gate_fix {
-    _Atomic bool released;
-    _Atomic uint32_t jumped_early;
-    _Atomic uint32_t ran;
+    atomic_bool released;
+    atomic_uint32_t jumped_early;
+    atomic_uint32_t ran;
 };
 
 static bool gate_worker(struct test_fleet *f, struct test_conc_worker *w) {
@@ -53,9 +53,9 @@ static bool gate_worker(struct test_fleet *f, struct test_conc_worker *w) {
     cc_var_unused(f);
 
     if (!atomic_load(&fix->released))
-        atomic_fetch_add(&fix->jumped_early, 1);
+        atomic_inc(&fix->jumped_early);
 
-    atomic_fetch_add(&fix->ran, 1);
+    atomic_inc(&fix->ran);
     return true;
 }
 
@@ -110,7 +110,7 @@ TEST_DECLARE_INTEGRATION(test_fleet, worker_failure_folds) {
 
 struct lock_fix {
     struct mutex lock;
-    _Atomic bool second_acquired;
+    atomic_bool second_acquired;
 };
 
 static bool lock_failing_worker(struct test_fleet *f,
@@ -176,7 +176,7 @@ TEST_DECLARE_INTEGRATION(test_fleet, first_failure_wins,
 
 struct alloc_fix {
     uint64_t canary;
-    _Atomic uint32_t seen;
+    atomic_uint32_t seen;
 };
 
 #define FLEET_CANARY UINT64_C(0x5A5AC0FFEE5A5A11)
@@ -188,7 +188,7 @@ static bool canary_worker(struct test_fleet *f, struct test_conc_worker *w) {
         TEST_WORKER_CHECK_EQ(f, fix->canary, FLEET_CANARY);
         scheduler_yield();
     }
-    atomic_fetch_add(&fix->seen, 1);
+    atomic_inc(&fix->seen);
     return true;
 }
 
@@ -219,13 +219,13 @@ TEST_DECLARE_INTEGRATION(test_fleet, alloc_outlives_body,
 /* ==================== affinity ==================== */
 
 struct affinity_fix {
-    _Atomic uint32_t wrong_core;
-    _Atomic uint32_t checked;
+    atomic_uint32_t wrong_core;
+    atomic_uint32_t checked;
 };
 
 static void affinity_probe(void *arg) {
     struct affinity_fix *fix = arg;
-    atomic_fetch_add(&fix->checked, 1);
+    atomic_inc(&fix->checked);
 }
 
 TEST_DECLARE_INTEGRATION(test_fleet, run_on_core, .min_cores = 2) {
@@ -245,7 +245,7 @@ static bool pinned_worker(struct test_fleet *f, struct test_conc_worker *w) {
 
     TEST_WORKER_CHECK(
         f, (thread_get_flags(thread_get_current()) & THREAD_FLAG_PINNED) != 0);
-    atomic_fetch_add(&fix->checked, 1);
+    atomic_inc(&fix->checked);
     return true;
 }
 

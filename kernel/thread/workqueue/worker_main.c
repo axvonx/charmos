@@ -10,7 +10,7 @@ static enum wake_reason worker_wait(struct workqueue *wq, struct worker *w,
     TSA_MUST_HOLD(&wq->lock) {
     enum wake_reason sig;
 
-    atomic_fetch_add(&wq->idle_workers, 1);
+    atomic_inc(&wq->idle_workers);
 
     /* Do not garbage collect workers, just wait... */
     if (wq->attrs.flags & WORKQUEUE_FLAG_NO_WORKER_GC) {
@@ -25,7 +25,7 @@ static enum wake_reason worker_wait(struct workqueue *wq, struct worker *w,
         }
     }
 
-    atomic_fetch_sub(&wq->idle_workers, 1);
+    atomic_dec(&wq->idle_workers);
 
     if (sig == WAKE_REASON_TIMEOUT && !ignore_timeouts(wq)) {
         w->timeout_ran = true;
@@ -92,7 +92,7 @@ static void worker_exit(struct workqueue *queue, struct worker *worker,
     worker->thread = NULL;
 
     workqueue_remove_worker(queue, worker);
-    atomic_fetch_sub(&queue->num_workers, 1);
+    atomic_dec(&queue->num_workers);
 
     spin_unlock(&queue->lock, irql);
 

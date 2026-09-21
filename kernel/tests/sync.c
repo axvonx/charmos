@@ -10,8 +10,8 @@ bool test_phase_wait(struct test_phase *p, uint32_t expected,
     time_ms_t deadline = time_get_ms() + timeout_ms;
     enum irql irql = spin_lock(&p->lock);
 
-    while (atomic_load_explicit(&p->phase, memory_order_acquire) != expected) {
-        if (atomic_load_explicit(&p->poisoned, memory_order_acquire)) {
+    while (atomic_load_acq(&p->phase) != expected) {
+        if (atomic_load_acq(&p->poisoned)) {
             spin_unlock(&p->lock, irql);
             return false;
         }
@@ -25,7 +25,7 @@ bool test_phase_wait(struct test_phase *p, uint32_t expected,
         condvar_wait_timeout(&p->cv, &p->lock, deadline - now, irql, &irql);
     }
 
-    bool poisoned = atomic_load_explicit(&p->poisoned, memory_order_acquire);
+    bool poisoned = atomic_load_acq(&p->poisoned);
     spin_unlock(&p->lock, irql);
     return !poisoned;
 }

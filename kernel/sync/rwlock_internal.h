@@ -22,10 +22,8 @@ enum rwlock_bits : uintptr_t {
 #define RWLOCK_OWNER_MASK (~0x1FULL)
 #define RWLOCK_READER_COUNT_ONE BIT(5)
 
-#define RWLOCK_READ_LOCK_WORD(rw)                                              \
-    (atomic_load_explicit(&rw->lock_word, memory_order_acquire))
-#define RWLOCK_WRITE_LOCK_WORD(rw, w)                                          \
-    atomic_store_explicit(&rw->lock_word, w, memory_order_release)
+#define RWLOCK_READ_LOCK_WORD(rw) (atomic_load_acq(&rw->lock_word))
+#define RWLOCK_WRITE_LOCK_WORD(rw, w) atomic_store_release(&rw->lock_word, w)
 
 #define RWLOCK_GET_OWNER(rw)                                                   \
     (RWLOCK_READ_LOCK_WORD(rw) & RWLOCK_OWNER_MASK) /* mask out metadata */
@@ -46,9 +44,8 @@ static inline bool rwlock_try_lock_read(struct rwlock *lock) {
 
         uintptr_t new_state = old_state + RWLOCK_READER_COUNT_ONE;
 
-        if (atomic_compare_exchange_weak_explicit(
-                &lock->lock_word, &old_state, new_state, memory_order_acquire,
-                memory_order_relaxed))
+        if (atomic_cas_weak(&lock->lock_word, &old_state, new_state, mo_acquire,
+                            mo_relaxed))
             return true;
     }
 }
@@ -56,8 +53,7 @@ static inline bool rwlock_try_lock_read(struct rwlock *lock) {
 static inline bool rwlock_try_lock_write(struct rwlock *lock,
                                          struct thread *thread) {
     uintptr_t desired = rwlock_make_write_word(lock, thread);
-    uintptr_t old =
-        atomic_load_explicit(&lock->lock_word, memory_order_acquire);
+    uintptr_t old = atomic_load_acq(&lock->lock_word);
 
     while (true) {
         /* If there's a writer held or any readers, we cannot acquire now */
@@ -67,9 +63,8 @@ static inline bool rwlock_try_lock_write(struct rwlock *lock,
         /* No owner - try to become the writer. This will replace any
          * WANT/WAITER bits that were present with the writer word. */
 
-        if (atomic_compare_exchange_weak_explicit(&lock->lock_word, &old,
-                                                  desired, memory_order_acquire,
-                                                  memory_order_relaxed))
+        if (atomic_cas_weak(&lock->lock_word, &old, desired, mo_acquire,
+                            mo_relaxed))
             return true;
 
         /* CAS failed: reload old and loop - but if the new old indicates busy,

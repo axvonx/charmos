@@ -2,13 +2,13 @@
 #pragma once
 #include "console/crash.h"
 #include <asm.h>
+#include <atomic.h>
 #include <bootstage.h>
 #include <compiler/core.h>
 #include <console/panic.h>
 #include <irq/irq.h>
 #include <kassert.h>
 #include <sch/irql.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <sync/lock_chk_types.h>
@@ -56,11 +56,11 @@ enum qspinlock_level {
 };
 
 struct TSA_CAPABILITY("spinlock") qspinlock {
-    _Atomic uint32_t val;
+    atomic_uint32_t val;
 
 #ifdef DEBUG_LOCK_CHK
     struct lock_chk_lock chk;
-    _Atomic enum lock_op_flags irq_usage;
+    atomic(enum lock_op_flags) irq_usage;
 #endif /* DEBUG_LOCK_CHK */
 };
 
@@ -103,7 +103,7 @@ static inline void qspinlock_policy_init_internal(struct qspinlock *lock,
     kassert((flags & ~LOCK_CHKD_FULL) == 0);
     lock->chk.flags = flags;
     lock->chk.initialized = true;
-    atomic_store_explicit(&lock->chk.used, false, memory_order_relaxed);
+    atomic_store_relaxed(&lock->chk.used, false);
 }
 
 static inline void
@@ -115,15 +115,14 @@ qspinlock_map_init_internal(struct qspinlock *lock,
 }
 
 static inline void qspinlock_shallow_init_internal(struct qspinlock *lock) {
-    atomic_store_explicit(&lock->irq_usage, LOCK_OP_IRQ_NONE,
-                          memory_order_relaxed);
+    atomic_store_relaxed(&lock->irq_usage, LOCK_OP_IRQ_NONE);
 }
 
 static inline void qspinlock_set_chk_flags(struct qspinlock *lock,
                                            enum lock_chk_flags flags) {
     kassert(lock->chk.initialized);
     kassert(!qspin_is_locked(lock));
-    kassert(!atomic_load_explicit(&lock->chk.used, memory_order_relaxed));
+    kassert(!atomic_load_relaxed(&lock->chk.used));
     kassert((flags & ~LOCK_CHKD_FULL) == 0);
     lock->chk.flags = flags;
 }
@@ -381,7 +380,7 @@ static inline void
 qspinlock_init_chk_internal(struct qspinlock *lock,
                             const struct lock_chk_class *class,
                             enum lock_chk_flags flags) {
-    atomic_store_explicit(&lock->val, 0, memory_order_relaxed);
+    atomic_store_relaxed(&lock->val, 0);
     qspinlock_policy_init_internal(lock, flags);
     qspinlock_shallow_init_internal(lock);
     qspinlock_map_init_internal(lock, class, flags);
@@ -398,18 +397,16 @@ qspinlock_init_chk_internal(struct qspinlock *lock,
 static inline cc_warn_unused_result bool
 qspin_trylock_physical(struct qspinlock *lock) TSA_NO_ANALYSIS {
     uint32_t expected = 0;
-    return atomic_compare_exchange_strong_explicit(
-        &lock->val, &expected, Q_SPIN_LOCKED_VAL, memory_order_acquire,
-        memory_order_relaxed);
+    return atomic_cas_strong(&lock->val, &expected, Q_SPIN_LOCKED_VAL,
+                             mo_acquire, mo_relaxed);
 }
 
 void qspin_lock_slowpath(struct qspinlock *lock, uint32_t val);
 
 static inline void qspin_lock_physical(struct qspinlock *lock) TSA_NO_ANALYSIS {
     uint32_t val = 0;
-    if (cc_likely(atomic_compare_exchange_strong_explicit(
-            &lock->val, &val, Q_SPIN_LOCKED_VAL, memory_order_acquire,
-            memory_order_relaxed)))
+    if (cc_likely(atomic_cas_strong(&lock->val, &val, Q_SPIN_LOCKED_VAL,
+                                    mo_acquire, mo_relaxed)))
         return;
 
     qspin_lock_slowpath(lock, val);
@@ -418,13 +415,11 @@ static inline void qspin_lock_physical(struct qspinlock *lock) TSA_NO_ANALYSIS {
 static inline void
 qspin_unlock_physical(struct qspinlock *lock) TSA_NO_ANALYSIS {
     /* Clear only the locked byte so pending and tail bits remain valid */
-    atomic_store_explicit((_Atomic uint8_t *) &lock->val, 0,
-                          memory_order_release);
+    atomic_store_release((atomic_uint8_t *) &lock->val, 0);
 }
 
 static inline bool qspin_is_locked(const struct qspinlock *lock) {
-    return (atomic_load_explicit(&lock->val, memory_order_relaxed) &
-            Q_SPIN_LOCKED_MASK) != 0;
+    return (atomic_load_relaxed(&lock->val) & Q_SPIN_LOCKED_MASK) != 0;
 }
 
 /* Same deal as SPINLOCK_ASSERT_LOCKED, just checks the bit,

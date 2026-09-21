@@ -349,21 +349,19 @@ static inline bool log_ringbuf_try_enqueue(struct log_site *site,
     struct log_ring_slot *slot;
 
     while (true) {
-        pos = atomic_load_explicit(&rb->head, memory_order_relaxed);
+        pos = atomic_load_relaxed(&rb->head);
         slot = &rb->slots[pos % site->capacity];
 
-        uint64_t seq = atomic_load_explicit(&slot->seq, memory_order_acquire);
+        uint64_t seq = atomic_load_acq(&slot->seq);
         int64_t diff = (int64_t) seq - (int64_t) pos;
 
         if (diff == 0) {
-            if (atomic_compare_exchange_weak_explicit(&rb->head, &pos, pos + 1,
-                                                      memory_order_acq_rel,
-                                                      memory_order_relaxed)) {
+            if (atomic_cas_weak(&rb->head, &pos, pos + 1, mo_acq_rel,
+                                mo_relaxed)) {
 
                 slot->rec = *rec;
 
-                atomic_store_explicit(&slot->seq, pos + 1,
-                                      memory_order_release);
+                atomic_store_release(&slot->seq, pos + 1);
                 return true;
             }
         } else if (diff < 0) {
@@ -379,21 +377,19 @@ static inline bool log_ringbuf_try_dequeue(struct log_site *site,
     struct log_ring_slot *slot;
 
     while (true) {
-        pos = atomic_load_explicit(&rb->tail, memory_order_relaxed);
+        pos = atomic_load_relaxed(&rb->tail);
         slot = &rb->slots[pos % site->capacity];
 
-        uint64_t seq = atomic_load_explicit(&slot->seq, memory_order_acquire);
+        uint64_t seq = atomic_load_acq(&slot->seq);
         int64_t diff = (int64_t) seq - (int64_t) (pos + 1);
 
         if (diff == 0) {
-            if (atomic_compare_exchange_weak_explicit(&rb->tail, &pos, pos + 1,
-                                                      memory_order_acq_rel,
-                                                      memory_order_relaxed)) {
+            if (atomic_cas_weak(&rb->tail, &pos, pos + 1, mo_acq_rel,
+                                mo_relaxed)) {
 
                 *out = slot->rec;
 
-                atomic_store_explicit(&slot->seq, pos + site->capacity,
-                                      memory_order_release);
+                atomic_store_release(&slot->seq, pos + site->capacity);
                 return true;
             }
         } else if (diff < 0) {
@@ -568,7 +564,7 @@ void log_sites_init(void) {
                                     ALLOC_FLAGS_ZERO);
 
         for (size_t i = 0; i < s->capacity; i++) {
-            atomic_store_explicit(&lrb->slots[i].seq, i, memory_order_release);
+            atomic_store_release(&lrb->slots[i].seq, i);
         }
 
         locked_list_add(&log_global.list, &s->list);
@@ -643,7 +639,7 @@ struct log_site *log_site_create(struct log_site_options opts) {
     ret->flags = opts.flags;
     INIT_LIST_HEAD(&ret->list);
     for (size_t i = 0; i < opts.capacity; i++) {
-        atomic_store_explicit(&slots[i].seq, i, memory_order_release);
+        atomic_store_release(&slots[i].seq, i);
     }
 
     locked_list_add(&log_global.list, &ret->list);

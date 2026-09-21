@@ -1,7 +1,7 @@
 /* @title: Workqueues */
 #pragma once
+#include <atomic.h>
 #include <smp/topology.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <structures/list.h>
@@ -27,7 +27,7 @@ struct work {
 
     atomic_bool enqueued;
     atomic_bool active;
-    _Atomic uint64_t seq;
+    atomic_uint64_t seq;
 };
 
 struct delayed_work {
@@ -179,14 +179,14 @@ struct workqueue {
     struct list_head works;
     struct worker *worker_array; /* if STATIC_WORKER is needed */
 
-    _Atomic uint64_t head;
-    _Atomic uint64_t tail;
+    atomic_uint64_t head;
+    atomic_uint64_t tail;
 
-    atomic_bool spawn_pending;  /* Some enqueue wants us to spawn a worker */
-    _Atomic uint32_t num_tasks; /* How many tasks do we have in the ringbuf */
+    atomic_bool spawn_pending; /* Some enqueue wants us to spawn a worker */
+    atomic_uint32_t num_tasks; /* How many tasks do we have in the ringbuf */
 
-    _Atomic uint32_t num_workers;  /* Current # workers */
-    _Atomic uint32_t idle_workers; /* # idle */
+    atomic_uint32_t num_workers;  /* Current # workers */
+    atomic_uint32_t idle_workers; /* # idle */
 
     cpu_id_t core;
     time_ms_t last_spawn_attempt;
@@ -199,7 +199,7 @@ struct workqueue {
     struct workqueue_stats stats;
 #endif
 
-    _Atomic enum workqueue_state state; /* Atomic to avoid
+    atomic(enum workqueue_state) state; /* Atomic to avoid
                                          * race where stale
                                          * state is seen */
     struct thread_request *request;

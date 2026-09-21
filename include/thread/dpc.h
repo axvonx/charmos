@@ -1,6 +1,6 @@
 /* @title: DPCs */
 #pragma once
-#include <stdatomic.h>
+#include <atomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -11,18 +11,18 @@ typedef void (*dpc_func_t)(void *ctx);
 struct dpc {
     dpc_func_t func;
     void *ctx;
-    _Atomic(struct dpc *) next; /* for MPSC push */
-    _Atomic bool enqueued;      /* prevents double-enqueue */
+    atomic(struct dpc *) next; /* for MPSC push */
+    atomic_bool enqueued;      /* prevents double-enqueue */
 };
 
 struct dpc_queue {
-    _Atomic(struct dpc *) head;
-    _Atomic size_t count;
+    atomic(struct dpc *) head;
+    atomic_size_t count;
 };
 
 /* Per-cpu DPC data */
 struct dpc_cpu {
-    _Atomic bool ipi_queued;
+    atomic_bool ipi_queued;
     struct dpc_queue queue;
 };
 

@@ -415,15 +415,14 @@ static inline void unmark_active(struct rt_scheduler_mapping *rtm) {
 
 static inline void clear_switch_and_post(struct rt_scheduler_percpu *rts,
                                          enum rt_scheduler_error err) {
-    atomic_store_explicit(&rts->switch_code, err, memory_order_release);
-    atomic_store_explicit(&rts->switch_into, NULL, memory_order_release);
+    atomic_store_release(&rts->switch_code, err);
+    atomic_store_release(&rts->switch_into, NULL);
     semaphore_post(&rts->switch_semaphore);
 }
 
 void rt_scheduler_switch() {
     struct rt_scheduler_percpu *pcpu = smp_core_scheduler()->rt;
-    struct rt_scheduler_static *into =
-        atomic_load_explicit(&pcpu->switch_into, memory_order_acquire);
+    struct rt_scheduler_static *into = atomic_load_acq(&pcpu->switch_into);
 
     /* Nothing to do */
     if (!into)
@@ -569,8 +568,7 @@ rt_scheduler_switch_cpu(size_t cpu, struct rt_scheduler_static *into) {
     /* It will signal us now */
     semaphore_wait(&pcpu->switch_semaphore);
 
-    enum rt_scheduler_error ret =
-        atomic_load_explicit(&pcpu->switch_code, memory_order_relaxed);
+    enum rt_scheduler_error ret = atomic_load_relaxed(&pcpu->switch_code);
 
     /* Signal the waiting thread */
     semaphore_post(&pcpu->switch_semaphore);

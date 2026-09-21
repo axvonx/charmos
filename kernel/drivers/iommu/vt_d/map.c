@@ -20,7 +20,7 @@ static bool vtd_pt_empty(uint64_t *pt) {
 }
 
 static uint64_t *vtd_sl_ensure_child(sl_pte_atomic_t *entry) {
-    uint64_t val = atomic_load_explicit(entry, memory_order_relaxed);
+    uint64_t val = atomic_load_relaxed(entry);
     val &= ~SL_PTE_LOCK_BIT;
 
     if (val & SL_PTE_READ)
@@ -33,8 +33,7 @@ static uint64_t *vtd_sl_ensure_child(sl_pte_atomic_t *entry) {
     void *virt = hhdm_paddr_to_ptr(phys);
     memset(virt, 0, PAGE_SIZE);
 
-    atomic_store_explicit(entry, SL_TABLE_ENTRY(phys) | SL_PTE_LOCK_BIT,
-                          memory_order_release);
+    atomic_store_release(entry, SL_TABLE_ENTRY(phys) | SL_PTE_LOCK_BIT);
     return virt;
 }
 
@@ -71,7 +70,7 @@ static enum iommu_error vtd_sl_map_page(uint64_t *sl_pgd, iova_t iova,
     saved[3] = vtd_pt_lock(e1);
     locked[3] = e1;
 
-    atomic_store_explicit(e1, SL_PAGE_ENTRY(pa, perm), memory_order_release);
+    atomic_store_release(e1, SL_PAGE_ENTRY(pa, perm));
 
     /* Unlock in reverse: leaf → root */
     for (int i = PT_LEVELS - 1; i >= 0; i--)
@@ -207,7 +206,7 @@ static bool vtd_sl_unmap_locked(uint64_t *sl_pgd, iova_t iova,
         saved[lvl] = vtd_pt_lock(entry);
         locked[lvl] = entry;
 
-        uint64_t val = atomic_load_explicit(entry, memory_order_relaxed);
+        uint64_t val = atomic_load_relaxed(entry);
         val &= ~SL_PTE_LOCK_BIT;
 
         if (!(val & SL_PTE_READ)) {
@@ -219,7 +218,7 @@ static bool vtd_sl_unmap_locked(uint64_t *sl_pgd, iova_t iova,
 
         if (lvl == PT_LEVELS - 1) {
             /* leaf, clear it, keep lock bit until unlock */
-            atomic_store_explicit(entry, SL_PTE_LOCK_BIT, memory_order_release);
+            atomic_store_release(entry, SL_PTE_LOCK_BIT);
         } else {
             ws->tables[lvl + 1] = hhdm_paddr_to_ptr(SL_PTE_ADDR(val));
             cur = ws->tables[lvl + 1];
@@ -241,7 +240,7 @@ static void vtd_sl_reclaim_walk(struct vtd_walk_state *ws) {
 
         enum irql old_irql = vtd_pt_lock(parent);
 
-        uint64_t val = atomic_load_explicit(parent, memory_order_relaxed);
+        uint64_t val = atomic_load_relaxed(parent);
         val &= ~SL_PTE_LOCK_BIT;
 
         if (!(val & SL_PTE_READ)) {
@@ -258,7 +257,7 @@ static void vtd_sl_reclaim_walk(struct vtd_walk_state *ws) {
         }
 
         /* child is empty, clear parent entry and free child */
-        atomic_store_explicit(parent, SL_PTE_LOCK_BIT, memory_order_release);
+        atomic_store_release(parent, SL_PTE_LOCK_BIT);
         vtd_pt_mark_dead(parent);
         vtd_pt_unlock(parent, old_irql);
 

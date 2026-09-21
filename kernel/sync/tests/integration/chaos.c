@@ -34,19 +34,19 @@ static size_t chaos_apc_period = CHAOS_APC_PERIOD_BASE;
 static struct chaos_state states[CHAOS_THREADS_MAX];
 static atomic_bool chaos_stop = false;
 static atomic_bool starter_ok = false;
-static _Atomic uint32_t sync_chaos_left = 0;
+static atomic_uint32_t sync_chaos_left = 0;
 
 static struct mutex chaos_fuzz_mtx = MUTEX_INIT;
 static struct rwlock chaos_fuzz_rw = RWLOCK_INIT(THREAD_PRIO_CLASS_TIMESHARE);
 static struct spinlock chaos_fuzz_spin = SPINLOCK_INIT;
 static struct qspinlock chaos_fuzz_qspin = QSPINLOCK_INIT;
 
-static _Atomic uint64_t chaos_apc_lock_taken = 0;
-static _Atomic uint64_t chaos_apc_lock_skips = 0;
+static atomic_uint64_t chaos_apc_lock_taken = 0;
+static atomic_uint64_t chaos_apc_lock_skips = 0;
 
-static _Atomic uint64_t chaos_iters[CHAOS_THREADS_MAX];
-static _Atomic uint64_t chaos_spammer_iters;
-static _Atomic uint64_t chaos_waker_iters;
+static atomic_uint64_t chaos_iters[CHAOS_THREADS_MAX];
+static atomic_uint64_t chaos_spammer_iters;
+static atomic_uint64_t chaos_waker_iters;
 
 #define CHAOS_DIAG_SPAMMER CHAOS_THREADS_MAX
 #define CHAOS_DIAG_WAKER (CHAOS_THREADS_MAX + 1)
@@ -83,12 +83,11 @@ static void chaos_apc_fn(void *arg) {
 
     enum irql irql;
     if (!spin_trylock_irq_disable(&chaos_fuzz_spin, &irql)) {
-        atomic_fetch_add_explicit(&chaos_apc_lock_skips, 1,
-                                  memory_order_relaxed);
+        atomic_inc_relaxed(&chaos_apc_lock_skips);
         return;
     }
 
-    atomic_fetch_add_explicit(&chaos_apc_lock_taken, 1, memory_order_relaxed);
+    atomic_inc_relaxed(&chaos_apc_lock_taken);
     for (volatile int j = 0; j < 10; j++)
         cpu_pause();
     spin_unlock(&chaos_fuzz_spin, irql);
@@ -101,8 +100,7 @@ static void chaos_apc_spammer(void *arg) {
     size_t pass = 0;
 
     while (!atomic_load(&chaos_stop)) {
-        atomic_fetch_add_explicit(&chaos_spammer_iters, 1,
-                                  memory_order_relaxed);
+        atomic_inc_relaxed(&chaos_spammer_iters);
 
         if (pass++ % chaos_apc_period) {
             thread_sleep_for_ms(10);
@@ -152,7 +150,7 @@ static void chaos_sleeper(void *arg) {
         cpu_pause();
 
     for (size_t i = 0; i < chaos_iters_count; i++) {
-        atomic_fetch_add_explicit(&chaos_iters[id], 1, memory_order_relaxed);
+        atomic_inc_relaxed(&chaos_iters[id]);
 
         /* Exercise mutex */
         mutex_lock(&chaos_fuzz_mtx);
@@ -195,7 +193,7 @@ static void chaos_sleeper(void *arg) {
     }
 
     atomic_store(&states[id].alive, false);
-    atomic_fetch_sub(&sync_chaos_left, 1);
+    atomic_dec(&sync_chaos_left);
 }
 
 static void chaos_waker(void *arg) {
@@ -203,7 +201,7 @@ static void chaos_waker(void *arg) {
     CHAOS_LOG("waker start");
 
     while (!atomic_load(&chaos_stop)) {
-        atomic_fetch_add_explicit(&chaos_waker_iters, 1, memory_order_relaxed);
+        atomic_inc_relaxed(&chaos_waker_iters);
         int id = prng_next() % chaos_threads;
 
         if (!atomic_load(&states[id].alive)) {
@@ -241,8 +239,8 @@ static void chaos_waker(void *arg) {
 #define CHAOS_QUIET_POLLS 3
 #define CHAOS_MAX_REPORTS 2
 
-static bool chaos_progress_moved(_Atomic uint64_t *counter, uint64_t *last) {
-    uint64_t now = atomic_load_explicit(counter, memory_order_relaxed);
+static bool chaos_progress_moved(atomic_uint64_t *counter, uint64_t *last) {
+    uint64_t now = atomic_load_relaxed(counter);
     bool moved = now != *last;
     *last = now;
     return moved;
@@ -306,10 +304,10 @@ static void chaos_report_stall(const char *waiting_on, size_t waiting_idx,
 }
 
 static bool chaos_join_watched(struct thread *t, const char *role, size_t idx,
-                               _Atomic uint64_t *counter,
+                               atomic_uint64_t *counter,
                                struct thread **threads, struct thread *spammer,
                                struct thread *waker) {
-    uint64_t last = atomic_load_explicit(counter, memory_order_relaxed);
+    uint64_t last = atomic_load_relaxed(counter);
 
     size_t quiet = 0;
     size_t reports = 0;

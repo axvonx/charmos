@@ -210,7 +210,7 @@ static void sd_dedup_worker(void *arg) {
     sd_dedup_body(tid, held, &held_n);
 
     /* Publish unconditionally since the main thread will be waiting */
-    atomic_fetch_add(&sd_dedup_saved, 1);
+    atomic_inc(&sd_dedup_saved);
 
     while (!atomic_load(&sd_dedup_release))
         scheduler_yield();
@@ -218,7 +218,7 @@ static void sd_dedup_worker(void *arg) {
     for (size_t i = 0; i < held_n; i++)
         stack_depot_put(held[i]);
 
-    atomic_fetch_sub(&sd_mt.left, 1);
+    atomic_dec(&sd_mt.left);
 }
 
 TEST_DECLARE_INTEGRATION(stack_depot, mt_dedup, TEST_INTENSITY(16, 64, 256)) {
@@ -322,7 +322,7 @@ static bool sd_shared_body(size_t tid) {
 
 static void sd_shared_worker(void *arg) {
     sd_shared_body((size_t) (uintptr_t) arg);
-    atomic_fetch_sub(&sd_mt.left, 1);
+    atomic_dec(&sd_mt.left);
 }
 
 TEST_DECLARE_INTEGRATION(stack_depot, mt_shared_set,
@@ -405,7 +405,7 @@ static void sd_disjoint_worker(void *arg) {
         }
     }
 
-    atomic_fetch_sub(&sd_mt.left, 1);
+    atomic_dec(&sd_mt.left);
 }
 
 TEST_DECLARE_INTEGRATION(stack_depot, mt_disjoint, TEST_INTENSITY(8, 32, 128)) {
@@ -470,7 +470,7 @@ static bool sd_churn_body(size_t tid) {
 
 static void sd_churn_worker(void *arg) {
     sd_churn_body((size_t) (uintptr_t) arg);
-    atomic_fetch_sub(&sd_mt.left, 1);
+    atomic_dec(&sd_mt.left);
 }
 
 TEST_DECLARE_INTEGRATION(stack_depot, mt_churn_race,
@@ -534,7 +534,7 @@ static cc_noinline bool sd_cur_body(size_t tid) {
 
 static void sd_cur_worker(void *arg) {
     sd_cur_body((size_t) (uintptr_t) arg);
-    atomic_fetch_sub(&sd_mt.left, 1);
+    atomic_dec(&sd_mt.left);
 }
 
 TEST_DECLARE_INTEGRATION(stack_depot, mt_save_current) {

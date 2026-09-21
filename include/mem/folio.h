@@ -1,12 +1,12 @@
 /* @title: Folio */
 #pragma once
+#include <atomic.h>
 #include <compiler/core.h>
 #include <math/bit.h>
 #include <mem/alloc.h>
 #include <mem/hhdm.h>
 #include <mem/page.h>
 #include <sch/irql.h>
-#include <stdatomic.h>
 #include <structures/list.h>
 #include <types/refcount.h>
 #include <types/types.h>
@@ -51,7 +51,7 @@ enum folio_tag : uintptr_t {
 
 struct folio {
     struct page *base_page;
-    _Atomic enum folio_flags flags;
+    atomic(enum folio_flags) flags;
     uint8_t order; /* 2^order pages */
     refcount_t refcount;
     mapcount_t mapcount;
@@ -117,20 +117,19 @@ static inline enum folio_tag folio_get_tag(const struct folio *f) {
 }
 
 static inline bool folio_test_flag(const struct folio *f, enum folio_flags m) {
-    return atomic_load_explicit(&f->flags, memory_order_acquire) & m;
+    return atomic_load_acq(&f->flags) & m;
 }
 
 static inline void folio_set_flag(struct folio *f, enum folio_flags m) {
-    atomic_fetch_or_explicit(&f->flags, m, memory_order_release);
+    atomic_fetch_or_release(&f->flags, m);
 }
 
 static inline void folio_clear_flag(struct folio *f, enum folio_flags m) {
-    atomic_fetch_and_explicit(&f->flags, (enum folio_flags) ~(uint32_t) m,
-                              memory_order_release);
+    atomic_fetch_and_release(&f->flags, (enum folio_flags) ~(uint32_t) m);
 }
 
 static inline bool folio_test_set_flag(struct folio *f, enum folio_flags m) {
-    return atomic_fetch_or_explicit(&f->flags, m, memory_order_acq_rel) & m;
+    return atomic_fetch_or_acq_rel(&f->flags, m) & m;
 }
 
 static inline bool folio_get(struct folio *f) {

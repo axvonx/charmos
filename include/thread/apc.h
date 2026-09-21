@@ -1,9 +1,9 @@
 /* @title: APCs */
 #pragma once
+#include <atomic.h>
 #include <irq/irq.h>
 #include <sch/sched.h>
 #include <smp/core.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -27,7 +27,7 @@ struct apc {
     struct thread *owner;
     struct apc *next;
     refcount_t refcount;
-    _Atomic enum apc_state state;
+    atomic(enum apc_state) state;
     apc_destroy_t destroy;
 };
 

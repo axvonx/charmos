@@ -1,9 +1,9 @@
 /* @title: Shared test concurrency core */
 #pragma once
+#include <atomic.h>
 #include <compiler/core.h>
 #include <crypto/prng.h>
 #include <smp/percpu.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -50,7 +50,7 @@ struct test_rng {
 };
 
 struct test_progress_counter {
-    _Atomic uint64_t count;
+    atomic_uint64_t count;
 };
 
 struct test_stall_evidence {
@@ -63,14 +63,14 @@ struct test_conc_worker {
     const char *role;
     struct test_rng rng;
     void *arg;
-    _Atomic(struct thread *) th;
+    atomic(struct thread *) th;
     atomic_bool parked;
 };
 
 struct test_conc {
     atomic_bool active;
 
-    _Atomic enum test_stop stop;
+    atomic(enum test_stop) stop;
     atomic_bool quiesce_requested;
     atomic_size_t parked_count;
 
@@ -79,7 +79,7 @@ struct test_conc {
 
     /* An extra thread that should be alerted on
      * stop but isn't a worker, NULL if unused */
-    _Atomic(struct thread *) aux;
+    atomic(struct thread *) aux;
 
     /* For telling all the workers 'go!' */
     struct completion start;
@@ -87,7 +87,7 @@ struct test_conc {
 
 struct test_liveness_state {
     struct watchdog_callback callback;
-    _Atomic enum test_liveness_phase phase;
+    atomic(enum test_liveness_phase) phase;
 
     uint64_t last_progress;
     time_ms_t last_change_ms;
@@ -129,8 +129,7 @@ bool test_liveness_take(struct test_liveness_state *state,
 
 PERCPU_DEFINE(test_progress, struct test_progress_counter);
 static inline void test_conc_progress_tick(void) {
-    atomic_fetch_add_explicit(&PERCPU_PTR(TOPC_NONE, test_progress)->count, 1,
-                              memory_order_relaxed);
+    atomic_inc_relaxed(&PERCPU_PTR(TOPC_NONE, test_progress)->count);
 }
 
 static inline uint64_t test_rng_next(struct test_rng *rng) {
@@ -138,15 +137,15 @@ static inline uint64_t test_rng_next(struct test_rng *rng) {
 }
 
 static inline bool test_conc_must_stop(const struct test_conc *c) {
-    return atomic_load_explicit(&c->stop, memory_order_acquire) != TEST_RUN;
+    return atomic_load_acq(&c->stop) != TEST_RUN;
 }
 
 static inline enum test_stop test_conc_stop_reason(const struct test_conc *c) {
-    return atomic_load_explicit(&c->stop, memory_order_acquire);
+    return atomic_load_acq(&c->stop);
 }
 
 static inline bool test_conc_must_park(const struct test_conc *c) {
-    return atomic_load_explicit(&c->quiesce_requested, memory_order_acquire);
+    return atomic_load_acq(&c->quiesce_requested);
 }
 
 #define TEST_PROGRESS() test_conc_progress_tick()

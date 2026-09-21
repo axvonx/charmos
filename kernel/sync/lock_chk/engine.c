@@ -1,13 +1,13 @@
 #ifdef DEBUG_LOCK_CHK
 
 #include <asm.h>
+#include <atomic.h>
 #include <console/panic.h>
 #include <console/printf.h>
 #include <irq/irq.h>
 #include <kassert.h>
 #include <smp/core.h>
 #include <smp/percpu.h>
-#include <stdatomic.h>
 #include <string.h>
 #include <thread/thread.h>
 
@@ -70,13 +70,11 @@ validate_acq(const struct lock_chk_acq_req *request,
 void lock_chk_deep_activate(void) {
     kassert(PERCPU_READY(lock_chk_recursion_depth));
     lock_chk_graph_init(&lock_chk_global.graph);
-    atomic_store_explicit(&lock_chk_global.deep, LOCK_CHK_ACTIVE,
-                          memory_order_release);
+    atomic_store_release(&lock_chk_global.deep, LOCK_CHK_ACTIVE);
 }
 
 static void lock_chk_degrade(void) {
-    atomic_store_explicit(&lock_chk_global.deep, LOCK_CHK_DEGRADED,
-                          memory_order_release);
+    atomic_store_release(&lock_chk_global.deep, LOCK_CHK_DEGRADED);
 }
 
 static void lock_chk_note_capacity_exhausted(enum lock_chk_result result) {

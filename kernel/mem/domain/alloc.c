@@ -174,7 +174,9 @@ static paddr_t alloc_interleaved(size_t pages) {
 
     paddr_t ret = 0;
 
-    if (target->total_pages - target->pages_used >= pages)
+    if (atomic_load_relaxed(&target->total_pages) -
+            atomic_load_relaxed(&target->pages_used) >=
+        pages)
         ret = do_alloc_interleaved(target, local, pages);
 
     *rr_idx = (idx + 1) % zl->count;
@@ -237,7 +239,8 @@ struct domain *domain_alloc_pick_best_domain(struct domain *local, size_t pages,
         struct domain_zonelist_entry *ent = &zl->entries[i];
         struct domain_buddy *candidate = ent->domain;
 
-        size_t free_pages = candidate->total_pages - candidate->pages_used;
+        size_t free_pages = atomic_load_relaxed(&candidate->total_pages) -
+                            atomic_load_relaxed(&candidate->pages_used);
         if (free_pages < pages)
             continue;
 
@@ -274,7 +277,8 @@ static paddr_t alloc_with_locality(size_t pages, bool flexible_locality,
         struct domain_zonelist_entry *ent = &zl->entries[i];
         struct domain_buddy *candidate = ent->domain;
 
-        size_t free_pages = candidate->total_pages - candidate->pages_used;
+        size_t free_pages = atomic_load_relaxed(&candidate->total_pages) -
+                            atomic_load_relaxed(&candidate->pages_used);
         if (free_pages < pages)
             continue;
 

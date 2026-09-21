@@ -1,8 +1,8 @@
 /* @title: HPET */
 #pragma once
+#include <atomic.h>
 #include <compiler/core.h>
 #include <drivers/mmio.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <types/types.h>

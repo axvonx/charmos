@@ -22,6 +22,7 @@
  */
 
 #include <acpi/lapic.h>
+#include <atomic.h>
 #include <compiler/atomic.h>
 #include <console/printf.h>
 #include <global.h>
@@ -34,7 +35,6 @@
 #include <mem/alloc_or_die.h>
 #include <sch/sched.h>
 #include <smp/core.h>
-#include <stdatomic.h>
 #include <structures/list.h>
 #include <sync/rcu.h>
 #include <sync/semaphore.h>
@@ -85,7 +85,7 @@ static void rcu_propagate_done(struct rcu_node *node, uint64_t seq,
 
         if (!parent) {
             /* Root is done, GP over */
-            atomic_store_explicit(&rcu.gp_completed, seq, memory_order_release);
+            atomic_store_release(&rcu.gp_completed, seq);
             return;
         }
 
@@ -110,8 +110,7 @@ static void rcu_report_cpu_locked(struct rcu_node *leaf, cpu_id_t cpu,
         return;
     }
 
-    atomic_store_explicit(&rcu.cpus[cpu].reported_seq, gp_seq_seen,
-                          memory_order_relaxed);
+    atomic_store_relaxed(&rcu.cpus[cpu].reported_seq, gp_seq_seen);
 
     cpu_mask_clear(&leaf->qs_cpus, cpu);
     rcu_propagate_done(leaf, gp_seq_seen, irql);
@@ -130,7 +129,7 @@ void rcu_read_lock(void) {
     if (cc_likely(nesting != 0)) {
         ca_write_once(t->rcu_nesting, nesting + 1);
     } else {
-        uint64_t seq = atomic_load_explicit(&rcu.gp_seq, memory_order_acquire);
+        uint64_t seq = atomic_load_acq(&rcu.gp_seq);
         t->rcu_read_seq = seq;
         ca_write_once(t->rcu_nesting, 1);
     }
@@ -200,12 +199,11 @@ void rcu_note_context_switch(struct thread *outgoing,
 
     cpu_id_t cpu = smp_id(TOPC_IRQL);
     struct rcu_node *leaf = rcu_leaf_for_cpu(cpu);
-    uint64_t gp_seq_seen =
-        atomic_load_explicit(&rcu.gp_seq, memory_order_acquire);
+    uint64_t gp_seq_seen = atomic_load_acq(&rcu.gp_seq);
 
     enum irql irql = spin_lock_irq_disable(&leaf->lock);
 
-    if (incoming->state == THREAD_STATE_IDLE_THREAD) {
+    if (atomic_load_relaxed(&incoming->state) == THREAD_STATE_IDLE_THREAD) {
         cpu_mask_set(&leaf->idle_cpus, cpu);
     } else {
         cpu_mask_clear(&leaf->idle_cpus, cpu);
@@ -251,12 +249,12 @@ void rcu_note_irq_exit(void) TSA_NO_ANALYSIS {
     if (t && ca_read_once(t->rcu_nesting) && !t->rcu_leaf)
         return;
 
-    uint64_t gp_seq_seen = atomic_load(&rcu.gp_seq);
-    if (gp_seq_seen == atomic_load(&rcu.gp_completed))
+    uint64_t gp_seq_seen = atomic_load_acq(&rcu.gp_seq);
+    if (gp_seq_seen == atomic_load_acq(&rcu.gp_completed))
         return;
 
     cpu_id_t cpu = smp_id(TOPC_IRQ);
-    if (atomic_load(&rcu.cpus[cpu].reported_seq) == gp_seq_seen)
+    if (atomic_load_relaxed(&rcu.cpus[cpu].reported_seq) == gp_seq_seen)
         return;
 
     /* Technically the IRQL stuff here is a no-op, but we'll
@@ -284,7 +282,7 @@ void rcu_defer(struct rcu_cb *cb, rcu_fn func, void *arg) {
     /* Pin + disable interrupts for queue selection */
     enum irql outer = irql_raise(IRQL_HIGH_LEVEL);
 
-    cb->enqueued_waiting_on_gen = atomic_load(&rcu.gp_seq);
+    cb->enqueued_waiting_on_gen = atomic_load_relaxed(&rcu.gp_seq);
 
     if (cc_unlikely(!rcu.ready)) {
         /* Before rcu_init(), we have nothing, and the boot CPU
@@ -330,7 +328,7 @@ static bool rcu_callbacks_pending(void) {
 }
 
 static bool rcu_work_pending(void) {
-    if (atomic_load_explicit(&rcu.gp_requests, memory_order_acquire) != 0)
+    if (atomic_load_acq(&rcu.gp_requests) != 0)
         return true;
     return rcu_callbacks_pending();
 }
@@ -419,9 +417,9 @@ static void rcu_report_stall(uint64_t seq, time_ms_t elapsed) {
 static uint64_t rcu_gp_start(struct list_head *batch) TSA_NO_ANALYSIS {
     enum irql outer = irql_raise(IRQL_DISPATCH_LEVEL);
     rcu_detach_callbacks(batch);
-    atomic_store_explicit(&rcu.gp_requests, 0, memory_order_relaxed);
+    atomic_store_relaxed(&rcu.gp_requests, 0);
 
-    uint64_t prev = atomic_load_explicit(&rcu.gp_seq, memory_order_relaxed);
+    uint64_t prev = atomic_load_relaxed(&rcu.gp_seq);
     kassert(prev != UINT64_MAX, "RCU GP seq wrap");
     uint64_t seq = prev + 1;
 
@@ -455,7 +453,7 @@ static uint64_t rcu_gp_start(struct list_head *batch) TSA_NO_ANALYSIS {
         spin_unlock(&node->lock, irql);
     }
 
-    atomic_store_explicit(&rcu.gp_seq, seq, memory_order_release);
+    atomic_store_release(&rcu.gp_seq, seq);
 
     /* Retire quiescent and poke everyone else */
     cpu_id_t self = smp_id(TOPC_IRQL);
@@ -490,8 +488,7 @@ static void rcu_gp_wait(uint64_t seq) {
     time_ms_t last_kick = started;
     time_ms_t last_stall = started;
 
-    while (atomic_load_explicit(&rcu.gp_completed, memory_order_acquire) <
-           seq) {
+    while (atomic_load_acq(&rcu.gp_completed) < seq) {
         scheduler_yield();
 
         time_ms_t now = time_get_ms();
@@ -540,14 +537,12 @@ void rcu_synchronize(void) {
     /* Caller's unpublish happened before this load, meaning
      * grace periods that published a sequence greater than what's
      * here started after the unpublish */
-    uint64_t target =
-        atomic_load_explicit(&rcu.gp_seq, memory_order_acquire) + 1;
+    uint64_t target = atomic_load_acq(&rcu.gp_seq) + 1;
 
-    atomic_fetch_add_explicit(&rcu.gp_requests, 1, memory_order_release);
+    atomic_inc_release(&rcu.gp_requests);
     semaphore_post(&rcu.sem);
 
-    while (atomic_load_explicit(&rcu.gp_completed, memory_order_acquire) <
-           target)
+    while (atomic_load_acq(&rcu.gp_completed) < target)
         scheduler_yield();
 }
 
@@ -624,9 +619,9 @@ static void rcu_build_tree(void) {
 }
 
 void rcu_init(void) {
-    atomic_store(&rcu.gp_seq, 1);
-    atomic_store(&rcu.gp_completed, 1);
-    atomic_store(&rcu.gp_requests, 0);
+    atomic_store_relaxed(&rcu.gp_seq, 1);
+    atomic_store_relaxed(&rcu.gp_completed, 1);
+    atomic_store_relaxed(&rcu.gp_requests, 0);
 
     semaphore_init(&rcu.sem, 0, SEMAPHORE_INIT_NORMAL);
 
@@ -637,7 +632,7 @@ void rcu_init(void) {
     for (cpu_id_t cpu = 0; cpu < global.core_count; cpu++) {
         spinlock_init(&rcu.cpus[cpu].lock);
         INIT_LIST_HEAD(&rcu.cpus[cpu].list);
-        atomic_store(&rcu.cpus[cpu].reported_seq, 0);
+        atomic_store_relaxed(&rcu.cpus[cpu].reported_seq, 0);
     }
 
     rcu.worker = thread_spawn("rcu_gp_worker", rcu_gp_worker, NULL);

@@ -8,8 +8,7 @@
 static void percpu_rc_switch_to_atomic_rcu(struct rcu_cb *cb, void *arg) {
     cc_var_unused(cb);
     struct percpu_rc *rc = arg;
-    uintptr_t pcpu =
-        atomic_load_explicit(&rc->percpu_count_ptr, memory_order_relaxed);
+    uintptr_t pcpu = atomic_load_relaxed(&rc->percpu_count_ptr);
 
     int64_t *counters = PERCPU_RC_PTR(pcpu);
     int64_t sum = 0;
@@ -22,16 +21,14 @@ static void percpu_rc_switch_to_atomic_rcu(struct rcu_cb *cb, void *arg) {
 
         if (!rc->allow_reinit) {
             kfree(counters);
-            atomic_store_explicit(&rc->percpu_count_ptr,
-                                  PERCPU_RC_DEAD | PERCPU_RC_ATOMIC,
-                                  memory_order_release);
+            atomic_store_release(&rc->percpu_count_ptr,
+                                 PERCPU_RC_DEAD | PERCPU_RC_ATOMIC);
         }
     }
 
     /* Add pcpu sum and remove bias + initial kill ref, == 0, release */
     int64_t adjustment = sum - (PERCPU_COUNT_BIAS + 1);
-    int64_t prev =
-        atomic_fetch_add_explicit(&rc->count, adjustment, memory_order_acq_rel);
+    int64_t prev = atomic_fetch_add_acq_rel(&rc->count, adjustment);
 
     if (prev + adjustment == 0) {
         if (rc->release)
@@ -45,9 +42,8 @@ int percpu_rc_init(struct percpu_rc *rc, percpu_rc_release_fn release,
     rc->allow_reinit = (flags & PERCPU_RC_ALLOW_REINIT) != 0;
 
     if (flags & PERCPU_RC_INIT_ATOMIC) {
-        atomic_store_explicit(&rc->count, 1, memory_order_relaxed);
-        atomic_store_explicit(&rc->percpu_count_ptr, PERCPU_RC_ATOMIC,
-                              memory_order_relaxed);
+        atomic_store_relaxed(&rc->count, 1);
+        atomic_store_relaxed(&rc->percpu_count_ptr, PERCPU_RC_ATOMIC);
         return 0;
     }
 
@@ -58,37 +54,31 @@ int percpu_rc_init(struct percpu_rc *rc, percpu_rc_release_fn release,
 
     /* Init with PERCPU_COUNT_BIAS + 1 so early put()s during kill don't
      * prematurely trigger release */
-    atomic_store_explicit(&rc->count, 1 + PERCPU_COUNT_BIAS,
-                          memory_order_relaxed);
-    atomic_store_explicit(&rc->percpu_count_ptr, (uintptr_t) counters,
-                          memory_order_release);
+    atomic_store_relaxed(&rc->count, 1 + PERCPU_COUNT_BIAS);
+    atomic_store_release(&rc->percpu_count_ptr, (uintptr_t) counters);
 
     return 0;
 }
 
 void percpu_rc_destroy(struct percpu_rc *ref) {
-    uintptr_t pcpu =
-        atomic_load_explicit(&ref->percpu_count_ptr, memory_order_relaxed);
+    uintptr_t pcpu = atomic_load_relaxed(&ref->percpu_count_ptr);
     int64_t *counters = PERCPU_RC_PTR(pcpu);
 
     if (counters) {
         kfree(counters);
-        atomic_store_explicit(&ref->percpu_count_ptr,
-                              PERCPU_RC_DEAD | PERCPU_RC_ATOMIC,
-                              memory_order_relaxed);
+        atomic_store_relaxed(&ref->percpu_count_ptr,
+                             PERCPU_RC_DEAD | PERCPU_RC_ATOMIC);
     }
 }
 
 void percpu_rc_kill(struct percpu_rc *ref) {
-    uintptr_t pcpu =
-        atomic_load_explicit(&ref->percpu_count_ptr, memory_order_relaxed);
+    uintptr_t pcpu = atomic_load_relaxed(&ref->percpu_count_ptr);
 
     if (pcpu & PERCPU_RC_DEAD)
         return;
 
-    atomic_fetch_or_explicit(&ref->percpu_count_ptr,
-                             PERCPU_RC_DEAD | PERCPU_RC_ATOMIC,
-                             memory_order_release);
+    atomic_fetch_or_release(&ref->percpu_count_ptr,
+                            PERCPU_RC_DEAD | PERCPU_RC_ATOMIC);
 
     rcu_defer(&ref->rcu, percpu_rc_switch_to_atomic_rcu, ref);
 }
@@ -97,24 +87,20 @@ void percpu_rc_reinit(struct percpu_rc *rc) {
     kassert(rc->allow_reinit,
             "percpu_rc was not initialized with allow_reinit");
 
-    uintptr_t pcpu =
-        atomic_load_explicit(&rc->percpu_count_ptr, memory_order_relaxed);
+    uintptr_t pcpu = atomic_load_relaxed(&rc->percpu_count_ptr);
     int64_t *counters = PERCPU_RC_PTR(pcpu);
     kassert(counters, "percpu_rc counters missing during reinit");
 
-    atomic_store_explicit(&rc->count, 1 + PERCPU_COUNT_BIAS,
-                          memory_order_relaxed);
-    atomic_store_explicit(&rc->percpu_count_ptr, (uintptr_t) counters,
-                          memory_order_release);
+    atomic_store_relaxed(&rc->count, 1 + PERCPU_COUNT_BIAS);
+    atomic_store_release(&rc->percpu_count_ptr, (uintptr_t) counters);
 }
 
 void percpu_rc_resurrect(struct percpu_rc *rc) {
-    atomic_store_explicit(&rc->count, 1, memory_order_relaxed);
+    atomic_store_relaxed(&rc->count, 1);
 }
 
 int64_t percpu_rc_read(struct percpu_rc *rc) {
-    uintptr_t pcpu =
-        atomic_load_explicit(&rc->percpu_count_ptr, memory_order_relaxed);
+    uintptr_t pcpu = atomic_load_relaxed(&rc->percpu_count_ptr);
 
     if (percpu_rc_is_percpu(pcpu)) {
         int64_t sum = 0;
@@ -123,10 +109,8 @@ int64_t percpu_rc_read(struct percpu_rc *rc) {
             for (size_t i = 0; i < global.core_count; i++)
                 sum += counters[i];
         }
-        return (atomic_load_explicit(&rc->count, memory_order_relaxed) -
-                PERCPU_COUNT_BIAS) +
-               sum;
+        return (atomic_load_relaxed(&rc->count) - PERCPU_COUNT_BIAS) + sum;
     }
 
-    return atomic_load_explicit(&rc->count, memory_order_relaxed);
+    return atomic_load_relaxed(&rc->count);
 }

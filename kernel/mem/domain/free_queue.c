@@ -21,7 +21,7 @@ bool domain_free_queue_enqueue(struct domain_free_queue *fq, paddr_t addr,
     }
 
     if (success)
-        atomic_fetch_add_explicit(&fq->num_elements, 1, memory_order_relaxed);
+        atomic_inc_relaxed(&fq->num_elements);
 
     spin_unlock(&fq->lock, irql);
     return success;
@@ -40,7 +40,7 @@ bool domain_free_queue_dequeue(struct domain_free_queue *fq, paddr_t *addr_out,
     }
 
     if (success)
-        atomic_fetch_sub_explicit(&fq->num_elements, 1, memory_order_relaxed);
+        atomic_dec_relaxed(&fq->num_elements);
 
     spin_unlock(&fq->lock, irql);
     return success;

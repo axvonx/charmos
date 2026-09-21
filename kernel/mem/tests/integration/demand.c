@@ -6,7 +6,7 @@
 #define DP_MAX_THREADS ((size_t) 64)
 
 struct dp_worker {
-    _Atomic uint64_t **bufs; /* nbuf demand buffers, counter at page head */
+    atomic_uint64_t **bufs; /* nbuf demand buffers, counter at page head */
     size_t nbuf;
     size_t pages;
     atomic_uint *done;
@@ -18,13 +18,12 @@ static void dp_hammer(void *arg) {
     /* touch every page of every buffer */
     for (size_t b = 0; b < w->nbuf; b++)
         for (size_t p = 0; p < w->pages; p++)
-            atomic_fetch_add_explicit(&w->bufs[b][p * DP_STRIDE], 1,
-                                      memory_order_relaxed);
+            atomic_inc_relaxed(&w->bufs[b][p * DP_STRIDE]);
 
-    atomic_fetch_add(w->done, 1);
+    atomic_inc(w->done);
 }
 
-static bool dp_alloc_bufs(_Atomic uint64_t **bufs, size_t nbuf, size_t pages) {
+static bool dp_alloc_bufs(atomic_uint64_t **bufs, size_t nbuf, size_t pages) {
     for (size_t b = 0; b < nbuf; b++) {
         bufs[b] = page_alloc_demand(pages, ALLOC_FLAGS_ZERO);
         if (!bufs[b]) {
@@ -37,12 +36,12 @@ static bool dp_alloc_bufs(_Atomic uint64_t **bufs, size_t nbuf, size_t pages) {
 }
 
 /* every page was faulted in by workers, so all frames are present */
-static void dp_free_bufs(_Atomic uint64_t **bufs, size_t nbuf, size_t pages) {
+static void dp_free_bufs(atomic_uint64_t **bufs, size_t nbuf, size_t pages) {
     for (size_t b = 0; b < nbuf; b++)
         page_free((void *) bufs[b], pages);
 }
 
-static bool dp_verify(_Atomic uint64_t **bufs, size_t nbuf, size_t pages,
+static bool dp_verify(atomic_uint64_t **bufs, size_t nbuf, size_t pages,
                       uint64_t expect) {
     for (size_t b = 0; b < nbuf; b++)
         for (size_t p = 0; p < pages; p++)
@@ -81,7 +80,7 @@ TEST_DECLARE_INTEGRATION(mem, demand_single_buf_smp,
         MIN(ctx->intensity_val ? ctx->intensity_val : global.core_count,
             DP_MAX_THREADS);
 
-    _Atomic uint64_t *bufs[1];
+    atomic_uint64_t *bufs[1];
     TEST_ASSERT(dp_alloc_bufs(bufs, nbuf, pages));
 
     atomic_uint done = 0;
@@ -107,7 +106,7 @@ TEST_DECLARE_INTEGRATION(mem, demand_multi_buf_smp,
     size_t nthreads = MIN(ctx->intensity_val ? ctx->intensity_val : (2 * nbuf),
                           DP_MAX_THREADS); /* M > N */
 
-    _Atomic uint64_t *bufs[DP_MAX_BUFS];
+    atomic_uint64_t *bufs[DP_MAX_BUFS];
     TEST_ASSERT(dp_alloc_bufs(bufs, nbuf, pages));
 
     atomic_uint done = 0;

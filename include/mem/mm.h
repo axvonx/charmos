@@ -29,7 +29,7 @@ enum mm_fault_result {
  * once we go and implement this thing for ASID */
 struct mm_context {
     size_t ctx_id;
-    _Atomic size_t tlb_gen;
+    atomic_size_t tlb_gen;
     struct cpu_mask cpus;
 };
 

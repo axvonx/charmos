@@ -56,7 +56,7 @@ TEST_DECLARE_UNIT(qspinlock, pending_to_locked_math) {
 
 struct qspin_contention_fix {
     struct qspinlock lock;
-    _Atomic size_t count;
+    atomic_size_t count;
 };
 
 static bool qspinlock_contention_worker(struct test_fleet *f,
@@ -66,7 +66,7 @@ static bool qspinlock_contention_worker(struct test_fleet *f,
 
     for (size_t i = 0; i < QSPINLOCK_CONTENTION_ITERS; i++) {
         enum irql irql = qspin_lock(&fix->lock);
-        atomic_fetch_add(&fix->count, 1);
+        atomic_inc(&fix->count);
         qspin_unlock(&fix->lock, irql);
     }
 

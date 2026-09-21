@@ -24,7 +24,7 @@
  * want to refactor and clean this up into state machines */
 
 static volatile uint64_t cr3 = 0;
-static _Atomic uint32_t cores_awake = 0;
+static atomic_uint32_t cores_awake = 0;
 #define CPUID_LEAF_HYBRID 0x1A
 
 static void detect_cpu_features(struct cpu_capability *cap) {
@@ -246,9 +246,7 @@ static struct core *setup_cpu(uint64_t cpu) {
 }
 
 static inline void set_core_awake(void) {
-    atomic_fetch_add_explicit(&cores_awake, 1, memory_order_release);
-    if (atomic_load_explicit(&cores_awake, memory_order_acquire) ==
-        (global.core_count - 1)) {
+    if (atomic_inc_return_acq_rel(&cores_awake) == (global.core_count - 1)) {
         bootstage_advance(BOOTSTAGE_MID_MP);
     }
 }
@@ -344,7 +342,7 @@ void smp_setup_bsp(void) {
     tsc_mailboxes_init();
 }
 
-static atomic_uint tick_change_state = 0;
+static atomic_uint32_t tick_change_state = 0;
 static bool enable = false;
 static uint8_t entry = 0;
 
@@ -357,7 +355,7 @@ static enum irq_result tick_op_isr(void *ctx, uint8_t vector,
         scheduler_tick_disable();
     }
 
-    atomic_fetch_add(&tick_change_state, 1);
+    atomic_inc(&tick_change_state);
     return IRQ_HANDLED;
 }
 

@@ -1,10 +1,10 @@
 /* @title: Per-CPU dynamic objects */
 #pragma once
+#include <atomic.h>
 #include <compiler/core.h>
 #include <global.h>
 #include <linker/symbols.h>
 #include <smp/core.h>
-#include <stdatomic.h>
 #include <stddef.h>
 #include <stdint.h>
 

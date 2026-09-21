@@ -37,7 +37,7 @@ void reaper_init(void) {
 }
 
 size_t reaper_get_reaped_thread_count(void) {
-    return atomic_load_explicit(&reaped_threads, memory_order_acquire);
+    return atomic_load_acq(&reaped_threads);
 }
 
 void reaper_thread_main(void *unused) {
@@ -61,7 +61,7 @@ void reaper_thread_main(void *unused) {
 
             kassert(refcount_read(&t->refcount) == 0);
             thread_free(t);
-            atomic_fetch_add(&reaped_threads, 1);
+            atomic_inc(&reaped_threads);
         }
 
         scheduler_yield();

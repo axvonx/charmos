@@ -4,7 +4,7 @@
 
 #include "internal.h"
 
-static _Atomic uint8_t *order_map_entry_for(vaddr_t vaddr, bool *high_bits) {
+static atomic_uint8_t *order_map_entry_for(vaddr_t vaddr, bool *high_bits) {
     kassert(kmalloc_ptr_in_slab_validate((void *) vaddr));
     vaddr_t vptr_relative = vaddr - SLAB_HEAP_START;
     vaddr_t aligned_2mb = ALIGN_DOWN(vptr_relative, PAGE_2MB);
@@ -15,7 +15,7 @@ static _Atomic uint8_t *order_map_entry_for(vaddr_t vaddr, bool *high_bits) {
 
 uint8_t slab_order_map_get(vaddr_t vaddr) {
     bool get_high;
-    uint8_t byte = *order_map_entry_for(vaddr, &get_high);
+    uint8_t byte = atomic_load_relaxed(order_map_entry_for(vaddr, &get_high));
     if (get_high) {
         return byte >> 4;
     } else {
@@ -26,13 +26,13 @@ uint8_t slab_order_map_get(vaddr_t vaddr) {
 void slab_order_map_set(vaddr_t vaddr, uint8_t order) {
     order &= 0xF;
     bool set_high;
-    _Atomic uint8_t *bptr = order_map_entry_for(vaddr, &set_high);
+    atomic_uint8_t *bptr = order_map_entry_for(vaddr, &set_high);
 
     uint8_t first_mask = set_high ? 0xF : 0xF0;
     order = set_high ? order << 4 : order;
 
-    atomic_fetch_and(bptr, first_mask);
-    atomic_fetch_or(bptr, order);
+    atomic_update_explicit(bptr, old_val, (old_val & first_mask) | order,
+                           mo_release, mo_relaxed);
 }
 
 void slab_order_map_init(void) {

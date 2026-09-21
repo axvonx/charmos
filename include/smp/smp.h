@@ -1,7 +1,7 @@
 /* @title: SMP initialization */
 #pragma once
+#include <atomic.h>
 #include <limine.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 
 struct core;

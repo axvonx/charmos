@@ -32,7 +32,7 @@ struct stack_depot_record_chain {
 struct stack_depot_globals {
     uint32_t starting_seed;
     struct stack_depot_record_chain chains[STACK_DEPOT_HASH_SIZE];
-    _Atomic size_t num_records;
+    atomic_size_t num_records;
 };
 
 extern struct stack_depot_globals stack_depot_global;

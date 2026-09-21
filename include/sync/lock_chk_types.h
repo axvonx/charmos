@@ -1,9 +1,9 @@
 /* @title: Lock Validation Layout Types */
 #pragma once
 #include <asm.h>
+#include <atomic.h>
 #include <irq/irq.h>
 #include <sch/irql.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <sync/lock_chk.h>
@@ -31,11 +31,11 @@ enum lock_chk_context_bits : uint8_t {
 struct lock_chk_map {
     const struct lock_chk_class *class;
     struct lock_chk_class instance_class;
-    _Atomic(struct lock_chk_node *) base_node;
+    atomic(struct lock_chk_node *) base_node;
 };
 
 struct lock_chk_lock {
-    _Atomic bool used;
+    atomic_bool used;
     struct lock_chk_map map;
     void *instance;
 
@@ -161,7 +161,7 @@ lock_chk_map_runtime_init(struct lock_chk_map *map,
         .file = __RELFILE__,
         .line = 0,
     };
-    atomic_store_explicit(&map->base_node, NULL, memory_order_relaxed);
+    atomic_store_relaxed(&map->base_node, NULL);
 }
 
 static inline struct lock_chk_acq_req

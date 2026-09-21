@@ -52,7 +52,7 @@ static void test_fleet_worker_main(void *arg) {
     struct test_fleet *f = container_of(base, struct test_fleet, workers[0]);
 
     completion_wait(&f->conc.start);
-    atomic_fetch_add_explicit(&f->started, 1, memory_order_release);
+    atomic_inc_release(&f->started);
 
     if (!test_conc_must_stop(&f->conc)) {
         test_worker_fn body = f->bodies[self->index];
@@ -61,7 +61,7 @@ static void test_fleet_worker_main(void *arg) {
     }
 
     test_conc_unpark_self(&f->conc, self);
-    atomic_fetch_add_explicit(&f->finished, 1, memory_order_release);
+    atomic_inc_release(&f->finished);
 }
 
 static void test_fleet_deadline(struct timer *timer) {
@@ -77,6 +77,7 @@ struct test_fleet *test_fleet_init(struct test_context *ctx,
     if (!f)
         return NULL;
 
+    once_token_init(&f->failed);
     f->ctx = ctx;
     f->opts = opts ? *opts : (struct test_fleet_opts){0};
 
@@ -125,7 +126,7 @@ static bool test_fleet_attach(struct test_fleet *f, struct test_conc_worker *w,
     }
 
     kassert(thread_get(t));
-    atomic_store_explicit(&w->th, t, memory_order_release);
+    atomic_store_release(&w->th, t);
     return true;
 }
 
@@ -176,7 +177,7 @@ struct test_conc_worker *test_fleet_spawn_on_core(struct test_fleet *f,
     thread_set_joinable(t);
 
     kassert(thread_get(t));
-    atomic_store_explicit(&w->th, t, memory_order_release);
+    atomic_store_release(&w->th, t);
     thread_enqueue_on_core(t, core_id);
     return w;
 }
@@ -198,7 +199,7 @@ size_t test_fleet_spawn_per_core(struct test_fleet *f, const char *role,
 }
 
 void test_fleet_start_all(struct test_fleet *f) {
-    atomic_store_explicit(&f->conc.active, true, memory_order_release);
+    atomic_store_release(&f->conc.active, true);
 
     if (f->opts.soft_ms)
         test_liveness_start(&f->liveness, &f->conc, f->opts.soft_ms,
@@ -210,7 +211,7 @@ void test_fleet_start_all(struct test_fleet *f) {
 #define TEST_FLEET_DUMP_ARMS 8
 
 static void test_fleet_dump_worker(const struct test_conc_worker *w) {
-    struct thread *t = atomic_load_explicit(&w->th, memory_order_acquire);
+    struct thread *t = atomic_load_acq(&w->th);
 
     if (!t) {
         test_err("  %s[%zu]: <not spawned>", w->role ? w->role : "worker",
@@ -267,8 +268,7 @@ static void test_fleet_drain(struct test_fleet *f, enum test_stop reason) {
     test_fleet_arm_hard_deadline(f);
 
     for (size_t i = 0; i < f->count; i++) {
-        struct thread *t =
-            atomic_load_explicit(&f->workers[i].th, memory_order_acquire);
+        struct thread *t = atomic_load_acq(&f->workers[i].th);
 
         if (t)
             thread_join(t);
@@ -279,13 +279,12 @@ static void test_fleet_drain(struct test_fleet *f, enum test_stop reason) {
 
 static void test_fleet_put(struct test_fleet *f) {
     for (size_t i = 0; i < f->count; i++) {
-        struct thread *t = atomic_exchange_explicit(&f->workers[i].th, NULL,
-                                                    memory_order_acq_rel);
+        struct thread *t = atomic_xchg_acq_rel(&f->workers[i].th, NULL);
         if (t)
             thread_put(t);
     }
 
-    atomic_store_explicit(&f->conc.active, false, memory_order_release);
+    atomic_store_release(&f->conc.active, false);
 }
 
 void *test_fleet_alloc(struct test_fleet *f, size_t size) {
@@ -309,7 +308,7 @@ static void test_fleet_free_allocs(struct test_fleet *f) {
 }
 
 struct test_verdict test_fleet_join(struct test_fleet *f) {
-    if (!atomic_load_explicit(&f->conc.active, memory_order_acquire))
+    if (!atomic_load_acq(&f->conc.active))
         test_fleet_start_all(f);
 
     bool spawn_failed = f->spawn_failed;
@@ -354,7 +353,7 @@ bool test_fleet_teardown(struct test_context *ctx) {
 
     bool leaked = !f->joined && f->count > 0;
     if (leaked) {
-        if (!atomic_load_explicit(&f->conc.active, memory_order_acquire))
+        if (!atomic_load_acq(&f->conc.active))
             test_fleet_start_all(f);
 
         test_fleet_drain(f, TEST_STOP_BUDGET);

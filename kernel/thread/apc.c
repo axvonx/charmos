@@ -31,11 +31,7 @@ static inline bool safe_to_exec_apcs(void) {
 }
 
 static inline enum apc_state apc_state_load(struct apc *a) {
-    return atomic_load_explicit(&a->state, memory_order_acquire);
-}
-
-static inline size_t apc_type_bit(enum apc_type t) {
-    return pow2(t);
+    return atomic_load_acq(&a->state);
 }
 
 static inline bool apc_queue_empty(struct apc_queue *q) {
@@ -76,22 +72,21 @@ static inline bool apc_list_empty(struct thread *t, enum apc_type type) {
 }
 
 static inline void apc_unset_bitmask(struct thread *t, enum apc_type type) {
-    atomic_fetch_and(&t->apc_pending_mask, ~apc_type_bit(type));
+    atomic_clear_bit(&t->apc_pending_mask, type);
 }
 
 static inline void apc_set_bitmask(struct thread *t, enum apc_type type) {
-    atomic_fetch_or(&t->apc_pending_mask, apc_type_bit(type));
+    atomic_set_bit(&t->apc_pending_mask, type);
 }
 
 static inline bool thread_can_exec_special_apcs(struct thread *t) {
     return t->special_apc_disable == 0 &&
-           (atomic_load(&t->apc_pending_mask) &
-            apc_type_bit(APC_TYPE_SPECIAL_KERNEL));
+           atomic_test_bit(&t->apc_pending_mask, APC_TYPE_SPECIAL_KERNEL);
 }
 
 static inline bool thread_can_exec_kernel_apcs(struct thread *t) {
     return t->kernel_apc_disable == 0 &&
-           (atomic_load(&t->apc_pending_mask) & apc_type_bit(APC_TYPE_KERNEL));
+           atomic_test_bit(&t->apc_pending_mask, APC_TYPE_KERNEL);
 }
 
 static inline bool thread_is_dying(struct thread *t) {
@@ -150,14 +145,12 @@ static void deliver_apc_type(struct thread *t, enum apc_type type) {
         kassert(apc->owner == t);
         kassert(apc_state_load(apc) == APC_STATE_QUEUED);
         apc->owner = NULL;
-        atomic_store_explicit(&apc->state, APC_STATE_EXECUTING,
-                              memory_order_release);
+        atomic_store_release(&apc->state, APC_STATE_EXECUTING);
 
         thread_release(t, irql);
 
         apc_execute(apc);
-        atomic_store_explicit(&apc->state, APC_STATE_IDLE,
-                              memory_order_release);
+        atomic_store_release(&apc->state, APC_STATE_IDLE);
         apc_put(apc);
         drained++;
     }
@@ -195,9 +188,8 @@ bool apc_enqueue(struct thread *t, struct apc *a, enum apc_type type) {
     }
 
     enum apc_state expected = APC_STATE_IDLE;
-    if (!atomic_compare_exchange_strong_explicit(
-            &a->state, &expected, APC_STATE_QUEUED, memory_order_acq_rel,
-            memory_order_acquire)) {
+    if (!atomic_cas_strong(&a->state, &expected, APC_STATE_QUEUED, mo_acq_rel,
+                           mo_acquire)) {
         thread_release(t, irql);
         apc_put(a);
         return false;
@@ -224,9 +216,8 @@ bool apc_enqueue_event_apc(struct event_apc *a, struct apc_event_desc *desc) {
         return false;
 
     enum apc_state expected = APC_STATE_IDLE;
-    if (!atomic_compare_exchange_strong_explicit(
-            &a->apc.state, &expected, APC_STATE_QUEUED, memory_order_acq_rel,
-            memory_order_acquire)) {
+    if (!atomic_cas_strong(&a->apc.state, &expected, APC_STATE_QUEUED,
+                           mo_acq_rel, mo_acquire)) {
         apc_put(&a->apc);
         return false;
     }
@@ -237,8 +228,7 @@ bool apc_enqueue_event_apc(struct event_apc *a, struct apc_event_desc *desc) {
 
     struct thread *t = thread_get_current();
     if (!thread_apc_sanity_check(t)) {
-        atomic_store_explicit(&a->apc.state, APC_STATE_IDLE,
-                              memory_order_release);
+        atomic_store_release(&a->apc.state, APC_STATE_IDLE);
         apc_put(&a->apc);
         return false;
     }
@@ -287,7 +277,7 @@ static bool try_cancel_from_queue(struct thread *t, struct apc *a,
 /* update pending mask if queue now empty */
 static inline void update_pending_mask(struct thread *t, enum apc_type type) {
     if (apc_list_empty(t, type))
-        atomic_fetch_and(&t->apc_pending_mask, ~apc_type_bit(type));
+        atomic_clear_bit(&t->apc_pending_mask, type);
 }
 
 bool apc_cancel(struct thread *t, struct apc *a) {
@@ -311,7 +301,7 @@ bool apc_cancel(struct thread *t, struct apc *a) {
 
     thread_release(t, irql);
     if (removed) {
-        atomic_store_explicit(&a->state, APC_STATE_IDLE, memory_order_release);
+        atomic_store_release(&a->state, APC_STATE_IDLE);
         apc_put(a);
     }
     return removed;
@@ -333,7 +323,7 @@ void apc_init(struct apc *a, apc_func_t fn, void *arg1, apc_destroy_t destroy) {
     a->next = NULL;
     a->owner = NULL;
     refcount_init(&a->refcount, 1);
-    atomic_store_explicit(&a->state, APC_STATE_IDLE, memory_order_relaxed);
+    atomic_store_relaxed(&a->state, APC_STATE_IDLE);
     a->destroy = destroy;
 }
 
@@ -382,7 +372,7 @@ void apc_rundown_thread(struct thread *t) {
 
     apc_queue_splice(&t->event_apcs, &drained);
     apc_queue_splice(&t->to_exec_event_apcs, &drained);
-    atomic_store_explicit(&t->apc_pending_mask, 0, memory_order_release);
+    atomic_store_release(&t->apc_pending_mask, 0);
 
     spin_unlock(&t->lock, irql);
 
@@ -390,7 +380,7 @@ void apc_rundown_thread(struct thread *t) {
     struct apc *a;
     while ((a = apc_dequeue_head(&drained))) {
         a->owner = NULL;
-        atomic_store_explicit(&a->state, APC_STATE_IDLE, memory_order_release);
+        atomic_store_release(&a->state, APC_STATE_IDLE);
         apc_put(a);
     }
 }
@@ -434,9 +424,9 @@ static void bump_counters_on_queue(struct apc_queue *from,
 
 static void apc_execute_event(struct apc *a) {
     kassert(apc_state_load(a) == APC_STATE_QUEUED);
-    atomic_store_explicit(&a->state, APC_STATE_EXECUTING, memory_order_release);
+    atomic_store_release(&a->state, APC_STATE_EXECUTING);
     apc_execute(a);
-    atomic_store_explicit(&a->state, APC_STATE_QUEUED, memory_order_release);
+    atomic_store_release(&a->state, APC_STATE_QUEUED);
 }
 
 void apc_event_signal(struct apc_event_desc *desc) {

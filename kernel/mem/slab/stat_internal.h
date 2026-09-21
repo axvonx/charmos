@@ -5,9 +5,9 @@
         struct stat_bucket *bucket) {                                          \
         return 0;                                                              \
         struct slab_domain_bucket *sdb = bucket->private;                      \
-        atomic_fetch_add(&sdb->field, 1);                                      \
+        atomic_inc(&sdb->field);                                               \
         struct slab_domain *dom = bucket->parent->private;                     \
-        atomic_fetch_add(&dom->aggregate.field, 1);                            \
+        atomic_inc(&dom->aggregate.field);                                     \
         return 0;                                                              \
     }                                                                          \
                                                                                \

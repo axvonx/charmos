@@ -1,12 +1,12 @@
 /* @title: Per-CPU structure */
 #pragma once
+#include <atomic.h>
 #include <compiler/core.h>
 #include <compiler/intrinsic.h>
 #include <console/panic.h>
 #include <math/bit.h>
 #include <sch/irql.h>
 #include <smp/topology.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -102,7 +102,7 @@ struct core {
     time_us_t last_us;
     uint64_t last_tsc; /* For time.c */
 
-    _Atomic uint64_t pt_seen_epoch;
+    atomic_uint64_t pt_seen_epoch;
     bool reclaiming_page_tables;
 };
 

@@ -1,10 +1,10 @@
 /* @title: Per-CPU Reference Counter */
 #pragma once
+#include <atomic.h>
 #include <compiler/core.h>
 #include <kassert.h>
 #include <math/bit.h>
 #include <smp/core.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <sync/rcu.h>
@@ -32,8 +32,8 @@ enum percpu_rc_flags {
 #define PERCPU_RC_PTR(m) (int64_t *) (m & PERCPU_RC_PTR_MASK)
 
 struct percpu_rc {
-    _Atomic int64_t count;
-    _Atomic uintptr_t percpu_count_ptr;
+    atomic_int64_t count;
+    atomic_uintptr_t percpu_count_ptr;
     percpu_rc_release_fn release;
     bool allow_reinit;
     struct rcu_cb rcu;
@@ -67,22 +67,20 @@ static inline bool percpu_rc_is_percpu(uintptr_t pcpu) {
  */
 static inline void percpu_rc_get(struct percpu_rc *ref) {
     rcu_read_lock();
-    uintptr_t pcpu =
-        atomic_load_explicit(&ref->percpu_count_ptr, memory_order_relaxed);
+    uintptr_t pcpu = atomic_load_relaxed(&ref->percpu_count_ptr);
 
     if (cc_likely(percpu_rc_is_percpu(pcpu))) {
         int64_t *counters = PERCPU_RC_PTR(pcpu);
         counters[smp_id(TOPC_NONE)]++;
     } else {
-        atomic_fetch_add_explicit(&ref->count, 1, memory_order_relaxed);
+        atomic_inc_relaxed(&ref->count);
     }
     rcu_read_unlock();
 }
 
 static inline void percpu_rc_put(struct percpu_rc *ref) {
     rcu_read_lock();
-    uintptr_t pcpu =
-        atomic_load_explicit(&ref->percpu_count_ptr, memory_order_relaxed);
+    uintptr_t pcpu = atomic_load_relaxed(&ref->percpu_count_ptr);
 
     if (cc_likely(percpu_rc_is_percpu(pcpu))) {
         int64_t *counters = PERCPU_RC_PTR(pcpu);
@@ -90,8 +88,7 @@ static inline void percpu_rc_put(struct percpu_rc *ref) {
         rcu_read_unlock();
     } else {
         rcu_read_unlock();
-        if (atomic_fetch_sub_explicit(&ref->count, 1, memory_order_acq_rel) ==
-            1) {
+        if (atomic_dec_and_test(&ref->count)) {
             if (ref->release)
                 ref->release(ref);
         }
@@ -100,8 +97,7 @@ static inline void percpu_rc_put(struct percpu_rc *ref) {
 
 static inline bool percpu_rc_tryget(struct percpu_rc *ref) {
     rcu_read_lock();
-    uintptr_t pcpu =
-        atomic_load_explicit(&ref->percpu_count_ptr, memory_order_relaxed);
+    uintptr_t pcpu = atomic_load_relaxed(&ref->percpu_count_ptr);
 
     if (cc_likely(percpu_rc_is_percpu(pcpu))) {
         int64_t *counters = PERCPU_RC_PTR(pcpu);
@@ -111,19 +107,17 @@ static inline bool percpu_rc_tryget(struct percpu_rc *ref) {
     }
 
     rcu_read_unlock();
-    int64_t c = atomic_load_explicit(&ref->count, memory_order_relaxed);
+    int64_t c = atomic_load_relaxed(&ref->count);
     do {
         if (c <= 0)
             return false;
-    } while (!atomic_compare_exchange_weak_explicit(
-        &ref->count, &c, c + 1, memory_order_relaxed, memory_order_relaxed));
+    } while (!atomic_cas_weak(&ref->count, &c, c + 1, mo_relaxed, mo_relaxed));
     return true;
 }
 
 static inline bool percpu_rc_tryget_live(struct percpu_rc *ref) {
     rcu_read_lock();
-    uintptr_t pcpu =
-        atomic_load_explicit(&ref->percpu_count_ptr, memory_order_relaxed);
+    uintptr_t pcpu = atomic_load_relaxed(&ref->percpu_count_ptr);
 
     if (cc_likely(percpu_rc_is_percpu(pcpu))) {
         int64_t *counters = PERCPU_RC_PTR(pcpu);
@@ -138,20 +132,18 @@ static inline bool percpu_rc_tryget_live(struct percpu_rc *ref) {
     }
 
     rcu_read_unlock();
-    int64_t c = atomic_load_explicit(&ref->count, memory_order_relaxed);
+    int64_t c = atomic_load_relaxed(&ref->count);
     do {
         if (c <= 0)
             return false;
-    } while (!atomic_compare_exchange_weak_explicit(
-        &ref->count, &c, c + 1, memory_order_relaxed, memory_order_relaxed));
+    } while (!atomic_cas_weak(&ref->count, &c, c + 1, mo_relaxed, mo_relaxed));
     return true;
 }
 
 static inline bool percpu_rc_is_zero(struct percpu_rc *ref) {
-    return atomic_load_explicit(&ref->count, memory_order_relaxed) == 0;
+    return atomic_load_relaxed(&ref->count) == 0;
 }
 
 static inline bool percpu_rc_is_dying(struct percpu_rc *ref) {
-    return (atomic_load_explicit(&ref->percpu_count_ptr, memory_order_relaxed) &
-            PERCPU_RC_DEAD) != 0;
+    return (atomic_load_relaxed(&ref->percpu_count_ptr) & PERCPU_RC_DEAD) != 0;
 }

@@ -54,7 +54,7 @@ void scheduler_init(void) {
         rbt_init(&s->completed_rbt, scheduler_thread_get_data,
                  scheduler_cmp_threads);
         rbt_init(&s->climb_threads, climb_get_thread_data, climb_cmp_threads);
-        s->tick_enabled = false;
+        atomic_store_relaxed(&s->tick_enabled, false);
         s->current_period = 1; /* Start at period 1 to avoid
                                 * starting at 0 because
                                 * that would lead to threads
@@ -67,8 +67,8 @@ void scheduler_init(void) {
             TIMER_FLAG_IRQ | TIMER_FLAG_CPU(s->core_id) | TIMER_FLAG_PINNED;
         struct thread *idle_thread =
             thread_create("idle_thread_%u", scheduler_idle_main, NULL, i);
-        idle_thread->flags |= THREAD_FLAG_PINNED;
-        idle_thread->state = THREAD_STATE_IDLE_THREAD;
+        atomic_fetch_or_relaxed(&idle_thread->flags, THREAD_FLAG_PINNED);
+        atomic_store_relaxed(&idle_thread->state, THREAD_STATE_IDLE_THREAD);
         s->idle_thread = idle_thread;
 
         INIT_LIST_HEAD(&s->rt_threads);
@@ -77,7 +77,7 @@ void scheduler_init(void) {
 
         if (!i) {
             struct thread *t = thread_create("main_thread", k_sch_main, NULL);
-            t->flags |= THREAD_FLAG_PINNED;
+            atomic_fetch_or_relaxed(&t->flags, THREAD_FLAG_PINNED);
             scheduler_add_thread(s, t);
         }
 

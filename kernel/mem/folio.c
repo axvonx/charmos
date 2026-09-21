@@ -50,10 +50,10 @@ struct folio *folio_alloc_internal(uint8_t order, enum alloc_flags f,
     struct page *base_page = page_for_paddr(phys);
     folio->base_page = base_page;
     folio->order = order;
-    folio->mapcount = 0;
+    atomic_init(&folio->mapcount, 0);
     refcount_init(&folio->refcount, 1);
     folio->mapping = NULL;
-    folio->flags = 0;
+    atomic_init(&folio->flags, 0);
     folio_bind_pages(folio);
 
     return folio;

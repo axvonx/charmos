@@ -1,7 +1,7 @@
 #pragma once
+#include <atomic.h>
 #include <compiler/core.h>
 #include <log.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -62,15 +62,15 @@ struct rcu_node {
 struct rcu_cpu {
     struct spinlock lock;
     struct list_head list;
-    _Atomic uint64_t reported_seq;
+    atomic_uint64_t reported_seq;
 } cc_cache_aligned;
 
 struct rcu_state {
     bool ready;
 
-    _Atomic uint64_t gp_seq;       /* last GP started */
-    _Atomic uint64_t gp_completed; /* last GP completed */
-    _Atomic uint64_t gp_requests;  /* pending rcu_synchronize() requests */
+    atomic_uint64_t gp_seq;       /* last GP started */
+    atomic_uint64_t gp_completed; /* last GP completed */
+    atomic_uint64_t gp_requests;  /* pending rcu_synchronize() requests */
 
     struct semaphore sem; /* wake the GP worker */
 

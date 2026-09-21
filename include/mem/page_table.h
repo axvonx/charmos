@@ -1,11 +1,11 @@
 /* @title: Page Table */
 #pragma once
 #include <asm.h>
+#include <atomic.h>
 #include <irq/irq.h>
 #include <math/bit.h>
 #include <mem/page.h>
 #include <sch/irql.h>
-#include <stdatomic.h>
 #include <stdint.h>
 
 #define PT_LEVELS 4
@@ -61,7 +61,7 @@ static inline bool pte_is_shared(uint64_t pte) {
     (((pte) >> PTE_TAGGED_TYPE_SHIFT) & PTE_TAGGED_TYPE_MASK)
 #define PTE_TAGGED_SET_TYPE(type) ((uint64_t) (type) << PTE_TAGGED_TYPE_SHIFT)
 
-typedef _Atomic uint64_t pte_atomic_t;
+typedef atomic_uint64_t pte_atomic_t;
 
 /* Packed into the low X bits */
 enum pte_tag_type : uint8_t {
@@ -111,36 +111,33 @@ static inline struct pte_tagged pte_tagged_unpack(pte_t pte) {
 }
 
 static inline bool pte_locked(pte_atomic_t *pte) {
-    return atomic_load_explicit(pte, memory_order_relaxed) & PTE_LOCK_BIT;
+    return atomic_load_relaxed(pte) & PTE_LOCK_BIT;
 }
 
 static inline uint64_t pte_read(pte_atomic_t *pte) {
-    return atomic_load_explicit(pte, memory_order_relaxed);
+    return atomic_load_relaxed(pte);
 }
 
 static inline uint64_t pte_or(pte_atomic_t *pte, uint64_t val) {
-    return atomic_fetch_or_explicit(pte, val, memory_order_acq_rel);
+    return atomic_fetch_or_acq_rel(pte, val);
 }
 
 static inline void pte_unlock_internal(pte_atomic_t *pte) {
-    kassert(
-        atomic_fetch_and_explicit(pte, ~PTE_LOCK_BIT, memory_order_release) &
-        PTE_LOCK_BIT);
+    kassert(atomic_fetch_and_release(pte, ~PTE_LOCK_BIT) & PTE_LOCK_BIT);
 }
 
 /* TODO: use bit_spinlock.h */
 static inline void pte_lock_internal(pte_atomic_t *pte) {
     for (;;) {
-        uint64_t old = atomic_load_explicit(pte, memory_order_relaxed);
+        uint64_t old = atomic_load_relaxed(pte);
 
         if (old & PTE_LOCK_BIT) {
             cpu_pause();
             continue;
         }
 
-        if (atomic_compare_exchange_weak_explicit(pte, &old, old | PTE_LOCK_BIT,
-                                                  memory_order_acquire,
-                                                  memory_order_relaxed))
+        if (atomic_cas_weak(pte, &old, old | PTE_LOCK_BIT, mo_acquire,
+                            mo_relaxed))
             return;
 
         cpu_pause();

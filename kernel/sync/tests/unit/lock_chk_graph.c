@@ -314,8 +314,7 @@ TEST_DECLARE_UNIT(lock_chk, graph_acquire_rollback) {
                    LOCK_CHK_RESULT_EDGE_CAPACITY);
     TEST_ASSERT_NULL(node_b);
     TEST_ASSERT_EQ(graph->node_count, nodes_before);
-    TEST_ASSERT_NULL(
-        atomic_load_explicit(&map_b.base_node, memory_order_relaxed));
+    TEST_ASSERT_NULL(atomic_load_relaxed(&map_b.base_node));
     TEST_ASSERT_EQ(failure.kind, LOCK_CHK_FAIL_CAPACITY);
     lock_chk_report_release();
     return TEST_SUCCESS;

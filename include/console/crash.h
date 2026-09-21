@@ -1,11 +1,11 @@
 /* @title: Crash Engine */
 #pragma once
 #include <asm.h>
+#include <atomic.h>
 #include <compiler/core.h>
 #include <linker/symbols.h>
 #include <sch/irql.h>
 #include <setjmp.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>

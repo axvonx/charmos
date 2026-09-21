@@ -71,8 +71,8 @@ struct log_handle {
     void (*print)(const struct log_site *site, const struct log_record *rec,
                   void (*print)(const char *fmt, ...));
     enum log_handle_flags flags;
-    _Atomic uint32_t seen_internal;
-    _Atomic uint64_t last_ts_internal;
+    atomic_uint32_t seen_internal;
+    atomic_uint64_t last_ts_internal;
 };
 
 struct log_record {
@@ -100,7 +100,7 @@ struct log_record {
 };
 
 struct log_ring_slot {
-    _Atomic uint64_t seq;
+    atomic_uint64_t seq;
     struct log_record rec;
     char *shadow_buf; /* With a len of msg_max_len */
 };
@@ -108,8 +108,8 @@ struct log_ring_slot {
 struct log_ringbuf {
     struct log_ring_slot *slots;
 
-    _Atomic uint64_t head;
-    _Atomic uint64_t tail;
+    atomic_uint64_t head;
+    atomic_uint64_t tail;
 };
 
 /* Ephemeral argument passed in creation */
@@ -198,8 +198,8 @@ static inline void log_site_put(struct log_site *site) {
 
 /* NOTE: RACY, only usable as a heuristic */
 static inline size_t log_site_message_count(struct log_site *site) {
-    uint64_t head = atomic_load_explicit(&site->rb.head, memory_order_acquire);
-    uint64_t tail = atomic_load_explicit(&site->rb.tail, memory_order_acquire);
+    uint64_t head = atomic_load_acq(&site->rb.head);
+    uint64_t tail = atomic_load_acq(&site->rb.tail);
 
     return head - tail;
 }

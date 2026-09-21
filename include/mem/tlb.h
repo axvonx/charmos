@@ -1,7 +1,7 @@
 /* @title: TLB */
 #include <acpi/lapic.h>
+#include <atomic.h>
 #include <mem/page.h>
-#include <stdatomic.h>
 #include <stdint.h>
 #include <types/types.h>
 
@@ -9,13 +9,13 @@
 #define TLB_QUEUE_SIZE 64
 
 struct tlb_shootdown_cpu {
-    _Atomic uintptr_t queue[TLB_QUEUE_SIZE];
-    _Atomic uint32_t head;
-    _Atomic uint32_t tail;
+    atomic_uintptr_t queue[TLB_QUEUE_SIZE];
+    atomic_uint32_t head;
+    atomic_uint32_t tail;
     atomic_bool in_tlb_shootdown;
-    _Atomic uint8_t flush_all;
-    _Atomic uint64_t req_gen;  /* last requested generation */
-    _Atomic uint64_t done_gen; /* last completed generation */
+    atomic_uint8_t flush_all;
+    atomic_uint64_t req_gen;  /* last requested generation */
+    atomic_uint64_t done_gen; /* last completed generation */
 };
 
 void tlb_init(void);

@@ -48,30 +48,33 @@ static bool arena_valid(struct vas_arena *arena, vaddr_t base, vaddr_t limit,
         if (!seg->length || seg->start < end || seg->start >= limit ||
             seg->length > limit - seg->start || node != &seg->node)
             return false;
-        if (prev && prev->type == VAS_SEG_FREE && seg->type == VAS_SEG_FREE &&
+        enum vas_segment_type type = atomic_load_relaxed(&seg->type);
+        enum vas_segment_type prev_type =
+            prev ? atomic_load_relaxed(&prev->type) : VAS_SEG_BUSY;
+        if (prev && prev_type == VAS_SEG_FREE && type == VAS_SEG_FREE &&
             prev->span_start == seg->span_start && end == seg->start)
             return false;
         end = seg->start + seg->length;
-        if (seg->type == VAS_SEG_FREE) {
+        if (type == VAS_SEG_FREE) {
             free_bytes += seg->length;
             free_tags++;
-        } else if (seg->type == VAS_SEG_BUSY) {
+        } else if (type == VAS_SEG_BUSY) {
             *live += seg->length;
-        } else if (seg->type == VAS_SEG_CACHED) {
+        } else if (type == VAS_SEG_CACHED) {
             *cached += seg->length;
             if (!seg->mag_slot)
                 return false;
         }
         if (seg->mag_slot) {
             uintptr_t state =
-                seg->type == VAS_SEG_BUSY ? VAS_MAG_LIVE : VAS_MAG_CACHED;
-            if ((seg->type != VAS_SEG_BUSY && seg->type != VAS_SEG_CACHED) ||
+                type == VAS_SEG_BUSY ? VAS_MAG_LIVE : VAS_MAG_CACHED;
+            if ((type != VAS_SEG_BUSY && type != VAS_SEG_CACHED) ||
                 seg->mag_slot->segment != seg ||
                 atomic_load(&seg->mag_slot->token) != (seg->start | state))
                 return false;
             *enrolled += seg->length;
         }
-        if (seg->type != VAS_SEG_FREE && !list_empty(&seg->bin_node))
+        if (type != VAS_SEG_FREE && !list_empty(&seg->bin_node))
             return false;
         prev = seg;
         node = rbt_next(node);
@@ -83,7 +86,7 @@ static bool arena_valid(struct vas_arena *arena, vaddr_t base, vaddr_t limit,
         list_for_each(pos, &arena->free_bins[bin]) {
             struct vas_segment *seg =
                 list_entry(pos, struct vas_segment, bin_node);
-            if (seg->type != VAS_SEG_FREE ||
+            if (atomic_load_relaxed(&seg->type) != VAS_SEG_FREE ||
                 (63U - ci_clzll(seg->length)) != bin ||
                 rbt_search(&arena->tree, seg->start) != &seg->node)
                 return false;
@@ -132,7 +135,8 @@ static bool vas_valid(struct vas *vas, size_t expected_live) {
             if (!parent || atomic_load(&vas->chunk_owner[index]) != cpu ||
                 seg->start < seg->span_start ||
                 seg->start - seg->span_start + seg->length > VAS_CHUNK_SIZE ||
-                rbt_entry(parent, struct vas_segment, node)->type !=
+                atomic_load_relaxed(
+                    &rbt_entry(parent, struct vas_segment, node)->type) !=
                     VAS_SEG_IMPORTED)
                 return false;
         }
@@ -258,8 +262,9 @@ TSA_NO_ANALYSIS {
     vas_free(vas, addr, PAGE_SIZE);
 
     uintptr_t token = vas_token_make(addr, VAS_MAG_CACHED);
-    TEST_ASSERT(atomic_compare_exchange_strong(
-        &slot->token, &token, vas_token_make(addr, VAS_MAG_CLAIMED)));
+    TEST_ASSERT(atomic_cas_strong(&slot->token, &token,
+                                  vas_token_make(addr, VAS_MAG_CLAIMED),
+                                  mo_acquire, mo_relaxed));
     vas_reclaim(vas);
     TEST_ASSERT_EQ(atomic_load(&vas->mag_reserved_bytes), PAGE_SIZE);
     TEST_ASSERT_EQ(rbt_search(&arena->tree, addr), &seg->node);

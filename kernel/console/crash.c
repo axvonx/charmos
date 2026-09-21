@@ -33,11 +33,11 @@
 #include <time/spin_sleep.h>
 #include <time/time.h>
 
-static _Atomic int64_t crash_owner = -1;
-static _Atomic uint32_t crash_depth = 0;
+static atomic_int64_t crash_owner = -1;
+static atomic_uint32_t crash_depth = 0;
 static struct raw_spinlock crash_lock = RAW_SPINLOCK_INIT;
 
-PERCPU_DECLARE(crash_quiesced, _Atomic uint32_t, NULL);
+PERCPU_DECLARE(crash_quiesced, atomic_uint32_t, NULL);
 PERCPU_DECLARE(crash_regs, struct crash_regs, NULL);
 static cc_unused struct crash_regs boot_crash_regs = {0};
 
@@ -54,8 +54,7 @@ extern void crash_capture_regs(struct crash_regs *out);
 static struct crash_facility *crash_facility_for(enum crash_code code);
 
 bool crash_cpu_is_owner(uint64_t id) {
-    return atomic_load_explicit(&crash_owner, memory_order_relaxed) ==
-           (int64_t) id;
+    return atomic_load_relaxed(&crash_owner) == (int64_t) id;
 }
 
 void crash_nmi_handoff(void *p, struct irq_registers *irqc) {
@@ -377,7 +376,7 @@ static uint32_t crash_cpu_panes(void) {
 static void crash_cpu_box(struct report_target *tgt, uint64_t id,
                           uint16_t inner) {
     const struct crash_regs *r = PERCPU_PTR_FOR_CPU(crash_regs, id);
-    _Atomic uint32_t *quiesced = PERCPU_PTR_FOR_CPU(crash_quiesced, id);
+    atomic_uint32_t *quiesced = PERCPU_PTR_FOR_CPU(crash_quiesced, id);
     time_us_t end = time_get_us() + CRASH_WAIT_US;
     uint64_t entries[6];
     char line[REPORT_PANE_LINE_MAX];
@@ -816,8 +815,7 @@ static void crash_report_raw_serial(const struct crash_context *ctx,
 cc_noreturn void crash_full(const struct crash_context *ctx) TSA_NO_ANALYSIS {
     irq_disable();
 
-    uint32_t depth =
-        atomic_fetch_add_explicit(&crash_depth, 1, memory_order_relaxed);
+    uint32_t depth = atomic_fetch_add_relaxed(&crash_depth, 1);
 
     if (depth >= CRASH_MAX_DEPTH) {
         printf_unlocked("\n[crash depth %u, aborting report]\n", depth);
@@ -833,8 +831,7 @@ cc_noreturn void crash_full(const struct crash_context *ctx) TSA_NO_ANALYSIS {
         raw_spin_lock(&crash_lock);
 
     int64_t unowned = -1;
-    atomic_compare_exchange_strong(&crash_owner, &unowned,
-                                   (int64_t) smp_id(TOPC_NONE));
+    atomic_cas_strong(&crash_owner, &unowned, (int64_t) smp_id(TOPC_NONE));
     atomic_store(&global.panicked, true);
 
     struct crash_regs captured_regs;

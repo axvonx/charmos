@@ -43,14 +43,12 @@ void nightmare_finding_at(const struct nightmare_finding_site *site,
         .site = location,
         .msg = msg,
     });
-    atomic_fetch_add_explicit(&nightmare_runtime.finding_count, 1,
-                              memory_order_relaxed);
+    atomic_inc_relaxed(&nightmare_runtime.finding_count);
 }
 
 void nightmare_request_external_fail(const char *kind, uint64_t discriminator,
                                      const char *fmt, ...) {
-    if (!atomic_load_explicit(&nightmare_runtime.conc.active,
-                              memory_order_acquire))
+    if (!atomic_load_acq(&nightmare_runtime.conc.active))
         return;
 
     char msg[256];

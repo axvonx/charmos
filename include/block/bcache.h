@@ -1,7 +1,7 @@
 /* @title: Block Cache */
+#include <atomic.h>
 #include <block/bio.h>
 #include <err.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <sync/mutex.h>
@@ -47,7 +47,7 @@ struct bcache_wrapper {
 /* TODO: bitmap to mark present entries */
 struct bcache {
     struct bcache_wrapper **entries;
-    _Atomic uint64_t ticks;
+    atomic_uint64_t ticks;
     uint64_t capacity;
     uint64_t count;
     uint64_t spb;
@@ -90,7 +90,7 @@ void *bcache_create_ent(struct block_device *disk, uint64_t lba,
                         bool no_evict, struct bcache_entry **out_entry);
 
 static inline void bcache_increment_ticks(struct bcache *cache) {
-    atomic_fetch_add(&cache->ticks, 1);
+    atomic_inc(&cache->ticks);
 }
 
 static inline uint64_t bcache_get_ticks(struct bcache *cache) {

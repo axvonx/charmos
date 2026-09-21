@@ -257,7 +257,7 @@ struct thread *turnstile_dequeue_first(struct turnstile *ts, size_t queue) {
     thread->turnstile = got;
 
     /* you are no longer blocked on a lock */
-    atomic_store(&thread->blocked_ts, NULL);
+    atomic_store_relaxed(&thread->blocked_ts, NULL);
 
     /* you are also no longer a waiter */
     ts->waiters--;
@@ -315,7 +315,7 @@ void turnstile_propagate_boost(struct turnstile_hash_chain *locked_chain,
         if (cur_ts->lock_obj != cur_obj ||
             (cur_header && &cur_ts->wait != cur_header) ||
             (boosting_ref &&
-             atomic_load(&boosting_ref->blocked_ts) != cur_ts)) {
+             atomic_load_relaxed(&boosting_ref->blocked_ts) != cur_ts)) {
             if (unlock)
                 turnstile_hash_chain_unlock(chain, irql);
             break;
@@ -343,7 +343,7 @@ void turnstile_propagate_boost(struct turnstile_hash_chain *locked_chain,
         }
 
         /* Speculative next hop */
-        struct turnstile *next = atomic_load(&owner->blocked_ts);
+        struct turnstile *next = atomic_load_relaxed(&owner->blocked_ts);
 
         if (unlock)
             turnstile_hash_chain_unlock(chain, irql);
@@ -367,8 +367,9 @@ void turnstile_propagate_boost(struct turnstile_hash_chain *locked_chain,
         if (next_unlock)
             nirql = turnstile_hash_chain_lock(next_chain);
 
-        if (owner->blocked_ts != next || next->lock_obj != next_obj ||
-            &next->wait != next_header || !next->owner) {
+        if (atomic_load_relaxed(&owner->blocked_ts) != next ||
+            next->lock_obj != next_obj || &next->wait != next_header ||
+            !next->owner) {
             if (next_unlock)
                 turnstile_hash_chain_unlock(next_chain, nirql);
 
@@ -399,7 +400,7 @@ void turnstile_propagate_boost(struct turnstile_hash_chain *locked_chain,
 static void turnstile_block_on(struct turnstile *ts, size_t queue_num) {
     struct thread *curr = thread_get_current();
 
-    atomic_store(&curr->blocked_ts, ts);
+    atomic_store_relaxed(&curr->blocked_ts, ts);
 
     thread_wait_prepare_one(&ts->wait, ts->lock_obj,
                             THREAD_WAIT_UNINTERRUPTIBLE,

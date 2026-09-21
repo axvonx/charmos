@@ -54,20 +54,17 @@ static bool magazines_enabled(struct vas *vas) {
 
 static bool magazine_claim(struct vas_mag_slot *slot, uintptr_t token) {
     uintptr_t claimed = (token & ~VAS_MAG_STATE_MASK) | VAS_MAG_CLAIMED;
-    return atomic_compare_exchange_strong_explicit(
-        &slot->token, &token, claimed, memory_order_acquire,
-        memory_order_relaxed);
+    return atomic_cas_strong(&slot->token, &token, claimed, mo_acquire,
+                             mo_relaxed);
 }
 
 static void magazine_publish(struct vas_mag_slot *slot,
                              enum vas_mag_state state) {
     struct vas_segment *seg = slot->segment;
     vaddr_t addr = seg->start;
-    atomic_store_explicit(&seg->type,
-                          state == VAS_MAG_LIVE ? VAS_SEG_BUSY : VAS_SEG_CACHED,
-                          memory_order_release);
-    atomic_store_explicit(&slot->token, vas_token_make(addr, state),
-                          memory_order_release);
+    atomic_store_release(&seg->type,
+                         state == VAS_MAG_LIVE ? VAS_SEG_BUSY : VAS_SEG_CACHED);
+    atomic_store_release(&slot->token, vas_token_make(addr, state));
 }
 
 static vaddr_t magazine_alloc(struct vas_arena *arena, uint32_t cls,
@@ -76,8 +73,7 @@ static vaddr_t magazine_alloc(struct vas_arena *arena, uint32_t cls,
     for (uint32_t n = 0; n < mag_capacities[cls]; n++) {
         uint32_t i = (mag->recent + n) % mag_capacities[cls];
         struct vas_mag_slot *slot = &mag->slots[i];
-        uintptr_t token =
-            atomic_load_explicit(&slot->token, memory_order_relaxed);
+        uintptr_t token = atomic_load_relaxed(&slot->token);
 
         vaddr_t addr = token & ~VAS_MAG_STATE_MASK;
 
@@ -109,7 +105,7 @@ static bool magazine_free(struct vas_arena *arena, uint32_t cls, vaddr_t addr) {
         struct vas_mag_slot *slot = &mag->slots[i];
         uintptr_t token = vas_token_make(addr, VAS_MAG_LIVE);
 
-        if (atomic_load_explicit(&slot->token, memory_order_relaxed) != token ||
+        if (atomic_load_relaxed(&slot->token) != token ||
             !magazine_claim(slot, token))
             continue;
 
@@ -267,7 +263,7 @@ static struct vas_segment *arena_alloc(struct vas_arena *arena, size_t size,
             }
             seg->start += pad;
             seg->length = size;
-            seg->type = VAS_SEG_BUSY;
+            atomic_store_relaxed(&seg->type, VAS_SEG_BUSY);
             rbt_init_node(&seg->node);
             rbt_insert(&arena->tree, &seg->node);
             if (right) {
@@ -287,7 +283,8 @@ static struct vas_segment *arena_alloc(struct vas_arena *arena, size_t size,
 
 static bool segments_mergeable(struct vas_segment *left,
                                struct vas_segment *right) {
-    return left->type == VAS_SEG_FREE && right->type == VAS_SEG_FREE &&
+    return atomic_load_relaxed(&left->type) == VAS_SEG_FREE &&
+           atomic_load_relaxed(&right->type) == VAS_SEG_FREE &&
            left->span_start == right->span_start &&
            left->length == right->start - left->start;
 }
@@ -295,7 +292,7 @@ static bool segments_mergeable(struct vas_segment *left,
 /* The tag already exists */
 static void arena_release(struct vas_arena *arena, struct vas_segment *seg) {
     arena->total_free += seg->length;
-    seg->type = VAS_SEG_FREE;
+    atomic_store_relaxed(&seg->type, VAS_SEG_FREE);
     if (seg->seg_node.prev != &arena->all_segs) {
         struct vas_segment *prev =
             list_entry(seg->seg_node.prev, struct vas_segment, seg_node);
@@ -327,22 +324,19 @@ static bool magazine_enroll(struct vas *vas, struct vas_arena *arena,
 
     struct vas_mag_slot *slot = NULL;
     for (uint32_t i = 0; i < mag_capacities[cls]; i++) {
-        if (!atomic_load_explicit(&arena->magazines[cls].slots[i].token,
-                                  memory_order_relaxed)) {
+        if (!atomic_load_relaxed(&arena->magazines[cls].slots[i].token)) {
             slot = &arena->magazines[cls].slots[i];
             break;
         }
     }
     if (!slot)
         return false;
-    size_t bytes =
-        atomic_load_explicit(&vas->mag_reserved_bytes, memory_order_relaxed);
+    size_t bytes = atomic_load_relaxed(&vas->mag_reserved_bytes);
     do {
         if (seg->length > VAS_MAG_BYTE_LIMIT - bytes)
             return false;
-    } while (!atomic_compare_exchange_weak_explicit(
-        &vas->mag_reserved_bytes, &bytes, bytes + seg->length,
-        memory_order_relaxed, memory_order_relaxed));
+    } while (!atomic_cas_weak(&vas->mag_reserved_bytes, &bytes,
+                              bytes + seg->length, mo_relaxed, mo_relaxed));
     seg->mag_slot = slot;
     slot->segment = seg;
     magazine_publish(slot, state);
@@ -373,20 +367,18 @@ static void magazine_refill(struct vas *vas, struct vas_arena *arena,
 static void magazine_release(struct vas *vas, struct vas_arena *arena,
                              struct vas_mag_slot *slot) {
     struct vas_segment *seg = slot->segment;
-    atomic_fetch_sub_explicit(&vas->mag_reserved_bytes, seg->length,
-                              memory_order_relaxed);
+    atomic_fetch_sub_relaxed(&vas->mag_reserved_bytes, seg->length);
     seg->mag_slot = NULL;
     slot->segment = NULL;
     arena_release(arena, seg);
-    atomic_store_explicit(&slot->token, 0, memory_order_release);
+    atomic_store_release(&slot->token, 0);
 }
 
 static void magazine_drain(struct vas *vas, struct vas_arena *arena) {
     for (uint32_t cls = 0; cls < VAS_MAG_CLASSES; cls++) {
         for (uint32_t i = 0; i < mag_capacities[cls]; i++) {
             struct vas_mag_slot *slot = &arena->magazines[cls].slots[i];
-            uintptr_t token =
-                atomic_load_explicit(&slot->token, memory_order_relaxed);
+            uintptr_t token = atomic_load_relaxed(&slot->token);
             if ((token & VAS_MAG_STATE_MASK) != VAS_MAG_CACHED)
                 continue;
             if (magazine_claim(slot, token))
@@ -412,22 +404,22 @@ static void reclaim_locked(struct vas *vas) {
             struct vas_segment *seg =
                 list_entry(pos, struct vas_segment, seg_node);
 
-            if (seg->type != VAS_SEG_FREE || seg->start != seg->span_start ||
-                seg->length != VAS_CHUNK_SIZE)
+            if (atomic_load_relaxed(&seg->type) != VAS_SEG_FREE ||
+                seg->start != seg->span_start || seg->length != VAS_CHUNK_SIZE)
                 continue;
 
             vaddr_t start = seg->start;
             struct vas_segment *parent = segment_find(&vas->global, start);
             kassert(parent && parent->start == start &&
                     parent->length == VAS_CHUNK_SIZE &&
-                    parent->type == VAS_SEG_IMPORTED);
+                    atomic_load_relaxed(&parent->type) == VAS_SEG_IMPORTED);
 
             bin_remove(local, seg);
             local->total_free -= seg->length;
             segment_delete(local, seg);
             arena_release(&vas->global, parent);
-            atomic_store_explicit(&vas->chunk_owner[owner_index(vas, start)],
-                                  VAS_OWNER_GLOBAL, memory_order_release);
+            atomic_store_release(&vas->chunk_owner[owner_index(vas, start)],
+                                 VAS_OWNER_GLOBAL);
         }
         spin_unlock(&local->lock, irql);
     }
@@ -452,7 +444,7 @@ static vaddr_t import_alloc(struct vas *vas, uint32_t cpu, size_t size,
         return 0;
     }
 
-    parent->type = VAS_SEG_IMPORTED;
+    atomic_store_relaxed(&parent->type, VAS_SEG_IMPORTED);
     seg->start = seg->span_start = parent->start;
     seg->length = VAS_CHUNK_SIZE;
 
@@ -478,8 +470,8 @@ static vaddr_t import_alloc(struct vas *vas, uint32_t cpu, size_t size,
         return 0;
     }
 
-    atomic_store_explicit(&vas->chunk_owner[owner_index(vas, parent->start)],
-                          cpu, memory_order_release);
+    atomic_store_release(&vas->chunk_owner[owner_index(vas, parent->start)],
+                         cpu);
     vaddr_t result = allocated->start;
     magazine_refill(vas, local, allocated, align);
     spin_unlock(&local->lock, irql);
@@ -558,14 +550,12 @@ static enum irql vas_lock_owner(struct vas *vas, vaddr_t addr,
     TSA_ACQUIRES(&(*out_arena)->lock) TSA_NO_ANALYSIS {
     size_t index = owner_index(vas, addr);
     while (true) {
-        cpu_id_t owner = atomic_load_explicit(&vas->chunk_owner[index],
-                                              memory_order_acquire);
+        cpu_id_t owner = atomic_load_acq(&vas->chunk_owner[index]);
         kassert(owner == VAS_OWNER_GLOBAL || owner < global.core_count);
         struct vas_arena *arena =
             owner == VAS_OWNER_GLOBAL ? &vas->global : &vas->local[owner];
         enum irql irql = spin_lock(&arena->lock);
-        if (atomic_load_explicit(&vas->chunk_owner[index],
-                                 memory_order_acquire) == owner) {
+        if (atomic_load_acq(&vas->chunk_owner[index]) == owner) {
             *out_arena = arena;
             return irql;
         }
@@ -594,8 +584,8 @@ void vas_free(struct vas *vas, vaddr_t addr, size_t size) {
     enum irql irql = vas_lock_owner(vas, addr, &arena);
     struct vas_segment *seg = segment_find(arena, addr);
 
-    if (!seg || seg->type != VAS_SEG_BUSY || seg->start != addr ||
-        seg->length != size)
+    if (!seg || atomic_load_relaxed(&seg->type) != VAS_SEG_BUSY ||
+        seg->start != addr || seg->length != size)
         panic("vas_free: invalid allocation/double free at %p+%zu",
               (void *) addr, size);
 
@@ -624,7 +614,7 @@ bool vas_vaddr_is_allocated(struct vas *vas, vaddr_t addr) {
     struct vas_arena *arena;
     enum irql irql = vas_lock_owner(vas, addr, &arena);
     struct vas_segment *seg = segment_find(arena, addr);
-    bool allocated = seg && seg->type == VAS_SEG_BUSY;
+    bool allocated = seg && atomic_load_relaxed(&seg->type) == VAS_SEG_BUSY;
     spin_unlock(&arena->lock, irql);
 
     irql_lower(outer);
@@ -646,7 +636,7 @@ static void arena_destroy(struct vas_arena *arena) {
 
     list_for_each_safe(pos, next, &arena->all_segs) {
         struct vas_segment *seg = list_entry(pos, struct vas_segment, seg_node);
-        if (seg->type == VAS_SEG_FREE)
+        if (atomic_load_relaxed(&seg->type) == VAS_SEG_FREE)
             bin_remove(arena, seg);
 
         segment_delete(arena, seg);
@@ -689,10 +679,10 @@ static struct vas *space_create(vaddr_t base, vaddr_t limit, bool bootstrap) {
     size_t arena_bytes = global.core_count * sizeof(struct vas_arena);
     size_t overhead = sizeof(struct vas) + arena_bytes;
 
-    if (owners > (SIZE_MAX - overhead) / sizeof(_Atomic cpu_id_t))
+    if (owners > (SIZE_MAX - overhead) / sizeof(atomic(cpu_id_t)))
         return NULL;
 
-    size_t bytes = overhead + owners * sizeof(_Atomic cpu_id_t);
+    size_t bytes = overhead + owners * sizeof(atomic(cpu_id_t));
     if (bytes > SIZE_MAX - (PAGE_SIZE - 1))
         return NULL;
 
@@ -803,12 +793,13 @@ static void arena_dump(struct vas_arena *arena) {
     struct list_head *pos;
     list_for_each(pos, &arena->all_segs) {
         struct vas_segment *seg = list_entry(pos, struct vas_segment, seg_node);
+        enum vas_segment_type type = atomic_load_relaxed(&seg->type);
         printf("    %p .. %p len=%zu %s\n", (void *) seg->start,
                (void *) (seg->start + seg->length), seg->length,
-               seg->type == VAS_SEG_CACHED     ? "cached"
-               : seg->type == VAS_SEG_FREE     ? "free"
-               : seg->type == VAS_SEG_IMPORTED ? "imported"
-                                               : "busy");
+               type == VAS_SEG_CACHED     ? "cached"
+               : type == VAS_SEG_FREE     ? "free"
+               : type == VAS_SEG_IMPORTED ? "imported"
+                                          : "busy");
     }
     printf("    total_free=%zu\n", arena->total_free);
     spin_unlock(&arena->lock, irql);

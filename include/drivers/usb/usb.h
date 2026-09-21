@@ -1,10 +1,10 @@
 /* @title: USB */
 #pragma once
+#include <atomic.h>
 #include <compiler/core.h>
 #include <linker/symbols.h>
 #include <log.h>
 #include <math/bit.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -330,7 +330,7 @@ struct usb_driver {
 
 struct usb_device {
     struct list_head hc_list;
-    _Atomic enum usb_dev_status status;
+    atomic(enum usb_dev_status) status;
     char manufacturer[128];
     char product[128];
     char config_str[128];

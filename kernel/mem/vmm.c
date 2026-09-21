@@ -84,7 +84,7 @@ bool hhdm_ptr_in_range(void *ptr) {
 static struct pt_deferred_free *pt_free_list;
 static struct spinlock pt_free_lock = SPINLOCK_INIT;
 static struct page_table *kernel_pml4 = NULL;
-static _Atomic uintptr_t vmm_map_top = VMM_MAP_BASE;
+static atomic_uintptr_t vmm_map_top = VMM_MAP_BASE;
 static void vmm_unmap_aliased(vaddr_t virt, size_t len, enum vmm_flags vflags);
 
 static inline struct page_table *alloc_pt(void) {
@@ -140,17 +140,14 @@ static inline uint64_t pt_level_granule(int level) {
 
 static inline void pt_walk_enter(void) {
     if (global.current_bootstage >= BOOTSTAGE_MID_MP) {
-        uint64_t e =
-            atomic_load_explicit(&global.pt_epoch, memory_order_acquire);
-        atomic_store_explicit(&smp_core(TOPC_IRQL)->pt_seen_epoch, e,
-                              memory_order_release);
+        uint64_t e = atomic_load_acq(&global.pt_epoch);
+        atomic_store_release(&smp_core(TOPC_IRQL)->pt_seen_epoch, e);
     }
 }
 
 static inline void pt_walk_exit(void) {
     if (global.current_bootstage >= BOOTSTAGE_MID_MP) {
-        atomic_store_explicit(&smp_core(TOPC_IRQL)->pt_seen_epoch, UINT64_MAX,
-                              memory_order_release);
+        atomic_store_release(&smp_core(TOPC_IRQL)->pt_seen_epoch, UINT64_MAX);
     }
 }
 
@@ -161,9 +158,7 @@ static void enqueue_pt_free(paddr_t phys) {
     struct pt_deferred_free *n =
         (struct pt_deferred_free *) hhdm_paddr_to_ptr(phys);
 
-    uint64_t e =
-        atomic_fetch_add_explicit(&global.pt_epoch, 1, memory_order_acq_rel) +
-        1;
+    uint64_t e = atomic_inc_return_acq_rel(&global.pt_epoch);
     n->phys = phys;
     n->epoch = e;
 
@@ -186,8 +181,7 @@ void vmm_reclaim_page_tables(void) {
     uint64_t min_epoch = UINT64_MAX;
     struct core *cpu;
     for_each_cpu_struct(cpu) {
-        uint64_t seen =
-            atomic_load_explicit(&cpu->pt_seen_epoch, memory_order_acquire);
+        uint64_t seen = atomic_load_acq(&cpu->pt_seen_epoch);
         if (seen < min_epoch)
             min_epoch = seen;
     }
@@ -505,17 +499,15 @@ static enum err vmm_pt_apply(struct vmm_map_request *rq) {
     }
 
     if (clear) {
-        atomic_store_explicit((pte_atomic_t *) last_entry, PTE_LOCK_BIT,
-                              memory_order_release);
+        atomic_store_release((pte_atomic_t *) last_entry, PTE_LOCK_BIT);
     } else {
         if (in_use(*last_entry) && !modify)
             panic(
                 "vmm_pt_apply: leaf in use without MODIFY_LEAF (double map?)");
 
-        atomic_store_explicit((pte_atomic_t *) last_entry,
-                              build_leaf_pte(rq->phys, flags, sz, vflags) |
-                                  PTE_LOCK_BIT,
-                              memory_order_release);
+        atomic_store_release((pte_atomic_t *) last_entry,
+                             build_leaf_pte(rq->phys, flags, sz, vflags) |
+                                 PTE_LOCK_BIT);
     }
 
     /* Publish new PTE first */
@@ -833,13 +825,11 @@ enum err vmm_unshare_path(vaddr_t virt, enum vmm_map_page_size leaf_size,
             }
 
             /* Swap the target, keep flags, drop SHARED */
-            pte_t cur = atomic_load_explicit((pte_atomic_t *) entry,
-                                             memory_order_acquire);
-            atomic_store_explicit(
+            pte_t cur = atomic_load_acq((pte_atomic_t *) entry);
+            atomic_store_release(
                 (pte_atomic_t *) entry,
                 (hhdm_ptr_to_paddr(priv) & PAGE_PHYS_MASK) |
-                    (cur & ~(PAGE_PHYS_MASK | PTE_SHARED_BIT)),
-                memory_order_release);
+                    (cur & ~(PAGE_PHYS_MASK | PTE_SHARED_BIT)));
             unshared = true;
         }
 
@@ -1007,9 +997,8 @@ static pte_t vmm_walk_leaf(struct page_table *root, vaddr_t virt,
 
         /* assert so that clang inlines this instead of creating a call to
          * __atomic_load (from c lib, breaks under -nostdlib), gcc inlines */
-        snap = atomic_load_explicit((_Atomic pte_t *) ci_assume_aligned(
-                                        &table->entries[index], sizeof(pte_t)),
-                                    memory_order_acquire);
+        snap = atomic_load_acq((atomic(pte_t) *) ci_assume_aligned(
+            &table->entries[index], sizeof(pte_t)));
 
 #pragma GCC diagnostic pop
 
@@ -1027,10 +1016,8 @@ static pte_t vmm_walk_leaf(struct page_table *root, vaddr_t virt,
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Waddress-of-packed-member"
 
-    snap = atomic_load_explicit(
-        (_Atomic pte_t *) ci_assume_aligned(
-            &table->entries[pt_index(virt, PT_LEVEL_PT)], sizeof(pte_t)),
-        memory_order_acquire);
+    snap = atomic_load_acq((atomic(pte_t) *) ci_assume_aligned(
+        &table->entries[pt_index(virt, PT_LEVEL_PT)], sizeof(pte_t)));
 
 #pragma GCC diagnostic pop
 
@@ -1130,14 +1117,12 @@ void *vmm_map_bump_internal(uintptr_t addr, uint64_t len, uint64_t flags,
     if (total_pages != 0 && span / PAGE_SIZE != total_pages)
         return NULL;
 
-    uintptr_t virt_start =
-        atomic_load_explicit(&vmm_map_top, memory_order_relaxed);
+    uintptr_t virt_start = atomic_load_relaxed(&vmm_map_top);
     do {
         if (virt_start > VMM_MAP_LIMIT || span > VMM_MAP_LIMIT - virt_start)
             return NULL;
-    } while (!atomic_compare_exchange_weak_explicit(
-        &vmm_map_top, &virt_start, virt_start + span, memory_order_acq_rel,
-        memory_order_relaxed));
+    } while (!atomic_cas_weak(&vmm_map_top, &virt_start, virt_start + span,
+                              mo_acq_rel, mo_relaxed));
 
     enum err e = ERR_OK;
     uint64_t mapped = 0;
@@ -1157,9 +1142,8 @@ unwind:
         vmm_unmap_page(virt_start + i * PAGE_SIZE, vflags);
 
     uintptr_t expected = virt_start + span;
-    atomic_compare_exchange_strong_explicit(&vmm_map_top, &expected, virt_start,
-                                            memory_order_acq_rel,
-                                            memory_order_relaxed);
+    atomic_cas_strong(&vmm_map_top, &expected, virt_start, mo_acq_rel,
+                      mo_relaxed);
 
     return NULL;
 }

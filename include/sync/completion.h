@@ -11,7 +11,7 @@
 #define COMPLETION_INIT_NORMAL false
 
 struct completion {
-    _Atomic uint32_t done;
+    atomic_uint32_t done;
     bool irq_disable;
 
     struct spinlock lock;

@@ -1,11 +1,11 @@
 /* @title: One-time atomic counters */
 #pragma once
-#include <stdatomic.h>
+#include <atomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 
 struct once_counter {
-    _Atomic uint64_t count;
+    atomic_uint64_t count;
 };
 
 #define ONCE_COUNTER_INIT {.count = ATOMIC_VAR_INIT(0)}
@@ -15,13 +15,12 @@ static inline void once_counter_init(struct once_counter *c) {
 }
 
 static inline bool once_counter_claim(struct once_counter *c) {
-    return atomic_fetch_add_explicit(&c->count, 1, memory_order_acq_rel) == 0;
+    return atomic_fetch_add_acq_rel(&c->count, 1) == 0;
 }
 
 static inline bool once_counter_claim_ticket(struct once_counter *c,
                                              uint64_t *out_ticket) {
-    uint64_t ticket =
-        atomic_fetch_add_explicit(&c->count, 1, memory_order_acq_rel);
+    uint64_t ticket = atomic_fetch_add_acq_rel(&c->count, 1);
 
     if (out_ticket)
         *out_ticket = ticket;
@@ -30,5 +29,5 @@ static inline bool once_counter_claim_ticket(struct once_counter *c,
 }
 
 static inline uint64_t once_counter_count(const struct once_counter *c) {
-    return atomic_load_explicit(&c->count, memory_order_acquire);
+    return atomic_load_acq(&c->count);
 }

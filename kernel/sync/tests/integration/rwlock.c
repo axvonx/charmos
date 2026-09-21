@@ -34,7 +34,7 @@ TEST_DECLARE_INTEGRATION(rwlock, two_writers) {
 #define RWLOCK_READER_PRINT_INTERVAL 10000
 
 static struct rwlock rw_readers = RWLOCK_INIT(THREAD_PRIO_CLASS_TIMESHARE);
-static _Atomic uint32_t rw_readers_left = 0;
+static atomic_uint32_t rw_readers_left = 0;
 
 static void rw_reader_worker(void *arg) {
     cc_var_unused(arg);
@@ -51,7 +51,7 @@ static void rw_reader_worker(void *arg) {
         last_print = now;
     }
 
-    atomic_fetch_sub(&rw_readers_left, 1);
+    atomic_dec(&rw_readers_left);
 }
 
 TEST_DECLARE_INTEGRATION(rwlock, many_readers, TEST_INTENSITY(4, 20, 64)) {
@@ -82,7 +82,7 @@ TEST_DECLARE_INTEGRATION(rwlock, many_readers, TEST_INTENSITY(4, 20, 64)) {
 #define RWLOCK_MIXED_LOOPS 500
 struct thread *mixed_threads[RWLOCK_MIXED_THREADS_MAX];
 static struct rwlock rw_mixed = RWLOCK_INIT(THREAD_PRIO_CLASS_TIMESHARE);
-static _Atomic uint32_t rw_mixed_left = 0;
+static atomic_uint32_t rw_mixed_left = 0;
 
 static void rw_mixed_worker(void *arg) {
     cc_var_unused(arg);
@@ -104,7 +104,7 @@ static void rw_mixed_worker(void *arg) {
             scheduler_yield();
     }
 
-    atomic_fetch_sub(&rw_mixed_left, 1);
+    atomic_dec(&rw_mixed_left);
 }
 
 TEST_DECLARE_INTEGRATION(rwlock, mixed_stress, TEST_INTENSITY(4, 24, 64)) {
@@ -131,7 +131,7 @@ TEST_DECLARE_INTEGRATION(rwlock, mixed_stress, TEST_INTENSITY(4, 24, 64)) {
 #define RWLOCK_CHAOS_LOOPS 500
 
 static struct rwlock rw_chaos = RWLOCK_INIT(THREAD_PRIO_CLASS_TIMESHARE);
-static _Atomic uint32_t rw_chaos_left = 0;
+static atomic_uint32_t rw_chaos_left = 0;
 
 static void rw_chaos_worker(void *arg) {
     cc_var_unused(arg);
@@ -177,9 +177,9 @@ TEST_DECLARE_INTEGRATION(rwlock, chaos, TEST_INTENSITY(4, 24, 64)) {
 }
 
 static struct rwlock rw_correct = RWLOCK_INIT(THREAD_PRIO_CLASS_TIMESHARE);
-static _Atomic uint32_t active_readers = 0;
+static atomic_uint32_t active_readers = 0;
 
-static _Atomic uint32_t active_writers = 0;
+static atomic_uint32_t active_writers = 0;
 static atomic_bool correctness_ok = true;
 
 #define RWLOCK_CORRECT_LOOPS 5000
@@ -193,7 +193,7 @@ static void rw_correct_worker(void *arg) {
         if (prng_next() & 1) {
             // Reader
             rw_lock(&rw_correct, RWLOCK_READ);
-            atomic_fetch_add(&active_readers, 1);
+            atomic_inc(&active_readers);
 
             if (atomic_load(&active_writers) > 0)
                 atomic_store(&correctness_ok, false);
@@ -201,12 +201,12 @@ static void rw_correct_worker(void *arg) {
             for (volatile size_t j = 0; j < (prng_next() & 0xF); j++)
                 cpu_pause();
 
-            atomic_fetch_sub(&active_readers, 1);
+            atomic_dec(&active_readers);
             rw_unlock(&rw_correct);
         } else {
             // Writer
             rw_lock(&rw_correct, RWLOCK_WRITE);
-            atomic_fetch_add(&active_writers, 1);
+            atomic_inc(&active_writers);
 
             if (atomic_load(&active_readers) > 0 ||
                 atomic_load(&active_writers) > 1)
@@ -215,7 +215,7 @@ static void rw_correct_worker(void *arg) {
             for (volatile size_t j = 0; j < (prng_next() & 0xF); j++)
                 cpu_pause();
 
-            atomic_fetch_sub(&active_writers, 1);
+            atomic_dec(&active_writers);
             rw_unlock(&rw_correct);
         }
 
@@ -223,7 +223,7 @@ static void rw_correct_worker(void *arg) {
             scheduler_yield();
     }
 
-    atomic_fetch_sub(&correctness_left, 1);
+    atomic_dec(&correctness_left);
 }
 
 TEST_DECLARE_INTEGRATION(rwlock, mutual_exclusion, TEST_INTENSITY(4, 16, 64)) {

@@ -1,6 +1,7 @@
 #pragma once
 #include <test/test.h>
 
+#include <atomic.h>
 #include <crypto/prng.h>
 #include <err.h>
 #include <math/align.h>
@@ -22,7 +23,6 @@
 #include <mem/vmm.h>
 #include <sch/sched.h>
 #include <stack_depot.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>

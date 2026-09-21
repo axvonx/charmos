@@ -1,15 +1,15 @@
 /* @title: Single-Producer Single-Consumer Lock-Free FIFO */
 #pragma once
-#include <stdatomic.h>
+#include <atomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
 struct spsc_fifo {
-    _Atomic size_t head; /* Written by Producer */
-    _Atomic size_t tail; /* Written by Consumer */
-    size_t size;         /* Capacity (pow2) */
-    size_t mask;         /* size - 1 */
+    atomic_size_t head; /* Written by Producer */
+    atomic_size_t tail; /* Written by Consumer */
+    size_t size;        /* Capacity (pow2) */
+    size_t mask;        /* size - 1 */
     uint8_t *data;
 };
 
@@ -36,8 +36,8 @@ bool spsc_fifo_push_ptr(struct spsc_fifo *fifo, const void *ptr);
 bool spsc_fifo_pop_ptr(struct spsc_fifo *fifo, void **out_ptr);
 
 static inline size_t spsc_fifo_len(const struct spsc_fifo *fifo) {
-    size_t h = atomic_load_explicit(&fifo->head, memory_order_acquire);
-    size_t t = atomic_load_explicit(&fifo->tail, memory_order_relaxed);
+    size_t h = atomic_load_acq(&fifo->head);
+    size_t t = atomic_load_relaxed(&fifo->tail);
     return h - t;
 }
 
@@ -54,6 +54,6 @@ static inline bool spsc_fifo_is_full(const struct spsc_fifo *fifo) {
 }
 
 static inline void spsc_fifo_reset(struct spsc_fifo *fifo) {
-    atomic_store_explicit(&fifo->head, 0, memory_order_relaxed);
-    atomic_store_explicit(&fifo->tail, 0, memory_order_relaxed);
+    atomic_store_relaxed(&fifo->head, 0);
+    atomic_store_relaxed(&fifo->tail, 0);
 }

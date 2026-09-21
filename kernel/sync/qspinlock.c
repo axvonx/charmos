@@ -5,8 +5,8 @@
 #include <sync/qspinlock.h>
 
 struct qnode {
-    _Atomic(struct qnode *) next;
-    _Atomic uint8_t locked;
+    atomic(struct qnode *) next;
+    atomic_uint8_t locked;
 } cc_cache_aligned;
 
 PERCPU_DECLARE(qnodes, struct qnode[QSPINLOCK_LEVEL_MAX], NULL);
@@ -32,8 +32,7 @@ static uint32_t qspinlock_exchange_tail(struct qspinlock *lock, uint32_t tail,
 
     do {
         next = (val & ~Q_SPIN_TAIL_MASK) | tail;
-    } while (!atomic_compare_exchange_weak_explicit(
-        &lock->val, &val, next, memory_order_acq_rel, memory_order_relaxed));
+    } while (!atomic_cas_weak(&lock->val, &val, next, mo_acq_rel, mo_relaxed));
 
     return val;
 }
@@ -44,20 +43,17 @@ void qspin_lock_slowpath(struct qspinlock *lock, uint32_t val) {
     if (!(val & Q_SPIN_TAIL_MASK)) {
         while (!(val & Q_SPIN_PENDING_MASK)) {
             uint32_t old = val;
-            if (atomic_compare_exchange_weak_explicit(
-                    &lock->val, &old, val | Q_SPIN_PENDING_VAL,
-                    memory_order_acquire, memory_order_relaxed)) {
+            if (atomic_cas_weak(&lock->val, &old, val | Q_SPIN_PENDING_VAL,
+                                mo_acquire, mo_relaxed)) {
 
                 /* We are the pender, now we wait for LOCK to clear */
-                while ((val = atomic_load_explicit(&lock->val,
-                                                   memory_order_relaxed)) &
+                while ((val = atomic_load_relaxed(&lock->val)) &
                        Q_SPIN_LOCKED_MASK)
                     cpu_pause();
 
                 /* pending -> locked: -0x100 + 1 */
-                atomic_fetch_add_explicit(
-                    &lock->val, Q_SPIN_LOCKED_VAL - Q_SPIN_PENDING_VAL,
-                    memory_order_acquire);
+                atomic_fetch_add_acq(&lock->val,
+                                     Q_SPIN_LOCKED_VAL - Q_SPIN_PENDING_VAL);
                 return;
             }
             val = old;
@@ -77,8 +73,8 @@ void qspin_lock_slowpath(struct qspinlock *lock, uint32_t val) {
     struct qnode *nodes = PERCPU_READ_FOR_CPU(qnodes, cpu);
 
     struct qnode *node = &nodes[lvl];
-    atomic_store_explicit(&node->locked, 0, memory_order_relaxed);
-    atomic_store_explicit(&node->next, NULL, memory_order_relaxed);
+    atomic_store_relaxed(&node->locked, 0);
+    atomic_store_relaxed(&node->next, NULL);
 
     /* Build the tail: We encode the level and the CPU */
     uint32_t tail =
@@ -99,42 +95,38 @@ void qspin_lock_slowpath(struct qspinlock *lock, uint32_t val) {
         struct qnode *prev_node = &prev_nodes[prev_idx];
 
         /* Chain us up */
-        atomic_store_explicit(&prev_node->next, node, memory_order_release);
+        atomic_store_release(&prev_node->next, node);
 
         /* The signal will propagate to us */
-        while (!atomic_load_explicit(&node->locked, memory_order_acquire))
+        while (!atomic_load_acq(&node->locked))
             cpu_pause();
     }
 
     /* We're at the head now, wait for pending, at this point no new CPU
      * will be able to set PENDING as they're failing on Q_SPIN_TAIL_MASK */
-    while ((val = atomic_load_explicit(&lock->val, memory_order_relaxed)) &
-           Q_SPIN_LOCKED_PENDING_MASK)
+    while ((val = atomic_load_relaxed(&lock->val)) & Q_SPIN_LOCKED_PENDING_MASK)
         cpu_pause();
 
     /* If no one new joined, clear the tail and claim the lock, or claim
      * lock + notify the successor to us */
     while (true) {
         if ((val & Q_SPIN_TAIL_MASK) == tail) {
-            if (atomic_compare_exchange_weak_explicit(
-                    &lock->val, &val, Q_SPIN_LOCKED_VAL, memory_order_acquire,
-                    memory_order_relaxed))
+            if (atomic_cas_weak(&lock->val, &val, Q_SPIN_LOCKED_VAL, mo_acquire,
+                                mo_relaxed))
                 return; /* Got it */
         } else {
-            atomic_fetch_or_explicit(&lock->val, Q_SPIN_LOCKED_VAL,
-                                     memory_order_acquire);
+            atomic_fetch_or_acq(&lock->val, Q_SPIN_LOCKED_VAL);
             break;
         }
         cpu_pause();
     }
 
     /* successor links */
-    while (!atomic_load_explicit(&node->next, memory_order_acquire))
+    while (!atomic_load_acq(&node->next))
         cpu_pause();
 
-    struct qnode *next_node =
-        atomic_load_explicit(&node->next, memory_order_relaxed);
+    struct qnode *next_node = atomic_load_relaxed(&node->next);
 
     /* "Level-triggered" "notification" */
-    atomic_store_explicit(&next_node->locked, 1, memory_order_release);
+    atomic_store_release(&next_node->locked, 1);
 }

@@ -1,6 +1,6 @@
 #include <asm.h>
+#include <atomic.h>
 #include <ndjson.h>
-#include <stdatomic.h>
 #include <sync/raw_spinlock.h>
 
 #include "internal.h"
@@ -35,19 +35,19 @@ void ndjson_carrier_init(uint16_t port) {
     outb(port + UART_MODEM_CTRL, 0x0B);
 
     carrier_port = port;
-    atomic_store_explicit(&carrier_up, true, memory_order_release);
+    atomic_store_release(&carrier_up, true);
 }
 
 void ndjson_carrier_disable(void) {
-    atomic_store_explicit(&carrier_up, false, memory_order_release);
+    atomic_store_release(&carrier_up, false);
 }
 
 bool ndjson_carrier_online(void) {
-    return atomic_load_explicit(&carrier_up, memory_order_acquire);
+    return atomic_load_acq(&carrier_up);
 }
 
 void ndjson_enter_panic(void) TSA_NO_ANALYSIS {
-    atomic_store_explicit(&carrier_panicked, true, memory_order_release);
+    atomic_store_release(&carrier_panicked, true);
     raw_spin_unlock(&carrier_lock);
 }
 
@@ -61,7 +61,7 @@ bool ndjson_carrier_begin(bool *irqs_were_on) TSA_NO_ANALYSIS {
 
     *irqs_were_on = irq_disable_save();
 
-    if (atomic_load_explicit(&carrier_panicked, memory_order_acquire)) {
+    if (atomic_load_acq(&carrier_panicked)) {
         for (uint64_t i = 0; i < NDJSON_PANIC_LOCK_SPINS; i++) {
             if (raw_spin_trylock(&carrier_lock))
                 break;

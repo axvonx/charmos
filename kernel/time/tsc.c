@@ -1,9 +1,9 @@
 #include <acpi/hpet.h>
 #include <asm.h>
+#include <atomic.h>
 #include <log.h>
 #include <math/bit.h>
 #include <mem/alloc_or_die.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <time/clock.h>
@@ -15,8 +15,8 @@
 #include <mem/alloc.h>
 
 struct tsc_sync_mailbox {
-    _Atomic uint32_t stage;
-    _Atomic uint64_t ap_tsc;
+    atomic_uint32_t stage;
+    atomic_uint64_t ap_tsc;
 };
 
 static struct tsc_sync_mailbox *mailboxes;
@@ -69,24 +69,19 @@ bool tsc_sync_check_bsp(cpu_id_t ap_cpu) {
     int64_t best_offset = 0;
 
     for (int i = 0; i < TSC_SYNC_ROUNDS; i++) {
-        atomic_store_explicit(&mailboxes[ap_cpu].stage, 1,
-                              memory_order_release);
-        while (atomic_load_explicit(&mailboxes[ap_cpu].stage,
-                                    memory_order_acquire) != 2)
+        atomic_store_release(&mailboxes[ap_cpu].stage, 1);
+        while (atomic_load_acq(&mailboxes[ap_cpu].stage) != 2)
             cpu_pause();
 
         /* Sample T0, signal AP to sample its TSC */
         uint64_t t0 = rdtsc_ordered();
-        atomic_store_explicit(&mailboxes[ap_cpu].stage, 3,
-                              memory_order_release);
+        atomic_store_release(&mailboxes[ap_cpu].stage, 3);
 
-        while (atomic_load_explicit(&mailboxes[ap_cpu].stage,
-                                    memory_order_acquire) != 4)
+        while (atomic_load_acq(&mailboxes[ap_cpu].stage) != 4)
             cpu_pause();
 
         uint64_t t1 = rdtsc_ordered();
-        uint64_t t_ap = atomic_load_explicit(&mailboxes[ap_cpu].ap_tsc,
-                                             memory_order_relaxed);
+        uint64_t t_ap = atomic_load_relaxed(&mailboxes[ap_cpu].ap_tsc);
 
         uint64_t rtt = t1 - t0;
         int64_t warp = 0;
@@ -106,7 +101,7 @@ bool tsc_sync_check_bsp(cpu_id_t ap_cpu) {
         }
     }
 
-    atomic_store_explicit(&mailboxes[ap_cpu].stage, 0, memory_order_release);
+    atomic_store_release(&mailboxes[ap_cpu].stage, 0);
 
     if (max_warp > TSC_MAX_ALLOWED_WARP_CYCLES) {
         log_msg(LOG_WARN,
@@ -129,20 +124,17 @@ bool tsc_sync_check_bsp(cpu_id_t ap_cpu) {
 
 void tsc_sync_check_ap(cpu_id_t self) {
     for (int i = 0; i < TSC_SYNC_ROUNDS; i++) {
-        while (atomic_load_explicit(&mailboxes[self].stage,
-                                    memory_order_acquire) != 1)
+        while (atomic_load_acq(&mailboxes[self].stage) != 1)
             cpu_pause();
 
-        atomic_store_explicit(&mailboxes[self].stage, 2, memory_order_release);
+        atomic_store_release(&mailboxes[self].stage, 2);
 
-        while (atomic_load_explicit(&mailboxes[self].stage,
-                                    memory_order_acquire) != 3)
+        while (atomic_load_acq(&mailboxes[self].stage) != 3)
             cpu_pause();
 
         uint64_t ap = rdtsc_ordered();
-        atomic_store_explicit(&mailboxes[self].ap_tsc, ap,
-                              memory_order_relaxed);
-        atomic_store_explicit(&mailboxes[self].stage, 4, memory_order_release);
+        atomic_store_relaxed(&mailboxes[self].ap_tsc, ap);
+        atomic_store_release(&mailboxes[self].stage, 4);
     }
 }
 

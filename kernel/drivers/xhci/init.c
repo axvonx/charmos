@@ -360,7 +360,7 @@ struct xhci_device *xhci_device_create(void cc_mem_io *mmio) {
     for (size_t i = 0; i < XHCI_SLOT_COUNT; i++) {
         struct xhci_slot *xs = &dev->slots[i];
         xs->dev = dev;
-        xs->state = XHCI_SLOT_STATE_DISCONNECTED;
+        atomic_init(&xs->state, XHCI_SLOT_STATE_DISCONNECTED);
         xs->slot_id = (i + 1);
     }
 
@@ -403,7 +403,7 @@ enum usb_error xhci_port_init(struct xhci_port *p) {
     xhci_trace("enable_slot returned");
 
     struct xhci_slot temp_slot = {0};
-    temp_slot.state = XHCI_SLOT_STATE_ENABLED;
+    atomic_init(&temp_slot.state, XHCI_SLOT_STATE_ENABLED);
     temp_slot.slot_id = slot_id;
     temp_slot.dev = dev;
 

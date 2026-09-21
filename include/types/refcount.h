@@ -1,10 +1,10 @@
 /* @title: Reference count */
 #pragma once
+#include <atomic.h>
 #include <console/panic.h>
 #include <console/printf.h>
 #include <kassert.h>
 #include <limits.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <types/types.h>
 
@@ -19,7 +19,7 @@ static inline bool refcount_inc(refcount_t *rc) {
             return false;
 
         uint32_t expected = old;
-        if (atomic_compare_exchange_weak(rc, &expected, old + 1))
+        if (atomic_cas_weak(rc, &expected, old + 1))
             return true;
     }
 }
@@ -31,7 +31,7 @@ static inline bool refcount_inc_not_zero(refcount_t *rc) {
             return false;
 
         uint32_t expected = old;
-        if (atomic_compare_exchange_weak(rc, &expected, old + 1))
+        if (atomic_cas_weak(rc, &expected, old + 1))
             return true;
 
         old = expected;
@@ -51,7 +51,7 @@ static inline bool refcount_dec_and_test(refcount_t *rc) {
         }
 
         uint32_t expected = old;
-        if (atomic_compare_exchange_weak(rc, &expected, old - 1))
+        if (atomic_cas_weak(rc, &expected, old - 1))
             return (old - 1) == 0;
 
         old = expected;
@@ -68,8 +68,7 @@ static inline bool refcount_dec_and_test(refcount_t *rc) {
     static inline bool __struct##_get(struct __struct *obj) {                  \
         uint32_t old;                                                          \
         while (true) {                                                         \
-            old = atomic_load_explicit(&obj->__refcount_member,                \
-                                       memory_order_acquire);                  \
+            old = atomic_load_acq(&obj->__refcount_member);                    \
                                                                                \
             /* panic if refcount is zero (possible UAF) */                     \
             if (!old) {                                                        \
@@ -77,15 +76,13 @@ static inline bool refcount_dec_and_test(refcount_t *rc) {
             }                                                                  \
                                                                                \
             /* check failure before attempting to increment */                 \
-            if (atomic_load_explicit(&obj->__failure_member,                   \
-                                     memory_order_acquire) __failure_state) {  \
+            if (atomic_load_acq(&obj->__failure_member) __failure_state) {     \
                 return false;                                                  \
             }                                                                  \
                                                                                \
             /* attempt to increment refcount */                                \
-            if (atomic_compare_exchange_weak_explicit(                         \
-                    &obj->__refcount_member, &old, old + 1,                    \
-                    memory_order_acquire, memory_order_relaxed)) {             \
+            if (atomic_cas_weak(&obj->__refcount_member, &old, old + 1,        \
+                                mo_acquire, mo_relaxed)) {                     \
                 return true;                                                   \
             }                                                                  \
                                                                                \

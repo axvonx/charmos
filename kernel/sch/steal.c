@@ -1,7 +1,7 @@
+#include <atomic.h>
 #include <compiler/intrinsic.h>
 #include <math/bit.h>
 #include <sch/sched.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -18,8 +18,7 @@ bool scheduler_can_take_thread(size_t core, struct thread *target) {
     if (!cpu_mask_test(&target->allowed_cpus, core))
         return false;
 
-    return atomic_load_explicit(&target->migrate_to, memory_order_acquire) ==
-           -1;
+    return atomic_load_acq(&target->migrate_to) == -1;
 }
 
 /* self->stealing_work should already be set before this is called */
@@ -48,7 +47,8 @@ struct scheduler *scheduler_pick_victim(struct scheduler *self) {
 
         uint64_t victim_scaled = victim_thread_count * 100;
         uint64_t scaled =
-            self->total_thread_count * scheduler_data.steal_min_diff;
+            (uint64_t) self->total_thread_count *
+            (uint64_t) atomic_load_relaxed(&scheduler_data.steal_min_diff);
         bool victim_is_poor = victim_scaled < scaled;
 
         if (victim_busy || victim_is_poor)
@@ -170,10 +170,10 @@ static inline void begin_steal(struct scheduler *sched) {
 }
 
 static inline bool try_begin_steal() {
-    unsigned current = atomic_load(&scheduler_data.active_stealers);
+    uint32_t current = atomic_load_relaxed(&scheduler_data.active_stealers);
     while (current < scheduler_data.max_concurrent_stealers) {
-        if (atomic_compare_exchange_weak(&scheduler_data.active_stealers,
-                                         &current, current + 1)) {
+        if (atomic_cas_weak(&scheduler_data.active_stealers, &current,
+                            current + 1, mo_acquire, mo_relaxed)) {
             return true;
         }
     }
@@ -186,7 +186,7 @@ static inline void stop_steal(struct scheduler *sched,
         atomic_store(&victim->being_robbed, false);
 
     atomic_store(&sched->stealing_work, false);
-    atomic_fetch_sub(&scheduler_data.active_stealers, 1);
+    atomic_dec_release(&scheduler_data.active_stealers);
 }
 
 struct thread *scheduler_try_do_steal(struct scheduler *sched) {

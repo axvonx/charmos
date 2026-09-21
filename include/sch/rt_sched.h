@@ -1,9 +1,9 @@
 /* @title: Real-time scheduling */
 #pragma once
+#include <atomic.h>
 #include <log.h>
 #include <sch/rt_sched_types.h>
 #include <smp/topology.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -433,7 +433,7 @@ struct rt_scheduler_static {
     struct cpu_mask *active_mask_internal; /* Who is using us? */
     refcount_t refcount;
     struct work teardown_work;
-    _Atomic enum rt_scheduler_static_state state;
+    atomic(enum rt_scheduler_static_state) state;
     struct spinlock state_change_lock;
 
     /* ---------- EXTERNAL ---------- */
@@ -514,8 +514,8 @@ struct rt_scheduler_percpu {
     struct semaphore switch_semaphore;
     struct log_site *log_site;
     struct log_handle log_handle;
-    _Atomic enum rt_scheduler_error switch_code;
-    _Atomic(struct rt_scheduler_static *) switch_into;
+    atomic(enum rt_scheduler_error) switch_code;
+    atomic(struct rt_scheduler_static *) switch_into;
 };
 
 struct rt_global {

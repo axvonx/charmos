@@ -174,7 +174,7 @@ void slab_gc_recycle(struct slab_domain *domain, struct slab *slab,
 
 static void slab_gc_destroy(struct slab_gc *gc, struct slab *slab) {
     rbt_delete(&gc->rbt, &slab->rb);
-    atomic_fetch_sub(&gc->num_elements, 1);
+    atomic_dec(&gc->num_elements);
     /* List unlink happens in slab_destroy -> slab_list_del */
     slab_destroy(slab);
 }
@@ -322,7 +322,7 @@ void slab_gc_enqueue(struct slab_domain *domain, struct slab *slab) {
     list_add_tail(&slab->list, &domain->slab_gc.lists[slab->type][order]);
 
     rbt_insert(&domain->slab_gc.rbt, &slab->rb);
-    atomic_fetch_add(&gc->num_elements, 1);
+    atomic_inc(&gc->num_elements);
 
     spin_unlock(&gc->lock, irql);
 }
@@ -331,7 +331,7 @@ static void slab_gc_dequeue(struct slab_gc *gc, struct slab *slab) {
     SPINLOCK_ASSERT_HELD(&gc->lock);
 
     rbt_delete(&gc->rbt, &slab->rb);
-    atomic_fetch_sub(&gc->num_elements, 1);
+    atomic_dec(&gc->num_elements);
 
     /* We need to drop all the traces here */
 #ifdef DEBUG_SLAB_DEEP
@@ -423,7 +423,7 @@ bool slab_should_enqueue_gc(struct slab *slab) {
 
 void slab_gc_init(struct slab_domain *dom) {
     struct slab_gc *gc = &dom->slab_gc;
-    gc->num_elements = 0;
+    atomic_init(&gc->num_elements, 0);
     spinlock_init(&gc->lock);
     rbt_init(&gc->rbt, slab_get_data, slab_cmp_slabs);
     gc->parent = dom;

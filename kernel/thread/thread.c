@@ -100,7 +100,7 @@ void thread_exit_with_status(int status) {
 
     climb_thread_remove(self);
     locked_list_del(&global.thread_list, &self->thread_list);
-    atomic_fetch_sub(&global.thread_count, 1);
+    atomic_dec(&global.thread_count);
 
     irql_lower(irql);
 
@@ -115,8 +115,9 @@ void thread_entry_wrapper(void) TSA_NO_ANALYSIS {
      * i.e. a thread entering */
     scheduler_yield_nesting_reset(thread_get_current());
 
-    if (thread_get_current()->state != THREAD_STATE_IDLE_THREAD)
-        atomic_fetch_add(&global.thread_count, 1);
+    if (atomic_load_relaxed(&thread_get_current()->state) !=
+        THREAD_STATE_IDLE_THREAD)
+        atomic_inc(&global.thread_count);
 
     void (*entry)(void *);
     asm volatile("mov %%r12, %0" : "=r"(entry));
@@ -202,25 +203,25 @@ static struct thread *thread_init(struct thread *thread,
     thread->creation_time_ms = time_get_ms();
     thread->stack_size = stack_size;
     thread->regs.rsp = stack_top;
-    thread->migrate_to = -1;
+    atomic_init(&thread->migrate_to, -1);
     thread->base_prio_class = THREAD_PRIO_CLASS_TIMESHARE;
     thread->niceness = 0;
     thread->perceived_prio_class = THREAD_PRIO_CLASS_TIMESHARE;
-    thread->state = THREAD_STATE_READY;
+    atomic_init(&thread->state, THREAD_STATE_READY);
     thread->regs.r12 = (uint64_t) entry_point;
     thread->regs.r13 = (uint64_t) arg;
     thread->regs.rip = (uint64_t) thread_entry_wrapper;
     thread->stack = (void *) stack;
-    thread->flags = 0;
+    atomic_init(&thread->flags, 0);
     thread->curr_core = -1;
     thread->rcu_nesting = 0;
     thread->rcu_read_seq = 0;
     thread->rcu_leaf = NULL;
     thread->rcu_blocked_seq = 0;
     thread->id = tid_alloc(global_tid_space);
-    thread->refcount = 1;
+    refcount_init(&thread->refcount, 1);
     thread->timeslice_length_raw_ms = THREAD_DEFAULT_TIMESLICE;
-    thread->wait_type = THREAD_WAIT_NONE;
+    atomic_init(&thread->wait_type, THREAD_WAIT_NONE);
     thread->activity_class = THREAD_ACTIVITY_CLASS_UNKNOWN;
     thread->exit_status = 0;
     spinlock_init(&thread->lock);

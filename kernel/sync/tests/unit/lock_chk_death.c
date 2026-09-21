@@ -39,12 +39,12 @@ LOCK_CHK_CLASS_DECLARE_LOCAL(death_assert_not_held_mutex_simple_class);
 /* ABBA cycle between two threads */
 static struct mutex death_abba_m1;
 static struct mutex death_abba_m2;
-static _Atomic bool death_abba_ready = false;
+static atomic_bool death_abba_ready = false;
 
 static void death_abba_worker(void *arg) {
     cc_var_unused(arg);
     mutex_lock(&death_abba_m2);
-    atomic_store_explicit(&death_abba_ready, true, memory_order_release);
+    atomic_store_release(&death_abba_ready, true);
     sleep_spin_ms(10);
     mutex_lock(&death_abba_m1);
     mutex_unlock(&death_abba_m1);
@@ -58,7 +58,7 @@ TEST_DECLARE_UNIT(lock_chk, death_abba_mutex, .enabled = TEST_STATE_DISABLED) {
                    LOCK_CHKD_FULL);
     thread_spawn("death_abba_worker", death_abba_worker, NULL);
     mutex_lock(&death_abba_m1);
-    while (!atomic_load_explicit(&death_abba_ready, memory_order_acquire))
+    while (!atomic_load_acq(&death_abba_ready))
         sleep_spin_ms(1);
     mutex_lock(&death_abba_m2);
     mutex_unlock(&death_abba_m2);
@@ -277,13 +277,12 @@ TEST_DECLARE_UNIT(lock_chk, death_assert_not_held_mutex_while_held,
 }
 
 static struct qspinlock death_foreign_qspin;
-static _Atomic bool death_foreign_qspin_held = false;
+static atomic_bool death_foreign_qspin_held = false;
 
 static void death_foreign_qspin_worker(void *arg) {
     cc_var_unused(arg);
     enum irql old = qspin_lock(&death_foreign_qspin);
-    atomic_store_explicit(&death_foreign_qspin_held, true,
-                          memory_order_release);
+    atomic_store_release(&death_foreign_qspin_held, true);
     sleep_spin_ms(2000);
     qspin_unlock(&death_foreign_qspin, old);
 }
@@ -295,8 +294,7 @@ TEST_DECLARE_UNIT(lock_chk, death_assert_held_qspin_foreign_owner,
                        LOCK_CHKD_FULL);
     thread_spawn("death_foreign_qspin_worker", death_foreign_qspin_worker,
                  NULL);
-    while (
-        !atomic_load_explicit(&death_foreign_qspin_held, memory_order_acquire))
+    while (!atomic_load_acq(&death_foreign_qspin_held))
         sleep_spin_ms(1);
     QSPINLOCK_ASSERT_HELD(&death_foreign_qspin);
     return TEST_SUCCESS;

@@ -33,7 +33,7 @@ static bool slab_pf_update(vaddr_t vaddr, struct page *p) {
     size_t idx = vaddr_vpn - slab_vpn;
     struct page *exp = NULL;
 
-    return atomic_compare_exchange_strong(&slab->backing_pages[idx], &exp, p);
+    return atomic_cas_strong(&slab->backing_pages[idx], &exp, p);
 }
 
 static paddr_t slab_pf_alloc_pages(vaddr_t vaddr, uint8_t order) {

@@ -6,11 +6,11 @@ TEST_GROUP_DECLARE(workqueue, .intensity_desc = {
                               });
 
 static atomic_bool workqueue_ran = false;
-static _Atomic uint32_t workqueue_times = 0;
+static atomic_uint32_t workqueue_times = 0;
 static void workqueue_fn(void *arg, void *unused) {
     cc_var_unused(arg, unused);
     atomic_store(&workqueue_ran, true);
-    atomic_fetch_add(&workqueue_times, 1);
+    atomic_inc(&workqueue_times);
 }
 
 TEST_DECLARE_UNIT(workqueue, fast_oneshot, TEST_INTENSITY(32, 256, 4096)) {
@@ -54,18 +54,18 @@ TEST_DECLARE_UNIT(workqueue, fast_oneshot, TEST_INTENSITY(32, 256, 4096)) {
 
 #define WQ_2_THREADS 2
 
-static _Atomic uint32_t times_2 = 0;
+static atomic_uint32_t times_2 = 0;
 static size_t wq_2_items_per_thread = 2048;
 
 static void wq_test_2(void *a, void *b) {
     cc_var_unused(a, b);
-    atomic_fetch_add(&times_2, 1);
+    atomic_inc(&times_2);
     for (uint64_t i = 0; i < 500; i++)
         cpu_pause();
 }
 
 static struct workqueue *wq = NULL;
-static _Atomic uint32_t threads_left = WQ_2_THREADS;
+static atomic_uint32_t threads_left = WQ_2_THREADS;
 
 static void enqueue_thread(void *arg) {
     cc_var_unused(arg);
@@ -76,7 +76,7 @@ static void enqueue_thread(void *arg) {
         workqueue_enqueue_oneshot(wq, wq_test_2, WORK_ARGS(NULL, wq));
         scheduler_yield();
     }
-    atomic_fetch_sub(&threads_left, 1);
+    atomic_dec(&threads_left);
 }
 
 TEST_DECLARE_UNIT(workqueue, concurrent_enqueue_scaling,
@@ -119,7 +119,7 @@ TEST_DECLARE_UNIT(workqueue, concurrent_enqueue_scaling,
 
     TEST_ASSERT_EQ(atomic_load(&threads_left), 0);
 
-    uint64_t workers = wq->num_workers;
+    uint64_t workers = atomic_load_relaxed(&wq->num_workers);
 
     char *msg = kmalloc(100, ALLOC_FLAGS_ZERO);
     if (msg) {

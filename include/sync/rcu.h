@@ -1,7 +1,7 @@
 /* @title: RCU */
 #pragma once
+#include <atomic.h>
 #include <compiler/core.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -39,7 +39,6 @@ void rcu_defer(struct rcu_cb *cb, rcu_fn fn, void *arg);
 void rcu_note_context_switch(struct thread *outgoing, struct thread *incoming);
 void rcu_note_irq_exit(void);
 
-#define rcu_dereference(p) atomic_load_explicit(&(p), memory_order_acquire)
+#define rcu_dereference(p) atomic_load_acq(&(p))
 
-#define rcu_assign_pointer(p, v)                                               \
-    atomic_store_explicit(&(p), (v), memory_order_release)
+#define rcu_assign_pointer(p, v) atomic_store_release(&(p), (v))

@@ -11,7 +11,7 @@
 
 struct many_waiter_fix {
     struct mutex lock;
-    _Atomic uint32_t completed;
+    atomic_uint32_t completed;
 };
 
 static bool many_worker(struct test_fleet *f, struct test_conc_worker *w) {
@@ -24,7 +24,7 @@ static bool many_worker(struct test_fleet *f, struct test_conc_worker *w) {
         mutex_unlock(&fix->lock);
     }
 
-    atomic_fetch_add(&fix->completed, 1);
+    atomic_inc(&fix->completed);
     return true;
 }
 
@@ -59,7 +59,7 @@ TEST_DECLARE_INTEGRATION(mutex, many_waiters, TEST_INTENSITY(2, 10, 32)) {
 
 struct chaos_fix {
     struct mutex lock;
-    _Atomic uint32_t completed;
+    atomic_uint32_t completed;
 };
 
 static bool chaos(struct test_fleet *f, struct test_conc_worker *w) {
@@ -78,7 +78,7 @@ static bool chaos(struct test_fleet *f, struct test_conc_worker *w) {
             scheduler_yield();
     }
 
-    atomic_fetch_add(&fix->completed, 1);
+    atomic_inc(&fix->completed);
     return true;
 }
 

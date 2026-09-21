@@ -402,8 +402,7 @@ out:
 void usb_teardown_device(struct usb_device *dev) {
     struct usb_driver *driver = dev->driver;
 
-    atomic_store_explicit(&dev->status, USB_DEV_DISCONNECTED,
-                          memory_order_release);
+    atomic_store_release(&dev->status, USB_DEV_DISCONNECTED);
 
     if (driver && dev->teardown)
         dev->teardown(dev);

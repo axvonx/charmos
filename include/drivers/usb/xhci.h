@@ -585,7 +585,7 @@ static inline const char *xhci_port_state_str(enum xhci_port_state s) {
 }
 
 struct xhci_slot {
-    _Atomic enum xhci_slot_state state;
+    atomic(enum xhci_slot_state) state;
     struct xhci_device *dev;
     struct xhci_ring *ep_rings[32];
     uint8_t slot_id; /* Just so everyone knows what slot we are */

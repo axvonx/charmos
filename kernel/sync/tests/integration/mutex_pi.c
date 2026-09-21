@@ -15,7 +15,7 @@ static void pi_dummy(void *nothing) {
     while (atomic_load(&pi_done) < 1)
         scheduler_yield();
 
-    atomic_fetch_add(&pi_done, 1);
+    atomic_inc(&pi_done);
     test_info("exiting");
 }
 
@@ -26,7 +26,7 @@ static void pi_rt_thread(void *nothing) {
     kassert(mutex_read_owner(&pi_mutex) == thread_get_current());
     mutex_unlock(&pi_mutex);
     test_info("unlock");
-    atomic_fetch_add(&pi_done, 1);
+    atomic_inc(&pi_done);
     test_info("exiting");
 }
 
@@ -45,7 +45,7 @@ static void pi_ts_thread(void *nothing) {
     test_info("unlock");
     mutex_unlock(&pi_mutex);
 
-    atomic_fetch_add(&pi_done, 1);
+    atomic_inc(&pi_done);
     test_info("exiting");
 }
 
@@ -109,7 +109,7 @@ static void pi_chain_ts2(void *arg) {
 
     test_info("ts2 boosted");
     mutex_unlock(&pi_mtx_b);
-    atomic_fetch_add(&pi_chain_done, 1);
+    atomic_inc(&pi_chain_done);
 }
 
 static void pi_chain_ts1(void *arg) {
@@ -126,7 +126,7 @@ static void pi_chain_ts1(void *arg) {
 
     mutex_unlock(&pi_mtx_b);
     mutex_unlock(&pi_mtx_a);
-    atomic_fetch_add(&pi_chain_done, 1);
+    atomic_inc(&pi_chain_done);
 }
 
 static void pi_chain_rt(void *arg) {
@@ -136,7 +136,7 @@ static void pi_chain_rt(void *arg) {
     test_info("rt lock got");
 
     mutex_unlock(&pi_mtx_a);
-    atomic_fetch_add(&pi_chain_done, 1);
+    atomic_inc(&pi_chain_done);
 }
 
 TEST_DECLARE_INTEGRATION(mutex, pi_chain, .min_cores = 2) {
@@ -195,7 +195,7 @@ static void pi_multi_ts(void *arg) {
 
     test_info("ts boosted");
     mutex_unlock(&pi_multi_mtx);
-    atomic_fetch_add(&pi_multi_done, 1);
+    atomic_inc(&pi_multi_done);
 }
 
 static void pi_multi_rt(void *arg) {
@@ -203,7 +203,7 @@ static void pi_multi_rt(void *arg) {
     test_info("multi_rt running");
     mutex_lock(&pi_multi_mtx);
     mutex_unlock(&pi_multi_mtx);
-    atomic_fetch_add(&pi_multi_done, 1);
+    atomic_inc(&pi_multi_done);
 }
 
 TEST_DECLARE_INTEGRATION(mutex, pi_multi_waiters,
@@ -268,14 +268,14 @@ static void pi_revert_ts(void *arg) {
         cpu_pause();
 
     atomic_store(&pi_reverted, true);
-    atomic_fetch_add(&pi_reverted_done, 1);
+    atomic_inc(&pi_reverted_done);
 }
 
 static void pi_revert_rt(void *arg) {
     cc_var_unused(arg);
     mutex_lock(&pi_revert_mtx);
     mutex_unlock(&pi_revert_mtx);
-    atomic_fetch_add(&pi_reverted_done, 1);
+    atomic_inc(&pi_reverted_done);
 }
 
 TEST_DECLARE_INTEGRATION(mutex, pi_revert, .min_cores = 2) {

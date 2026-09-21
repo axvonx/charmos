@@ -1,9 +1,9 @@
 #include <acpi/lapic.h>
+#include <atomic.h>
 #include <mem/alloc.h>
 #include <mem/page.h>
 #include <mem/tlb.h>
 #include <sch/sched.h>
-#include <stdatomic.h>
 #include <stdint.h>
 #include <thread/dpc.h>
 
@@ -13,27 +13,24 @@ static void tlb_shootdown_internal(void) {
     size_t cpu = smp_id(TOPC_IRQ);
     struct tlb_shootdown_cpu *c = &global.shootdown_data[cpu];
 
-    uint64_t done = atomic_load_explicit(&c->done_gen, memory_order_relaxed);
+    uint64_t done = atomic_load_relaxed(&c->done_gen);
 
     while (true) {
-        uint64_t req = atomic_load_explicit(&c->req_gen, memory_order_acquire);
+        uint64_t req = atomic_load_acq(&c->req_gen);
 
         if (done >= req)
             break;
 
         for (;;) {
-            uint32_t tail =
-                atomic_load_explicit(&c->tail, memory_order_relaxed);
-            uint32_t head =
-                atomic_load_explicit(&c->head, memory_order_acquire);
+            uint32_t tail = atomic_load_relaxed(&c->tail);
+            uint32_t head = atomic_load_acq(&c->head);
 
             if (tail == head)
                 break;
 
             while (tail != head) {
                 uintptr_t addr =
-                    atomic_load_explicit(&c->queue[tail & (TLB_QUEUE_SIZE - 1)],
-                                         memory_order_acquire);
+                    atomic_load_acq(&c->queue[tail & (TLB_QUEUE_SIZE - 1)]);
 
                 if (addr)
                     tlb_invlpg(addr);
@@ -41,14 +38,13 @@ static void tlb_shootdown_internal(void) {
                 tail++;
             }
 
-            atomic_store_explicit(&c->tail, tail, memory_order_release);
+            atomic_store_release(&c->tail, tail);
         }
 
-        if (atomic_exchange_explicit(&c->flush_all, false,
-                                     memory_order_acq_rel)) {
+        if (atomic_xchg_acq_rel(&c->flush_all, false)) {
             tlb_flush();
-            uint32_t h = atomic_load_explicit(&c->head, memory_order_acquire);
-            atomic_store_explicit(&c->tail, h, memory_order_release);
+            uint32_t h = atomic_load_acq(&c->head);
+            atomic_store_release(&c->tail, h);
         }
 
         /* A drain satisfies each gen up to the `req` we read before
@@ -56,7 +52,7 @@ static void tlb_shootdown_internal(void) {
          * how many shootdowns the rest of the machine had done, which
          * causes some larger slowdowns */
         done = req;
-        atomic_store_explicit(&c->done_gen, done, memory_order_release);
+        atomic_store_release(&c->done_gen, done);
     }
 }
 
@@ -75,9 +71,7 @@ void tlb_shootdown(uintptr_t addr, bool synchronous) {
     /* TODO: scale up */
     enum irql lirql = spin_lock(&tlb_shootdown_lock);
 
-    uint64_t gen = atomic_fetch_add_explicit(&global.next_tlb_gen, 1,
-                                             memory_order_relaxed) +
-                   1;
+    uint64_t gen = atomic_inc_return_relaxed(&global.next_tlb_gen);
 
     size_t this_cpu = smp_id(TOPC_IRQL);
 
@@ -90,18 +84,17 @@ void tlb_shootdown(uintptr_t addr, bool synchronous) {
 
         struct tlb_shootdown_cpu *t = &global.shootdown_data[i];
 
-        uint32_t head = atomic_load_explicit(&t->head, memory_order_relaxed);
-        uint32_t tail = atomic_load_explicit(&t->tail, memory_order_acquire);
+        uint32_t head = atomic_load_relaxed(&t->head);
+        uint32_t tail = atomic_load_acq(&t->tail);
 
         if ((head - tail) >= TLB_QUEUE_SIZE) {
-            atomic_store_explicit(&t->flush_all, true, memory_order_release);
+            atomic_store_release(&t->flush_all, true);
         } else {
-            atomic_store_explicit(&t->queue[head & (TLB_QUEUE_SIZE - 1)], addr,
-                                  memory_order_release);
-            atomic_store_explicit(&t->head, head + 1, memory_order_release);
+            atomic_store_release(&t->queue[head & (TLB_QUEUE_SIZE - 1)], addr);
+            atomic_store_release(&t->head, head + 1);
         }
 
-        atomic_store_explicit(&t->req_gen, gen, memory_order_release);
+        atomic_store_release(&t->req_gen, gen);
         ipi_send(i, IRQ_TLB_SHOOTDOWN);
     }
 
@@ -114,8 +107,7 @@ void tlb_shootdown(uintptr_t addr, bool synchronous) {
 
             int spins = 0;
 
-            while (atomic_load_explicit(&o->done_gen, memory_order_acquire) <
-                   gen) {
+            while (atomic_load_acq(&o->done_gen) < gen) {
                 if (spins < 100) {
                     cpu_pause();
                     spins++;
@@ -127,7 +119,7 @@ void tlb_shootdown(uintptr_t addr, bool synchronous) {
             }
         }
 
-        atomic_fetch_add_explicit(&global.pt_epoch, 1, memory_order_release);
+        atomic_inc_release(&global.pt_epoch);
     }
 
     spin_unlock(&tlb_shootdown_lock, lirql);

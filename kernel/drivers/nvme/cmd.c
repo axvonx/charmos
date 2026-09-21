@@ -145,8 +145,8 @@ void nvme_process_completions(struct nvme_device *dev, uint32_t qid) {
 
             spin_unlock(&dev->finished_requests.lock, irql2);
 
-            atomic_fetch_sub(&queue->outstanding, 1);
-            atomic_fetch_sub(&dev->total_outstanding, 1);
+            atomic_dec(&queue->outstanding);
+            atomic_dec(&dev->total_outstanding);
         }
 
         queue->cq_head = (queue->cq_head + 1) % queue->cq_depth;
@@ -203,8 +203,8 @@ bool nvme_submit_io_cmd(struct nvme_device *nvme, struct nvme_command *cmd,
 
     this_queue->sq_tail = next_tail;
 
-    atomic_fetch_add(&this_queue->outstanding, 1);
-    atomic_fetch_add(&nvme->total_outstanding, 1);
+    atomic_inc(&this_queue->outstanding);
+    atomic_inc(&nvme->total_outstanding);
 
     mmio_write_32(this_queue->sq_db, next_tail);
 

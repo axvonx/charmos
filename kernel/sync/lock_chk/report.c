@@ -1,11 +1,11 @@
 #ifdef DEBUG_LOCK_CHK
 
+#include <atomic.h>
 #include <console/crash.h>
 #include <console/printf.h>
 #include <kassert.h>
 #include <ndjson.h>
 #include <nightmare/nightmare.h>
-#include <stdatomic.h>
 
 #include "internal.h"
 
@@ -86,8 +86,8 @@ static void lock_chk_emit_finding(const struct lock_chk_fault *fault,
 static void maybe_report_degradation(const struct lock_chk_fault *fault,
                                      uint64_t signature,
                                      const char *signature_text) {
-    static _Atomic bool emitted = false;
-    if (atomic_exchange_explicit(&emitted, true, memory_order_relaxed))
+    static atomic_bool emitted = false;
+    if (atomic_xchg_relaxed(&emitted, true))
         return;
 
     printf_unlocked("\n*** LOCK_CHK WARNING: Capacity exhausted for pool '%s' "

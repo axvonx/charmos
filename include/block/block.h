@@ -1,9 +1,9 @@
 /* @title: Block Devices */
 #pragma once
+#include <atomic.h>
 #include <block/bcache.h>
 #include <fs/detect.h>
 #include <sch/sched.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <sync/spinlock.h>

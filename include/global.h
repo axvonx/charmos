@@ -1,10 +1,10 @@
 /* @title: Global Variables */
 #pragma once
+#include <atomic.h>
 #include <bootstage.h>
 #include <mem/buddy.h>
 #include <mem/movealloc.h>
 #include <smp/topology.h>
-#include <stdatomic.h>
 #include <structures/list.h>
 #include <structures/locked_list.h>
 
@@ -51,14 +51,14 @@ struct globals {
     struct scheduler_domain *scheduler_domains[TOPOLOGY_LEVEL_MAX];
 
     vaddr_t hhdm_offset;
-    _Atomic uint64_t pt_epoch;
+    atomic_uint64_t pt_epoch;
     uint64_t total_pages;
     pfn_t last_pfn;
 
     struct movealloc_callback_chain movealloc_chain;
 
     /* TODO: no more of this */
-    _Atomic uint64_t next_tlb_gen;
+    atomic_uint64_t next_tlb_gen;
 
     /* Per core workqueues */
     struct workqueue **workqueues;

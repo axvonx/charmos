@@ -20,19 +20,19 @@ static void defer_func(void *boo, void *unused) {
 
     test_info("Delayed work complete");
     test_info(msg);
-    defer_worked = true;
+    atomic_store_release(&defer_worked, true);
 }
 
 TEST_DECLARE_UNIT(defer, delayed_work_schedule) {
-    atomic_store(&defer_worked, false);
+    atomic_store_relaxed(&defer_worked, false);
     delayed_work_init(&test_dwork, defer_func, WORK_ARGS(NULL, NULL));
     enqueue_ms = time_get_ms();
     delayed_work_schedule(&test_dwork, 5);
 
     time_ms_t deadline = time_get_ms() + 500;
-    while (!defer_worked && time_get_ms() < deadline)
+    while (!atomic_load_acq(&defer_worked) && time_get_ms() < deadline)
         scheduler_yield();
 
-    TEST_ASSERT(defer_worked);
+    TEST_ASSERT(atomic_load_acq(&defer_worked));
     return TEST_SUCCESS;
 }

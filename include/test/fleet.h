@@ -80,8 +80,8 @@ struct test_fleet {
     const char *fail_file;
     uint32_t fail_line;
 
-    _Atomic size_t started;
-    _Atomic size_t finished;
+    atomic_size_t started;
+    atomic_size_t finished;
 
     struct test_liveness_state liveness;
     struct timer hard_timer;

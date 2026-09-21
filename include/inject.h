@@ -1,7 +1,7 @@
 /* @title: Code Fuzzing Injections */
 #pragma once
+#include <atomic.h>
 #include <linker/symbols.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -16,10 +16,10 @@ struct inject_site {
     const char *desc;
     enum inject_kind kind;
 
-    _Atomic bool armed;
-    _Atomic uint32_t seed;
-    _Atomic uint32_t nth;
-    _Atomic uint32_t counter;
+    atomic_bool armed;
+    atomic_uint32_t seed;
+    atomic_uint32_t nth;
+    atomic_uint32_t counter;
 };
 
 LINKER_SECTION_DEFINE(struct inject_site, inject_sites);
@@ -35,14 +35,14 @@ LINKER_SECTION_DEFINE(struct inject_site, inject_sites);
 
 static inline void inject_arm(struct inject_site *s, uint32_t seed,
                               uint32_t nth) {
-    atomic_store_explicit(&s->seed, seed, memory_order_relaxed);
-    atomic_store_explicit(&s->nth, nth, memory_order_relaxed);
-    atomic_store_explicit(&s->counter, 0, memory_order_relaxed);
-    atomic_store_explicit(&s->armed, true, memory_order_relaxed);
+    atomic_store_relaxed(&s->seed, seed);
+    atomic_store_relaxed(&s->nth, nth);
+    atomic_store_relaxed(&s->counter, 0);
+    atomic_store_relaxed(&s->armed, true);
 }
 
 static inline void inject_disarm(struct inject_site *s) {
-    atomic_store_explicit(&s->armed, false, memory_order_relaxed);
+    atomic_store_relaxed(&s->armed, false);
 }
 
 #ifdef INJECT_ENABLED
@@ -51,14 +51,12 @@ cc_warn_unused_result bool inject_fail_impl(struct inject_site *s);
 
 #define INJECT_DELAY(id)                                                       \
     do {                                                                       \
-        if (cc_unlikely(atomic_load_explicit(&INJECT_SITE(id)->armed,          \
-                                             memory_order_relaxed)))           \
+        if (cc_unlikely(atomic_load_relaxed(&INJECT_SITE(id)->armed)))         \
             inject_delay_impl(INJECT_SITE(id));                                \
     } while (0)
 
 #define INJECT_FAIL(id)                                                        \
-    (cc_unlikely(atomic_load_explicit(&INJECT_SITE(id)->armed,                 \
-                                      memory_order_relaxed)) &&                \
+    (cc_unlikely(atomic_load_relaxed(&INJECT_SITE(id)->armed)) &&              \
      inject_fail_impl(INJECT_SITE(id)))
 #else
 #define INJECT_DELAY(id) ((void) 0)

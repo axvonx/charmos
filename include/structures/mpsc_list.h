@@ -1,8 +1,8 @@
 /* @title: Lockless MPSC singly linked list */
 #pragma once
+#include <atomic.h>
 #include <compiler/core.h>
 #include <container_of.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -11,36 +11,34 @@ struct mpsc_slist_node {
 };
 
 struct mpsc_slist {
-    _Atomic(struct mpsc_slist_node *) head;
+    atomic(struct mpsc_slist_node *) head;
 };
 
 #define MPSC_SLIST_INIT {NULL}
 #define MPSC_SLIST(name) struct mpsc_slist name = MPSC_SLIST_INIT
 
 static inline void mpsc_slist_init(struct mpsc_slist *q) {
-    atomic_store_explicit(&q->head, NULL, memory_order_relaxed);
+    atomic_store_relaxed(&q->head, NULL);
 }
 
 static inline int mpsc_slist_empty(const struct mpsc_slist *q) {
-    return atomic_load_explicit(&q->head, memory_order_acquire) == NULL;
+    return atomic_load_acq(&q->head) == NULL;
 }
 
 /* Returns true if list was previously empty */
 static inline bool mpsc_slist_push(struct mpsc_slist *q,
                                    struct mpsc_slist_node *n) {
-    struct mpsc_slist_node *old =
-        atomic_load_explicit(&q->head, memory_order_relaxed);
+    struct mpsc_slist_node *old = atomic_load_relaxed(&q->head);
     do {
         n->next = old;
-    } while (!atomic_compare_exchange_weak_explicit(
-        &q->head, &old, n, memory_order_release, memory_order_relaxed));
+    } while (!atomic_cas_weak(&q->head, &old, n, mo_release, mo_relaxed));
 
     return old == NULL;
 }
 
 /* Return the entire chain and mark as empty */
 static inline struct mpsc_slist_node *mpsc_slist_drain(struct mpsc_slist *q) {
-    return atomic_exchange_explicit(&q->head, NULL, memory_order_acquire);
+    return atomic_xchg_acq(&q->head, NULL);
 }
 
 /* Reverse a detached chain to get the FIFO list order */
@@ -58,12 +56,9 @@ mpsc_slist_reverse(struct mpsc_slist_node *chain) {
 
 /* Single consumer pop */
 static inline struct mpsc_slist_node *mpsc_slist_pop_one(struct mpsc_slist *q) {
-    struct mpsc_slist_node *old =
-        atomic_load_explicit(&q->head, memory_order_acquire);
+    struct mpsc_slist_node *old = atomic_load_acq(&q->head);
     while (old) {
-        if (atomic_compare_exchange_weak_explicit(&q->head, &old, old->next,
-                                                  memory_order_acquire,
-                                                  memory_order_acquire))
+        if (atomic_cas_weak(&q->head, &old, old->next, mo_acquire, mo_acquire))
             return old;
     }
     return NULL;

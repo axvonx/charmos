@@ -169,14 +169,13 @@ TEST_DECLARE_INTEGRATION(vas, magazine_remote_free_does_not_cache,
 struct magazine_visibility {
     struct vas *vas;
     vaddr_t addr;
-    _Atomic uint32_t phase;
+    atomic_uint32_t phase;
     bool valid;
 };
 
 static bool await_phase(struct magazine_visibility *v, uint32_t phase) {
     while (true) {
-        uint32_t current =
-            atomic_load_explicit(&v->phase, memory_order_acquire);
+        uint32_t current = atomic_load_acq(&v->phase);
         if (current == UINT32_MAX)
             return false;
         if (current == phase)
@@ -193,13 +192,13 @@ static void visibility_owner(void *arg) {
             atomic_store(&v->phase, UINT32_MAX);
             return;
         }
-        atomic_store_explicit(&v->phase, 1, memory_order_release);
+        atomic_store_release(&v->phase, 1);
         if (!await_phase(v, 2)) {
             vas_free(v->vas, v->addr, PAGE_SIZE);
             return;
         }
         vas_free(v->vas, v->addr, PAGE_SIZE);
-        atomic_store_explicit(&v->phase, 3, memory_order_release);
+        atomic_store_release(&v->phase, 3);
         if (!await_phase(v, 4))
             return;
     }
@@ -215,7 +214,7 @@ static void visibility_observer(void *arg) {
         }
         vas_reclaim(v->vas); /* Must keep the owner's live slot intact */
         v->valid &= vas_vaddr_is_allocated(v->vas, v->addr + PAGE_SIZE - 1);
-        atomic_store_explicit(&v->phase, 2, memory_order_release);
+        atomic_store_release(&v->phase, 2);
         if (!await_phase(v, 3)) {
             v->valid = false;
             return;
@@ -223,7 +222,7 @@ static void visibility_observer(void *arg) {
         v->valid &= !vas_vaddr_is_allocated(v->vas, v->addr);
         vas_reclaim(v->vas);
         v->valid &= atomic_load(&v->vas->mag_reserved_bytes) == 0;
-        atomic_store_explicit(&v->phase, 4, memory_order_release);
+        atomic_store_release(&v->phase, 4);
     }
 }
 

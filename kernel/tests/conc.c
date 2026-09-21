@@ -14,7 +14,7 @@ uint64_t test_conc_progress_sum(void) {
     uint64_t sum = 0;
     struct test_progress_counter *counter;
     percpu_for_each(test_progress, counter) {
-        sum += atomic_load_explicit(&counter->count, memory_order_relaxed);
+        sum += atomic_load_relaxed(&counter->count);
     }
 
     return sum;
@@ -39,25 +39,23 @@ uint64_t test_rng_seed_for(uint64_t base_seed, size_t index) {
 
 void test_conc_init(struct test_conc *c, struct test_conc_worker *workers,
                     size_t worker_count) {
-    atomic_store_explicit(&c->stop, TEST_RUN, memory_order_relaxed);
-    atomic_store_explicit(&c->quiesce_requested, false, memory_order_relaxed);
-    atomic_store_explicit(&c->parked_count, 0, memory_order_relaxed);
-    atomic_store_explicit(&c->aux, NULL, memory_order_relaxed);
+    atomic_store_relaxed(&c->stop, TEST_RUN);
+    atomic_store_relaxed(&c->quiesce_requested, false);
+    atomic_store_relaxed(&c->parked_count, 0);
+    atomic_store_relaxed(&c->aux, NULL);
     c->workers = workers;
     c->worker_count = worker_count;
     completion_init(&c->start, COMPLETION_INIT_NORMAL);
-    atomic_store_explicit(&c->active, false, memory_order_release);
+    atomic_store_release(&c->active, false);
 }
 
 void test_conc_publish_stop(struct test_conc *c, enum test_stop reason) {
-    enum test_stop observed =
-        atomic_load_explicit(&c->stop, memory_order_acquire);
+    enum test_stop observed = atomic_load_acq(&c->stop);
     bool advanced = false;
 
     while (observed < reason) {
-        if (atomic_compare_exchange_weak_explicit(&c->stop, &observed, reason,
-                                                  memory_order_release,
-                                                  memory_order_acquire)) {
+        if (atomic_cas_weak(&c->stop, &observed, reason, mo_acq_rel,
+                            mo_acquire)) {
             advanced = true;
             break;
         }
@@ -67,23 +65,21 @@ void test_conc_publish_stop(struct test_conc *c, enum test_stop reason) {
         return;
 
     for (size_t i = 0; i < c->worker_count; i++) {
-        struct thread *thread =
-            atomic_load_explicit(&c->workers[i].th, memory_order_acquire);
+        struct thread *thread = atomic_load_acq(&c->workers[i].th);
 
         if (thread)
             thread_alert(thread);
     }
 
-    struct thread *aux = atomic_load_explicit(&c->aux, memory_order_acquire);
+    struct thread *aux = atomic_load_acq(&c->aux);
     if (aux)
         thread_alert(aux);
 }
 
 void test_conc_park(struct test_conc *c, struct test_conc_worker *w) {
-    bool was_parked =
-        atomic_exchange_explicit(&w->parked, true, memory_order_acq_rel);
+    bool was_parked = atomic_xchg_acq_rel(&w->parked, true);
     if (!was_parked)
-        atomic_fetch_add_explicit(&c->parked_count, 1, memory_order_release);
+        atomic_inc_release(&c->parked_count);
 
     while (test_conc_must_park(c) && !test_conc_must_stop(c))
         scheduler_yield();
@@ -93,16 +89,15 @@ void test_conc_park(struct test_conc *c, struct test_conc_worker *w) {
 }
 
 void test_conc_unpark_self(struct test_conc *c, struct test_conc_worker *w) {
-    if (!atomic_load_explicit(&w->parked, memory_order_acquire))
+    if (!atomic_load_acq(&w->parked))
         return;
 
-    atomic_fetch_sub_explicit(&c->parked_count, 1, memory_order_release);
-    atomic_store_explicit(&w->parked, false, memory_order_release);
+    atomic_dec_release(&c->parked_count);
+    atomic_store_release(&w->parked, false);
 }
 
 static bool test_liveness_eval(struct test_liveness_state *state) {
-    if (atomic_load_explicit(&state->phase, memory_order_acquire) !=
-        TEST_LIVE_ARMED)
+    if (atomic_load_acq(&state->phase) != TEST_LIVE_ARMED)
         return false;
 
     bool quiesce = test_conc_must_park(state->conc);
@@ -138,9 +133,8 @@ static bool test_liveness_eval(struct test_liveness_state *state) {
     };
 
     enum test_liveness_phase expected = TEST_LIVE_ARMED;
-    if (!atomic_compare_exchange_strong_explicit(
-            &state->phase, &expected, TEST_LIVE_PENDING, memory_order_release,
-            memory_order_acquire))
+    if (!atomic_cas_strong(&state->phase, &expected, TEST_LIVE_PENDING,
+                           mo_acq_rel, mo_acquire))
         return false;
 
     return true;
@@ -154,7 +148,7 @@ static void test_liveness_watchdog_cb(struct watchdog_callback *cb) {
     if (!c)
         return;
 
-    if (!atomic_load_explicit(&c->active, memory_order_acquire))
+    if (!atomic_load_acq(&c->active))
         return;
 
     if (test_conc_stop_reason(c) != TEST_RUN)
@@ -191,15 +185,14 @@ void test_liveness_stop(struct test_liveness_state *state) {
         state->registered = false;
     }
 
-    atomic_store_explicit(&state->phase, TEST_LIVE_OFF, memory_order_release);
+    atomic_store_release(&state->phase, TEST_LIVE_OFF);
 }
 
 bool test_liveness_take(struct test_liveness_state *state,
                         struct test_stall_evidence *out) {
     enum test_liveness_phase expected = TEST_LIVE_PENDING;
-    if (!atomic_compare_exchange_strong_explicit(
-            &state->phase, &expected, TEST_LIVE_REPORTED, memory_order_acq_rel,
-            memory_order_acquire))
+    if (!atomic_cas_strong(&state->phase, &expected, TEST_LIVE_REPORTED,
+                           mo_acq_rel, mo_acquire))
         return false;
 
     if (out)

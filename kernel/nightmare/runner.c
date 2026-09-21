@@ -165,8 +165,7 @@ nightmare_record_resolved_boot(const struct nightmare_cmdline_config *config,
 
 static void nightmare_emit_verdict(struct nightmare_verdict verdict,
                                    const char *fallback_reason) {
-    size_t findings = atomic_load_explicit(&nightmare_runtime.finding_count,
-                                           memory_order_acquire);
+    size_t findings = atomic_load_acq(&nightmare_runtime.finding_count);
     enum nightmare_result result =
         nightmare_result_with_findings(verdict.result, findings);
 
@@ -277,9 +276,8 @@ static void nightmare_soft_deadline(struct timer *timer) {
 static void nightmare_hard_deadline(struct timer *timer) {
     cc_var_unused(timer);
     bool expected = false;
-    if (!atomic_compare_exchange_strong_explicit(
-            &nightmare_runtime.terminal, &expected, true, memory_order_acq_rel,
-            memory_order_acquire))
+    if (!atomic_cas_strong(&nightmare_runtime.terminal, &expected, true,
+                           mo_acq_rel, mo_acquire))
         return;
 
     nightmare_publish_stop(TEST_STOP_STALL);
@@ -289,8 +287,7 @@ static void nightmare_hard_deadline(struct timer *timer) {
         .reason = "drain_timeout",
         .duration_ms = time_get_ms() - nightmare_runtime.started_ms,
         .progress = test_conc_progress_sum(),
-        .findings = atomic_load_explicit(&nightmare_runtime.finding_count,
-                                         memory_order_relaxed),
+        .findings = atomic_load_relaxed(&nightmare_runtime.finding_count),
         .msg = "hard deadline expired before teardown completed",
     });
     nightmare_exit(NIGHTMARE_EXIT_STALL, "hard deadline");
@@ -338,7 +335,7 @@ static bool nightmare_spawn_threads(void) {
         if (!thread)
             goto fail;
         kassert(thread_get(thread));
-        atomic_store_explicit(&worker->th, thread, memory_order_release);
+        atomic_store_release(&worker->th, thread);
         created++;
     }
 
@@ -348,16 +345,15 @@ static bool nightmare_spawn_threads(void) {
     if (!heartbeat)
         goto fail;
     kassert(thread_get(heartbeat));
-    atomic_store_explicit(&nightmare_runtime.conc.aux, heartbeat,
-                          memory_order_release);
+    atomic_store_release(&nightmare_runtime.conc.aux, heartbeat);
     return true;
 
 fail:
     nightmare_publish_stop(TEST_STOP_FAIL);
     complete_all(&nightmare_runtime.conc.start);
     for (size_t i = created; i > 0; i--) {
-        struct thread *th = atomic_load_explicit(
-            &nightmare_runtime.conc.workers[i - 1].th, memory_order_acquire);
+        struct thread *th =
+            atomic_load_acq(&nightmare_runtime.conc.workers[i - 1].th);
         if (th)
             thread_join(th);
     }
@@ -367,19 +363,18 @@ fail:
 static void nightmare_join_threads(void) {
     for (size_t i = nightmare_runtime.ctx.worker_count;
          i < nightmare_runtime.conc.worker_count; i++) {
-        struct thread *thread = atomic_load_explicit(
-            &nightmare_runtime.conc.workers[i].th, memory_order_acquire);
+        struct thread *thread =
+            atomic_load_acq(&nightmare_runtime.conc.workers[i].th);
         if (thread)
             thread_join(thread);
     }
     for (size_t i = 0; i < nightmare_runtime.ctx.worker_count; i++) {
-        struct thread *thread = atomic_load_explicit(
-            &nightmare_runtime.conc.workers[i].th, memory_order_acquire);
+        struct thread *thread =
+            atomic_load_acq(&nightmare_runtime.conc.workers[i].th);
         if (thread)
             thread_join(thread);
     }
-    struct thread *heartbeat =
-        atomic_load_explicit(&nightmare_runtime.conc.aux, memory_order_acquire);
+    struct thread *heartbeat = atomic_load_acq(&nightmare_runtime.conc.aux);
     if (heartbeat)
         thread_join(heartbeat);
 }
@@ -387,21 +382,20 @@ static void nightmare_join_threads(void) {
 /* All workers are joined and timer/probe callbacks are quiescent */
 static void nightmare_release_threads(void) {
     for (size_t i = 0; i < nightmare_runtime.conc.worker_count; i++) {
-        struct thread *thread = atomic_exchange_explicit(
-            &nightmare_runtime.conc.workers[i].th, NULL, memory_order_acq_rel);
+        struct thread *thread =
+            atomic_xchg_acq_rel(&nightmare_runtime.conc.workers[i].th, NULL);
         if (thread)
             thread_put(thread);
     }
-    struct thread *heartbeat = atomic_exchange_explicit(
-        &nightmare_runtime.conc.aux, NULL, memory_order_acq_rel);
+    struct thread *heartbeat =
+        atomic_xchg_acq_rel(&nightmare_runtime.conc.aux, NULL);
     if (heartbeat)
         thread_put(heartbeat);
 }
 
 void nightmare_publish_perturb_verdict(struct nightmare_verdict verdict) {
     if (verdict.result == NIGHTMARE_RESULT_OK ||
-        atomic_load_explicit(&nightmare_runtime.perturb_verdict_ready,
-                             memory_order_acquire))
+        atomic_load_acq(&nightmare_runtime.perturb_verdict_ready))
         return;
 
     if (verdict.reason) {
@@ -416,13 +410,11 @@ void nightmare_publish_perturb_verdict(struct nightmare_verdict verdict) {
         verdict.msg = nightmare_runtime.perturb_msg;
     }
     nightmare_runtime.perturb_verdict = verdict;
-    atomic_store_explicit(&nightmare_runtime.perturb_verdict_ready, true,
-                          memory_order_release);
+    atomic_store_release(&nightmare_runtime.perturb_verdict_ready, true);
 }
 
 bool nightmare_load_perturb_verdict(struct nightmare_verdict *out) {
-    if (!atomic_load_explicit(&nightmare_runtime.perturb_verdict_ready,
-                              memory_order_acquire))
+    if (!atomic_load_acq(&nightmare_runtime.perturb_verdict_ready))
         return false;
     *out = nightmare_runtime.perturb_verdict;
     return true;
@@ -476,8 +468,7 @@ nightmare_finalize_verdict(const struct nightmare *nm) {
         final = nm->ops->finish(&nightmare_runtime.ctx);
     }
 
-    enum test_stop stop = atomic_load_explicit(&nightmare_runtime.conc.stop,
-                                               memory_order_acquire);
+    enum test_stop stop = atomic_load_acq(&nightmare_runtime.conc.stop);
     return nightmare_verdict_for_stop(final, stop);
 }
 
@@ -572,8 +563,7 @@ void nightmare_run(void) {
         nightmare_emit_verdict(NIGHTMARE_SKIP(refusal),
                                nightmare_skip_to_str(refusal));
 
-    atomic_store_explicit(&nightmare_runtime.conc.active, true,
-                          memory_order_release);
+    atomic_store_release(&nightmare_runtime.conc.active, true);
     nightmare_arm_deadlines(duration_ms, drain_ms);
 
     struct nightmare_verdict prepared = NIGHTMARE_OK;
@@ -625,8 +615,7 @@ void nightmare_run(void) {
     timer_shutdown_sync(&nightmare_runtime.hard_timer);
 
     struct nightmare_verdict final = nightmare_finalize_verdict(nm);
-    atomic_store_explicit(&nightmare_runtime.conc.active, false,
-                          memory_order_release);
+    atomic_store_release(&nightmare_runtime.conc.active, false);
 
     nightmare_release_threads();
 
@@ -638,9 +627,8 @@ void nightmare_run(void) {
     }
 
     bool expected = false;
-    if (atomic_compare_exchange_strong_explicit(
-            &nightmare_runtime.terminal, &expected, true, memory_order_acq_rel,
-            memory_order_acquire))
+    if (atomic_cas_strong(&nightmare_runtime.terminal, &expected, true,
+                          mo_acq_rel, mo_acquire))
         nightmare_emit_verdict(final, "completed");
 #endif
 }

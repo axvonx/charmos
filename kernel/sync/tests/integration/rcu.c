@@ -12,9 +12,9 @@ struct rcu_test_data {
     int value;
 };
 
-static _Atomic(struct rcu_test_data *) shared_ptr = NULL;
+static atomic(struct rcu_test_data *) shared_ptr = NULL;
 static atomic_bool rcu_test_failed = false;
-static _Atomic uint32_t rcu_reads_done = 0;
+static atomic_uint32_t rcu_reads_done = 0;
 
 static void rcu_reader_thread(void *arg) {
     cc_var_unused(arg);
@@ -38,7 +38,7 @@ static void rcu_reader_thread(void *arg) {
         scheduler_yield();
     }
 
-    atomic_fetch_add(&rcu_reads_done, 1);
+    atomic_inc(&rcu_reads_done);
 }
 
 static atomic_bool volatile rcu_deferred_freed = false;
@@ -53,7 +53,7 @@ static void rcu_writer_thread(void *arg) {
     cc_var_unused(arg);
     sleep_spin_ms(30);
 
-    struct rcu_test_data *old = shared_ptr;
+    struct rcu_test_data *old = atomic_load_relaxed(&shared_ptr);
 
     struct rcu_test_data *new = kmalloc(sizeof(*new), ALLOC_FLAGS_ZERO);
     new->value = 43;
@@ -75,7 +75,7 @@ TEST_DECLARE_INTEGRATION(rcu, basic, TEST_INTENSITY(40, 50, 200)) {
 
     struct rcu_test_data *initial = kmalloc(sizeof(*initial), ALLOC_FLAGS_ZERO);
     initial->value = 42;
-    shared_ptr = initial;
+    rcu_assign_pointer(shared_ptr, initial);
 
     struct thread *readers[NUM_RCU_READERS];
     for (uint64_t i = 0; i < NUM_RCU_READERS; i++)
@@ -114,14 +114,14 @@ struct rcu_stress_node {
     size_t freed_gen, enqueued_on;
 };
 
-static _Atomic(struct rcu_stress_node *) stress_shared = NULL;
+static atomic(struct rcu_stress_node *) stress_shared = NULL;
 
 static atomic_bool stress_stop = false;
 static atomic_bool stress_failed = false;
-static _Atomic uint32_t stress_readers_done = 0;
-static _Atomic uint32_t stress_writers_done = 0;
-static _Atomic uint32_t stress_deferred_freed = 0;
-static _Atomic uint32_t stress_replacements = 0;
+static atomic_uint32_t stress_readers_done = 0;
+static atomic_uint32_t stress_writers_done = 0;
+static atomic_uint32_t stress_deferred_freed = 0;
+static atomic_uint32_t stress_replacements = 0;
 static atomic_size_t gen_freed = 0;
 
 static void stress_free_cb(struct rcu_cb *cb, void *ptr) {
@@ -130,7 +130,7 @@ static void stress_free_cb(struct rcu_cb *cb, void *ptr) {
     n->value = 34;
     n->freed_gen = cb->gen_when_called;
     n->enqueued_on = cb->enqueued_waiting_on_gen;
-    atomic_fetch_add(&stress_deferred_freed, 1);
+    atomic_inc(&stress_deferred_freed);
     kfree(cb);
     kfree(n);
 }
@@ -169,7 +169,7 @@ static void rcu_stress_reader(void *arg) {
         iter++;
     }
 
-    atomic_fetch_add(&stress_readers_done, 1);
+    atomic_inc(&stress_readers_done);
 }
 
 static void rcu_stress_writer(void *arg) {
@@ -188,8 +188,7 @@ static void rcu_stress_writer(void *arg) {
         new->value = (local_iter & 1) ? 43 : 42;
         local_iter++;
 
-        struct rcu_stress_node *old =
-            atomic_exchange_explicit(&stress_shared, new, memory_order_acq_rel);
+        struct rcu_stress_node *old = atomic_xchg_acq_rel(&stress_shared, new);
 
         if (old)
             rcu_defer(kmalloc(sizeof(struct rcu_cb), ALLOC_FLAGS_ZERO),
@@ -202,7 +201,7 @@ static void rcu_stress_writer(void *arg) {
         scheduler_yield();
     }
 
-    atomic_fetch_add(&stress_writers_done, 1);
+    atomic_inc(&stress_writers_done);
 }
 
 static void rcu_stress_reclaimer(void *arg) {
@@ -227,7 +226,7 @@ TEST_DECLARE_INTEGRATION(rcu, stress, TEST_INTENSITY(200, 2000, 10000)) {
         kmalloc(sizeof(*initial), ALLOC_FLAGS_ZERO);
     initial->seq = 0;
     initial->value = 42;
-    stress_shared = initial;
+    rcu_assign_pointer(stress_shared, initial);
 
     struct thread *readers[STRESS_NUM_READERS];
     struct thread *writers[STRESS_NUM_WRITERS];
@@ -290,11 +289,11 @@ TEST_DECLARE_INTEGRATION(rcu, stress, TEST_INTENSITY(200, 2000, 10000)) {
     TEST_ASSERT_EQ(atomic_load(&stress_deferred_freed),
                    atomic_load(&stress_replacements));
 
-    struct rcu_stress_node *last = stress_shared;
+    struct rcu_stress_node *last = atomic_load_relaxed(&stress_shared);
     if (last) {
         rcu_synchronize();
         kfree(last);
-        atomic_fetch_add(&stress_deferred_freed, 1);
+        atomic_inc(&stress_deferred_freed);
     }
 
     return TEST_SUCCESS;

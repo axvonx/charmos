@@ -1,8 +1,8 @@
+#include <atomic.h>
 #include <irq/idt.h>
 #include <kassert.h>
 #include <sch/sched.h>
 #include <smp/core.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -12,7 +12,7 @@
 #include "internal.h"
 
 void scheduler_add_thread_locked(struct scheduler *sched, struct thread *task) {
-    kassert(task->state != THREAD_STATE_IDLE_THREAD);
+    kassert(atomic_load_relaxed(&task->state) != THREAD_STATE_IDLE_THREAD);
 
     enum thread_prio_class prio = task->perceived_prio_class;
 

@@ -16,7 +16,8 @@ static void minheap_swap(struct minheap *heap, uint32_t a, uint32_t b) {
 static void minheap_sift_up(struct minheap *heap, uint32_t idx) {
     while (idx > 0) {
         uint32_t parent = (idx - 1) / 2;
-        if (heap->nodes[idx]->key >= heap->nodes[parent]->key)
+        if (MINHEAP_NODE_KEY(heap->nodes[idx]) >=
+            MINHEAP_NODE_KEY(heap->nodes[parent]))
             break;
 
         minheap_swap(heap, idx, parent);
@@ -32,12 +33,13 @@ static void minheap_sift_down(struct minheap *heap, uint32_t idx) {
         right = 2 * idx + 2;
         smallest = idx;
 
-        if (left < heap->size &&
-            heap->nodes[left]->key < heap->nodes[smallest]->key)
+        uint32_t heap_size = MINHEAP_SIZE(heap);
+        if (left < heap_size && MINHEAP_NODE_KEY(heap->nodes[left]) <
+                                    MINHEAP_NODE_KEY(heap->nodes[smallest]))
             smallest = left;
 
-        if (right < heap->size &&
-            heap->nodes[right]->key < heap->nodes[smallest]->key)
+        if (right < heap_size && MINHEAP_NODE_KEY(heap->nodes[right]) <
+                                     MINHEAP_NODE_KEY(heap->nodes[smallest]))
             smallest = right;
 
         if (smallest == idx)
@@ -50,16 +52,17 @@ static void minheap_sift_down(struct minheap *heap, uint32_t idx) {
 
 struct minheap *minheap_create(void) {
     struct minheap *heap = kmalloc(sizeof(struct minheap));
-    heap->capacity = MINHEAP_INIT_CAP;
-    heap->size = 0;
-    heap->nodes = kmalloc(sizeof(struct minheap_node *) * heap->capacity,
-                          ALLOC_FLAGS_ZERO);
+    MINHEAP_SET_CAPACITY(heap, MINHEAP_INIT_CAP);
+    MINHEAP_SET_SIZE(heap, 0);
+    heap->nodes =
+        kmalloc(sizeof(struct minheap_node *) * MINHEAP_CAPACITY(heap),
+                ALLOC_FLAGS_ZERO);
     spinlock_init(&heap->lock);
     return heap;
 }
 
 void minheap_expand(struct minheap *heap, uint32_t new_size) {
-    if (new_size <= heap->capacity)
+    if (new_size <= MINHEAP_CAPACITY(heap))
         return;
 
     struct minheap_node **new_nodes =
@@ -69,7 +72,7 @@ void minheap_expand(struct minheap *heap, uint32_t new_size) {
         return;
 
     memcpy(new_nodes, heap->nodes,
-           sizeof(struct minheap_node *) * heap->capacity);
+           sizeof(struct minheap_node *) * MINHEAP_CAPACITY(heap));
 
     kfree(heap->nodes);
     heap->nodes = new_nodes;
@@ -79,8 +82,10 @@ void minheap_expand(struct minheap *heap, uint32_t new_size) {
 void minheap_insert(struct minheap *heap, struct minheap_node *node,
                     uint64_t key) {
     enum irql irql = spin_lock(&heap->lock);
-    if (heap->size >= heap->capacity) {
-        uint32_t new_cap = heap->capacity * 2;
+    uint32_t heap_cap = MINHEAP_CAPACITY(heap);
+    uint32_t heap_size = MINHEAP_SIZE(heap);
+    if (heap_size >= heap_cap) {
+        uint32_t new_cap = heap_cap * 2;
         struct minheap_node **new_nodes =
             kmalloc(sizeof(struct minheap_node *) * new_cap);
 
@@ -90,34 +95,37 @@ void minheap_insert(struct minheap *heap, struct minheap_node *node,
         }
 
         memcpy(new_nodes, heap->nodes,
-               sizeof(struct minheap_node *) * heap->capacity);
+               sizeof(struct minheap_node *) * heap_cap);
         kfree(heap->nodes);
         heap->nodes = new_nodes;
-        heap->capacity = new_cap;
+        MINHEAP_SET_CAPACITY(heap, new_cap);
     }
 
-    MINHEAP_NODE_SET_INDEX(node, heap->size);
+    MINHEAP_NODE_SET_INDEX(node, heap_size);
     MINHEAP_NODE_SET_KEY(node, key);
 
-    heap->nodes[heap->size++] = node;
+    heap->nodes[heap_size] = node;
+    MINHEAP_SET_SIZE(heap, heap_size + 1);
 
-    minheap_sift_up(heap, node->index);
+    minheap_sift_up(heap, MINHEAP_NODE_INDEX(node));
     spin_unlock(&heap->lock, irql);
 }
 
 void minheap_remove(struct minheap *heap, struct minheap_node *node) {
     enum irql irql = spin_lock(&heap->lock);
     uint32_t idx = MINHEAP_NODE_INDEX(node);
+    uint32_t heap_size = MINHEAP_SIZE(heap);
 
-    if (idx >= MINHEAP_SIZE(heap)) {
+    if (idx >= heap_size) {
         spin_unlock(&heap->lock, irql);
         return;
     }
 
-    heap->size--;
-    if (idx != heap->size) {
-        heap->nodes[idx] = heap->nodes[heap->size];
-        heap->nodes[idx]->index = idx;
+    heap_size--;
+    MINHEAP_SET_SIZE(heap, heap_size);
+    if (idx != heap_size) {
+        heap->nodes[idx] = heap->nodes[heap_size];
+        MINHEAP_NODE_SET_INDEX(heap->nodes[idx], idx);
         minheap_sift_down(heap, idx);
         minheap_sift_up(heap, idx);
     }
@@ -127,14 +135,16 @@ void minheap_remove(struct minheap *heap, struct minheap_node *node) {
 }
 
 struct minheap_node *minheap_pop(struct minheap *heap) {
-    if (MINHEAP_SIZE(heap) == 0)
+    uint32_t heap_size = MINHEAP_SIZE(heap);
+    if (heap_size == 0)
         return NULL;
 
     struct minheap_node *top = heap->nodes[0];
-    heap->size--;
-    if (heap->size > 0) {
-        heap->nodes[0] = heap->nodes[heap->size];
-        heap->nodes[0]->index = 0;
+    heap_size--;
+    MINHEAP_SET_SIZE(heap, heap_size);
+    if (heap_size > 0) {
+        heap->nodes[0] = heap->nodes[heap_size];
+        MINHEAP_NODE_SET_INDEX(heap->nodes[0], 0);
         minheap_sift_down(heap, 0);
     }
 

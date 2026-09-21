@@ -21,7 +21,7 @@ static enum irq_result kfree_irq_test_irq(void *ctx, uint8_t vector,
         possible = total - atomic_load(&kfree_irq_test_consumed);
 
     for (int i = 0; i < possible; i++) {
-        size_t idx = atomic_fetch_add(&kfree_irq_test_consumed, 1);
+        size_t idx = atomic_inc(&kfree_irq_test_consumed);
         if (idx < total) {
             kfree_defer_irq(kfree_irq_allocs[idx]);
             int spins = prng_next() & KFREE_IRQ_TEST_SPIN_MASK;

@@ -34,12 +34,11 @@ void workqueue_link_thread_and_worker(struct worker *worker,
 }
 
 static bool claim_spawner(struct workqueue *p) {
-    return atomic_flag_test_and_set_explicit(&p->spawner_flag_internal,
-                                             memory_order_acq_rel) == 0;
+    return atomic_flag_test_and_set_acq_rel(&p->spawner_flag_internal) == 0;
 }
 
 static void release_spawner(struct workqueue *p) {
-    atomic_flag_clear_explicit(&p->spawner_flag_internal, memory_order_release);
+    atomic_flag_clear_release(&p->spawner_flag_internal);
 }
 
 static void worker_init(struct workqueue *queue, struct worker *w,
@@ -53,7 +52,7 @@ static void worker_init(struct workqueue *queue, struct worker *w,
 
     t->private = w;
 
-    atomic_fetch_add(&queue->num_workers, 1);
+    atomic_inc(&queue->num_workers);
 }
 
 static struct thread *workqueue_worker_thread_create(struct workqueue *queue) {

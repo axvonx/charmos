@@ -78,8 +78,9 @@ CMDLINE_CHILDREN_DECLARE(
 static void watchdog_percpu_ctor(struct watchdog_percpu *pcpu, cpu_id_t cpu) {
     pcpu->id = cpu;
     pcpu->pets_enabled = false;
-    pcpu->pets = 0;
-    pcpu->anti_pets = 0;
+    atomic_init(&pcpu->pets, 0);
+    atomic_init(&pcpu->anti_pets, 0);
+    atomic_init(&pcpu->heartbeat_seq, 0);
     watchdog_buckets_init(&pcpu->buckets);
     pcpu->timer.func = watchdog_worker_timer_func;
     pcpu->timer.flags =
@@ -174,9 +175,7 @@ static void watchdog_buckets_inc_heartbeat(struct watchdog_buckets *buckets,
 static void watchdog_do_percpu_heartbeat(time_ms_t now) {
     kassert(PERCPU_READY(watchdog_percpu));
 
-    atomic_fetch_add_explicit(
-        &PERCPU_PTR(TOPC_IRQL, watchdog_percpu)->heartbeat_seq, 1,
-        memory_order_relaxed);
+    atomic_inc_relaxed(&PERCPU_PTR(TOPC_IRQL, watchdog_percpu)->heartbeat_seq);
 
     watchdog_buckets_inc_heartbeat(
         &PERCPU_READ(TOPC_IRQL, watchdog_percpu).buckets, now);
@@ -310,8 +309,8 @@ static void watchdog_start_petting(cpu_id_t cpu) {
     struct watchdog_percpu *pcpu = PERCPU_PTR_FOR_CPU(watchdog_percpu, cpu);
     if (cpu == 0) {
         pcpu->pets_enabled = true;
-        pcpu->anti_pets = 0;
-        pcpu->pets = 0;
+        atomic_store_relaxed(&pcpu->anti_pets, 0);
+        atomic_store_relaxed(&pcpu->pets, 0);
         return; /* We don't touch the seqcount for BSP */
     }
 
@@ -322,9 +321,8 @@ static void watchdog_start_petting(cpu_id_t cpu) {
 static void watchdog_read_pets_for(cpu_id_t cpu, size_t *out_pets,
                                    size_t *out_anti_pets) {
     struct watchdog_percpu *pcpu = PERCPU_PTR_FOR_CPU(watchdog_percpu, cpu);
-    *out_pets = atomic_load_explicit(&pcpu->pets, memory_order_relaxed);
-    *out_anti_pets =
-        atomic_load_explicit(&pcpu->anti_pets, memory_order_relaxed);
+    *out_pets = atomic_load_relaxed(&pcpu->pets);
+    *out_anti_pets = atomic_load_relaxed(&pcpu->anti_pets);
 }
 
 /* This is the real meat and potatoes of this whole subsystem, and it
@@ -644,8 +642,7 @@ static void watchdog_master_process_stall(void) {
         struct watchdog_master_cpu *mcpu = &watchdog_master.cpus[i];
         struct watchdog_percpu *pcpu = PERCPU_PTR_FOR_CPU(watchdog_percpu, i);
 
-        uint64_t seen =
-            atomic_load_explicit(&pcpu->heartbeat_seq, memory_order_relaxed);
+        uint64_t seen = atomic_load_relaxed(&pcpu->heartbeat_seq);
 
         if (seen != mcpu->last_seen_heartbeat) {
             mcpu->last_seen_heartbeat = seen;
@@ -799,7 +796,7 @@ void watchdog_pet(void) {
         /* The caller must make sure we cannot be preempted */
         if (this->pets_enabled) {
             kassert(irql_get() >= IRQL_DISPATCH_LEVEL);
-            this->pets++;
+            atomic_inc_relaxed(&this->pets);
         }
     }
 }
@@ -810,7 +807,7 @@ void watchdog_anti_pet(void) {
         /* The caller must make sure we cannot be preempted */
         if (this->pets_enabled) {
             kassert(irql_get() >= IRQL_DISPATCH_LEVEL);
-            this->anti_pets++;
+            atomic_inc_relaxed(&this->anti_pets);
         }
     }
 }

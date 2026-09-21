@@ -78,7 +78,7 @@ static void daemon_thread_exit(struct daemon *daemon,
 
     if (!background) {
         daemon_list_del(daemon, self);
-        atomic_fetch_sub(&daemon->attrs.timesharing_threads, 1);
+        atomic_dec(&daemon->attrs.timesharing_threads);
     } else {
         daemon->background_thread = NULL;
         set_bg_present(daemon, false);
@@ -110,21 +110,21 @@ static void daemon_work_execute(struct daemon_work *w,
     mark_daemon_thread_executing(self, false);
 
     /* Exit if we are destroying */
-    if (self->daemon->state == DAEMON_STATE_DESTROYING)
+    if (atomic_load_acq(&self->daemon->state) == DAEMON_STATE_DESTROYING)
         self->command = DAEMON_THREAD_COMMAND_EXIT;
 }
 
 static void daemon_wait(struct daemon *daemon, struct daemon_thread *self) {
-    atomic_fetch_add(&daemon->attrs.idle_timesharing_threads, 1);
+    atomic_inc(&daemon->attrs.idle_timesharing_threads);
 
     if (self->background)
         semaphore_wait(&daemon->bg_sem);
     else
         semaphore_wait(&daemon->ts_sem);
 
-    atomic_fetch_sub(&daemon->attrs.idle_timesharing_threads, 1);
+    atomic_dec(&daemon->attrs.idle_timesharing_threads);
 
-    if (daemon->state == DAEMON_STATE_DESTROYING)
+    if (atomic_load_acq(&daemon->state) == DAEMON_STATE_DESTROYING)
         daemon_thread_exit(daemon, self);
 }
 
@@ -199,7 +199,7 @@ daemon_thread_spawn(struct daemon *daemon,
     }
 
     if (!t->background)
-        atomic_fetch_add(&daemon->attrs.timesharing_threads, 1);
+        atomic_inc(&daemon->attrs.timesharing_threads);
 
     t->thread->allowed_cpus = daemon->attrs.thread_cpu_mask;
     thread_enqueue(t->thread);
@@ -251,9 +251,9 @@ struct daemon *daemon_create(const char *fmt, struct daemon_attributes *attrs,
         daemon->name = name;
     }
 
-    daemon->attrs.background_thread_present = false;
-    daemon->attrs.idle_timesharing_threads = 0;
-    daemon->attrs.timesharing_threads = 0;
+    atomic_init(&daemon->attrs.background_thread_present, false);
+    atomic_init(&daemon->attrs.idle_timesharing_threads, 0);
+    atomic_init(&daemon->attrs.timesharing_threads, 0);
 
     refcount_init(&daemon->refcount, 1);
     spinlock_init(&daemon->lock);
@@ -295,7 +295,7 @@ struct daemon *daemon_create(const char *fmt, struct daemon_attributes *attrs,
         set_bg_present(daemon, true);
     }
 
-    daemon->state = DAEMON_STATE_ACTIVE;
+    atomic_store_relaxed(&daemon->state, DAEMON_STATE_ACTIVE);
 
     va_end(args);
     return daemon;
@@ -325,7 +325,7 @@ static void boost_bg_thread_to_ts(struct daemon *daemon) {
 /* TODO: Actually use a refcount here */
 void daemon_destroy(struct daemon *daemon) {
     /* Make all the threads go sleep on the semaphore */
-    atomic_store(&daemon->state, DAEMON_STATE_DESTROYING);
+    atomic_store_release(&daemon->state, DAEMON_STATE_DESTROYING);
 
     boost_bg_thread_to_ts(daemon);
 
@@ -394,11 +394,12 @@ void daemon_print(struct daemon *daemon) {
     printf("                  .max_timesharing_threads = %zu\n",
            attrs->max_timesharing_threads);
     printf("                  .idle_timesharing_threads = %zu\n",
-           attrs->idle_timesharing_threads);
+           atomic_load_relaxed(&attrs->idle_timesharing_threads));
     printf("                  .timesharing_threads = %zu\n",
-           attrs->timesharing_threads);
+           atomic_load_relaxed(&attrs->timesharing_threads));
     printf("                  .flags = 0b%b\n", attrs->flags);
     printf("             }\n");
-    printf("    .state = %s\n", daemon_state_str(daemon->state));
+    printf("    .state = %s\n",
+           daemon_state_str(atomic_load_relaxed(&daemon->state)));
     printf("}\n");
 }

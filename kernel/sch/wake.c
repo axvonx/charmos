@@ -2,8 +2,9 @@
 
 struct scheduler *scheduler_select_best_for_thread(struct thread *t) {
     /* Pinned threads are already placed, don't bother here */
-    if (thread_test_flag(t, THREAD_FLAG_PINNED) && t->scheduler)
-        return t->scheduler;
+    struct scheduler *pinned_sched = atomic_load_acq(&t->scheduler);
+    if (thread_test_flag(t, THREAD_FLAG_PINNED) && pinned_sched)
+        return pinned_sched;
 
     /* IMPORTANT NOTE: If a thread that was newly spawned as PINNED,
      * we do NOT fail the selection. We select as if it's simply
@@ -46,7 +47,8 @@ static void resume_thread(struct thread *t, enum thread_resume_reason reason,
     enum thread_state state = thread_get_state(t);
     if (completion) {
         kassert(t->object_wait);
-    } else if (!t->object_wait || t->wait_type != THREAD_WAIT_INTERRUPTIBLE) {
+    } else if (!t->object_wait ||
+               thread_get_wait_type(t) != THREAD_WAIT_INTERRUPTIBLE) {
 
         if (state == THREAD_STATE_RUNNING || state == THREAD_STATE_READY)
             scheduler_force_resched(last);
