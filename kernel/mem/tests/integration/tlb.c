@@ -20,7 +20,7 @@ static void tlb_reader(void *arg) {
 
 TEST_DECLARE_INTEGRATION(mem, tlb_shootdown_sync,
                          TEST_INTENSITY_CORES(1, 1, 4, "threads/core"),
-                         .min_cores = 2, .min_ram_mb = 8) {
+                         .min_cores = 2, .min_ram_mib = 8) {
     size_t nthreads =
         MIN(ctx->intensity_val ? ctx->intensity_val : global.core_count,
             TLB_MAX_TEST_THREADS);
@@ -69,7 +69,7 @@ TEST_DECLARE_INTEGRATION(mem, tlb_shootdown_sync,
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_INTEGRATION(mem, tlb_shootdown_async, .min_ram_mb = 8) {
+TEST_DECLARE_INTEGRATION(mem, tlb_shootdown_async, .min_ram_mib = 8) {
     paddr_t p1 = pmm_alloc_page();
     paddr_t p2 = pmm_alloc_page();
     TEST_ASSERT(p1 && p2);
@@ -96,7 +96,7 @@ TEST_DECLARE_INTEGRATION(mem, tlb_shootdown_async, .min_ram_mb = 8) {
 }
 
 TEST_DECLARE_INTEGRATION(mem, tlb_shootdown_flush_all,
-                         TEST_INTENSITY(64, 256, 4096), .min_ram_mb = 8) {
+                         TEST_INTENSITY(64, 256, 4096), .min_ram_mib = 8) {
     size_t iters =
         ctx->intensity_val ? ctx->intensity_val : (TLB_QUEUE_SIZE * 4);
 

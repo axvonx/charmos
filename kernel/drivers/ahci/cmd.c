@@ -19,7 +19,7 @@
 #include <thread/thread.h>
 #include <time/spin_sleep.h>
 
-#define MAX_PRDT_ENTRY_SIZE MB(4)
+#define MAX_PRDT_ENTRY_SIZE MIB(4)
 
 /* TODO: horrible code - bit-op spam */
 void ahci_process_completions(struct ahci_device *dev, uint32_t port) {

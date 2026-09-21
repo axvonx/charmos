@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <types/types.h>
 
-#define BOOT_BITMAP_SIZE (MB(128) / PAGE_SIZE / 8)
+#define BOOT_BITMAP_SIZE (MIB(128) / PAGE_SIZE / 8)
 
 extern uint8_t boot_bitmap[BOOT_BITMAP_SIZE];
 extern uint8_t *bitmap;

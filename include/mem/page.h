@@ -11,9 +11,9 @@
 
 struct folio;
 
-#define PAGE_SIZE KB(4)
-#define PAGE_2MB MB(2)
-#define PAGE_1GB GB(1)
+#define PAGE_SIZE KIB(4)
+#define PAGE_2MB MIB(2)
+#define PAGE_1GB GIB(1)
 
 #define PAGE_PRESENT_SHIFT (0)
 #define PAGE_PRESENT (0x1UL)

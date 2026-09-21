@@ -231,7 +231,7 @@ static enum test_skip_reason test_check_preconditions(const struct test *t) {
     if (t->min_cores && global.core_count < t->min_cores)
         return TEST_SKIP_INSUFFICIENT_CORES;
 
-    if (t->min_ram_mb && pmm_get_usable_ram() < MB(t->min_ram_mb))
+    if (t->min_ram_mib && pmm_get_usable_ram() < MIB(t->min_ram_mib))
         return TEST_SKIP_RAM_LOW;
 
     if (t->required_fs != FS_UNKNOWN &&

@@ -162,7 +162,7 @@ static enum fs_type detect_partition_fs(struct block_device *disk,
     if (memcmp(&sector[3], "NTFS    ", 8) == 0)
         return FS_NTFS;
 
-    uint64_t ext_sb_offset = KB(1);
+    uint64_t ext_sb_offset = KIB(1);
     uint64_t ext_sector_offset =
         part->start_lba + (ext_sb_offset / disk->sector_size);
     uint64_t ext_offset_within_sector = ext_sb_offset % disk->sector_size;

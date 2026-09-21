@@ -5,7 +5,7 @@
 
 #define KMALLOC_ALIGNMENT_TEST(name, align)                                    \
     TEST_DECLARE_SMOKE(slab, aligned_alloc##name##_test,                       \
-                       TEST_INTENSITY(32, 512, 2048), .min_ram_mb = 8) {       \
+                       TEST_INTENSITY(32, 512, 2048), .min_ram_mib = 8) {      \
         size_t alloc_times = ctx->intensity_val ? ctx->intensity_val : 512;    \
         for (uint64_t i = 0; i < alloc_times; i++) {                           \
             void *ptr = kmalloc_aligned(align, align);                         \

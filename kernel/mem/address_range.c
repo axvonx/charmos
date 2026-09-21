@@ -22,10 +22,10 @@ LOG_HANDLE_DECLARE_PRINT(address_range);
 static struct rbt ar_tree;
 
 static cc_unused void print_bytes(uint64_t bytes) {
-    const uint64_t kib = KB(1);
-    const uint64_t mib = MB(1);
-    const uint64_t gib = GB(1);
-    const uint64_t tib = TB(1);
+    const uint64_t kib = KIB(1);
+    const uint64_t mib = MIB(1);
+    const uint64_t gib = GIB(1);
+    const uint64_t tib = TIB(1);
     const uint64_t pib = 1024ULL * tib;
     const uint64_t eib = 1024ULL * pib;
 
@@ -193,25 +193,25 @@ void address_ranges_init() {
 }
 
 static void format_size(char *buf, size_t bufsz, size_t bytes) {
-    if (bytes >= GB(1)) {
-        size_t whole = bytes / GB(1);
-        size_t frac = ((bytes & (GB(1) - 1)) * 100) / GB(1);
+    if (bytes >= GIB(1)) {
+        size_t whole = bytes / GIB(1);
+        size_t frac = ((bytes & (GIB(1) - 1)) * 100) / GIB(1);
         if (frac == 0) {
             snprintf(buf, bufsz, "%zu GiB", whole);
         } else {
             snprintf(buf, bufsz, "%zu.%02zu GiB", whole, frac);
         }
-    } else if (bytes >= MB(1)) {
-        size_t whole = bytes / MB(1);
-        size_t frac = ((bytes & (MB(1) - 1)) * 100) / MB(1);
+    } else if (bytes >= MIB(1)) {
+        size_t whole = bytes / MIB(1);
+        size_t frac = ((bytes & (MIB(1) - 1)) * 100) / MIB(1);
         if (frac == 0) {
             snprintf(buf, bufsz, "%zu MiB", whole);
         } else {
             snprintf(buf, bufsz, "%zu.%02zu MiB", whole, frac);
         }
-    } else if (bytes >= KB(1)) {
-        size_t whole = bytes / KB(1);
-        size_t frac = ((bytes & (KB(1) - 1)) * 100) / KB(1);
+    } else if (bytes >= KIB(1)) {
+        size_t whole = bytes / KIB(1);
+        size_t frac = ((bytes & (KIB(1) - 1)) * 100) / KIB(1);
         if (frac == 0) {
             snprintf(buf, bufsz, "%zu KiB", whole);
         } else {

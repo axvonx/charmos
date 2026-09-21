@@ -242,7 +242,7 @@ static void asan_map_early_shadow(void) {
 
     asan_info("shared shadow: [%lx, %lx), %zu GiB of window on one zero page "
               "at %lx\n",
-              start, end, (size_t) ((end - start) / GB(1)),
+              start, end, (size_t) ((end - start) / GIB(1)),
               asan_zero_shadow_phys);
 }
 

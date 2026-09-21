@@ -9,7 +9,7 @@ TEST_DECLARE_SMOKE(vas, reserve_query_free) {
     struct vas *vas = vas_create(base, base + PAGE_1GB);
     TEST_ASSERT_NONNULL(vas);
 
-    size_t sizes[] = {PAGE_SIZE, KB(64), PAGE_2MB};
+    size_t sizes[] = {PAGE_SIZE, KIB(64), PAGE_2MB};
     vaddr_t addresses[TEST_ARRAY_LEN(sizes)];
     for (size_t i = 0; i < TEST_ARRAY_LEN(sizes); i++) {
         addresses[i] = vas_alloc(vas, sizes[i], PAGE_SIZE);

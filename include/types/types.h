@@ -19,6 +19,18 @@ ct_strong_int(freq_khz, FREQ_KHZ, uint64_t, UINT64_MAX);
 ct_strong_int(freq_mhz, FREQ_MHZ, uint64_t, UINT64_MAX);
 ct_strong_int(freq_ghz, FREQ_GHZ, uint64_t, UINT64_MAX);
 
+/* Size (binary/IEC units, powers of 1024) */
+ct_strong_int(sz_kib, SZ_KIB, size_t, SIZE_MAX);
+ct_strong_int(sz_mib, SZ_MIB, size_t, SIZE_MAX);
+ct_strong_int(sz_gib, SZ_GIB, size_t, SIZE_MAX);
+ct_strong_int(sz_tib, SZ_TIB, size_t, SIZE_MAX);
+
+/* Size (decimal/SI units, powers of 1000) */
+ct_strong_int(sz_kb, SZ_KB, size_t, SIZE_MAX);
+ct_strong_int(sz_mb, SZ_MB, size_t, SIZE_MAX);
+ct_strong_int(sz_gb, SZ_GB, size_t, SIZE_MAX);
+ct_strong_int(sz_tb, SZ_TB, size_t, SIZE_MAX);
+
 /* Aliases over UNIX identifiers */
 ct_strong_int(inode, INODE, uint32_t, UINT32_MAX);
 typedef uint16_t mode_t;

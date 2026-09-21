@@ -24,7 +24,7 @@ static struct bio_request *rqs[BIO_SCHED_TEST_RUNS_MAX] = {0};
 static uint8_t *buffers[BIO_SCHED_TEST_RUNS_MAX] = {0};
 
 TEST_DECLARE_INTEGRATION(bio_sched, delay_enqueue,
-                         TEST_INTENSITY(64, 1024, 4096), .min_ram_mb = 8,
+                         TEST_INTENSITY(64, 1024, 4096), .min_ram_mib = 8,
                          .required_fs = FS_EXT2) {
     EXT2_ROOT;
     struct ext2_fs *fs = root->fs_data;

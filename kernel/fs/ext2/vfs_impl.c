@@ -354,7 +354,7 @@ enum err ext2_mount(struct partition *p, struct ext2_fs *fs,
     fs->inodes_count = sblock->inodes_count;
     fs->inodes_per_group = sblock->inodes_per_group;
     fs->inode_size = sblock->inode_size;
-    fs->block_size = KB(1) << sblock->log_block_size;
+    fs->block_size = KIB(1) << sblock->log_block_size;
     fs->blocks_per_group = sblock->blocks_per_group;
 
     spinlock_init(&fs->lock);
@@ -363,8 +363,8 @@ enum err ext2_mount(struct partition *p, struct ext2_fs *fs,
 
     fs->num_groups = DIV_ROUND_UP(fs->inodes_count, fs->inodes_per_group);
 
-    uint32_t superblock_block = KB(1) / fs->block_size;
-    uint32_t gdt_block = (fs->block_size == KB(1)) ? 2 : 1;
+    uint32_t superblock_block = KIB(1) / fs->block_size;
+    uint32_t gdt_block = (fs->block_size == KIB(1)) ? 2 : 1;
 
     fs->sblock =
         (void *) ext2_block_read(fs, superblock_block, &fs->sbcache_ent);

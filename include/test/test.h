@@ -170,9 +170,9 @@ struct test {
 
     size_t run_times;
 
-    /* TODO: typed sz_*_t */
+    /* TODO: typed core-count strong int */
     size_t min_cores;
-    size_t min_ram_mb;
+    sz_mib_t min_ram_mib;
     enum fs_type required_fs;
 
     size_t inject_count;
@@ -269,7 +269,7 @@ struct test_globals {
                            .intensity = TEST_INTENSITY_SENTINEL,               \
                            .intensity_desc = TEST_INTENSITY_DESC_SENTINEL,     \
                            .min_cores = 0,                                     \
-                           .min_ram_mb = 0,                                    \
+                           .min_ram_mib = 0,                                   \
                            .required_fs = FS_UNKNOWN,                          \
                            ##__VA_ARGS__};                                     \
                                                                                \
@@ -313,7 +313,7 @@ struct test_globals {
 #include <test/assert.h>
 
 #define ABORT_IF_RAM_LOW()                                                     \
-    if (pmm_get_usable_ram() < MB(8)) {                                        \
+    if (pmm_get_usable_ram() < MIB(8)) {                                       \
         test_info("RAM too low for test to continue!\n");                      \
         return TEST_SKIP(TEST_SKIP_RAM_LOW);                                   \
     }

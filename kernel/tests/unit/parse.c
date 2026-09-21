@@ -7,21 +7,21 @@ TEST_GROUP_DECLARE(parse);
 TEST_DECLARE_UNIT(parse, data_size_units) {
     uint64_t val = 0;
 
-    TEST_ASSERT(parse_is_data_size("1024", &val) && val == KB(1));
-    TEST_ASSERT(parse_is_data_size("1K", &val) && val == KB(1));
-    TEST_ASSERT(parse_is_data_size("4KiB", &val) && val == KB(4));
-    TEST_ASSERT(parse_is_data_size("16M", &val) && val == MB(16));
-    TEST_ASSERT(parse_is_data_size("2G", &val) && val == GB(2));
-    TEST_ASSERT(parse_is_data_size("1T", &val) && val == TB(1));
+    TEST_ASSERT(parse_is_data_size("1024", &val) && val == KIB(1));
+    TEST_ASSERT(parse_is_data_size("1K", &val) && val == KIB(1));
+    TEST_ASSERT(parse_is_data_size("4KiB", &val) && val == KIB(4));
+    TEST_ASSERT(parse_is_data_size("16M", &val) && val == MIB(16));
+    TEST_ASSERT(parse_is_data_size("2G", &val) && val == GIB(2));
+    TEST_ASSERT(parse_is_data_size("1T", &val) && val == TIB(1));
 
-    TEST_ASSERT(parse_is_data_size("4kib", &val) && val == KB(4));
-    TEST_ASSERT(parse_is_data_size("8mb", &val) && val == MB(8));
+    TEST_ASSERT(parse_is_data_size("4kib", &val) && val == KIB(4));
+    TEST_ASSERT(parse_is_data_size("8mb", &val) && val == MIB(8));
 
     TEST_ASSERT(!parse_is_data_size("", NULL));
     TEST_ASSERT(!parse_is_data_size("invalid", NULL));
     TEST_ASSERT(!parse_is_data_size("1024XYZ", NULL));
 
-    TEST_ASSERT(parse_is_data_size("64M", &val) && val == MB(64));
+    TEST_ASSERT(parse_is_data_size("64M", &val) && val == MIB(64));
     TEST_ASSERT(!parse_is_data_size("not_a_size", NULL));
 
     return TEST_SUCCESS;

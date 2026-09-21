@@ -375,7 +375,7 @@ TEST_DECLARE_UNIT(vas, alignment_and_partial_edge_buckets) {
     vaddr_t base = TEST_VAS_BASE + PAGE_SIZE;
     struct vas *vas = vas_create(base, TEST_VAS_BASE + 2 * PAGE_1GB);
     TEST_ASSERT_NONNULL(vas);
-    size_t aligns[] = {PAGE_SIZE, KB(64), PAGE_2MB, PAGE_1GB};
+    size_t aligns[] = {PAGE_SIZE, KIB(64), PAGE_2MB, PAGE_1GB};
     vaddr_t addresses[TEST_ARRAY_LEN(aligns)];
     for (size_t i = 0; i < TEST_ARRAY_LEN(aligns); i++) {
         addresses[i] = vas_alloc(vas, 3 * PAGE_SIZE, aligns[i]);
@@ -615,7 +615,7 @@ TEST_DECLARE_UNIT(vas, seeded_churn_against_interval_oracle) {
             live -= slots[slot].size;
             slots[slot].addr = 0;
         } else {
-            size_t size = 1 + prng_splitmix64_next(&random) % MB(16);
+            size_t size = 1 + prng_splitmix64_next(&random) % MIB(16);
             size_t align = BIT(prng_splitmix64_next(&random) % 25);
             vaddr_t addr = vas_alloc(vas, size, align);
             if (addr) {

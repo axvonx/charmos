@@ -2,7 +2,7 @@
 #include <math/units.h>
 
 TEST_DECLARE_UNIT(mem, kmalloc_zero_large_reuse) {
-    const size_t size = KB(64);
+    const size_t size = KIB(64);
     for (uint32_t iteration = 0; iteration < 32; iteration++) {
         uint8_t *buffer =
             kmalloc(size, ALLOC_FLAGS_ZERO,

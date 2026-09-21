@@ -1,7 +1,7 @@
 #include "mem/tests/test_internal.h"
 
 TEST_DECLARE_UNIT(mem, pmm_alloc_free_stress, TEST_INTENSITY(256, 2048, 32768),
-                  .min_ram_mb = 8) {
+                  .min_ram_mib = 8) {
     size_t iters = ctx->intensity_val ? ctx->intensity_val : 2048;
     paddr_t *pmm_stress_test_ptrs = kmalloc(sizeof(paddr_t) * iters);
     TEST_ASSERT_NONNULL(pmm_stress_test_ptrs);

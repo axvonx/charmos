@@ -83,25 +83,25 @@ static bool parse_data_size_internal(const char *str, uint64_t *out) {
     switch (*str) {
     case 'K':
     case 'k':
-        multiplier = KB(1);
+        multiplier = KIB(1);
         has_prefix = true;
         str++;
         break;
     case 'M':
     case 'm':
-        multiplier = MB(1);
+        multiplier = MIB(1);
         has_prefix = true;
         str++;
         break;
     case 'G':
     case 'g':
-        multiplier = GB(1);
+        multiplier = GIB(1);
         has_prefix = true;
         str++;
         break;
     case 'T':
     case 't':
-        multiplier = TB(1);
+        multiplier = TIB(1);
         has_prefix = true;
         str++;
         break;

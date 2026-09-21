@@ -1,6 +1,6 @@
 #include "mem/tests/test_internal.h"
 
-TEST_DECLARE_UNIT(mem, tlb_shootdown_single_cpu, .min_ram_mb = 8) {
+TEST_DECLARE_UNIT(mem, tlb_shootdown_single_cpu, .min_ram_mib = 8) {
     paddr_t p1 = pmm_alloc_page();
     paddr_t p2 = pmm_alloc_page();
     TEST_ASSERT(p1 && p2);
