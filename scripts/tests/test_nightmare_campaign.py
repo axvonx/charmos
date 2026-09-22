@@ -124,9 +124,8 @@ class GateExecutionTests(unittest.TestCase):
             suite=S.load(SUITES / "overnight_locks.toml"),
             base_seed=GATE_SEED,
             campaign_id="test-campaign",
-            budget_ms=1,  # no room for a real boot
             out_dir=tmp,
-            **kw,
+            **{"budget_ms": 1, **kw},  # default: no room for a real boot
         )
 
     def test_the_gate_boot_runs_first_and_into_its_own_directory(self) -> None:
@@ -161,10 +160,10 @@ class GateExecutionTests(unittest.TestCase):
         )
         self.assertLess(runner.calls[0]["timeout_ms"], real)
 
-    def test_a_failing_gate_stops_the_campaign(self) -> None:
+    def test_a_gate_the_rig_could_not_run_stops_the_campaign(self) -> None:
         import tempfile
 
-        runner = RecordingBootRunner(status=C.BootStatus.CRASH.value)
+        runner = RecordingBootRunner(status=C.BootStatus.TIMEOUT.value)
         with tempfile.TemporaryDirectory() as tmp:
             result = C.CampaignRunner(
                 self.manifest(Path(tmp)), boot_runner=runner
@@ -173,6 +172,7 @@ class GateExecutionTests(unittest.TestCase):
         self.assertEqual(len(runner.calls), 1)
         self.assertFalse(result.ok)
         self.assertEqual(result.status, C.CampaignStatus.INFRASTRUCTURE.value)
+        self.assertTrue(result.gated_out)
 
 
 class QemuInfrastructureRetryTests(unittest.TestCase):

@@ -289,6 +289,8 @@ def aggregate(
 
     rows: list[dict[str, Any]] = []
     findings: dict[str, dict[str, Any]] = {}
+    crashed_boots = 0
+    stalled_boots = 0
     for manifest_id, manifest_expected in sorted(expected.items()):
         matches = results_by_manifest.pop(manifest_id, [])
         if not matches:
@@ -410,6 +412,14 @@ def aggregate(
         campaign: dict[str, Any] = (
             campaign_value if isinstance(campaign_value, dict) else {}
         )
+        summary_value = campaign.get("summary")
+        summary: dict[str, Any] = (
+            summary_value if isinstance(summary_value, dict) else {}
+        )
+        crashed = _count(summary.get("crashed_boots"))
+        stalled = _count(summary.get("stalled_boots"))
+        crashed_boots += crashed
+        stalled_boots += stalled
         for finding in campaign.get("findings", []):
             if not isinstance(finding, dict):
                 continue
@@ -439,6 +449,8 @@ def aggregate(
                 "health": health,
                 "discovery": discovery.get("kind", "none"),
                 "finding_count": discovery.get("finding_count", 0),
+                "crashed_boots": crashed,
+                "stalled_boots": stalled,
                 "result": str(path),
                 "replay": replay,
                 "trace": campaign.get("trace", []),
@@ -466,6 +478,8 @@ def aggregate(
         "discovery": {
             "finding_count": sum(item["occurrences"] for item in findings.values()),
             "unique_findings": len(findings),
+            "crashed_boots": crashed_boots,
+            "stalled_boots": stalled_boots,
         },
         "infrastructure": {"issue_count": len(issues), "issues": issues},
         "results": rows,
@@ -474,26 +488,43 @@ def aggregate(
     return AggregateReport(document)
 
 
+def _count(value: Any) -> int:
+    return value if isinstance(value, int) and not isinstance(value, bool) else 0
+
+
 def render_markdown(report: AggregateReport) -> str:
     document = report.document
-    icon = "⚠️" if report.partial else "✅"
+    discovery = document["discovery"]
+    found_something = bool(
+        discovery["finding_count"]
+        or discovery.get("crashed_boots")
+        or discovery.get("stalled_boots")
+    )
+    if report.partial:
+        icon = "⚠️"
+    elif found_something:
+        icon = "🐛"
+    else:
+        icon = "✅"
     lines = [
         f"## {icon} Nightmare batch `{document['batch_id']}`",
         "",
         f"Results: **{document['received_results']}/{document['expected_manifests']}** · "
-        f"findings: **{document['discovery']['finding_count']}** · "
+        f"findings: **{discovery['finding_count']}** · "
+        f"crashed boots: **{discovery.get('crashed_boots', 0)}** · "
+        f"stalled boots: **{discovery.get('stalled_boots', 0)}** · "
         f"infrastructure issues: **{document['infrastructure']['issue_count']}**",
         "",
         "### Runner results",
         "",
-        "| Manifest | Build | Lifecycle | Health | Discovery | Findings |",
-        "| --- | --- | --- | --- | --- | ---: |",
+        "| Manifest | Build | Lifecycle | Health | Discovery | Findings | Crashed |",
+        "| --- | --- | --- | --- | --- | ---: | ---: |",
     ]
     for row in document["results"]:
         lines.append(
             f"| `{row['manifest_id']}` | `{row.get('bundle_id', '-')}` | "
             f"{row['state']} | {row.get('health', '-')} | {row.get('discovery', '-')} | "
-            f"{row.get('finding_count', 0)} |"
+            f"{row.get('finding_count', 0)} | {row.get('crashed_boots', 0)} |"
         )
     if document["findings"]:
         lines.extend(["", "### Findings", ""])

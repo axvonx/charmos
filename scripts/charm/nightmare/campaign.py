@@ -1,4 +1,6 @@
+import hashlib
 import json
+import re
 import shutil
 import signal
 import subprocess
@@ -47,6 +49,14 @@ FULL_DIAGNOSTIC_STATUSES = {
     BootStatus.FINDING.value,
     BootStatus.STALL.value,
     BootStatus.CRASH.value,
+}
+
+INFRASTRUCTURE_STATUSES = {
+    BootStatus.FAIL.value,
+    BootStatus.TIMEOUT.value,
+    BootStatus.INFRA.value,
+    BootStatus.UNKNOWN.value,
+    BootStatus.SKIP.value,
 }
 
 
@@ -175,15 +185,32 @@ class CampaignResult:
     boots: list[BootResult]
     findings: list[FindingSummary]
     trace: list[TraceSample]
+    gate: BootResult | None = None
+
+    @property
+    def crashed_boots(self) -> int:
+        return sum(
+            1 for boot in self.all_boots if boot.status == BootStatus.CRASH.value
+        )
+
+    @property
+    def gated_out(self) -> bool:
+        """True when the gate boot ended the campaign"""
+        return self.status == CampaignStatus.INFRASTRUCTURE.value and not self.boots
+
+    @property
+    def all_boots(self) -> list[BootResult]:
+        """Campaign boots plus the gate boot when worth reporting"""
+        return [*self.boots, self.gate] if self.gate is not None else list(self.boots)
 
     @property
     def discovery_kind(self) -> DiscoveryKind:
         kinds: set[DiscoveryKind] = set()
         if self.findings:
             kinds.add(DiscoveryKind.FINDING)
-        if any(boot.status == BootStatus.CRASH.value for boot in self.boots):
+        if any(boot.status == BootStatus.CRASH.value for boot in self.all_boots):
             kinds.add(DiscoveryKind.CRASH)
-        if any(boot.status == BootStatus.STALL.value for boot in self.boots):
+        if any(boot.status == BootStatus.STALL.value for boot in self.all_boots):
             kinds.add(DiscoveryKind.STALL)
         if not kinds:
             return DiscoveryKind.NONE
@@ -197,14 +224,7 @@ class CampaignResult:
             return ExecutionHealth.PARTIAL
         if self.status == CampaignStatus.INFRASTRUCTURE.value:
             return ExecutionHealth.INFRASTRUCTURE
-        infrastructure_statuses = {
-            BootStatus.FAIL.value,
-            BootStatus.TIMEOUT.value,
-            BootStatus.INFRA.value,
-            BootStatus.UNKNOWN.value,
-            BootStatus.SKIP.value,
-        }
-        if any(boot.status in infrastructure_statuses for boot in self.boots):
+        if any(boot.status in INFRASTRUCTURE_STATUSES for boot in self.all_boots):
             return ExecutionHealth.INFRASTRUCTURE
         return ExecutionHealth.HEALTHY
 
@@ -434,6 +454,39 @@ class BootRunner(Protocol):
     ) -> BootResult: ...
 
 
+"""Addresses, counters and CPU numbers inside a panic message."""
+_VOLATILE_IN_PANIC_MSG = re.compile(r"0x[0-9a-fA-F]+|\d+")
+
+
+def _crash_signature(site: str, msg: str) -> str:
+    digest = hashlib.sha1(
+        f"{site}|{_VOLATILE_IN_PANIC_MSG.sub('#', msg)}".encode()
+    ).hexdigest()
+    return f"panic_{digest[:16]}"
+
+
+def _finding_from_crash(
+    record: dict[str, Any] | None, *, boot_index: int, reason: str
+) -> FindingRecord:
+    """Turn a kernel panic into a finding"""
+    record = record or {}
+    file = str(record.get("file", ""))
+    line = record.get("line")
+    site = f"{file}:{line}" if file and line is not None else file
+    func = str(record.get("func", ""))
+    msg = str(record.get("msg", "")) or reason
+    return FindingRecord(
+        sig=_crash_signature(site or reason, msg),
+        tier="confident",
+        kind="panic",
+        site=f"{site} {func}".strip() if site or func else "unknown",
+        msg=msg,
+        boot_index=boot_index,
+        time_ms=int(record.get(P.KEY_TIME, 0) or 0),
+        raw=record,
+    )
+
+
 def _result_from_logs(
     *,
     boot_index: int,
@@ -452,6 +505,7 @@ def _result_from_logs(
     verdict_reason = ""
     final_progress = 0
     crashed = False
+    crash_site: dict[str, Any] | None = None
 
     if machine_log_path.is_file():
         for line in machine_log_path.read_text(
@@ -489,6 +543,8 @@ def _result_from_logs(
                 final_progress = rec.get("progress", 0)
             elif section in (P.SECTION_PANIC, P.SECTION_ASAN):
                 crashed = True
+                if crash_site is None and kind in (P.KIND_AT, P.KIND_FAULT):
+                    crash_site = rec
 
     if timed_out:
         status = BootStatus.TIMEOUT.value
@@ -530,6 +586,11 @@ def _result_from_logs(
     else:
         status = BootStatus.OK.value
         reason = "exit_ok"
+
+    if status == BootStatus.CRASH.value and not findings:
+        findings.append(
+            _finding_from_crash(crash_site, boot_index=boot_index, reason=reason)
+        )
 
     return BootResult(
         boot_index=boot_index,
@@ -844,9 +905,12 @@ class CampaignRunner:
             else any(t.boot.gate_first for t in manifest.suite.tasks)
         )
 
+        gate_res: BootResult | None = None
         if should_gate and not manifest.dry_run:
             gate_res = self._run_gate_boot()
-            if not gate_res.ok:
+            if gate_res.status in INFRASTRUCTURE_STATUSES:
+                # the rig could not run the subject, so there is nothing to
+                # learn from the rest of the lease
                 return CampaignResult(
                     campaign_id=manifest.campaign_id,
                     suite_name=manifest.suite.meta.name,
@@ -863,11 +927,19 @@ class CampaignRunner:
                     total_progress=0,
                     total_duration_ms=self.clock.elapsed_ms(),
                     tail_unused_ms=self.clock.tail_unused_ms(),
-                    boots=[gate_res],
+                    boots=[],
                     findings=[],
                     trace=[],
+                    gate=gate_res,
                 )
-            _prune_uninteresting_boot(gate_res)
+            # a gate that crashed or stalled proved the subject boots and
+            # then found a bug in it
+            if gate_res.findings:
+                self.ledger.record(gate_res.boot_index, gate_res.findings)
+            if gate_res.ok:
+                gate_res = None
+            else:
+                _prune_uninteresting_boot(gate_res)
 
         scheduler = BootScheduler(
             manifest.suite.tasks,
@@ -937,15 +1009,16 @@ class CampaignRunner:
                 task.boot.min_interval_ms, boot_start_time_s
             )
 
+        counted = [*boots, gate_res] if gate_res is not None else boots
         completed = sum(
             1
-            for b in boots
+            for b in counted
             if b.status in (BootStatus.OK.value, BootStatus.FINDING.value)
         )
-        finding_count = sum(1 for b in boots if b.status == BootStatus.FINDING.value)
+        finding_count = sum(1 for b in counted if b.status == BootStatus.FINDING.value)
         failed = sum(
             1
-            for b in boots
+            for b in counted
             if b.status
             in (
                 BootStatus.FAIL.value,
@@ -954,8 +1027,8 @@ class CampaignRunner:
                 BootStatus.INFRA.value,
             )
         )
-        stalled = sum(1 for b in boots if b.status == BootStatus.STALL.value)
-        skipped = sum(1 for b in boots if b.status == BootStatus.SKIP.value)
+        stalled = sum(1 for b in counted if b.status == BootStatus.STALL.value)
+        skipped = sum(1 for b in counted if b.status == BootStatus.SKIP.value)
 
         campaign_ok = (
             status
@@ -969,7 +1042,7 @@ class CampaignRunner:
             total_runners=manifest.total_runners,
             status=status,
             ok=campaign_ok,
-            total_boots=len(boots),
+            total_boots=len(counted),
             completed_boots=completed,
             finding_boots=finding_count,
             failed_boots=failed,
@@ -981,6 +1054,7 @@ class CampaignRunner:
             boots=boots,
             findings=self.ledger.report(),
             trace=self.accumulator.get_trace(),
+            gate=gate_res,
         )
 
     def _run_gate_boot(self) -> BootResult:
@@ -999,6 +1073,31 @@ class CampaignRunner:
             timeout_ms=gate.boot.host_timeout_ms,
             out_dir=self.manifest.out_dir / "gate",
         )
+
+
+def _boot_document(b: BootResult) -> dict[str, Any]:
+    return {
+        "boot_index": b.boot_index,
+        "task_name": b.task_name,
+        "seed": hex(b.seed) if b.seed is not None else None,
+        "duration_ms": b.duration_ms,
+        "exit_code": b.exit_code,
+        "status": b.status,
+        "reason": b.reason,
+        "progress": b.progress,
+        "findings_count": len(b.findings),
+        "recovered_infrastructure": b.recovered_infrastructure,
+        "attempts": [
+            {
+                "attempt": attempt.attempt,
+                "duration_ms": attempt.duration_ms,
+                "exit_code": attempt.exit_code,
+                "status": attempt.status,
+                "reason": attempt.reason,
+            }
+            for attempt in b.attempts
+        ],
+    }
 
 
 def render_json(result: CampaignResult) -> str:
@@ -1024,9 +1123,10 @@ def render_json(result: CampaignResult) -> str:
             "total_progress": result.total_progress,
             "total_duration_ms": result.total_duration_ms,
             "tail_unused_ms": result.tail_unused_ms,
+            "crashed_boots": result.crashed_boots,
             "unique_findings": len(result.findings),
             "recovered_infrastructure_boots": sum(
-                boot.recovered_infrastructure for boot in result.boots
+                boot.recovered_infrastructure for boot in result.all_boots
             ),
         },
         "findings": [
@@ -1045,31 +1145,8 @@ def render_json(result: CampaignResult) -> str:
             }
             for f in result.findings
         ],
-        "boots": [
-            {
-                "boot_index": b.boot_index,
-                "task_name": b.task_name,
-                "seed": hex(b.seed) if b.seed is not None else None,
-                "duration_ms": b.duration_ms,
-                "exit_code": b.exit_code,
-                "status": b.status,
-                "reason": b.reason,
-                "progress": b.progress,
-                "findings_count": len(b.findings),
-                "recovered_infrastructure": b.recovered_infrastructure,
-                "attempts": [
-                    {
-                        "attempt": attempt.attempt,
-                        "duration_ms": attempt.duration_ms,
-                        "exit_code": attempt.exit_code,
-                        "status": attempt.status,
-                        "reason": attempt.reason,
-                    }
-                    for attempt in b.attempts
-                ],
-            }
-            for b in result.boots
-        ],
+        "gate": _boot_document(result.gate) if result.gate is not None else None,
+        "boots": [_boot_document(b) for b in result.boots],
         "trace": [
             {
                 "at_ms": t.at_ms,
