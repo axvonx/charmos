@@ -20,7 +20,7 @@ CMDLINE_CHILDREN_DECLARE(
                                                     CLOCK_NAME_HPET,
                                                     CLOCK_NAME_TSC)));
 
-static void timer_dpc(void *ctx);
+static void timer_dpc(void *ctx, void *unused);
 void timer_base_reprogram_hardware(cpu_id_t cpu);
 static void timer_percpu_ctor(struct timer_percpu *p, cpu_id_t cpu) {
     for (int i = 0; i < TIMER_BASE_MAX; i++) {
@@ -35,7 +35,7 @@ static void timer_percpu_ctor(struct timer_percpu *p, cpu_id_t cpu) {
     spinlock_init(&p->lock);
     INIT_HLIST_HEAD(&p->dpc_timers);
     p->dispatching = NULL;
-    dpc_init(&p->timer_dpc, timer_dpc, p);
+    dpc_init(&p->timer_dpc, timer_dpc, p, NULL);
 }
 
 PERCPU_DECLARE(struct timer_percpu, timer_percpu, timer_percpu_ctor);
@@ -141,7 +141,8 @@ static inline void timer_sync_wait_spin() {
         cpu_pause();
 }
 
-static void timer_dpc(void *ctx) {
+static void timer_dpc(void *ctx, void *unused) {
+    cc_var_unused(unused);
     struct timer_percpu *pcpu = ctx;
 
     while (true) {

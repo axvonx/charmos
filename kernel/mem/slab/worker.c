@@ -29,7 +29,8 @@ static enum daemon_thread_command slab_background_work(void *a, void *b) {
  * mean that this can be MPSC, which is what we're looking to be
  * able to pull off here.
  */
-static void slab_defer_free_dpc(void *unused_arg) {
+static void slab_defer_free_dpc(void *unused_arg, void *unused_arg2) {
+    cc_var_unused(unused_arg2);
     cc_var_unused(unused_arg);
     struct slab_percpu_cache *c = slab_percpu_cache_local();
     /* Enter a loop here of stealing the defer free list,
@@ -95,7 +96,7 @@ void slab_domain_init_workqueue(struct slab_domain *domain) {
         workqueue_create("slab_domain_%u_wq", &attrs, domain->domain->id);
     for (size_t i = 0; i < domain->domain->num_cores; i++) {
         struct dpc *defer_dpc = &domain->percpu_caches[i]->defer_dpc;
-        dpc_init(defer_dpc, slab_defer_free_dpc, NULL);
+        dpc_init(defer_dpc, slab_defer_free_dpc, NULL, NULL);
     }
 }
 

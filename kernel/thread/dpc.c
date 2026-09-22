@@ -5,6 +5,7 @@
 #include <sch/sched.h>
 #include <smp/core.h>
 #include <stdint.h>
+#include <sync/once_latch.h>
 #include <thread/dpc.h>
 
 static struct dpc *dpc_steal_queue(struct dpc_queue *dq) {
@@ -34,7 +35,7 @@ static void dpc_execute_all_in_queue(struct dpc_queue *dq) {
         while (it) {
             struct dpc *next = atomic_load_relaxed(&it->next);
             atomic_store_release(&it->enqueued, false);
-            it->func(it->ctx);
+            it->func(it->a, it->b);
             it = next;
         }
     }
@@ -121,19 +122,48 @@ void dpc_init_percpu(void) {
     }
 }
 
-struct dpc *dpc_init(struct dpc *d, dpc_func_t fn, void *ctx) {
+struct dpc *dpc_init(struct dpc *d, dpc_func_t fn, void *a, void *b) {
     d->func = fn;
-    d->ctx = ctx;
+    d->a = a;
+    d->b = b;
     atomic_store_relaxed(&d->next, NULL);
     atomic_store_relaxed(&d->enqueued, false);
     return d;
 }
 
 /* DPC creation helpers */
-struct dpc *dpc_create(dpc_func_t fn, void *ctx) {
+struct dpc *dpc_create(dpc_func_t fn, void *a, void *b) {
     struct dpc *d = kmalloc(sizeof(*d));
     if (!d)
         return NULL;
 
-    return dpc_init(d, fn, ctx);
+    return dpc_init(d, fn, a, b);
+}
+
+static void dpc_fanout_wrapper(void *fn, void *latch) {
+    ((dpc_fanout_fn_t) fn)();
+    once_latch_count_down((struct once_latch *) latch);
+}
+
+void dpc_fanout(struct dpc *storage, struct cpu_mask cpus, dpc_fanout_fn_t fn) {
+    kassert(storage);
+    kassert(fn);
+
+    size_t count = cpu_mask_popcount(&cpus);
+    if (!count)
+        return;
+
+    struct once_latch latch;
+    once_latch_init(&latch, count);
+
+    size_t slot = 0;
+    size_t cpu;
+    cpu_mask_for_each(cpu, cpus) {
+        dpc_init(&storage[slot], dpc_fanout_wrapper, (void *) fn, &latch);
+        dpc_enqueue_on_cpu(cpu, &storage[slot]);
+        slot++;
+    }
+
+    kassert(slot == count);
+    once_latch_spin_wait(&latch);
 }
