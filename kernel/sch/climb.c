@@ -235,6 +235,12 @@ static void apply_handle(struct thread *t, struct climb_handle *ch) {
          * is tell the thread to start pressure again,
          * and set pressure_periods to 1 */
         cts->pressure_periods = 1;
+
+        /* reinsert upon pressure change */
+        if (cts->on_climb_tree) {
+            struct scheduler *sched = thread_get_scheduler_unsafe(t);
+            rbt_reinsert(&sched->climb_threads, &cts->climb_node);
+        }
     }
 }
 
@@ -575,8 +581,8 @@ void climb_post_migrate_hook(struct thread *t, size_t old_cpu, size_t new_cpu) {
     climb_warn("Migrating %p", &t->climb_state);
 
     /* Migrate and recompute */
-    rbt_delete(&old->climb_threads, &t->climb_state.climb_node);
-    rbt_insert(&new->climb_threads, &t->climb_state.climb_node);
+    rbt_move(&old->climb_threads, &new->climb_threads,
+             &t->climb_state.climb_node);
 }
 
 /* This is how we key our red black tree.
