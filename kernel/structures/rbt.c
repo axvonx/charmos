@@ -1,3 +1,4 @@
+#include <console/panic.h>
 #include <console/printf.h>
 #include <kassert.h>
 #include <mem/alloc.h>
@@ -303,6 +304,32 @@ bool rbt_has_node(struct rbt *tree, struct rbt_node *node) {
     return false;
 }
 
+bool rbt_position_valid(struct rbt *tree, struct rbt_node *node) {
+    struct rbt_node *prev = rbt_prev(node);
+    if (prev && tree->compare(prev, node) > 0)
+        return false;
+
+    struct rbt_node *next = rbt_next(node);
+    if (next && tree->compare(node, next) > 0)
+        return false;
+
+    return true;
+}
+
+bool rbt_reinsert(struct rbt *tree, struct rbt_node *node) {
+    if (rbt_position_valid(tree, node))
+        return false;
+
+    rbt_delete(tree, node);
+    rbt_insert(tree, node);
+    return true;
+}
+
+void rbt_move(struct rbt *from, struct rbt *to, struct rbt_node *node) {
+    rbt_delete(from, node);
+    rbt_insert(to, node);
+}
+
 void rbt_remove(struct rbt *tree, uint64_t data) {
     struct rbt_node *node = rbt_search_internal(tree, tree->root, data);
     if (node)
@@ -367,16 +394,26 @@ void rbt_insert(struct rbt *tree, struct rbt_node *new_node) {
 
     struct rbt_node *current = tree->root;
     struct rbt_node *parent = NULL;
+    int32_t cmp = 0;
     while (current != NULL) {
         parent = current;
-        if (tree->compare(new_node, current) < 0)
+        cmp = tree->compare(new_node, current);
+        if (cmp < 0)
             current = current->left;
         else
             current = current->right;
     }
 
     new_node->parent = parent;
-    if (tree->compare(new_node, parent) < 0)
+
+#ifdef DEBUG_LOCK_CHK
+    if ((cmp < 0 && parent->left) || (cmp >= 0 && parent->right))
+        panic("rbt_insert: node %p would be attached a child of %p "
+              "in tree %p, potential subtree orophaning",
+              new_node, parent, tree);
+#endif
+
+    if (cmp < 0)
         parent->left = new_node;
     else
         parent->right = new_node;

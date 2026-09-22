@@ -135,3 +135,12 @@ static inline bool rbt_empty(struct rbt *tree) {
 }
 
 bool rbt_has_node(struct rbt *tree, struct rbt_node *node);
+
+/* Re-position nodes whose sort key changes, with checks
+ * to first verify it needs to move at all, returning true if moved */
+bool rbt_reinsert(struct rbt *tree, struct rbt_node *node);
+
+/* True when ordering is correct */
+bool rbt_position_valid(struct rbt *tree, struct rbt_node *node);
+
+void rbt_move(struct rbt *from, struct rbt *to, struct rbt_node *node);
