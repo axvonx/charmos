@@ -267,9 +267,11 @@ static void remove_handle(struct thread *t, struct climb_handle *ch) {
                climb_count_handles(cts));
 
     if (list_empty(&cts->handles)) {
-        /* This thread is done. Let it decay now */
-        cts->pressure_periods = -1;
-        climb_info("Begin decay on %p", cts);
+        /* This thread is done, let it decay now */
+        if (cts->on_climb_tree) {
+            cts->pressure_periods = -1;
+            climb_info("Begin decay on %p", cts);
+        }
     }
 }
 
@@ -573,8 +575,12 @@ void climb_post_migrate_hook(struct thread *t, size_t old_cpu, size_t new_cpu) {
     struct scheduler *new = global.schedulers[new_cpu];
 
     if (!rbt_has_node(&old->climb_threads, &t->climb_state.climb_node)) {
-        kassert(t->climb_state.on_climb_tree == false);
-        kassert(t->climb_state.pressure_periods == 0);
+        kassert(t->climb_state.on_climb_tree == false,
+                "thread %s is off cpu %zu's tree but thinks it is on one",
+                t->name, old_cpu);
+        kassert(t->climb_state.pressure_periods == 0,
+                "thread %s left the tree carrying pressure_periods=%d", t->name,
+                t->climb_state.pressure_periods);
         return;
     }
 
