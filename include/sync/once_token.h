@@ -45,25 +45,40 @@
 #define once_token_init(...) PP_CALL(once_token_init, __VA_ARGS__)
 
 /* ===== claim ===== */
-#define once_token_claim_3(tok, from, to)                                      \
+/* The 2 and 4 argument versions return what was actually there, which
+ * can be used to inspect whether something unexpected happened */
+#define once_token_claim_4(tok, from, to, out)                                 \
     ({                                                                         \
         __auto_type __ot_tok = (tok);                                          \
         once_token_typecheck_internal(__ot_tok);                               \
         ct_typecheck_same(from, to);                                           \
         __typeof__(atomic_load_relaxed(&__ot_tok->state)) __ot_exp = (from);   \
         __typeof__(__ot_exp) __ot_to = (to);                                   \
-        atomic_cas_strong(&__ot_tok->state, &__ot_exp, __ot_to, mo_acq_rel,    \
-                          mo_acquire);                                         \
+        __auto_type __ot_out = (out);                                          \
+        static_assert(ct_is_type(__typeof__(__ot_exp) *, out) ||               \
+                          (ct_is_const(out) && (out) == NULL),                 \
+                      "once_token_claim out must point to the token state "    \
+                      "type or be NULL");                                      \
+        bool ret = atomic_cas_strong(&__ot_tok->state, &__ot_exp, __ot_to,     \
+                                     mo_acq_rel, mo_acquire);                  \
+        if (__ot_out)                                                          \
+            *((__typeof__(__ot_exp) *) __ot_out) = __ot_exp;                   \
+        ret;                                                                   \
     })
 
-#define once_token_claim_1(tok)                                                \
+#define once_token_claim_3(tok, from, to)                                      \
+    once_token_claim_4(tok, from, to, NULL)
+
+#define once_token_claim_2(tok, out)                                           \
     ({                                                                         \
         __auto_type __ot_tok = (tok);                                          \
         once_token_typecheck_internal_bool(__ot_tok);                          \
         static_assert(_Generic((__ot_tok->state), bool: 1, default: 0),        \
                       "once_token_claim_1 argument requires a boolean token"); \
-        once_token_claim_3(tok, false, true);                                  \
+        once_token_claim_4(tok, false, true, out);                             \
     })
+
+#define once_token_claim_1(tok) once_token_claim_2(tok, NULL)
 
 #define once_token_claim(...) PP_CALL(once_token_claim, __VA_ARGS__)
 
