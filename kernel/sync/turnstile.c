@@ -196,10 +196,7 @@ static void turnstile_requeue_waiter(struct turnstile *ts,
         if (!rbt_has_node(tree, &thread->wq_tree_node))
             continue;
 
-        /* The comparator reads the live priority, so remove and insert after
-         * PI changes instead of leaving a node under its old sort key. */
-        rbt_delete(tree, &thread->wq_tree_node);
-        rbt_insert(tree, &thread->wq_tree_node);
+        rbt_reinsert(tree, &thread->wq_tree_node);
         return;
     }
 }
