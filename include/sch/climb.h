@@ -13,11 +13,35 @@ struct climb_handle;
 
 #define CLIMB_BOOST_LEVELS 20
 #define CLIMB_MIN_GLOBAL_BOOST 1
-#define CLIMB_REINSERT_THRESHOLD 2
 #define CLIMB_GLOBAL_BOOST_SCALE(nt) (CLIMB_BOOST_LEVELS / nt)
 #define CLIMB_PRESSURE_KEY_SHIFT 31 /* one period == 0.5 pressure points */
 #define CLIMB_MAX_DECAY_PERIODS 20
 
+/* Pressures */
+#define CLIMB_PRESSURE_THREAD_BASE FX(0.05)
+#define CLIMB_PRESSURE_IO_BASE FX(0.20)
+#define CLIMB_PRESSURE_LOCK_BASE FX(0.10)
+#define CLIMB_PRESSURE_MAX FX(1.0)
+#define CLIMB_PRESSURE(x) FX(x)
+
+/* Pressure space */
+#define CLIMB_PRESSURE_MAX FX(1.0)
+#define CLIMB_DIRECT_PRESSURE_MAX FX(1.0)
+#define CLIMB_INDIRECT_PRESSURE_MAX FX(1.0)
+
+/* Indirect pressure scaling */
+#define CLIMB_INDIRECT_MIN_SCALE FX(0.10)
+#define CLIMB_INDIRECT_WEIGHT FX(0.85)
+
+/* Boost space */
+#define CLIMB_BOOST_LEVEL_MAX 20
+
+/* EWMA smoothing */
+#define CLIMB_BOOST_EWMA_ALPHA FX(0.75)
+
+/* Pressure to boost shaping */
+#define CLIMB_PRESSURE_EXPONENT 3 /* cubic */
+#define CLIMB_PRESSURE_TO_BOOST_SCALE FX(8.0)
 enum climb_pressure_kind {
     CLIMB_PRESSURE_DIRECT,
     CLIMB_PRESSURE_INDIRECT,
@@ -82,32 +106,6 @@ struct climb_source {
     char *name;
     climb_pressure_t base;
 };
-
-/* Pressures */
-#define CLIMB_PRESSURE_THREAD_BASE FX(0.05)
-#define CLIMB_PRESSURE_IO_BASE FX(0.20)
-#define CLIMB_PRESSURE_LOCK_BASE FX(0.10)
-#define CLIMB_PRESSURE_MAX FX(1.0)
-#define CLIMB_PRESSURE(x) FX(x)
-
-/* Pressure space */
-#define CLIMB_PRESSURE_MAX FX(1.0)
-#define CLIMB_DIRECT_PRESSURE_MAX FX(1.0)
-#define CLIMB_INDIRECT_PRESSURE_MAX FX(1.0)
-
-/* Indirect pressure scaling */
-#define CLIMB_INDIRECT_MIN_SCALE FX(0.10)
-#define CLIMB_INDIRECT_WEIGHT FX(0.85)
-
-/* Boost space */
-#define CLIMB_BOOST_LEVEL_MAX 20
-
-/* EWMA smoothing */
-#define CLIMB_BOOST_EWMA_ALPHA FX(0.75)
-
-/* Pressure to boost shaping */
-#define CLIMB_PRESSURE_EXPONENT 3 /* cubic */
-#define CLIMB_PRESSURE_TO_BOOST_SCALE FX(8.0)
 
 #define CLIMB_SOURCE_EXTERN(name) extern struct climb_source __climb_src_##name
 #define CLIMB_SOURCE_CREATE(n, strname, b)                                     \

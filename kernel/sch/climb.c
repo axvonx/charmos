@@ -292,13 +292,6 @@ static void climb_handle_act_self(
         irql_lower(irql);
 }
 
-static void climb_handle_act_other_locked(struct thread *t,
-                                          struct climb_handle *ch,
-                                          void (*act)(struct thread *,
-                                                      struct climb_handle *)) {
-    act(t, ch);
-}
-
 static void climb_handle_act_other(struct thread *t, struct climb_handle *ch,
                                    void (*act)(struct thread *,
                                                struct climb_handle *)) {
@@ -338,7 +331,7 @@ static void climb_handle_act_locked(struct thread *t, struct climb_handle *h,
     if (t == thread_get_current()) {
         climb_handle_act_self(t, h, act);
     } else {
-        climb_handle_act_other_locked(t, h, act);
+        act(t, h);
     }
 }
 
