@@ -13,6 +13,9 @@
 #include <thread/thread.h>
 #include <time/time.h>
 
+/* Scheduler rounds quiesce waits give before failing */
+#define NIGHTMARE_QUIESCE_MIN_ROUNDS 8
+
 static struct nightmare_perturb_config perturb_configs[] = {
     {.name = "migrator"}, {.name = "waker"},          {.name = "apc_spammer"},
     {.name = "stutter"},  {.name = "alloc_pressure"}, {.name = "inject_armer"},
@@ -189,20 +192,37 @@ void nightmare_perturb_stutter(struct nightmare_ctx *ctx,
         /* Request quiesce */
         atomic_store_release(&nightmare_runtime.conc.quiesce_requested, true);
 
-        /* Wait for all subject workers to park. */
-        time_ms_t deadline = time_get_ms() + (gap_ms ? gap_ms : 10);
+        /* Wait for subject workers to park, with signs of workers
+         * parking preventing the panic from firing so that VMs
+         * with oversubscribed vCPUs don't false positive */
+        time_ms_t grace_ms = gap_ms ? gap_ms : 10;
+        time_ms_t cap_ms = grace_ms * (ctx->worker_count + 1);
+        time_ms_t started_ms = time_get_ms();
+        time_ms_t last_park_ms = started_ms;
+        size_t parked_seen = 0;
+        size_t rounds = 0;
         bool all_subjects_parked = false;
-        while (time_get_ms() < deadline && !nightmare_must_stop()) {
-            all_subjects_parked = true;
+        while (!nightmare_must_stop()) {
+            size_t parked = 0;
             for (size_t i = 0; i < ctx->worker_count; i++) {
-                if (!atomic_load_acq(
-                        &nightmare_runtime.conc.workers[i].parked)) {
-                    all_subjects_parked = false;
-                    break;
-                }
+                if (atomic_load_acq(&nightmare_runtime.conc.workers[i].parked))
+                    parked++;
             }
+            all_subjects_parked = parked == ctx->worker_count;
             if (all_subjects_parked)
                 break;
+
+            time_ms_t now = time_get_ms();
+            if (parked > parked_seen) {
+                parked_seen = parked;
+                last_park_ms = now;
+            }
+
+            /* Give a few rounds of leeway */
+            if (rounds++ >= NIGHTMARE_QUIESCE_MIN_ROUNDS &&
+                (now - last_park_ms >= grace_ms || now - started_ms >= cap_ms))
+                break;
+
             scheduler_yield();
         }
 
