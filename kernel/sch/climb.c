@@ -593,38 +593,38 @@ void climb_post_migrate_hook(struct thread *t, size_t old_cpu, size_t new_cpu) {
 
 /* This is how we key our red black tree.
  *
- * 31.. .... .... .... .... .... .... ...0
+ * Our 64 bit fixed point representation uses the upper dword as the "integer"
+ * component and the lower dword as the "decimal" part. However, we
+ * also sort wrt. the amount of elapsed periods to avoid favoring
+ * high pressure recent threads over lower pressure older threads
  *
+ * 63.. .... .... .... .... .... .... .... .... .... .... .... .... ...0
+ *                                 S
  *
- * Our 32 bit fixed point representation uses the upper word as the "integer"
- * part and the lower word as the "decimal" part. This is how climb_pressure_t
- * is represented. However, we want to sort our threads in this tree as not
- * just a climb_pressure_t, but also with their amount of elapsed periods.
+ * "S" is the lowest bit of pressure_periods, at CLIMB_PRESSURE_KEY_SHIFT.
+ * Thus, one period is 0.5 pressure points.
  *
- * This is because sorting based on just climb_pressure_t will favor high
- * pressure threads, which can potentially starve lower pressure threads
- * that have been waiting for longer periods of time from a boost.
- *
- * climb_pressure_t is only ever a value between 0 and 1 in fixed point,
- * thus we take the approach of shifting in the pressure_periods by
- * a certain shift so that it contributes to the ordering of the tree.
- *
- * 31.. .... .... .... .... .... .... ...0
- *                     S
- *
- * The "S" represents where the lowest bit of the pressure periods would be
- * placed. This effectively means that every period of elapsed pressure
- * is equal to 0.5 climb_pressure_t points, and means that two periods
- * would result in a single maximum climb_pressure_t of pressure.
+
+ * The key has to be a signed 64-bit integer. Full pressure points don't fit
+ * in 32 bits, and pressure_periods can become negative as threads decay.
  */
-size_t climb_get_thread_data(struct rbt_node *n) {
-    struct climb_thread_state *cts = climb_thread_state_from_tree_node(n);
-    return cts->pressure_periods * (1 << CLIMB_PRESSURE_KEY_SHIFT) +
+
+static int64_t climb_key(struct climb_thread_state *cts) {
+    return (int64_t) cts->pressure_periods * (1LL << CLIMB_PRESSURE_KEY_SHIFT) +
            climb_thread_total_pressure(cts);
 }
 
+/* rbt_get_data is an unsigned key */
+size_t climb_get_thread_data(struct rbt_node *n) {
+    int64_t key = climb_key(climb_thread_state_from_tree_node(n));
+    return (size_t) ((uint64_t) key ^ (UINT64_C(1) << 63));
+}
+
 int32_t climb_cmp_threads(const struct rbt_node *a, const struct rbt_node *b) {
-    int32_t ca = climb_get_thread_data((struct rbt_node *) a);
-    int32_t cb = climb_get_thread_data((struct rbt_node *) b);
-    return ca - cb;
+    int64_t ka =
+        climb_key(climb_thread_state_from_tree_node((struct rbt_node *) a));
+    int64_t kb =
+        climb_key(climb_thread_state_from_tree_node((struct rbt_node *) b));
+
+    return (ka > kb) - (ka < kb);
 }
