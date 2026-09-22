@@ -7,6 +7,7 @@
 #include <smp/percpu.h>
 #include <string.h>
 #include <sync/seqlock.h>
+#include <thread/dpc.h>
 #include <time/time.h>
 #include <watchdog.h>
 
@@ -762,6 +763,15 @@ void watchdog_init(void) {
     }
 }
 
+/* TODO: give PERCPU contiguous functionality */
+static struct dpc watchdog_arm_dpcs[CPU_MASK_BITS];
+
+static void watchdog_arm_local(void) {
+    struct watchdog_percpu *pcpu = PERCPU_PTR(TOPC_NONE, watchdog_percpu);
+    timer_modify(&pcpu->timer,
+                 timer_delta_us(NS_TO_US(config.master_tick_interval)));
+}
+
 void watchdog_start(void) {
     watchdog_global.bucket_interval_ms = NS_TO_MS(config.bucket_interval);
     watchdog_global.expected_heartbeats_per_bucket =
@@ -779,11 +789,9 @@ void watchdog_start(void) {
         watchdog_master.cpus[i].last_progress_tick = 0;
     }
 
-    struct watchdog_percpu *pcpu;
-    percpu_for_each(watchdog_percpu, pcpu) {
-        timer_modify(&pcpu->timer,
-                     timer_delta_us(NS_TO_US(config.master_tick_interval)));
-    }
+    struct cpu_mask all = CPU_MASK_INIT;
+    cpu_mask_set_all(&all);
+    dpc_fanout(watchdog_arm_dpcs, all, watchdog_arm_local);
 
     pit_init();
     pit_wire_periodic_nmi(config.master_tick_interval);
