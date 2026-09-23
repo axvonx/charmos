@@ -48,7 +48,7 @@
 #define cw_clz(x)                                                              \
     ({                                                                         \
         __auto_type __cw_clz_x = (x);                                          \
-        ct_typecheck_unsigned(__cw_clz_x);                                     \
+        ct_typecheck_unsigned_as(__cw_clz_x, x);                               \
         __cw_clz_x == 0 ? (unsigned int) ct_bitsizeof(__cw_clz_x)              \
         : sizeof(__cw_clz_x) <= sizeof(unsigned int)                           \
             ? (unsigned int) (ci_clz((unsigned int) __cw_clz_x) -              \
@@ -67,7 +67,7 @@
 #define cw_clz_nonzero(x)                                                      \
     ({                                                                         \
         __auto_type __cw_clzn_x = (x);                                         \
-        ct_typecheck_unsigned(__cw_clzn_x);                                    \
+        ct_typecheck_unsigned_as(__cw_clzn_x, x);                              \
         sizeof(__cw_clzn_x) <= sizeof(unsigned int)                            \
             ? (unsigned int) (ci_clz((unsigned int) __cw_clzn_x) -             \
                               (ct_bitsizeof(unsigned int) -                    \
@@ -85,7 +85,7 @@
 #define cw_ctz(x)                                                              \
     ({                                                                         \
         __auto_type __cw_ctz_x = (x);                                          \
-        ct_typecheck_unsigned(__cw_ctz_x);                                     \
+        ct_typecheck_unsigned_as(__cw_ctz_x, x);                               \
         __cw_ctz_x == 0                                                        \
             ? (unsigned int) ct_bitsizeof(__cw_ctz_x)                          \
             : (sizeof(__cw_ctz_x) <= sizeof(unsigned int)                      \
@@ -100,7 +100,7 @@
 #define cw_ctz_nonzero(x)                                                      \
     ({                                                                         \
         __auto_type __cw_ctzn_x = (x);                                         \
-        ct_typecheck_unsigned(__cw_ctzn_x);                                    \
+        ct_typecheck_unsigned_as(__cw_ctzn_x, x);                              \
         sizeof(__cw_ctzn_x) <= sizeof(unsigned int)                            \
             ? (unsigned int) ci_ctz((unsigned int) __cw_ctzn_x)                \
         : sizeof(__cw_ctzn_x) <= sizeof(unsigned long)                         \
@@ -112,7 +112,7 @@
 #define cw_ffs(x)                                                              \
     ({                                                                         \
         __auto_type __cw_ffs_x = (x);                                          \
-        ct_typecheck_integer(__cw_ffs_x);                                      \
+        ct_typecheck_integer_as(__cw_ffs_x, x);                                \
         sizeof(__cw_ffs_x) <= sizeof(unsigned int)                             \
             ? (unsigned int) ci_ffs((int) __cw_ffs_x)                          \
         : sizeof(__cw_ffs_x) <= sizeof(unsigned long)                          \
@@ -124,7 +124,7 @@
 #define cw_fls(x)                                                              \
     ({                                                                         \
         __auto_type __cw_fls_x = (x);                                          \
-        ct_typecheck_unsigned(__cw_fls_x);                                     \
+        ct_typecheck_unsigned_as(__cw_fls_x, x);                               \
         __cw_fls_x == 0 ? 0u                                                   \
                         : (unsigned int) (ct_bitsizeof(__cw_fls_x) -           \
                                           cw_clz_nonzero(__cw_fls_x));         \
@@ -149,8 +149,8 @@
     ({                                                                         \
         __auto_type __cw_rol_x = (x);                                          \
         __auto_type __cw_rol_n = (n);                                          \
-        ct_typecheck_unsigned(__cw_rol_x);                                     \
-        ct_typecheck_integer(__cw_rol_n);                                      \
+        ct_typecheck_unsigned_as(__cw_rol_x, x);                               \
+        ct_typecheck_integer_as(__cw_rol_n, n);                                \
         unsigned int __cw_rol_shift = (unsigned int) __cw_rol_n;               \
         unsigned int __cw_rol_w = (unsigned int) ct_bitsizeof(__cw_rol_x);     \
         __cw_rol_shift &= (__cw_rol_w - 1u);                                   \
@@ -164,8 +164,8 @@
     ({                                                                         \
         __auto_type __cw_ror_x = (x);                                          \
         __auto_type __cw_ror_n = (n);                                          \
-        ct_typecheck_unsigned(__cw_ror_x);                                     \
-        ct_typecheck_integer(__cw_ror_n);                                      \
+        ct_typecheck_unsigned_as(__cw_ror_x, x);                               \
+        ct_typecheck_integer_as(__cw_ror_n, n);                                \
         unsigned int __cw_ror_shift = (unsigned int) __cw_ror_n;               \
         unsigned int __cw_ror_w = (unsigned int) ct_bitsizeof(__cw_ror_x);     \
         __cw_ror_shift &= (__cw_ror_w - 1u);                                   \

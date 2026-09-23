@@ -8,7 +8,7 @@
 #define abs(N)                                                                 \
     ({                                                                         \
         __auto_type __n = (N);                                                 \
-        ct_typecheck_signed(__n);                                              \
+        ct_typecheck_signed_as(__n, N);                                        \
         __typeof__(__n) __result = __n;                                        \
         if (__n < 0) {                                                         \
             bool __overflow =                                                  \
@@ -25,7 +25,7 @@
         __auto_type __cl_hi = (__max);                                         \
         typedef ct_common_type_2(*__cl_p, __cl_lo) __cl_t1;                    \
         typedef ct_common_type_2((__cl_t1) 0, __cl_hi) __cl_t;                 \
-        ct_typecheck_widenable_to((__cl_t) 0, *__cl_p);                        \
+        ct_typecheck_widenable_to((__cl_t) 0, __var);                          \
         ct_typecheck_widenable_to((__cl_t) 0, __min);                          \
         ct_typecheck_widenable_to((__cl_t) 0, __max);                          \
         __cl_t __cl_v = (__cl_t) * __cl_p;                                     \

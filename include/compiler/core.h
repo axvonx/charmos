@@ -238,9 +238,21 @@
         STEM##_MAX = (max_),                                                   \
     } stem##_t
 
+#define ct_expr_assert_zero(cond, msg)                                         \
+    (sizeof(struct {                                                           \
+         _Static_assert(__builtin_choose_expr((cond), 1, 0), msg);             \
+         char __ct_pad;                                                        \
+     }) *                                                                      \
+     0)
+
+#define ct_expr_assert(cond, msg) ((void) ct_expr_assert_zero(cond, msg))
+
 /* === ct_ Compile-Time Type System & Reflection ==== */
 
 #define ct_is_const(x) __builtin_constant_p(x)
+
+#define ct_is_ice(x)                                                           \
+    (sizeof(int) == sizeof(*(8 ? ((void *) ((long) (x) * 0l)) : (int *) 8)))
 
 #define ct_raw(x) ((__typeof__((x) + 0)) (x))
 
@@ -252,7 +264,10 @@
     (!__builtin_types_compatible_p(__typeof__(a), __typeof__(&(a)[0])))
 
 #define ct_array_size(a)                                                       \
-    (sizeof(char[ct_is_array(a) ? 1 : -1]) * 0 + (sizeof(a) / sizeof((a)[0])))
+    (ct_expr_assert_zero(ct_is_array(a), "`" #a "` is a pointer, not an "      \
+                                         "array; ct_array_size() needs a "     \
+                                         "real array") +                       \
+     (sizeof(a) / sizeof((a)[0])))
 
 #define ct_const_min(a, b) __builtin_choose_expr((a) < (b), (a), (b))
 #define ct_const_max(a, b) __builtin_choose_expr((a) > (b), (a), (b))
@@ -296,27 +311,31 @@
 
 /* Require expr to have the requested type, does not evaluate x */
 #define ct_typecheck(type, x)                                                  \
-    ((void) sizeof(                                                            \
-        char[__builtin_types_compatible_p(type, __typeof__(x)) ? 1 : -1]))
+    ct_expr_assert(__builtin_types_compatible_p(type, __typeof__(x)),          \
+                   "`" #x "` must have type `" #type "`")
 
-#define ct_typecheck_same(x, y) ct_typecheck(__typeof__(x), y)
+#define ct_typecheck_same(x, y)                                                \
+    ct_expr_assert(__builtin_types_compatible_p(__typeof__(x), __typeof__(y)), \
+                   "`" #x "` and `" #y "` must have the same type")
 
-/* Must be integer, not boolean */
-#define ct_typecheck_integer(x)                                                \
-    ((void) sizeof(char[(__builtin_classify_type(x) == 1 &&                    \
-                         !__builtin_types_compatible_p(__typeof__(x), _Bool))  \
-                            ? 1                                                \
-                            : -1]))
+#define ct_typecheck_integer_as(x, name)                                       \
+    ct_expr_assert(ct_is_integral(x), "`" #name "` must have an integer "      \
+                                      "type ")
+#define ct_typecheck_integer(x) ct_typecheck_integer_as(x, x)
 
 /* Require x to have a signed integer or enum type */
-#define ct_typecheck_signed(x)                                                 \
-    (ct_typecheck_integer(x),                                                  \
-     (void) sizeof(char[((__typeof__(x)) -1 < (__typeof__(x)) 0) ? 1 : -1]))
+#define ct_typecheck_signed_as(x, name)                                        \
+    (ct_typecheck_integer_as(x, name),                                         \
+     ct_expr_assert(ct_type_is_signed(x),                                      \
+                    "`" #name "` must have a signed integer type"))
+#define ct_typecheck_signed(x) ct_typecheck_signed_as(x, x)
 
 /* Require x to have an unsigned integer or enum type */
-#define ct_typecheck_unsigned(x)                                               \
-    (ct_typecheck_integer(x),                                                  \
-     (void) sizeof(char[((__typeof__(x)) -1 > (__typeof__(x)) 0) ? 1 : -1]))
+#define ct_typecheck_unsigned_as(x, name)                                      \
+    (ct_typecheck_integer_as(x, name),                                         \
+     ct_expr_assert(!ct_type_is_signed(x),                                     \
+                    "`" #name "` must have an unsigned integer type"))
+#define ct_typecheck_unsigned(x) ct_typecheck_unsigned_as(x, x)
 
 #define ct_typecheck_intmax_nonnegative(x)                                     \
     (((__UINTMAX_TYPE__) (__INTMAX_TYPE__) (x) >>                              \
@@ -330,7 +349,6 @@
     (!(!ct_type_is_signed(from) && ct_type_is_signed(to)) ||                   \
      ct_typecheck_intmax_nonnegative((__typeof__(to)) (from)))
 
-/* An integer constant expr only when `from` is too */
 #define ct_typecheck_value_fits(to, from)                                      \
     (ct_typecheck_source_nonnegative(to, from) &&                              \
      ct_typecheck_converted_nonnegative(to, from) &&                           \
@@ -345,11 +363,8 @@
      (ct_type_is_signed(to) && !ct_type_is_signed(from) &&                     \
       sizeof(__typeof__(from)) < sizeof(__typeof__(to))))
 
-/* We use __builtin_choose_expr here because it enforces the check at compile
- * time instead of a runtime value, and thus it also enforces the check
- * on both arms at compile time */
 #define ct_widenable_ok(to, from)                                              \
-    __builtin_choose_expr(__builtin_constant_p(from),                          \
+    __builtin_choose_expr(ct_is_ice(from),                                     \
                           (ct_typecheck_structurally_widenable(to, from)) ||   \
                               (ct_typecheck_value_fits(to, from)),             \
                           (ct_typecheck_structurally_widenable(to, from)))
@@ -360,7 +375,9 @@
  * sources require wider signed destinations */
 #define ct_typecheck_widenable_to(destination, source)                         \
     (ct_typecheck_integer(destination), ct_typecheck_integer(source),          \
-     (void) sizeof(char[ct_widenable_ok(destination, source) ? 1 : -1]))
+     ct_expr_assert(ct_widenable_ok(destination, source),                      \
+                    "`" #source "` cannot be converted to the destination "    \
+                    "type without changing its value. cast it explicitly"))
 
 /* Common/larger type to cast up to */
 #define ct_common_type_2(a, b)                                                 \
