@@ -108,7 +108,8 @@ static void stress_worker(void *arg) {
 
         enum alloc_behavior behavior = ALLOC_BEHAVIOR_NORMAL;
 
-        void *p = kmalloc_new(sz, flags, behavior);
+        void *p = kmalloc_new(
+            sz, (struct alloc_params){.flags = flags, .behavior = behavior});
         if (!p)
             continue;
 

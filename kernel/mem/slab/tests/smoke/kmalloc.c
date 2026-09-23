@@ -8,7 +8,9 @@ TEST_GROUP_DECLARE(slab, .intensity_desc = {
 static char hooray[128] = {0};
 TEST_DECLARE_SMOKE(slab, alloc_free_smoke) {
 
-    void *p = kmalloc_new(67, ALLOC_FLAGS_DEFAULT, ALLOC_BEHAVIOR_NORMAL);
+    void *p = kmalloc_new(
+        67, (struct alloc_params){.flags = ALLOC_FLAGS_DEFAULT,
+                                  .behavior = ALLOC_BEHAVIOR_NORMAL});
 
     time_ms_t ms = time_get_ms();
     kfree_new(p, ALLOC_BEHAVIOR_NORMAL);
@@ -27,9 +29,15 @@ TEST_DECLARE_SMOKE(slab, alloc_free_smoke) {
 static char a_msg[128];
 TEST_DECLARE_SMOKE(slab, pattern_integrity) {
 
-    void *p1 = kmalloc_new(1, ALLOC_FLAGS_DEFAULT, ALLOC_BEHAVIOR_NORMAL);
-    void *p2 = kmalloc_new(64, ALLOC_FLAGS_DEFAULT, ALLOC_BEHAVIOR_NORMAL);
-    void *p3 = kmalloc_new(4096, ALLOC_FLAGS_DEFAULT, ALLOC_BEHAVIOR_NORMAL);
+    void *p1 = kmalloc_new(
+        1, (struct alloc_params){.flags = ALLOC_FLAGS_DEFAULT,
+                                 .behavior = ALLOC_BEHAVIOR_NORMAL});
+    void *p2 = kmalloc_new(
+        64, (struct alloc_params){.flags = ALLOC_FLAGS_DEFAULT,
+                                  .behavior = ALLOC_BEHAVIOR_NORMAL});
+    void *p3 = kmalloc_new(
+        4096, (struct alloc_params){.flags = ALLOC_FLAGS_DEFAULT,
+                                    .behavior = ALLOC_BEHAVIOR_NORMAL});
 
     if (!p1 || !p2 || !p3) {
         test_info("kmalloc_new returned NULL for a valid request");

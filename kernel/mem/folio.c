@@ -33,15 +33,13 @@ void folio_free(struct folio *folio) {
     folio_free_folio_struct(folio);
 } */
 
-struct folio *folio_alloc_internal(uint8_t order, enum alloc_flags f,
-                                   enum alloc_behavior b) {
-    cc_var_unused(b);
+struct folio *folio_alloc_internal(uint8_t order, struct alloc_params params) {
     size_t pages = pow2(order);
     struct folio *folio = folio_alloc_folio_struct();
     if (!folio)
         return NULL;
 
-    paddr_t phys = pmm_alloc_pages(pages, f);
+    paddr_t phys = pmm_alloc_pages(pages, params.flags);
     if (!phys) {
         folio_free_folio_struct(folio);
         return NULL;

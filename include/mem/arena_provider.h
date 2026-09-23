@@ -30,16 +30,15 @@ struct arena_strategy_capabilities {
 
 struct arena_ops {
     void *(*alloc)(struct arena *a, size_t size, arena_tag_t tag,
-                   enum alloc_flags flags, enum alloc_behavior bh);
+                   struct alloc_params params);
 
     void *(*realloc)(struct arena *a, void *ptr, size_t size, arena_tag_t tag,
-                     enum alloc_flags flags, enum alloc_behavior bh);
+                     struct alloc_params params);
 
     /* Just in case the arena wants to have extra functionality
      * on allocation. Not an ext_fn since it's got so many arguments */
     void *(*alloc_special)(struct arena *a, struct arena_params *p,
-                           arena_tag_t tag, enum alloc_flags flags,
-                           enum alloc_behavior bh);
+                           arena_tag_t tag, struct alloc_params params);
 
     /* If an arena cannot implement a free operation without other
      * information, it should be using an extended function */

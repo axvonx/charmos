@@ -188,12 +188,11 @@ static vaddr_t slab_percpu_refill_for_mag_and_cache(
 static vaddr_t slab_percpu_refill_class(struct slab_domain *dom,
                                         struct slab_percpu_cache *pc,
                                         size_t class_idx,
-                                        enum alloc_flags flags,
-                                        enum alloc_behavior behavior) {
+                                        struct alloc_params params) {
     struct slab_magazine *mag;
     struct slab_cache *cache;
 
-    if (flags & ALLOC_FLAG_ZERO_ON_ALLOC) {
+    if (params.flags & ALLOC_FLAG_ZERO_ON_ALLOC) {
         mag = &pc->mags[SLAB_MAGAZINE_ZERO][class_idx];
         cache = &dom->caches[SLAB_TYPE_NONPAGEABLE_ZERO]->caches[class_idx];
     } else {
@@ -201,16 +200,17 @@ static vaddr_t slab_percpu_refill_class(struct slab_domain *dom,
         cache = &dom->caches[SLAB_TYPE_NONPAGEABLE]->caches[class_idx];
     }
 
-    return slab_percpu_refill_for_mag_and_cache(pc, mag, cache, behavior);
+    return slab_percpu_refill_for_mag_and_cache(pc, mag, cache,
+                                                params.behavior);
 }
 
 void slab_percpu_refill(struct slab_domain *dom,
-                        struct slab_percpu_cache *cache, enum alloc_flags flags,
-                        enum alloc_behavior behavior) {
+                        struct slab_percpu_cache *cache,
+                        struct alloc_params params) {
     /* This flushes a portion of the freequeue into the percpu cache */
-    slab_free_queue_drain_limited(cache, dom, /* pct = */ 100, behavior);
+    slab_free_queue_drain_limited(cache, dom, /* pct = */ 100, params.behavior);
     for (size_t class = 0; class < slab_global.num_sizes; class++)
-        slab_percpu_refill_class(dom, cache, class, flags, behavior);
+        slab_percpu_refill_class(dom, cache, class, params);
 }
 
 /* TODO: memory locality */

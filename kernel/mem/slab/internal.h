@@ -126,10 +126,10 @@ LOG_HANDLE_EXTERN(slab);
 
 #define SLAB_CHUNK_SIZE PAGE_2MB
 
-#define kmalloc_validate_params(size, flags, behavior)                         \
+#define kmalloc_validate_params(size, params)                                  \
     do {                                                                       \
-        kassert(alloc_flags_valid(flags));                                     \
-        kassert(alloc_flag_behavior_verify(flags, behavior));                  \
+        kassert(alloc_flags_valid((params).flags));                            \
+        kassert(alloc_flag_behavior_verify((params)));                         \
         kassert((size) != 0);                                                  \
     } while (0)
 
@@ -578,8 +578,8 @@ void slab_domain_percpu_init(struct slab_domain *domain);
 void slab_percpu_flush(struct slab_domain *dom, struct slab_percpu_cache *pc,
                        size_t class_idx, vaddr_t overflow_obj);
 void slab_percpu_refill(struct slab_domain *dom,
-                        struct slab_percpu_cache *cache, enum alloc_flags flags,
-                        enum alloc_behavior behavior);
+                        struct slab_percpu_cache *cache,
+                        struct alloc_params params);
 
 /* Freequeue */
 void slab_free_queue_init(struct slab_domain *domain, struct slab_free_queue *q,

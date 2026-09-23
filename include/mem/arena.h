@@ -134,13 +134,11 @@ struct arena_result {
 
 extern struct err_facility arena_err_facility;
 void *arena_alloc_internal(struct arena *arena, size_t size, arena_tag_t tag,
-                           enum alloc_flags flags, enum alloc_behavior bh)
-    cw_alloc(2);
+                           struct alloc_params params) cw_alloc(2);
 
 enum err arena_free_internal(struct arena *arena, void *ptr,
                              enum alloc_behavior bh) cc_warn_unused_result;
 
 void *arena_alloc_special_internal(struct arena *arena,
                                    struct arena_params *params, arena_tag_t tag,
-                                   enum alloc_flags flags,
-                                   enum alloc_behavior bh) cw_alloc();
+                                   struct alloc_params alloc_params) cw_alloc();

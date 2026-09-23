@@ -256,57 +256,53 @@ static inline bool alloc_behavior_is_fast(enum alloc_behavior raw) {
     return (raw & ALLOC_BEHAVIOR_FLAG_FAST);
 }
 
-static inline bool alloc_flag_behavior_verify(enum alloc_flags f,
-                                              enum alloc_behavior behavior) {
-    bool may_fault = alloc_behavior_may_fault(behavior);
-    bool flag_requires_residency = !(f & ALLOC_FLAG_PAGEABLE);
-    bool flag_can_fault = (f & ALLOC_FLAG_MOVABLE) || (f & ALLOC_FLAG_PAGEABLE);
+static inline bool alloc_flag_behavior_verify(struct alloc_params params) {
+    bool may_fault = alloc_behavior_may_fault(params.behavior);
+    bool flag_requires_residency = !(params.flags & ALLOC_FLAG_PAGEABLE);
+    bool flag_can_fault = (params.flags & ALLOC_FLAG_MOVABLE) ||
+                          (params.flags & ALLOC_FLAG_PAGEABLE);
 
     /* Non-faulting behavior cannot tolerate pageable or movable allocations */
     if (!may_fault && flag_can_fault)
         return false;
 
     /* ISR-safe behavior must use nonpageable memory */
-    if (alloc_behavior_is_isr_safe(behavior) && !flag_requires_residency)
+    if (alloc_behavior_is_isr_safe(params.behavior) && !flag_requires_residency)
         return false;
 
     return true;
 }
 
-static inline void alloc_request_sanitize(enum alloc_flags *f,
-                                          enum alloc_behavior *b) {
-    if (!alloc_flag_behavior_verify(*f, *b)) {
+static inline void alloc_request_sanitize(struct alloc_params *params) {
+    if (!alloc_flag_behavior_verify(*params)) {
         /* Force safety first */
         log(LOG_SITE(slab), LOG_HANDLE(slab_flags), LOG_WARN,
             "Allocation flag discrepancy");
-        if (alloc_behavior_is_isr_safe(*b) || !alloc_behavior_may_fault(*b)) {
-            *f &= ~(ALLOC_FLAG_PAGEABLE | ALLOC_FLAG_MOVABLE);
-            *f |= ALLOC_FLAG_NONPAGEABLE;
+        if (alloc_behavior_is_isr_safe(params->behavior) ||
+            !alloc_behavior_may_fault(params->behavior)) {
+            params->flags &= ~(ALLOC_FLAG_PAGEABLE | ALLOC_FLAG_MOVABLE);
+            params->flags |= ALLOC_FLAG_NONPAGEABLE;
         }
     }
 }
 
-void *kmalloc_new(size_t size, enum alloc_flags flags,
-                  enum alloc_behavior behavior)
+void *kmalloc_new(size_t size, struct alloc_params params)
     cw_alloc(1) cc_warn_unused_result;
 void kfree_new(void *ptr, enum alloc_behavior behavior);
 
 void *kmalloc_from_domain(domain_id_t domain, size_t size)
     cw_alloc(2) cc_warn_unused_result;
 
-void *kmalloc_internal(size_t size, enum alloc_flags flags,
-                       enum alloc_behavior behavior)
+void *kmalloc_internal(size_t size, struct alloc_params params)
     cw_alloc(1) cc_warn_unused_result;
 
-void *krealloc_internal(void *ptr, size_t size, enum alloc_flags flags,
-                        enum alloc_behavior behavior)
+void *krealloc_internal(void *ptr, size_t size, struct alloc_params params)
     cc_alloc_size(2) cc_warn_unused_result;
 void kfree_internal(void *ptr, enum alloc_behavior behavior);
 size_t ksize(void *ptr);
 
 void *kmalloc_aligned_internal(size_t size, size_t align,
-                               enum alloc_flags flags,
-                               enum alloc_behavior behavior)
+                               struct alloc_params params)
     cw_alloc(1, 2) cc_warn_unused_result;
 void kfree_aligned_internal(void *ptr, enum alloc_behavior behavior);
 void kfree_defer_irq(void *ptr);

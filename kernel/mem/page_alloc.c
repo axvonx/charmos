@@ -84,18 +84,16 @@ static bool page_alloc_pf_valid(struct page_fault_info *pfi) {
     return vas_vaddr_is_allocated(page_alloc_vas, pfi->addr);
 }
 
-void *page_alloc_internal(size_t n_pages, enum alloc_flags flags,
-                          enum alloc_behavior bh) {
-    cc_var_unused(bh);
+void *page_alloc_internal(size_t n_pages, struct alloc_params params) {
     void *ret;
-    if (n_pages == 1 || flags & ALLOC_FLAG_CONTIGUOUS) {
+    if (n_pages == 1 || params.flags & ALLOC_FLAG_CONTIGUOUS) {
         paddr_t phys = pmm_alloc_pages(n_pages);
         if (!phys)
             return NULL;
 
         ret = hhdm_paddr_to_ptr(phys);
     } else {
-        ret = page_alloc_vas_mapped_pages(n_pages, flags, false);
+        ret = page_alloc_vas_mapped_pages(n_pages, params.flags, false);
     }
 
 #ifdef DEBUG_ASAN
@@ -105,10 +103,8 @@ void *page_alloc_internal(size_t n_pages, enum alloc_flags flags,
     return ret;
 }
 
-void *page_alloc_demand_internal(size_t n_pages, enum alloc_flags flags,
-                                 enum alloc_behavior bh) {
-    cc_var_unused(bh);
-    void *ret = page_alloc_vas_mapped_pages(n_pages, flags, true);
+void *page_alloc_demand_internal(size_t n_pages, struct alloc_params params) {
+    void *ret = page_alloc_vas_mapped_pages(n_pages, params.flags, true);
 
 #ifdef DEBUG_ASAN
     /* NOTE: these pages are not yet backed; the shadow write here assumes the

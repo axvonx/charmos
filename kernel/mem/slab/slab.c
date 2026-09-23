@@ -803,16 +803,16 @@ size_t slab_allocation_size(vaddr_t addr) {
 }
 
 void *kmalloc_pages_raw(struct slab_domain *parent, stack_handle_t handle,
-                        size_t size, enum alloc_flags flags,
-                        enum alloc_behavior behavior) {
+                        size_t size, struct alloc_params params) {
+    enum alloc_flags flags = params.flags;
     uint64_t total_size = size + sizeof(struct slab_page_hdr);
     uint64_t pages = PAGES_NEEDED_FOR(total_size);
 
     void *vptr;
     if (flags & ALLOC_FLAG_PAGEABLE) {
-        vptr = page_alloc_demand(pages, flags, behavior);
+        vptr = page_alloc_demand_internal(pages, params);
     } else {
-        vptr = page_alloc(pages, flags, behavior);
+        vptr = page_alloc_internal(pages, params);
         if (vptr && (flags & ALLOC_FLAG_ZERO_ON_ALLOC))
             memset(vptr, 0, total_size);
     }
@@ -842,8 +842,10 @@ static void *kmalloc_old(size_t size, enum alloc_flags flags) {
         ptr = slab_alloc_old(&slab_global.caches.caches[idx]);
     } else {
         /* we say NULL and just free these to domain 0 */
-        ptr = kmalloc_pages_raw(NULL, NULL, size, ALLOC_FLAGS_DEFAULT,
-                                ALLOC_BEHAVIOR_NORMAL);
+        ptr = kmalloc_pages_raw(
+            NULL, NULL, size,
+            (struct alloc_params){.flags = ALLOC_FLAGS_DEFAULT,
+                                  .behavior = ALLOC_BEHAVIOR_NORMAL});
     }
 
     if ((flags & ALLOC_FLAG_ZERO_ON_ALLOC) && ptr)
@@ -853,8 +855,10 @@ static void *kmalloc_old(size_t size, enum alloc_flags flags) {
 }
 
 void *kmalloc_pages(size_t n_pages, enum alloc_flags flags) {
-    void *ptr = kmalloc_pages_raw(NULL, NULL, n_pages * PAGE_SIZE,
-                                  ALLOC_FLAGS_DEFAULT, ALLOC_BEHAVIOR_NORMAL);
+    void *ptr = kmalloc_pages_raw(
+        NULL, NULL, n_pages * PAGE_SIZE,
+        (struct alloc_params){.flags = ALLOC_FLAGS_DEFAULT,
+                              .behavior = ALLOC_BEHAVIOR_NORMAL});
 
     if ((flags & ALLOC_FLAG_ZERO_ON_ALLOC) && ptr)
         memset(ptr, 0, n_pages * PAGE_SIZE);
@@ -890,12 +894,11 @@ void kfree_old(void *ptr) {
 
 static void *kmalloc_pages_internal(struct slab_domain *domain,
                                     stack_handle_t handle, size_t size,
-                                    enum alloc_flags flags,
-                                    enum alloc_behavior behavior) {
-    void *ret = kmalloc_pages_raw(domain, handle, size, flags, behavior);
+                                    struct alloc_params params) {
+    void *ret = kmalloc_pages_raw(domain, handle, size, params);
 
-    if (alloc_behavior_may_fault(behavior) &&
-        !alloc_behavior_is_fast(behavior)) {
+    if (alloc_behavior_may_fault(params.behavior) &&
+        !alloc_behavior_is_fast(params.behavior)) {
         struct slab_domain *local = slab_domain_local();
         struct slab_percpu_cache *pcpu = slab_percpu_cache_local();
 
@@ -904,7 +907,8 @@ static void *kmalloc_pages_internal(struct slab_domain *domain,
         size_t target = slab_free_queue_get_target_drain(local, pct);
         target /= 2;
 
-        slab_free_queue_drain(pcpu, &local->free_queue, target, behavior);
+        slab_free_queue_drain(pcpu, &local->free_queue, target,
+                              params.behavior);
     }
 
     if (ret)
@@ -1181,8 +1185,9 @@ out:
 }
 
 void *slab_alloc_retry(struct slab_domain *domain, stack_handle_t handle,
-                       size_t size, enum alloc_flags flags,
-                       enum alloc_behavior behavior) {
+                       size_t size, struct alloc_params params) {
+    enum alloc_flags flags = params.flags;
+    enum alloc_behavior behavior = params.behavior;
     /* here we run emergency GC to try and reclaim a little memory */
     enum slab_gc_flags gc_flags = SLAB_GC_FLAG_AGG_EMERGENCY;
 
@@ -1204,7 +1209,7 @@ void *slab_alloc_retry(struct slab_domain *domain, stack_handle_t handle,
     /* ok now we have ran the emergency GC, let's try again... */
     if (!kmalloc_size_fits_in_slab(size)) {
         /* here, `domain` should be the local domain... */
-        return kmalloc_pages_internal(domain, handle, size, flags, behavior);
+        return kmalloc_pages_internal(domain, handle, size, params);
     } else {
         /* here, `domain` might be another domain */
 
@@ -1225,9 +1230,10 @@ void *slab_alloc_retry(struct slab_domain *domain, stack_handle_t handle,
     }
 }
 
-void *kmalloc_new(size_t size, enum alloc_flags flags,
-                  enum alloc_behavior behavior) {
-    kmalloc_validate_params(size, flags, behavior);
+void *kmalloc_new(size_t size, struct alloc_params params) {
+    enum alloc_flags flags = params.flags;
+    enum alloc_behavior behavior = params.behavior;
+    kmalloc_validate_params(size, params);
     void *ret = NULL;
     enum irql outer = irql_raise(IRQL_DISPATCH_LEVEL);
 
@@ -1245,7 +1251,7 @@ void *kmalloc_new(size_t size, enum alloc_flags flags,
 
     /* this has its own path */
     if (!kmalloc_size_fits_in_slab(size)) {
-        ret = kmalloc_pages_internal(local_dom, handle, size, flags, behavior);
+        ret = kmalloc_pages_internal(local_dom, handle, size, params);
         goto exit;
     }
 
@@ -1282,12 +1288,12 @@ void *kmalloc_new(size_t size, enum alloc_flags flags,
 
     /* slowpath - let's try and fill up our percpu caches so we don't
      * end up in this slowpath over and over again... */
-    slab_percpu_refill(local_dom, pcpu, flags, behavior);
+    slab_percpu_refill(local_dom, pcpu, params);
 
     /* uh oh... we found NOTHING...
      * try one last time - this will run emergency GC */
     if (cc_unlikely(!ret) && !alloc_behavior_is_fast(behavior))
-        ret = slab_alloc_retry(selected_dom, handle, size, flags, behavior);
+        ret = slab_alloc_retry(selected_dom, handle, size, params);
 
 exit:
 
@@ -1522,9 +1528,8 @@ done:
     irql_lower(outer);
 }
 
-void *kmalloc_init(size_t size, enum alloc_flags f, enum alloc_behavior b) {
-    cc_var_unused(b);
-    return kmalloc_old(size, f);
+void *kmalloc_init(size_t size, struct alloc_params params) {
+    return kmalloc_old(size, params.flags);
 }
 
 void kfree_init(void *p, enum alloc_behavior b) {
@@ -1540,9 +1545,8 @@ void slab_switch_to_domain_allocations(void) {
     static_call_update(free, kfree_new);
 }
 
-void *kmalloc_internal(size_t size, enum alloc_flags flags,
-                       enum alloc_behavior behavior) {
-    void *p = static_call(alloc)(size, flags, behavior);
+void *kmalloc_internal(size_t size, struct alloc_params params) {
+    void *p = static_call(alloc)(size, params);
 
 #ifdef DEBUG_ASAN
     if (p)
@@ -1553,7 +1557,7 @@ void *kmalloc_internal(size_t size, enum alloc_flags flags,
     /* TODO: This should go away on release builds. When we bring
      * in non-fatal assertions/debug only assertions, this should
      * get changed so as to not make the code be slower than a memset 0 */
-    if (p && (flags & ALLOC_FLAG_ZERO_ON_ALLOC))
+    if (p && (params.flags & ALLOC_FLAG_ZERO_ON_ALLOC))
         kassert(is_buffer_uniform(p, size, 0));
 #endif
 
@@ -1590,13 +1594,12 @@ void kfree_internal(void *p, enum alloc_behavior behavior) {
     static_call(free)(p, behavior);
 }
 
-void *krealloc_internal(void *ptr, size_t size, enum alloc_flags flags,
-                        enum alloc_behavior behavior) {
+void *krealloc_internal(void *ptr, size_t size, struct alloc_params params) {
     if (!ptr)
-        return kmalloc(size, flags, behavior);
+        return kmalloc_internal(size, params);
 
     if (size == 0) {
-        kfree(ptr, behavior);
+        kfree_internal(ptr, params.behavior);
         return NULL;
     }
 
@@ -1612,7 +1615,7 @@ void *krealloc_internal(void *ptr, size_t size, enum alloc_flags flags,
         return ptr;
     }
 
-    void *new_ptr = kmalloc(size, flags, behavior);
+    void *new_ptr = kmalloc_internal(size, params);
 
     if (!new_ptr)
         return NULL;

@@ -65,8 +65,8 @@ bool page_is_folio_head(struct page *p);
 struct folio *folio_alloc_folio_struct() cw_alloc();
 void folio_free_folio_struct(struct folio *f);
 
-struct folio *folio_alloc_internal(uint8_t order, enum alloc_flags flags,
-                                   enum alloc_behavior bh) cw_alloc();
+struct folio *folio_alloc_internal(uint8_t order, struct alloc_params params)
+    cw_alloc();
 void folio_free(struct folio *folio);
 
 /* page <-> folio backptrs, give every struct page
@@ -260,8 +260,14 @@ folio_mapcount_dec(struct folio *f) { /* true if dropped to 0 */
          __i++)
 
 #define folio_alloc_1(sz)                                                      \
-    folio_alloc_internal((sz), ALLOC_FLAGS_DEFAULT, ALLOC_BEHAVIOR_DEFAULT)
+    folio_alloc_internal(                                                      \
+        (sz), ((struct alloc_params) {.flags = ALLOC_FLAGS_DEFAULT,            \
+                                      .behavior = ALLOC_BEHAVIOR_DEFAULT}))
 #define folio_alloc_2(sz, fl)                                                  \
-    folio_alloc_internal((sz), (fl), ALLOC_BEHAVIOR_DEFAULT)
-#define folio_alloc_3(sz, fl, bh) folio_alloc_internal((sz), (fl), (bh))
+    folio_alloc_internal(                                                      \
+        (sz), ((struct alloc_params) {.flags = (fl),                           \
+                                      .behavior = ALLOC_BEHAVIOR_DEFAULT}))
+#define folio_alloc_3(sz, fl, bh)                                              \
+    folio_alloc_internal(                                                      \
+        (sz), ((struct alloc_params) {.flags = (fl), .behavior = (bh)}))
 #define folio_alloc(...) PP_CALL(folio_alloc, __VA_ARGS__)

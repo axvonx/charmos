@@ -3,9 +3,10 @@
 #include <mem/alloc.h>
 #include <stddef.h>
 
-void *kmalloc_aligned_internal(size_t size, size_t align, enum alloc_flags f,
-                               enum alloc_behavior b) {
-    uintptr_t raw = (uintptr_t) kmalloc(size + align + sizeof(uintptr_t), f, b);
+void *kmalloc_aligned_internal(size_t size, size_t align,
+                               struct alloc_params params) {
+    uintptr_t raw =
+        (uintptr_t) kmalloc_internal(size + align + sizeof(uintptr_t), params);
     if (!raw)
         return NULL;
 
