@@ -23,11 +23,11 @@
 
 /* TODO: horrible code - bit-op spam */
 void ahci_process_completions(struct ahci_device *dev, uint32_t port) {
-    struct ahci_full_port *fp = &dev->regs[port];
-    struct ahci_port cc_mem_io *p = fp->port;
+    struct ahci_full_port      *fp = &dev->regs[port];
+    struct ahci_port cc_mem_io *p  = fp->port;
 
-    uint32_t ci = mmio_read_32(&p->ci);
-    uint32_t sact = mmio_read_32(&p->sact);
+    uint32_t ci        = mmio_read_32(&p->ci);
+    uint32_t sact      = mmio_read_32(&p->sact);
     uint32_t completed = ~(ci | sact);
 
     for (uint32_t slot = 0; slot < AHCI_MAX_SLOTS; slot++) {
@@ -40,8 +40,8 @@ void ahci_process_completions(struct ahci_device *dev, uint32_t port) {
         dev->io_requests[port][slot] = NULL;
         if (req && req->trigger_completion) {
             bool has_waiter = req->has_waiter;
-            req->done = true;
-            req->status = 0;
+            req->done       = true;
+            req->status     = 0;
             atomic_fetch_and(&fp->slot_bitmap, ~mask);
             if (req->on_complete)
                 req->on_complete(req);
@@ -113,8 +113,8 @@ uint32_t ahci_find_slot(struct ahci_full_port *p) {
 void ahci_prepare_command(struct ahci_full_port *port, uint32_t slot,
                           bool write, uint8_t *buf, uint64_t size) {
 
-    struct ahci_cmd_header *hdr = port->cmd_hdrs[slot];
-    struct ahci_cmd_table *cmd_tbl = port->cmd_tables[slot];
+    struct ahci_cmd_header *hdr     = port->cmd_hdrs[slot];
+    struct ahci_cmd_table  *cmd_tbl = port->cmd_tables[slot];
 
     if (!hdr || !cmd_tbl || size == 0)
         return;
@@ -124,16 +124,16 @@ void ahci_prepare_command(struct ahci_full_port *port, uint32_t slot,
     if (prdt_count > 65535)
         return;
 
-    hdr->cfl = sizeof(struct ahci_fis_reg_h2d) / sizeof(uint32_t);
-    hdr->w = write ? 1 : 0;
-    hdr->p = 0;
-    hdr->a = 0;
-    hdr->c = 1;
+    hdr->cfl   = sizeof(struct ahci_fis_reg_h2d) / sizeof(uint32_t);
+    hdr->w     = write ? 1 : 0;
+    hdr->p     = 0;
+    hdr->a     = 0;
+    hdr->c     = 1;
     hdr->prdtl = prdt_count;
     hdr->prdbc = 0;
 
     uint64_t remaining = size;
-    uint64_t offset = 0;
+    uint64_t offset    = 0;
     uint64_t phys_base =
         PAGE_ALIGN_DOWN(vmm_get_phys((uint64_t) buf, VMM_FLAG_NONE));
 
@@ -142,10 +142,10 @@ void ahci_prepare_command(struct ahci_full_port *port, uint32_t slot,
 
         uint64_t phys_addr = phys_base + offset;
 
-        cmd_tbl->prdt_entry[i].dba = (uint32_t) (phys_addr & 0xFFFFFFFF);
+        cmd_tbl->prdt_entry[i].dba  = (uint32_t) (phys_addr & 0xFFFFFFFF);
         cmd_tbl->prdt_entry[i].dbau = (uint32_t) (phys_addr >> 32);
-        cmd_tbl->prdt_entry[i].dbc = (uint32_t) (chunk - 1); // size - 1
-        cmd_tbl->prdt_entry[i].i = (i == prdt_count - 1) ? 1 : 0;
+        cmd_tbl->prdt_entry[i].dbc  = (uint32_t) (chunk - 1); // size - 1
+        cmd_tbl->prdt_entry[i].i    = (i == prdt_count - 1) ? 1 : 0;
 
         offset += chunk;
         remaining -= chunk;
@@ -158,8 +158,8 @@ void ahci_setup_fis(struct ahci_cmd_table *cmd_tbl, uint8_t command,
     memset(fis, 0, sizeof(struct ahci_fis_reg_h2d));
 
     fis->fis_type = FIS_TYPE_REG_H2D;
-    fis->c = 1;
-    fis->command = command;
+    fis->c        = 1;
+    fis->command  = command;
 
     if (is_atapi) {
         fis->device = BIT(6); // LBA bit
@@ -168,7 +168,7 @@ void ahci_setup_fis(struct ahci_cmd_table *cmd_tbl, uint8_t command,
 
 void ahci_identify(struct ahci_disk *disk) {
     struct ahci_full_port *port = &disk->device->regs[disk->port];
-    uint32_t slot = ahci_find_slot(port);
+    uint32_t               slot = ahci_find_slot(port);
 
     uint8_t *buffer = kmalloc_aligned(PAGE_SIZE, PAGE_SIZE);
     if (!buffer)
@@ -203,7 +203,7 @@ void ahci_identify(struct ahci_disk *disk) {
 static void ahci_on_bio_complete(struct ahci_request *req) {
     struct bio_request *bio = (struct bio_request *) req->user_data;
 
-    bio->done = true;
+    bio->done   = true;
     bio->status = req->status;
 
     if (bio->on_complete)
@@ -213,8 +213,8 @@ static void ahci_on_bio_complete(struct ahci_request *req) {
 }
 
 bool ahci_submit_bio_request(struct block_device *disk,
-                             struct bio_request *bio) {
-    struct ahci_disk *ahci_disk = (struct ahci_disk *) disk->driver_data;
+                             struct bio_request  *bio) {
+    struct ahci_disk    *ahci_disk = (struct ahci_disk *) disk->driver_data;
     struct ahci_request *ahci_req =
         kmalloc(sizeof(struct ahci_request), ALLOC_ZERO);
     if (!ahci_req)
@@ -222,17 +222,17 @@ bool ahci_submit_bio_request(struct block_device *disk,
 
     struct ahci_full_port *p = &ahci_disk->device->regs[ahci_disk->port];
 
-    ahci_req->port = ahci_disk->port;
-    ahci_req->slot = ahci_find_slot(p);
-    ahci_req->lba = bio->lba;
-    ahci_req->buffer = bio->buffer;
+    ahci_req->port         = ahci_disk->port;
+    ahci_req->slot         = ahci_find_slot(p);
+    ahci_req->lba          = bio->lba;
+    ahci_req->buffer       = bio->buffer;
     ahci_req->sector_count = bio->sector_count;
-    ahci_req->size = bio->size;
-    ahci_req->write = bio->write;
-    ahci_req->done = false;
+    ahci_req->size         = bio->size;
+    ahci_req->write        = bio->write;
+    ahci_req->done         = false;
 
     ahci_req->on_complete = ahci_on_bio_complete;
-    ahci_req->user_data = bio;
+    ahci_req->user_data   = bio;
 
     if (bio->write) {
         return ahci_write_sector_async_wrapper(disk, bio->lba, bio->buffer,

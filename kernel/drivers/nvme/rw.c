@@ -38,7 +38,7 @@ static void enqueue_request(struct nvme_device *dev, struct nvme_request *req) {
 
 static bool nvme_bio_fill_prps(struct nvme_bio_data *data, const void *buffer,
                                uint64_t size) {
-    uint64_t offset = (uintptr_t) buffer & (PAGE_SIZE - 1);
+    uint64_t offset    = (uintptr_t) buffer & (PAGE_SIZE - 1);
     uint64_t num_pages = PAGES_NEEDED_FOR(offset + size);
 
     data->prps = kmalloc(sizeof(uint64_t) * num_pages);
@@ -61,7 +61,7 @@ static bool nvme_bio_fill_prps(struct nvme_bio_data *data, const void *buffer,
     return true;
 }
 
-static bool nvme_setup_prps(struct nvme_command *cmd,
+static bool nvme_setup_prps(struct nvme_command  *cmd,
                             struct nvme_bio_data *data) {
     kassert(data->prp_count > 0);
 
@@ -93,7 +93,7 @@ static bool nvme_setup_prps(struct nvme_command *cmd,
         list[i] = data->prps[i + 1];
 
     data->prp_list_phys = list_phys;
-    cmd->prp2 = list_phys;
+    cmd->prp2           = list_phys;
     nvme_check_dma_addr(cmd->prp2, "PRP list pointer");
 
     /* List page has everything needed by the controller */
@@ -110,11 +110,11 @@ free_prps_fail:
 
 static bool rw_send_command(struct block_device *disk, struct nvme_request *req,
                             uint8_t opc) {
-    struct nvme_device *nvme = disk->driver_data;
-    uint16_t qid = THIS_QID(nvme);
-    uint64_t lba = req->lba;
-    uint64_t count = req->sector_count;
-    void *buffer = req->buffer;
+    struct nvme_device *nvme   = disk->driver_data;
+    uint16_t            qid    = THIS_QID(nvme);
+    uint64_t            lba    = req->lba;
+    uint64_t            count  = req->sector_count;
+    void               *buffer = req->buffer;
 
     struct nvme_queue *q = nvme->io_queues[qid];
 
@@ -139,11 +139,11 @@ static bool rw_send_command(struct block_device *disk, struct nvme_request *req,
     req->bio_data = data;
 
     struct nvme_command cmd = {0};
-    cmd.opc = opc;
-    cmd.nsid = 1;
-    cmd.cdw10 = lba & 0xFFFFFFFFULL;
-    cmd.cdw11 = lba >> 32ULL;
-    cmd.cdw12 = count - 1;
+    cmd.opc                 = opc;
+    cmd.nsid                = 1;
+    cmd.cdw10               = lba & 0xFFFFFFFFULL;
+    cmd.cdw11               = lba >> 32ULL;
+    cmd.cdw12               = count - 1;
 
     if (!nvme_setup_prps(&cmd, data)) {
         req->bio_data = NULL;
@@ -151,11 +151,11 @@ static bool rw_send_command(struct block_device *disk, struct nvme_request *req,
         return false;
     }
 
-    req->lba = lba;
-    req->buffer = buffer;
+    req->lba          = lba;
+    req->buffer       = buffer;
     req->sector_count = count;
-    req->done = false;
-    req->status = -1;
+    req->done         = false;
+    req->status       = -1;
 
     if (!nvme_submit_io_cmd(nvme, &cmd, qid, req)) {
         /* Queue filled up. Enqueue a request and a completion
@@ -177,10 +177,10 @@ static bool rw_sync(struct block_device *disk, uint64_t lba, uint8_t *buffer,
                     uint16_t count, async_fn function,
                     struct io_wait_token *iowt) {
     struct nvme_request req = {0};
-    req.lba = lba;
-    req.buffer = buffer;
-    req.sector_count = count;
-    req.remaining_parts = 1;
+    req.lba                 = lba;
+    req.buffer              = buffer;
+    req.sector_count        = count;
+    req.remaining_parts     = 1;
     INIT_LIST_HEAD(&req.list_node);
 
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
@@ -207,7 +207,7 @@ static bool rw_sync(struct block_device *disk, uint64_t lba, uint8_t *buffer,
 static bool rw_wrapper(struct block_device *disk, uint64_t lba, uint8_t *buf,
                        uint64_t cnt, sync_fn function) {
     struct nvme_device *nvme = (struct nvme_device *) disk->driver_data;
-    uint64_t max_sectors = nvme->max_transfer_size / disk->sector_size;
+    uint64_t max_sectors     = nvme->max_transfer_size / disk->sector_size;
     kassert(max_sectors > 0 && max_sectors <= UINT16_MAX);
     struct io_wait_token iowt = IO_WAIT_TOKEN_EMPTY;
 
@@ -231,13 +231,13 @@ static bool rw_wrapper(struct block_device *disk, uint64_t lba, uint8_t *buf,
 static bool rw_async_wrapper(struct block_device *disk,
                              struct nvme_request *req, async_fn function) {
     struct nvme_device *nvme = (struct nvme_device *) disk->driver_data;
-    uint64_t max_sectors = nvme->max_transfer_size / disk->sector_size;
+    uint64_t max_sectors     = nvme->max_transfer_size / disk->sector_size;
     uint64_t chunk;
 
     uint64_t cnt = req->sector_count;
 
-    int part_count = 0;
-    uint64_t tmp_cnt = cnt;
+    int      part_count = 0;
+    uint64_t tmp_cnt    = cnt;
     while (tmp_cnt > 0) {
         chunk = MIN(tmp_cnt, max_sectors);
         tmp_cnt -= chunk;

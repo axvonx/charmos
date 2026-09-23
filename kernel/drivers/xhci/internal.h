@@ -53,7 +53,7 @@ struct xhci_return xhci_wait_for_response(struct xhci_device *dev);
 
 /* returns STATUS */
 struct xhci_return xhci_wait_for_transfer_event(struct xhci_device *dev,
-                                                uint8_t slot_id);
+                                                uint8_t             slot_id);
 uint8_t xhci_enable_slot(struct xhci_device *dev);
 void xhci_disable_slot(struct xhci_device *dev, uint8_t slot_id);
 void xhci_parse_ext_caps(struct xhci_device *dev);
@@ -155,31 +155,31 @@ static inline enum usb_error xhci_rq_to_usb_status(struct xhci_request *req) {
 static inline void
 xhci_request_init_blocking(struct xhci_request *req, struct xhci_command *cmd,
                            uint8_t port, enum xhci_request_command_type t) {
-    req->status = XHCI_REQUEST_SENDING;
-    req->type = t;
+    req->status          = XHCI_REQUEST_SENDING;
+    req->type            = t;
     req->completion_code = 0;
-    req->command = cmd;
-    req->private = NULL;
-    req->callback = xhci_wake_waiter;
-    req->list_owner = XHCI_REQ_LIST_NONE;
-    req->port = port;
+    req->command         = cmd;
+    req->private         = NULL;
+    req->callback        = xhci_wake_waiter;
+    req->list_owner      = XHCI_REQ_LIST_NONE;
+    req->port            = port;
     INIT_LIST_HEAD(&req->list);
 }
 
-static inline void xhci_request_init(struct xhci_request *req,
-                                     struct xhci_command *cmd,
-                                     struct usb_request *rq,
+static inline void xhci_request_init(struct xhci_request           *req,
+                                     struct xhci_command           *cmd,
+                                     struct usb_request            *rq,
                                      enum xhci_request_command_type t) {
-    req->list_owner = XHCI_REQ_LIST_NONE;
-    req->status = XHCI_REQUEST_SENDING;
+    req->list_owner      = XHCI_REQ_LIST_NONE;
+    req->status          = XHCI_REQUEST_SENDING;
     req->completion_code = 0;
-    req->type = t;
-    req->command = cmd;
+    req->type            = t;
+    req->command         = cmd;
     INIT_LIST_HEAD(&req->list);
-    req->urb = rq;
-    req->private = NULL;
+    req->urb      = rq;
+    req->private  = NULL;
     req->callback = xhci_cleanup;
-    req->port = rq->dev->port;
+    req->port     = rq->dev->port;
 }
 
 static inline void xhci_clear_usbsts_ei(struct xhci_device *dev) {
@@ -187,8 +187,8 @@ static inline void xhci_clear_usbsts_ei(struct xhci_device *dev) {
                   mmio_read_32(&dev->op_regs->usbsts) | XHCI_USBSTS_EI);
 }
 
-static inline bool xhci_send_command_and_block(struct xhci_device *dev,
-                                               struct xhci_command *cmd,
+static inline bool xhci_send_command_and_block(struct xhci_device   *dev,
+                                               struct xhci_command  *cmd,
                                                struct io_wait_token *iot) {
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
 
@@ -224,13 +224,13 @@ static inline bool xhci_send_command_and_block(struct xhci_device *dev,
 }
 
 static inline uint64_t xhci_get_trb_phys(struct xhci_ring *ring,
-                                         struct xhci_trb *trb) {
+                                         struct xhci_trb  *trb) {
     uint64_t offset = (uint8_t *) trb - (uint8_t *) ring->trbs;
     return ring->phys + offset;
 }
 
 static inline uint32_t cc_mem_io *xhci_portsc_ptr(struct xhci_device *dev,
-                                                  uint8_t port) {
+                                                  uint8_t             port) {
     return &dev->port_regs[port - 1].portsc;
 }
 
@@ -239,7 +239,7 @@ static inline uint32_t xhci_read_portsc(struct xhci_device *dev, uint8_t port) {
 }
 
 static inline struct xhci_slot *xhci_get_slot(struct xhci_device *dev,
-                                              uint8_t id) {
+                                              uint8_t             id) {
     return &dev->slots[id - 1];
 }
 
@@ -311,7 +311,7 @@ static inline struct xhci_slot *xhci_usb_slot(struct usb_device *dev) {
     return dev->slot;
 }
 
-static inline void xhci_port_set_state(struct xhci_port *port,
+static inline void xhci_port_set_state(struct xhci_port    *port,
                                        enum xhci_port_state state) {
     port->state = state;
     port->generation++;

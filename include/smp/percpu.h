@@ -45,8 +45,8 @@ LINKER_SECTION_DEFINE(struct percpu_descriptor, percpu_desc);
         &__percpu_desc_##__n
 
 #define PERCPU_EXPORT_AS(sym_name, name)                                       \
-    extern struct percpu_descriptor __percpu_desc_sym_##sym_name cc_alias(     \
-        __percpu_desc_##name) cc_used
+    extern struct percpu_descriptor __percpu_desc_sym_##sym_name               \
+        cc_alias(__percpu_desc_##name) cc_used
 
 #define PERCPU_EXPORT(name) PERCPU_EXPORT_AS(name, name)
 

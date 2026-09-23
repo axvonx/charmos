@@ -42,7 +42,7 @@ enum irq_result ide_irq_handler(void *ctx, irq_t irq_num,
     cc_var_unused(irq_num, rsp);
 
     struct ide_channel *chan = ctx;
-    enum irql irql = spin_lock_irq_disable(&chan->lock);
+    enum irql           irql = spin_lock_irq_disable(&chan->lock);
 
     struct ide_request *req = chan->head;
 
@@ -60,11 +60,11 @@ enum irq_result ide_irq_handler(void *ctx, irq_t irq_num,
     }
 
     uint8_t status = inb(REG_STATUS(d->io_base));
-    uint8_t error = inb(REG_ERROR(d->io_base));
+    uint8_t error  = inb(REG_ERROR(d->io_base));
 
     if (status & STATUS_ERR) {
         req->status = translate_status(status, error);
-        req->done = true;
+        req->done   = true;
         goto next_request;
     }
 
@@ -82,7 +82,7 @@ enum irq_result ide_irq_handler(void *ctx, irq_t irq_num,
     }
 
     req->status = translate_status(status, error);
-    req->done = true;
+    req->done   = true;
 
 next_request:
     chan->head = req->next;
@@ -105,8 +105,8 @@ out:
 
 static void ide_on_complete(struct ide_request *req) {
     struct bio_request *bio = req->user_data;
-    bio->done = true;
-    bio->status = req->status;
+    bio->done               = true;
+    bio->status             = req->status;
 
     if (bio->on_complete)
         bio->on_complete(bio);
@@ -121,7 +121,7 @@ static void ide_wait_ready(struct ata_drive *d) {
 
 static void ide_start_next_locked(struct ide_channel *chan) {
     struct ide_request *req = chan->head;
-    struct ata_drive *d = chan->current_drive;
+    struct ata_drive   *d   = chan->current_drive;
 
     chan->busy = true;
 
@@ -181,13 +181,13 @@ static struct ide_request *request_init(uint64_t lba, uint8_t *buffer,
     if (!req)
         return NULL;
 
-    req->lba = lba;
-    req->buffer = buffer;
-    req->sector_count = (count == 0) ? 256 : count;
-    req->status = BIO_STATUS_INFLIGHT;
-    req->write = write;
-    req->next = NULL;
-    req->user_data = NULL;
+    req->lba                = lba;
+    req->buffer             = buffer;
+    req->sector_count       = (count == 0) ? 256 : count;
+    req->status             = BIO_STATUS_INFLIGHT;
+    req->write              = write;
+    req->next               = NULL;
+    req->user_data          = NULL;
     req->trigger_completion = true;
 
     return req;
@@ -195,19 +195,19 @@ static struct ide_request *request_init(uint64_t lba, uint8_t *buffer,
 
 bool ide_submit_bio_async(struct block_device *disk, struct bio_request *bio) {
     struct ata_drive *ide = disk->driver_data;
-    uint64_t lba = bio->lba;
-    uint8_t *buf = bio->buffer;
-    uint64_t cnt = bio->sector_count;
+    uint64_t          lba = bio->lba;
+    uint8_t          *buf = bio->buffer;
+    uint64_t          cnt = bio->sector_count;
 
     bio->status = BIO_STATUS_INFLIGHT;
     while (cnt > 0) {
-        uint8_t chunk = (cnt >= 256) ? 0 : (uint8_t) cnt;
+        uint8_t  chunk   = (cnt >= 256) ? 0 : (uint8_t) cnt;
         uint64_t sectors = (chunk == 0) ? 256 : chunk;
 
         struct ide_request *req = request_init(lba, buf, chunk, bio->write);
-        req->size = sectors * 512;
-        req->user_data = bio;
-        req->on_complete = ide_on_complete;
+        req->size               = sectors * 512;
+        req->user_data          = bio;
+        req->on_complete        = ide_on_complete;
 
         req->trigger_completion = (cnt == sectors);
 

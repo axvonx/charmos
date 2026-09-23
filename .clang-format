@@ -2,7 +2,7 @@ BasedOnStyle: LLVM
 IndentWidth: 4
 IndentPPDirectives: None
 UseTab: Never
-SpaceBeforeParens: ControlStatements
+SpaceBeforeParens: ControlStatementsExceptForEachMacros
 SpaceAfterCStyleCast: true
 AllowShortBlocksOnASingleLine: Empty
 AllowShortCaseLabelsOnASingleLine: true
@@ -10,3 +10,152 @@ AllowShortFunctionsOnASingleLine: Inline
 KeepEmptyLinesAtTheStartOfBlocks: true
 BreakBeforeBraces: Attach
 ColumnLimit: 80
+ReflowComments: IndentOnly
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 0
+AttributeMacros:
+  - cc_align_as
+  - cc_noinline
+  - cc_always_inline
+  - cc_noreturn
+  - cc_unused
+  - cc_maybe_unused
+  - cc_warn_unused_result
+  - cc_nodiscard
+  - cc_packed
+  - cc_aligned
+  - cc_cache_aligned
+  - cc_used
+  - cc_retain
+  - cc_section
+  - cc_hidden
+  - cc_export
+  - cc_cold
+  - cc_hot
+  - cc_flatten
+  - cc_nodebug
+  - cc_no_asan
+  - cc_no_ubsan
+  - cc_no_tsan
+  - cc_no_msan
+  - cc_no_csan
+  - cc_no_sanitize
+  - cc_no_stack_protector
+  - cc_no_instrument
+  - cc_deprecated
+  - cc_deprecated_msg
+  - cc_pure
+  - cc_constfn
+  - cc_noclone
+  - cc_malloc_like
+  - cc_nullable
+  - cc_naked
+  - cc_interrupt
+  - cc_no_caller_saved_registers
+  - cc_returns_nonnull
+  - cc_returns_twice
+  - cc_may_alias
+  - cc_weak
+  - cc_weakref
+  - cc_alias
+  - cc_alloc_size
+  - cc_alloc_align
+  - cc_dealloc
+  - cc_error
+  - cc_warning
+  - cc_nonnull
+  - cc_counted_by
+  - cc_access
+  - cc_printf_like
+  - cc_constructor
+  - cc_destructor
+  - cc_fallthrough
+  - cc_cleanup
+  - cc_target
+  - cc_optimize
+  - cc_designated_init
+  - cc_uninitialized
+  - cc_nonstring
+ForEachMacros:
+  - linker_section_for_each_object
+  - cmdline_list_for_each
+  - parse_list_for_each
+  - percpu_for_each
+  - pernode_for_each
+  - perdomain_for_each
+  - folio_for_each_page_struct
+  - folio_for_each_page_paddr
+  - folio_for_each_page_vaddr
+  - bitmap_for_each_bit_set
+  - bitmap_for_each_bit_unset
+  - domain_for_each_domain
+  - domain_for_each_domain_id
+  - domain_for_each_core
+  - domain_for_each_core_id
+  - domain_for_each_core_local
+  - domain_for_each_arena
+  - for_each_cpu
+  - for_each_cpu_struct
+  - for_each_cpu_id
+  - cpu_mask_for_each
+  - cpu_mask_for_each_clear
+  - cpu_mask_for_each_in
+  - cpu_mask_for_each_clear_in
+  - hlist_for_each_entry
+  - list_for_each
+  - list_for_each_rev
+  - list_for_each_safe
+  - list_for_each_rev_safe
+  - list_for_each_entry
+  - list_for_each_entry_rev
+  - list_for_each_entry_safe
+  - list_for_each_entry_safe_rev
+  - list_for_each_entry_safe_continue
+  - list_for_each_entry_safe_continue_rev
+  - stat_series_for_each
+  - minheap_for_each
+  - mpsc_slist_for_each
+  - mpsc_slist_for_each_safe
+  - mpsc_slist_for_each_entry
+  - watchdog_cpu_for_each
+  - rbit_for_each
+  - rbit_for_each_safe
+  - rbit_for_each_entry
+  - rbit_for_each_entry_safe
+  - rbit_for_each_reverse
+  - rbit_for_each_safe_reverse
+  - rbit_for_each_entry_reverse
+  - rbit_for_each_entry_safe_reverse
+  - avl_tree_for_each
+  - avl_tree_for_each_safe
+  - avl_tree_for_each_entry
+  - avl_tree_for_each_entry_safe
+  - avl_tree_for_each_reverse
+  - avl_tree_for_each_safe_reverse
+  - avl_tree_for_each_entry_reverse
+  - avl_tree_for_each_entry_safe_reverse
+  - splay_for_each
+  - splay_for_each_safe
+  - splay_for_each_entry
+  - splay_for_each_entry_safe
+  - splay_for_each_reverse
+  - splay_for_each_safe_reverse
+  - splay_for_each_entry_reverse
+  - splay_for_each_entry_safe_reverse
+  - treap_for_each
+  - treap_for_each_safe
+  - treap_for_each_entry
+  - treap_for_each_entry_safe
+  - treap_for_each_reverse
+  - treap_for_each_safe_reverse
+  - treap_for_each_entry_reverse
+  - treap_for_each_entry_safe_reverse
+  - rbt_for_each
+  - rbt_for_each_safe
+  - rbt_for_each_entry
+  - rbt_for_each_entry_safe
+  - rbt_for_each_reverse
+  - rbt_for_each_safe_reverse
+  - rbt_for_each_entry_reverse
+  - rbt_for_each_entry_safe_reverse

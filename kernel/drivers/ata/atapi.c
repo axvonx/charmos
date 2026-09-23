@@ -43,7 +43,7 @@ bool atapi_read_sector(struct block_device *disk, uint64_t lba, uint8_t *buffer,
         return false;
 
     struct ata_drive *atapi = (struct ata_drive *) disk->driver_data;
-    uint16_t io = atapi->io_base;
+    uint16_t          io    = atapi->io_base;
 
     outb(REG_DRIVE_HEAD(io), atapi->slave ? 0xB0 : 0xA0);
     io_port_wait();
@@ -97,8 +97,8 @@ bool atapi_read_sector(struct block_device *disk, uint64_t lba, uint8_t *buffer,
     }
 
     for (int i = 0; i < ATAPI_SECTOR_SIZE / 2; i++) {
-        uint16_t word = inw(REG_DATA(io));
-        buffer[i * 2] = word & 0xFF;
+        uint16_t word     = inw(REG_DATA(io));
+        buffer[i * 2]     = word & 0xFF;
         buffer[i * 2 + 1] = (word >> 8) & 0xFF;
     }
 
@@ -138,12 +138,12 @@ struct block_device *atapi_create_generic(struct ata_drive *d) {
     if (!ret)
         panic("Could not allocate space for ATAPI device");
 
-    ret->driver_data = d;
-    ret->sector_size = 2048;
-    ret->read_sector = atapi_read_sector_wrapper;
+    ret->driver_data  = d;
+    ret->sector_size  = 2048;
+    ret->read_sector  = atapi_read_sector_wrapper;
     ret->write_sector = atapi_write_sector;
-    ret->type = BDEV_ATAPI_DRIVE;
-    ret->cache = kmalloc(sizeof(struct bcache));
+    ret->type         = BDEV_ATAPI_DRIVE;
+    ret->cache        = kmalloc(sizeof(struct bcache));
     if (!ret->cache)
         panic("Could not allocate space for ATAPI device block cache");
 

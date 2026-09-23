@@ -5,29 +5,29 @@
 #include <stddef.h>
 #include <stdint.h>
 void *memcpy(void *dest, const void *src, size_t n) cc_access(write_only, 1, 3)
-    cc_access(read_only, 2, 3) cc_nonnull(1, 2) cc_returns_nonnull;
+cc_access(read_only, 2, 3) cc_nonnull(1, 2) cc_returns_nonnull;
 
-void *memset(void *s, int c, size_t n) cc_access(write_only, 1, 3)
-    cc_nonnull(1) cc_returns_nonnull;
+void *memset(void *s, int c, size_t n) cc_access(write_only, 1, 3) cc_nonnull(1)
+cc_returns_nonnull;
 
 void *memmove(void *dest, const void *src, size_t n) cc_access(write_only, 1, 3)
-    cc_access(read_only, 2, 3) cc_nonnull(1, 2) cc_returns_nonnull;
+cc_access(read_only, 2, 3) cc_nonnull(1, 2) cc_returns_nonnull;
 
 int memcmp(const void *s1, const void *s2, size_t n) cc_access(read_only, 1, 3)
-    cc_access(read_only, 2, 3) cc_nonnull(1, 2) cc_pure;
+cc_access(read_only, 2, 3) cc_nonnull(1, 2) cc_pure;
 
 void *memchr(const void *s, int c, size_t n) cc_access(read_only, 1, 3)
-    cc_nonnull(1) cc_pure;
+cc_nonnull(1) cc_pure;
 
 void *memrchr(const void *s, int c, size_t n) cc_access(read_only, 1, 3)
-    cc_nonnull(1) cc_pure;
+cc_nonnull(1) cc_pure;
 
 void *memmem(const void *haystack, size_t haystack_len, const void *needle,
              size_t needle_len) cc_access(read_only, 1, 2)
-    cc_access(read_only, 3, 4) cc_nonnull(1, 3) cc_pure;
+cc_access(read_only, 3, 4) cc_nonnull(1, 3) cc_pure;
 
 void *mempcpy(void *dest, const void *src, size_t n) cc_access(write_only, 1, 3)
-    cc_access(read_only, 2, 3) cc_nonnull(1, 2) cc_returns_nonnull;
+cc_access(read_only, 2, 3) cc_nonnull(1, 2) cc_returns_nonnull;
 
 #define __STRING_FAST static inline __attribute__((always_inline, artificial))
 
@@ -91,13 +91,13 @@ char *strcpy(char *dest, const char *src) cc_nonnull(1, 2) cc_returns_nonnull;
 /* Return the terminator */
 char *stpcpy(char *dest, const char *src) cc_nonnull(1, 2) cc_returns_nonnull;
 /* Pad to n bytes and return the first written NUL, or dest + n if truncated */
-char *stpncpy(char *dest, const char *src, size_t n)
-    cc_nonnull(1, 2) cc_returns_nonnull;
+char *stpncpy(char *dest, const char *src, size_t n) cc_nonnull(1, 2)
+cc_returns_nonnull;
 char *strcat(char *dest, const char *src) cc_nonnull(1, 2) cc_returns_nonnull;
 int strncmp(const char *s1, const char *s2, size_t n) cc_pure cc_nonnull(1, 2);
 int strcmp(const char *str1, const char *str2) cc_pure cc_nonnull(1, 2);
-char *strncpy(char *dest, const char *src, size_t n)
-    cc_nonnull(1, 2) cc_returns_nonnull;
+char *strncpy(char *dest, const char *src, size_t n) cc_nonnull(1, 2)
+cc_returns_nonnull;
 char *strchr(const char *s, int c) cc_pure cc_nonnull(1);
 char *strrchr(const char *s, int c) cc_pure cc_nonnull(1);
 size_t strspn(const char *s, const char *accept) cc_pure cc_nonnull(1, 2);
@@ -105,17 +105,17 @@ size_t strcspn(const char *s, const char *reject) cc_pure cc_nonnull(1, 2);
 char *strpbrk(const char *s, const char *accept) cc_pure cc_nonnull(1, 2);
 char *strstr(const char *haystack, const char *needle) cc_pure cc_nonnull(1, 2);
 char *strcasestr(const char *haystack, const char *needle) cc_pure
-    cc_nonnull(1, 2);
+cc_nonnull(1, 2);
 char *strnstr(const char *haystack, const char *needle, size_t len) cc_pure
-    cc_nonnull(1, 2);
+cc_nonnull(1, 2);
 char *strncasestr(const char *haystack, const char *needle, size_t len) cc_pure
-    cc_nonnull(1, 2);
+cc_nonnull(1, 2);
 
 char *strtok(char *str, const char *delim) cc_nonnull(2);
 char *strtok_r(char *str, const char *delim, char **saveptr) cc_nonnull(2, 3);
 
-char *strncat(char *dest, const char *src, size_t n)
-    cc_nonnull(1, 2) cc_returns_nonnull;
+char *strncat(char *dest, const char *src, size_t n) cc_nonnull(1, 2)
+cc_returns_nonnull;
 size_t strnlen(const char *s, size_t maxlen) cc_pure cc_nonnull(1);
 
 int islower(int c) cc_constfn;
@@ -137,7 +137,7 @@ char *strdup(const char *str) cw_alloc() cc_warn_unused_result;
 char *strndup(const char *str, size_t n) cw_alloc() cc_warn_unused_result;
 int strcasecmp(const char *s1, const char *s2) cc_pure cc_nonnull(1, 2);
 int strncasecmp(const char *s1, const char *s2, size_t n) cc_pure
-    cc_nonnull(1, 2);
+cc_nonnull(1, 2);
 
 char *strrev(char *s) cc_nonnull(1) cc_returns_nonnull;
 char *strtoupper(char *s) cc_nonnull(1) cc_returns_nonnull;

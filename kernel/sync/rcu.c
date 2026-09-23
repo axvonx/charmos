@@ -424,7 +424,8 @@ static uint64_t rcu_gp_start(struct list_head *batch) TSA_NO_ANALYSIS {
     uint64_t seq = prev + 1;
 
     struct rcu_cb *cb;
-    list_for_each_entry(cb, batch, list) cb->target_gen = (size_t) seq;
+    list_for_each_entry(cb, batch, list)
+        cb->target_gen = (size_t) seq;
 
     /* Root down, rcu.nodes is root then leaves */
     for (size_t i = 0; i < rcu.node_count; i++) {
@@ -476,7 +477,8 @@ static uint64_t rcu_gp_start(struct list_head *batch) TSA_NO_ANALYSIS {
         rcu_propagate_done(leaf, seq, irql);
 
         cpu_id_t cpu;
-        for_each_cpu(cpu, &pending) ipi_send((uint32_t) cpu, IRQ_NOP);
+        for_each_cpu(cpu, &pending)
+            ipi_send((uint32_t) cpu, IRQ_NOP);
     }
 
     irql_lower(outer);

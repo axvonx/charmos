@@ -15,10 +15,10 @@ LOG_SITE_DECLARE_PRINT(ahci);
 LOG_HANDLE_DECLARE_PRINT(ahci);
 
 struct ahci_disk *ahci_discover_device(uint8_t bus, uint8_t device,
-                                       uint8_t function,
+                                       uint8_t   function,
                                        uint32_t *out_disk_count) {
     ahci_log(LOG_INFO, "Found device at %02x:%02x.%x", bus, device, function);
-    uint32_t abar = pci_read(bus, device, function, PCI_BAR5);
+    uint32_t abar      = pci_read(bus, device, function, PCI_BAR5);
     uint32_t abar_base = abar & ~0xFU;
 
     pci_write(bus, device, function, PCI_BAR5, 0xFFFFFFFF);
@@ -31,7 +31,7 @@ struct ahci_disk *ahci_discover_device(uint8_t bus, uint8_t device,
     }
 
     uint64_t abar_size = ~(size_mask & ~0xFU) + 1;
-    uint64_t map_size = PAGE_ALIGN_UP(abar_size);
+    uint64_t map_size  = PAGE_ALIGN_UP(abar_size);
 
     void cc_mem_io *abar_virt = mmio_map(abar_base, map_size);
     if (!abar_virt) {
@@ -66,27 +66,27 @@ void ahci_print_wrapper(struct block_device *d) {
 
 static struct bio_scheduler_ops ahci_sata_ssd_ops = {
     .should_coalesce = noop_should_coalesce,
-    .reorder = noop_reorder,
-    .do_coalesce = noop_do_coalesce,
+    .reorder         = noop_reorder,
+    .do_coalesce     = noop_do_coalesce,
     .max_wait_time =
         {
             [BIO_RQ_BACKGROUND] = 30,
-            [BIO_RQ_LOW] = 20,
-            [BIO_RQ_MEDIUM] = 15,
-            [BIO_RQ_HIGH] = 10,
-            [BIO_RQ_URGENT] = 0,
+            [BIO_RQ_LOW]        = 20,
+            [BIO_RQ_MEDIUM]     = 15,
+            [BIO_RQ_HIGH]       = 10,
+            [BIO_RQ_URGENT]     = 0,
         },
     .dispatch_threshold = 96,
     .boost_occupance_limit =
         {
             [BIO_RQ_BACKGROUND] = 50,
-            [BIO_RQ_LOW] = 40,
-            [BIO_RQ_MEDIUM] = 30,
-            [BIO_RQ_HIGH] = 20,
-            [BIO_RQ_URGENT] = 8,
+            [BIO_RQ_LOW]        = 40,
+            [BIO_RQ_MEDIUM]     = 30,
+            [BIO_RQ_HIGH]       = 20,
+            [BIO_RQ_URGENT]     = 8,
         },
     .min_wait_ms = 2,
-    .tick_ms = 25,
+    .tick_ms     = 25,
 };
 
 struct block_device *ahci_create_generic(struct ahci_disk *disk) {
@@ -96,13 +96,13 @@ struct block_device *ahci_create_generic(struct ahci_disk *disk) {
 
     ahci_identify(disk);
 
-    d->flags = BDEV_FLAG_NO_COALESCE | BDEV_FLAG_NO_REORDER;
-    d->driver_data = disk;
-    d->sector_size = disk->sector_size;
-    d->read_sector = ahci_read_sector_wrapper;
-    d->write_sector = ahci_write_sector_wrapper;
+    d->flags            = BDEV_FLAG_NO_COALESCE | BDEV_FLAG_NO_REORDER;
+    d->driver_data      = disk;
+    d->sector_size      = disk->sector_size;
+    d->read_sector      = ahci_read_sector_wrapper;
+    d->write_sector     = ahci_write_sector_wrapper;
     d->submit_bio_async = ahci_submit_bio_request;
-    d->cache = kmalloc(sizeof(struct bcache), ALLOC_ZERO);
+    d->cache            = kmalloc(sizeof(struct bcache), ALLOC_ZERO);
     if (!d->cache)
         panic("Could not allocate space for AHCI device block cache");
 
@@ -116,9 +116,9 @@ static uint64_t ahci_cnt = 1;
 
 static enum err ahci_pci_init(struct device *device) {
     struct pci_device *dev = device->driver_data;
-    uint8_t bus = dev->bus, slot = dev->dev, func = dev->function;
-    uint32_t d_cnt = 0;
-    struct ahci_disk *disks = ahci_discover_device(bus, slot, func, &d_cnt);
+    uint8_t            bus = dev->bus, slot = dev->dev, func = dev->function;
+    uint32_t           d_cnt = 0;
+    struct ahci_disk  *disks = ahci_discover_device(bus, slot, func, &d_cnt);
     for (uint32_t i = 0; i < d_cnt; i++) {
         struct block_device *disk = ahci_create_generic(&disks[i]);
         registry_mkname(disk, "sata", ahci_cnt++);

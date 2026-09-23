@@ -26,9 +26,9 @@ static void e1000_reset(struct e1000_device *dev) {
 }
 
 static void e1000_setup_tx_ring(struct e1000_device *dev) {
-    uint64_t space = sizeof(struct e1000_tx_desc) * E1000_NUM_TX_DESC;
+    uint64_t space     = sizeof(struct e1000_tx_desc) * E1000_NUM_TX_DESC;
     dev->tx_descs_phys = pmm_alloc_page();
-    dev->tx_descs = mmio_map_dma(dev->tx_descs_phys, space);
+    dev->tx_descs      = mmio_map_dma(dev->tx_descs_phys, space);
     memset(dev->tx_descs, 0, space);
 
     for (int i = 0; i < E1000_NUM_TX_DESC; i++) {
@@ -56,9 +56,9 @@ static void e1000_setup_tx_ring(struct e1000_device *dev) {
 }
 
 static void e1000_setup_rx_ring(struct e1000_device *dev) {
-    uint64_t space = sizeof(struct e1000_rx_desc) * E1000_NUM_RX_DESC;
+    uint64_t space     = sizeof(struct e1000_rx_desc) * E1000_NUM_RX_DESC;
     dev->rx_descs_phys = pmm_alloc_page();
-    dev->rx_descs = mmio_map_dma(dev->rx_descs_phys, space);
+    dev->rx_descs      = mmio_map_dma(dev->rx_descs_phys, space);
     memset(dev->rx_descs, 0, space);
 
     for (int i = 0; i < E1000_NUM_RX_DESC; i++) {
@@ -89,7 +89,7 @@ int e1000_send_packet(struct e1000_device *dev, const void *data,
         return -1;
     }
 
-    uint32_t next = dev->tx_tail;
+    uint32_t              next = dev->tx_tail;
     struct e1000_tx_desc *desc = &dev->tx_descs[next];
 
     if (!(desc->status & E1000_TXD_STAT_DD)) {
@@ -99,7 +99,7 @@ int e1000_send_packet(struct e1000_device *dev, const void *data,
     memcpy(dev->tx_buffers[next], data, len);
 
     desc->length = (uint16_t) len;
-    desc->cmd = E1000_TXD_CMD_EOP | E1000_TXD_CMD_IFCS | E1000_TXD_CMD_RS;
+    desc->cmd    = E1000_TXD_CMD_EOP | E1000_TXD_CMD_IFCS | E1000_TXD_CMD_RS;
     desc->status = 0;
 
     dev->tx_tail = (next + 1) % E1000_NUM_TX_DESC;
@@ -118,7 +118,7 @@ static inline uint32_t htonl(uint32_t hostlong) {
 }
 
 static uint16_t checksum(void *data, int len) {
-    uint32_t sum = 0;
+    uint32_t  sum = 0;
     uint16_t *ptr = (uint16_t *) data;
     while (len > 1) {
         sum += *ptr++;
@@ -135,34 +135,34 @@ void send_hardcoded_ping(struct e1000_device *dev) {
     uint8_t packet[14 + 20 + 8 + 32];
     memset(packet, 0, sizeof(packet));
 
-    struct eth_hdr *eth = (void *) packet;
-    struct ipv4_hdr *ip = (void *) (packet + 14);
-    struct icmp_hdr *icmp = (void *) (packet + 14 + 20);
-    uint8_t *payload = packet + 14 + 20 + 8;
+    struct eth_hdr  *eth     = (void *) packet;
+    struct ipv4_hdr *ip      = (void *) (packet + 14);
+    struct icmp_hdr *icmp    = (void *) (packet + 14 + 20);
+    uint8_t         *payload = packet + 14 + 20 + 8;
 
-    uint8_t src_mac[6] = {0x52, 0x54, 0x00, 0x12, 0x34, 0x56};
+    uint8_t src_mac[6]  = {0x52, 0x54, 0x00, 0x12, 0x34, 0x56};
     uint8_t dest_mac[6] = {0x52, 0x54, 0x00, 0x8e, 0x61, 0xf4};
-    ip->dest_ip = htonl(0xC0A87A01); // 192.168.122.1
-    ip->src_ip = htonl(0xC0A87A64);  //  192.168.122.100
+    ip->dest_ip         = htonl(0xC0A87A01); // 192.168.122.1
+    ip->src_ip          = htonl(0xC0A87A64); //  192.168.122.100
 
     memcpy(eth->dest, dest_mac, 6);
     memcpy(eth->src, src_mac, 6);
     eth->ethertype = htons(0x0800);
 
-    ip->version_ihl = (4 << 4) | 5;
-    ip->tos = 0;
-    ip->total_length = htons(20 + 8 + 32);
-    ip->id = htons(0x1234);
+    ip->version_ihl    = (4 << 4) | 5;
+    ip->tos            = 0;
+    ip->total_length   = htons(20 + 8 + 32);
+    ip->id             = htons(0x1234);
     ip->flags_fragment = 0;
-    ip->ttl = 64;
-    ip->protocol = 1;
-    ip->checksum = 0;
-    ip->checksum = checksum(ip, 20);
+    ip->ttl            = 64;
+    ip->protocol       = 1;
+    ip->checksum       = 0;
+    ip->checksum       = checksum(ip, 20);
 
-    icmp->type = 8; // Echo request
-    icmp->code = 0;
+    icmp->type       = 8; // Echo request
+    icmp->code       = 0;
     icmp->identifier = htons(0x1);
-    icmp->sequence = htons(0x1);
+    icmp->sequence   = htons(0x1);
     memset(payload, 0xAA, 32); // dummy payload
 
     icmp->checksum = 0;
@@ -174,8 +174,8 @@ void send_hardcoded_ping(struct e1000_device *dev) {
 bool e1000_init(struct pci_device *pci, struct e1000_device *dev) {
     memset(dev, 0, sizeof(*dev));
 
-    dev->bus = pci->bus;
-    dev->device = pci->dev;
+    dev->bus      = pci->bus;
+    dev->device   = pci->dev;
     dev->function = pci->function;
 
     e1000_log(LOG_INFO, "Found device at %02x:%02x.%02x", pci->bus, pci->dev,
@@ -210,12 +210,12 @@ bool e1000_init(struct pci_device *pci, struct e1000_device *dev) {
 }
 
 static enum err e1000_pci_init(struct device *dev) {
-    struct pci_device *db = dev->driver_data;
-    uint8_t bus = db->bus, d = db->dev, func = db->function;
-    uint16_t did = db->device_id;
+    struct pci_device *db  = dev->driver_data;
+    uint8_t            bus = db->bus, d = db->dev, func = db->function;
+    uint16_t           did = db->device_id;
     if (did == 0x1000 || did == 0x100E || did == 0x1010 || did == 0x1026 ||
         did == 0x10D3 || did == 0x10F5) {
-        struct pci_device dev = {.bus = bus, .dev = d, .function = func};
+        struct pci_device    dev = {.bus = bus, .dev = d, .function = func};
         struct e1000_device *device =
             kmalloc_or_die(sizeof(struct e1000_device));
 

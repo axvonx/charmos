@@ -17,7 +17,7 @@ void xhci_emit_singular(struct xhci_command *cmd, struct xhci_ring *ring) {
     struct xhci_trb *dst = xhci_ring_next_trb(ring);
 
     dst->parameter = src->parameter;
-    dst->status = src->status;
+    dst->status    = src->status;
     dst->control |= src->control;
 
     /* Track completion TRB */
@@ -26,8 +26,8 @@ void xhci_emit_singular(struct xhci_command *cmd, struct xhci_ring *ring) {
 }
 
 bool xhci_send_command(struct xhci_device *dev, struct xhci_command *cmd) {
-    struct xhci_ring *ring = cmd->ring;
-    struct xhci_request *rq = cmd->request;
+    struct xhci_ring    *ring = cmd->ring;
+    struct xhci_request *rq   = cmd->request;
 
     enum irql irql = spin_lock_irq_disable(&dev->lock);
 
@@ -61,10 +61,10 @@ bool xhci_send_command(struct xhci_device *dev, struct xhci_command *cmd) {
 
 /* Submit a single interrupt IN transfer, blocking until completion */
 enum usb_error xhci_submit_interrupt_transfer(struct usb_request *req) {
-    struct usb_device *dev = req->dev;
-    struct xhci_device *xhci = dev->host->driver_data;
-    struct xhci_slot *slot = dev->slot;
-    enum usb_error return_status = USB_OK;
+    struct usb_device  *dev           = req->dev;
+    struct xhci_device *xhci          = dev->host->driver_data;
+    struct xhci_slot   *slot          = dev->slot;
+    enum usb_error      return_status = USB_OK;
 
     /* we drop this ref in the callback to the urb */
     if (!usb_device_get(dev)) {
@@ -88,7 +88,7 @@ enum usb_error xhci_submit_interrupt_transfer(struct usb_request *req) {
     }
 
     uint64_t parameter = vmm_get_phys((vaddr_t) req->buffer, VMM_FLAG_NONE);
-    uint32_t status = req->length;
+    uint32_t status    = req->length;
     status |= TRB_SET_INTERRUPTER_TARGET(0);
 
     uint32_t control = TRB_SET_TYPE(TRB_TYPE_NORMAL);
@@ -112,17 +112,17 @@ enum usb_error xhci_submit_interrupt_transfer(struct usb_request *req) {
 
     struct xhci_trb outgoing = {
         .parameter = parameter,
-        .control = control,
-        .status = status,
+        .control   = control,
+        .status    = status,
     };
 
     *cmd = (struct xhci_command){
-        .ring = ring,
-        .private = &outgoing,
-        .ep_id = ep_id,
-        .slot = slot,
-        .request = xreq,
-        .emit = xhci_emit_singular,
+        .ring     = ring,
+        .private  = &outgoing,
+        .ep_id    = ep_id,
+        .slot     = slot,
+        .request  = xreq,
+        .emit     = xhci_emit_singular,
         .num_trbs = 1,
     };
 
@@ -136,16 +136,16 @@ out:
 
 struct xhci_ctrl_emit {
     struct usb_setup_packet *setup;
-    uint64_t buffer_phys;
-    uint16_t length;
+    uint64_t                 buffer_phys;
+    uint16_t                 length;
 };
 
 void xhci_emit_control(struct xhci_command *cmd, struct xhci_ring *ring) {
     struct xhci_ctrl_emit *c = cmd->private;
-    struct xhci_trb *trb;
+    struct xhci_trb       *trb;
 
     /* Setup stage */
-    trb = xhci_ring_next_trb(ring);
+    trb            = xhci_ring_next_trb(ring);
     trb->parameter = ((uint64_t) c->setup->bitmap_request_type) |
                      ((uint64_t) c->setup->request << 8) |
                      ((uint64_t) c->setup->value << 16) |
@@ -157,16 +157,16 @@ void xhci_emit_control(struct xhci_command *cmd, struct xhci_ring *ring) {
     trb->control |= (XHCI_SETUP_TRANSFER_TYPE_OUT << 16);
 
     if (c->length) {
-        trb = xhci_ring_next_trb(ring);
+        trb            = xhci_ring_next_trb(ring);
         trb->parameter = c->buffer_phys;
-        trb->status = c->length;
+        trb->status    = c->length;
         trb->control |= TRB_SET_TYPE(TRB_TYPE_DATA_STAGE);
         trb->control |= (XHCI_SETUP_TRANSFER_TYPE_IN << 16);
     }
 
-    trb = xhci_ring_next_trb(ring);
+    trb            = xhci_ring_next_trb(ring);
     trb->parameter = 0;
-    trb->status = 0;
+    trb->status    = 0;
     trb->control |= TRB_SET_TYPE(TRB_TYPE_STATUS_STAGE) | TRB_IOC_BIT;
 
     /* Completion on status stage */
@@ -180,7 +180,7 @@ static inline enum usb_error fail_control_transfer(enum usb_error err) {
 }
 
 enum usb_error xhci_send_control_transfer(struct xhci_device *dev,
-                                          struct xhci_slot *slot,
+                                          struct xhci_slot   *slot,
                                           struct usb_request *req) {
     if (!req->setup)
         return fail_control_transfer(USB_ERR_INVALID_ARGUMENT);
@@ -194,8 +194,8 @@ enum usb_error xhci_send_control_transfer(struct xhci_device *dev,
         return fail_control_transfer(USB_ERR_NO_DEVICE);
     }
 
-    struct xhci_request *xreq = kmalloc(sizeof(*xreq), ALLOC_ZERO);
-    struct xhci_command *cmd = kmalloc(sizeof(*cmd), ALLOC_ZERO);
+    struct xhci_request   *xreq = kmalloc(sizeof(*xreq), ALLOC_ZERO);
+    struct xhci_command   *cmd  = kmalloc(sizeof(*cmd), ALLOC_ZERO);
     struct xhci_ctrl_emit *emit = kmalloc(sizeof(*emit), ALLOC_ZERO);
 
     if (!xreq || !cmd || !emit) {
@@ -208,7 +208,7 @@ enum usb_error xhci_send_control_transfer(struct xhci_device *dev,
         return fail_control_transfer(USB_ERR_OOM);
     }
 
-    emit->setup = req->setup;
+    emit->setup  = req->setup;
     emit->length = req->setup->length;
     emit->buffer_phys =
         emit->length ? vmm_get_phys((vaddr_t) req->buffer, VMM_FLAG_NONE) : 0;
@@ -216,12 +216,12 @@ enum usb_error xhci_send_control_transfer(struct xhci_device *dev,
     xhci_request_init(xreq, cmd, req, XHCI_CMD_TYPE_CONTROL_TRANSFER);
 
     *cmd = (struct xhci_command){
-        .ring = slot->ep_rings[0],
-        .slot = slot,
-        .ep_id = 1,
-        .request = xreq,
-        .private = emit,
-        .emit = xhci_emit_control,
+        .ring     = slot->ep_rings[0],
+        .slot     = slot,
+        .ep_id    = 1,
+        .request  = xreq,
+        .private  = emit,
+        .emit     = xhci_emit_control,
         .num_trbs = 2 + (emit->length ? 1 : 0),
     };
 
@@ -236,7 +236,7 @@ enum usb_error xhci_send_control_transfer(struct xhci_device *dev,
 
 enum usb_error xhci_control_transfer(struct usb_request *request) {
     struct xhci_device *xhci = request->dev->host->driver_data;
-    struct xhci_slot *slot = request->dev->slot;
+    struct xhci_slot   *slot = request->dev->slot;
 
     return xhci_send_control_transfer(xhci, slot, request);
 }

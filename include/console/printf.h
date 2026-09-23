@@ -22,6 +22,6 @@ extern struct spinlock k_printf_lock;
 
 void printf_init(struct limine_framebuffer *fb) cc_nonnull(1);
 void printf_unlocked(const char *format, ...) cc_printf_like(1, 2)
-    cc_nonnull(1);
+cc_nonnull(1);
 void printf_unlock(enum irql i) TSA_RELEASES(&k_printf_lock);
 enum irql printf_lock(void) TSA_ACQUIRES(&k_printf_lock);

@@ -4,11 +4,9 @@
 #include <compiler/intrinsic.h>
 #include <console/crash.h>
 
-cc_noreturn cc_cold cc_printf_like(5, 6)
-    cc_nonnull(2, 4, 5) void panic_impl_default(struct crash_payload payload,
-                                                const char *file, int line,
-                                                const char *func,
-                                                const char *fmt, ...);
+cc_noreturn cc_cold cc_printf_like(5, 6) cc_nonnull(2, 4, 5) void
+panic_impl_default(struct crash_payload payload, const char *file, int line,
+                   const char *func, const char *fmt, ...);
 
 #define _panic_pick(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, NAME, ...)   \
     NAME

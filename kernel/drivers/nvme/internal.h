@@ -61,6 +61,6 @@ bool nvme_write_sector_async(struct block_device *disk,
                              struct nvme_request *req);
 
 static inline enum workqueue_error nvme_work_enqueue(struct nvme_device *dev,
-                                                     struct work *work) {
+                                                     struct work        *work) {
     return workqueue_enqueue(dev->workqueue, work);
 }

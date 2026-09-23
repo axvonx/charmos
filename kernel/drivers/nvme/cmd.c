@@ -38,7 +38,7 @@ TEST_EXPORT(nvme_to_bio_status);
 
 void nvme_send_waiters(struct nvme_device *dev) {
     struct nvme_waiting_requests *waiters = &dev->waiting_requests;
-    struct nvme_request *next = NULL;
+    struct nvme_request          *next    = NULL;
 
     enum irql irql = spin_lock_irq_disable(&waiters->lock);
 
@@ -55,7 +55,7 @@ done:
         nvme_send_nvme_req(dev->generic_disk, next);
 }
 
-static void nvme_process_one(struct nvme_device *dev,
+static void nvme_process_one(struct nvme_device  *dev,
                              struct nvme_request *req) {
     cc_var_unused(dev);
     bool has_waiter = req->has_waiter;
@@ -66,7 +66,7 @@ static void nvme_process_one(struct nvme_device *dev,
 
         kfree(req->bio_data->prps);
         kfree(req->bio_data);
-        req->done = true;
+        req->done   = true;
         req->status = nvme_to_bio_status(req->status);
         if (req->on_complete)
             req->on_complete(req);
@@ -91,7 +91,7 @@ static struct nvme_request *nvme_finished_pop_front(struct nvme_device *dev) {
 void nvme_work(void *dvoid, void *nothing) {
     cc_var_unused(nothing);
 
-    struct nvme_device *dev = dvoid;
+    struct nvme_device  *dev = dvoid;
     struct nvme_request *req;
     while (true) {
         while ((req = nvme_finished_pop_front(dev)) != NULL) {
@@ -196,7 +196,7 @@ bool nvme_submit_io_cmd(struct nvme_device *nvme, struct nvme_command *cmd,
 
     cmd->cid = tail;
 
-    this_queue->sq[tail] = *cmd;
+    this_queue->sq[tail]          = *cmd;
     this_queue->sq_requests[tail] = req;
 
     req->status = BIO_STATUS_INFLIGHT; /* In flight */
@@ -213,12 +213,12 @@ bool nvme_submit_io_cmd(struct nvme_device *nvme, struct nvme_command *cmd,
     return true;
 }
 
-uint16_t nvme_submit_admin_cmd(struct nvme_device *nvme,
+uint16_t nvme_submit_admin_cmd(struct nvme_device  *nvme,
                                struct nvme_command *cmd, uint32_t *dw0_out) {
-    uint16_t tail = nvme->admin_sq_tail;
+    uint16_t tail      = nvme->admin_sq_tail;
     uint16_t next_tail = (tail + 1) % nvme->admin_q_depth;
 
-    cmd->cid = tail;
+    cmd->cid             = tail;
     nvme->admin_sq[tail] = *cmd;
 
     nvme->admin_sq_tail = next_tail;
@@ -262,11 +262,11 @@ uint8_t *nvme_identify_controller(struct nvme_device *nvme) {
     memset(buffer, 0, PAGE_SIZE);
 
     struct nvme_command cmd = {0};
-    cmd.opc = NVME_OP_ADMIN_IDENT; // IDENTIFY opcode
-    cmd.fuse = 0;                  // normal
-    cmd.nsid = 1;                  // not used for controller ID
-    cmd.prp1 = buffer_phys;
-    cmd.cdw10 = 1; // identify controller
+    cmd.opc                 = NVME_OP_ADMIN_IDENT; // IDENTIFY opcode
+    cmd.fuse                = 0;                   // normal
+    cmd.nsid                = 1;                   // not used for controller ID
+    cmd.prp1                = buffer_phys;
+    cmd.cdw10               = 1; // identify controller
 
     uint16_t status = nvme_submit_admin_cmd(nvme, &cmd, NULL);
 
@@ -282,8 +282,8 @@ uint8_t *nvme_identify_controller(struct nvme_device *nvme) {
 uint32_t nvme_set_num_queues(struct nvme_device *nvme, uint16_t desired_sq,
                              uint16_t desired_cq) {
     struct nvme_command cmd = {0};
-    cmd.opc = NVME_OP_ADMIN_SET_FEATS;
-    cmd.cdw10 = 0x07;
+    cmd.opc                 = NVME_OP_ADMIN_SET_FEATS;
+    cmd.cdw10               = 0x07;
     cmd.cdw11 =
         ((uint32_t) (desired_cq - 1) << 16) | ((desired_sq - 1) & 0xFFFF);
 
@@ -312,11 +312,11 @@ uint8_t *nvme_identify_namespace(struct nvme_device *nvme, uint32_t nsid) {
     memset(buffer, 0, PAGE_SIZE);
 
     struct nvme_command cmd = {0};
-    cmd.opc = NVME_OP_ADMIN_IDENT; // IDENTIFY opcode
-    cmd.fuse = 0;                  // normal
-    cmd.nsid = nsid;               // namespace ID to identify
-    cmd.prp1 = buffer_phys;
-    cmd.cdw10 = 0; // Identify Namespace (CNS=0)
+    cmd.opc                 = NVME_OP_ADMIN_IDENT; // IDENTIFY opcode
+    cmd.fuse                = 0;                   // normal
+    cmd.nsid                = nsid;                // namespace ID to identify
+    cmd.prp1                = buffer_phys;
+    cmd.cdw10               = 0; // Identify Namespace (CNS=0)
 
     uint16_t status = nvme_submit_admin_cmd(nvme, &cmd, NULL);
 
@@ -327,8 +327,8 @@ uint8_t *nvme_identify_namespace(struct nvme_device *nvme, uint32_t nsid) {
     }
 
     struct nvme_identify_namespace *ns = (void *) buffer;
-    uint8_t flbas_index = ns->flbas & 0xF; // lower 4 bits = selected format
-    uint8_t lbads = ns->lbaf[flbas_index].lbads;
+    uint8_t  flbas_index = ns->flbas & 0xF; // lower 4 bits = selected format
+    uint8_t  lbads       = ns->lbaf[flbas_index].lbads;
     uint32_t sector_size = BIT(lbads);
     nvme_log(LOG_INFO, "Device sector size is %u bytes", sector_size);
 

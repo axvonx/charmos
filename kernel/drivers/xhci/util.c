@@ -17,7 +17,7 @@ bool xhci_controller_stop(struct xhci_device *dev) {
     struct xhci_op_regs cc_mem_io *op = dev->op_regs;
 
     struct xhci_usbcmd usbcmd = {.raw = mmio_read_32(&op->usbcmd)};
-    usbcmd.run_stop = 0;
+    usbcmd.run_stop           = 0;
     mmio_write_32(&op->usbcmd, usbcmd.raw);
     uint64_t timeout = XHCI_DEVICE_TIMEOUT * 1000;
     while (!BIT_TEST(mmio_read_32(&op->usbsts), 0) && timeout--) {
@@ -31,7 +31,7 @@ bool xhci_controller_stop(struct xhci_device *dev) {
 bool xhci_controller_reset(struct xhci_device *dev) {
     struct xhci_op_regs cc_mem_io *op = dev->op_regs;
 
-    struct xhci_usbcmd usbcmd = {.raw = mmio_read_32(&op->usbcmd)};
+    struct xhci_usbcmd usbcmd    = {.raw = mmio_read_32(&op->usbcmd)};
     usbcmd.host_controller_reset = 1;
     mmio_write_32(&op->usbcmd, usbcmd.raw);
     uint64_t timeout = XHCI_DEVICE_TIMEOUT * 1000;
@@ -48,7 +48,7 @@ bool xhci_controller_start(struct xhci_device *dev) {
     struct xhci_op_regs cc_mem_io *op = dev->op_regs;
 
     struct xhci_usbcmd usbcmd = {.raw = mmio_read_32(&op->usbcmd)};
-    usbcmd.run_stop = 1;
+    usbcmd.run_stop           = 1;
     mmio_write_32(&op->usbcmd, usbcmd.raw);
     uint64_t timeout = XHCI_DEVICE_TIMEOUT * 1000;
     while (BIT_TEST(mmio_read_32(&op->usbsts), 0) && timeout--) {
@@ -61,9 +61,9 @@ bool xhci_controller_start(struct xhci_device *dev) {
 }
 
 void xhci_controller_enable_ints(struct xhci_device *dev) {
-    struct xhci_op_regs cc_mem_io *op = dev->op_regs;
-    struct xhci_usbcmd usbcmd = {.raw = mmio_read_32(&op->usbcmd)};
-    usbcmd.interrupter_enable = 1;
+    struct xhci_op_regs cc_mem_io *op     = dev->op_regs;
+    struct xhci_usbcmd             usbcmd = {.raw = mmio_read_32(&op->usbcmd)};
+    usbcmd.interrupter_enable             = 1;
     mmio_write_32(&op->usbcmd, usbcmd.raw);
 }
 
@@ -76,9 +76,9 @@ void xhci_wake_waiter(struct xhci_device *dev, struct xhci_request *req) {
 void xhci_cleanup(struct xhci_device *dev, struct xhci_request *req) {
     cc_var_unused(dev);
 
-    struct usb_request *urb = req->urb;
-    struct usb_device *udev = urb->dev;
-    urb->status = xhci_rq_to_usb_status(req);
+    struct usb_request *urb  = req->urb;
+    struct usb_device  *udev = urb->dev;
+    urb->status              = xhci_rq_to_usb_status(req);
     urb->complete(urb);
 
     kfree(req->command);
@@ -92,22 +92,22 @@ struct xhci_ring *xhci_allocate_ring() {
     if (!trbs)
         return NULL;
 
-    paddr_t phys = vmm_get_phys((vaddr_t) trbs, VMM_FLAG_NONE);
+    paddr_t           phys = vmm_get_phys((vaddr_t) trbs, VMM_FLAG_NONE);
     struct xhci_ring *ring = kmalloc(sizeof(struct xhci_ring), ALLOC_ZERO);
     if (!ring)
         return NULL;
 
-    ring->phys = phys;
-    ring->cycle = 1;
-    ring->size = TRB_RING_SIZE;
-    ring->trbs = trbs;
+    ring->phys          = phys;
+    ring->cycle         = 1;
+    ring->size          = TRB_RING_SIZE;
+    ring->trbs          = trbs;
     ring->enqueue_index = 0;
     ring->dequeue_index = 0;
 
     struct xhci_trb *link = &trbs[TRB_RING_SIZE - 1];
 
     link->parameter = phys;
-    link->status = 0;
+    link->status    = 0;
     link->control =
         TRB_SET_TYPE(TRB_TYPE_LINK) | TRB_TOGGLE_CYCLE_BIT | ring->cycle;
 
@@ -120,9 +120,9 @@ struct xhci_ring *xhci_allocate_event_ring(void) {
     er->trbs = kmalloc_aligned(PAGE_SIZE, PAGE_SIZE, ALLOC_ZERO);
     er->phys = vmm_get_phys((vaddr_t) er->trbs, VMM_FLAG_NONE);
 
-    er->size = TRB_RING_SIZE;
+    er->size          = TRB_RING_SIZE;
     er->dequeue_index = 0;
-    er->cycle = 1;
+    er->cycle         = 1;
     return er;
 }
 
@@ -135,7 +135,7 @@ void xhci_free_ring(struct xhci_ring *ring) {
 }
 
 void xhci_teardown_slot(struct xhci_slot *me) {
-    enum irql irql = spin_lock_irq_disable(&me->dev->lock);
+    enum irql         irql = spin_lock_irq_disable(&me->dev->lock);
     struct xhci_ring *copy_into[32];
     me->udev = NULL;
     me->port = NULL;
@@ -155,28 +155,28 @@ void xhci_teardown_slot(struct xhci_slot *me) {
 }
 
 void xhci_reset_slot(struct usb_device *dev) {
-    struct xhci_device *xdev = dev->host->driver_data;
-    uint8_t slot_id = ((struct xhci_slot *) dev->slot)->slot_id;
+    struct xhci_device *xdev    = dev->host->driver_data;
+    uint8_t             slot_id = ((struct xhci_slot *) dev->slot)->slot_id;
     struct xhci_request request = {0};
-    struct xhci_command cmd = {0};
+    struct xhci_command cmd     = {0};
 
     xhci_request_init_blocking(&request, &cmd, /* port = */ 0,
                                XHCI_CMD_TYPE_RESET_DEVICE);
 
     struct xhci_trb outgoing = {
         .parameter = 0,
-        .status = 0,
+        .status    = 0,
         .control =
             TRB_SET_TYPE(TRB_TYPE_RESET_DEVICE) | TRB_SET_SLOT_ID(slot_id),
     };
 
     cmd = (struct xhci_command){
-        .private = &outgoing,
-        .emit = xhci_emit_singular,
-        .ep_id = 0,
-        .slot = NULL,
-        .ring = xdev->cmd_ring,
-        .request = &request,
+        .private  = &outgoing,
+        .emit     = xhci_emit_singular,
+        .ep_id    = 0,
+        .slot     = NULL,
+        .ring     = xdev->cmd_ring,
+        .request  = &request,
         .num_trbs = 1,
     };
 

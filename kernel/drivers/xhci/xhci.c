@@ -29,9 +29,9 @@ LOG_SITE_DECLARE_PRINT(xhci, .enabled_mask = LOG_SITE_LEVEL(LOG_ERROR));
 
 enum usb_error xhci_address_device(struct xhci_port *p, uint8_t slot_id,
                                    struct xhci_slot *publish_to) {
-    struct xhci_device *xhci = p->dev;
-    uint8_t speed = p->speed;
-    uint8_t port = p->port_id;
+    struct xhci_device *xhci  = p->dev;
+    uint8_t             speed = p->speed;
+    uint8_t             port  = p->port_id;
 
     struct xhci_input_ctx *input_ctx =
         kmalloc_aligned(PAGE_SIZE, PAGE_SIZE, ALLOC_ZERO);
@@ -57,27 +57,27 @@ enum usb_error xhci_address_device(struct xhci_port *p, uint8_t slot_id,
 
     uintptr_t dev_ctx_phys = vmm_get_phys((uintptr_t) dev_ctx, VMM_FLAG_NONE);
 
-    enum irql irql = spin_lock_irq_disable(&xhci->lock);
-    input_ctx->ctrl_ctx.add_flags = XHCI_INPUT_CTX_ADD_FLAGS;
+    enum irql irql                 = spin_lock_irq_disable(&xhci->lock);
+    input_ctx->ctrl_ctx.add_flags  = XHCI_INPUT_CTX_ADD_FLAGS;
     input_ctx->ctrl_ctx.drop_flags = 0;
 
     struct xhci_slot_ctx *slot = &input_ctx->slot_ctx;
-    slot->route_string = 0;
-    slot->speed = speed;
-    slot->context_entries = 1;
-    slot->root_hub_port = port;
-    slot->mtt = 0;
-    slot->hub = 0;
-    slot->num_ports = 0;
+    slot->route_string         = 0;
+    slot->speed                = speed;
+    slot->context_entries      = 1;
+    slot->root_hub_port        = port;
+    slot->mtt                  = 0;
+    slot->hub                  = 0;
+    slot->num_ports            = 0;
 
     publish_to->ep_rings[0] = ring;
 
     struct xhci_ep_ctx *ep0 = &input_ctx->ep_ctx[0];
-    ep0->ep_type = XHCI_ENDPOINT_TYPE_CONTROL_BI;
+    ep0->ep_type            = XHCI_ENDPOINT_TYPE_CONTROL_BI;
     ep0->max_packet_size =
         (speed == PORT_SPEED_LOW || speed == PORT_SPEED_FULL) ? 8 : 64;
-    ep0->max_burst_size = 0;
-    ep0->interval = 0;
+    ep0->max_burst_size  = 0;
+    ep0->interval        = 0;
     ep0->dequeue_ptr_raw = ring->phys | TRB_CYCLE_BIT;
 
     xhci->dcbaa->ptrs[slot_id] = dev_ctx_phys;
@@ -87,24 +87,24 @@ enum usb_error xhci_address_device(struct xhci_port *p, uint8_t slot_id,
     control |= TRB_SET_SLOT_ID(slot_id);
 
     struct xhci_request request = {0};
-    struct xhci_command cmd = {0};
+    struct xhci_command cmd     = {0};
     xhci_request_init_blocking(&request, &cmd, port,
                                XHCI_CMD_TYPE_ADDRESS_DEVICE);
 
     struct xhci_trb outgoing = {
-        .control = control,
+        .control   = control,
         .parameter = input_ctx_phys,
-        .status = 0,
+        .status    = 0,
     };
 
     cmd = (struct xhci_command){
-        .ring = xhci->cmd_ring,
-        .private = &outgoing,
-        .emit = xhci_emit_singular,
+        .ring     = xhci->cmd_ring,
+        .private  = &outgoing,
+        .emit     = xhci_emit_singular,
         .num_trbs = 1,
-        .ep_id = 0,
-        .slot = NULL,
-        .request = &request,
+        .ep_id    = 0,
+        .slot     = NULL,
+        .request  = &request,
     };
 
     spin_unlock(&xhci->lock, irql);
@@ -133,7 +133,7 @@ enum usb_error xhci_configure_device_endpoints(struct usb_device *usb) {
     if (!xhci_slot_get(xslot))
         return USB_ERR_NO_DEVICE;
 
-    struct xhci_device *xhci = usb->driver_private;
+    struct xhci_device    *xhci = usb->driver_private;
     struct xhci_input_ctx *input_ctx =
         kmalloc_aligned(PAGE_SIZE, PAGE_SIZE, ALLOC_ZERO);
 
@@ -141,13 +141,13 @@ enum usb_error xhci_configure_device_endpoints(struct usb_device *usb) {
         vmm_get_phys((uintptr_t) input_ctx, VMM_FLAG_NONE);
 
     input_ctx->ctrl_ctx.add_flags = 1;
-    uint8_t max_ep_index = 0;
+    uint8_t max_ep_index          = 0;
 
     struct xhci_slot local_copy = *xslot;
 
     for (size_t i = 0; i < usb->num_endpoints; i++) {
-        struct usb_endpoint *ep = usb->endpoints[i];
-        uint8_t ep_index = get_ep_index(ep);
+        struct usb_endpoint *ep       = usb->endpoints[i];
+        uint8_t              ep_index = get_ep_index(ep);
 
         uint8_t input_ctx_idx = xhci_ep_to_input_ctx_idx(ep);
 
@@ -161,14 +161,14 @@ enum usb_error xhci_configure_device_endpoints(struct usb_device *usb) {
         ep_ctx->ep_type = usb_to_xhci_ep_type(ep->in, ep->type);
 
         ep_ctx->max_packet_size = ep->max_packet_size;
-        ep_ctx->interval = ep->interval;
+        ep_ctx->interval        = ep->interval;
 
         ep_ctx->max_burst_size = 0;
 
         struct xhci_ring *ring = xhci_allocate_ring();
 
         ep_ctx->dequeue_ptr_raw = ring->phys | TRB_CYCLE_BIT;
-        ep_ctx->ep_state = 1;
+        ep_ctx->ep_state        = 1;
 
         local_copy.ep_rings[ep_index] = ring;
     }
@@ -179,23 +179,23 @@ enum usb_error xhci_configure_device_endpoints(struct usb_device *usb) {
     control |= TRB_SET_SLOT_ID(xslot->slot_id);
 
     struct xhci_request request = {0};
-    struct xhci_command cmd = {0};
+    struct xhci_command cmd     = {0};
     xhci_request_init_blocking(&request, &cmd, /* port = */ 0,
                                XHCI_CMD_TYPE_CONFIGURE_ENDPOINT);
 
     struct xhci_trb outgoing = {
         .parameter = input_ctx_phys,
-        .control = control,
-        .status = 0,
+        .control   = control,
+        .status    = 0,
     };
 
     cmd = (struct xhci_command){
-        .slot = NULL,
-        .ep_id = 0,
-        .private = &outgoing,
-        .emit = xhci_emit_singular,
-        .ring = xhci->cmd_ring,
-        .request = &request,
+        .slot     = NULL,
+        .ep_id    = 0,
+        .private  = &outgoing,
+        .emit     = xhci_emit_singular,
+        .ring     = xhci->cmd_ring,
+        .request  = &request,
         .num_trbs = 1,
     };
 
@@ -231,9 +231,9 @@ static void xhci_work_port_disconnect(void *arg1) {
         /* Do repeated scans until we don't find a port */
         bool keep_going = true;
         while (keep_going) {
-            struct xhci_port *port = NULL;
-            struct xhci_slot *slot = NULL;
-            struct usb_device *dev = NULL;
+            struct xhci_port  *port = NULL;
+            struct xhci_slot  *slot = NULL;
+            struct usb_device *dev  = NULL;
 
             enum irql irql = spin_lock_irq_disable(&d->lock);
             for (size_t i = 0; i < XHCI_PORT_COUNT; i++) {
@@ -340,7 +340,7 @@ xhci_finished_requests_pop_front(struct xhci_device *dev) {
     enum irql irql = spin_lock_irq_disable(&dev->lock);
 
     struct xhci_request *ret = NULL;
-    struct list_head *lh =
+    struct list_head    *lh =
         list_pop_front_init(&dev->requests[XHCI_REQ_LIST_PROCESSED]);
     if (!lh)
         goto out;
@@ -354,9 +354,9 @@ out:
 
 static struct xhci_request *
 xhci_waiting_requests_pop_front(struct xhci_device *dev) {
-    enum irql irql = spin_lock_irq_disable(&dev->lock);
-    struct xhci_request *ret = NULL;
-    struct list_head *lh =
+    enum irql            irql = spin_lock_irq_disable(&dev->lock);
+    struct xhci_request *ret  = NULL;
+    struct list_head    *lh =
         list_pop_front_init(&dev->requests[XHCI_REQ_LIST_WAITING]);
 
     if (!lh)
@@ -369,7 +369,7 @@ out:
     return ret;
 }
 
-static void xhci_process_single(struct xhci_device *dev,
+static void xhci_process_single(struct xhci_device  *dev,
                                 struct xhci_request *request) {
     struct xhci_slot *rslot = request->command->slot;
 
@@ -391,7 +391,7 @@ static void xhci_worker_submit_waiting(struct xhci_device *dev) {
 }
 
 static void xhci_worker(void *arg) {
-    struct xhci_device *dev = arg;
+    struct xhci_device  *dev = arg;
     struct xhci_request *req;
     while (true) {
         while ((req = xhci_finished_requests_pop_front(dev)))
@@ -439,7 +439,7 @@ static void xhci_worker(void *arg) {
  */
 
 static struct xhci_request *xhci_lookup_trb(struct xhci_device *dev,
-                                            struct xhci_trb *trb) {
+                                            struct xhci_trb    *trb) {
     kassert(TRB_TYPE(trb->control) == TRB_TYPE_TRANSFER_EVENT ||
             TRB_TYPE(trb->control) == TRB_TYPE_COMMAND_COMPLETION);
 
@@ -478,7 +478,7 @@ void xhci_request_move(struct xhci_device *dev, struct xhci_request *req,
 }
 
 static void xhci_disconnect_requests_on_port(struct xhci_device *dev,
-                                             uint8_t port) {
+                                             uint8_t             port) {
     for (int i = XHCI_REQ_LIST_OUTGOING; i <= XHCI_REQ_LIST_WAITING; i++) {
         struct xhci_request *req, *tmp;
         list_for_each_entry_safe(req, tmp, &dev->requests[i], list) {
@@ -500,7 +500,7 @@ static void xhci_disconnect_requests_on_port(struct xhci_device *dev,
     }
 }
 
-static void catch_stragglers_on_list(struct xhci_device *dev,
+static void catch_stragglers_on_list(struct xhci_device    *dev,
                                      enum xhci_request_list l) {
     struct xhci_request *req, *tmp;
     list_for_each_entry_safe(req, tmp, &dev->requests[l], list) {
@@ -509,8 +509,8 @@ static void catch_stragglers_on_list(struct xhci_device *dev,
             continue;
 
         enum xhci_slot_state state = xhci_slot_get_state(slot);
-        bool slot_here = state == XHCI_SLOT_STATE_ENABLED &&
-                         slot->port->generation == req->generation;
+        bool slot_here             = state == XHCI_SLOT_STATE_ENABLED &&
+                                     slot->port->generation == req->generation;
 
         if (!slot_here) {
             req->status = XHCI_REQUEST_DISCONNECT;
@@ -526,7 +526,7 @@ static void xhci_catch_stragglers(struct xhci_device *dev) {
 }
 
 enum xhci_request_status
-xhci_make_request_status(struct xhci_device *dev,
+xhci_make_request_status(struct xhci_device  *dev,
                          struct xhci_request *request) {
     if (request->port) {
         struct xhci_port *port = &dev->port_info[request->port - 1];
@@ -569,20 +569,20 @@ xhci_make_request_status(struct xhci_device *dev,
     return XHCI_REQUEST_ERR;
 }
 
-static void xhci_process_trb_into_request(struct xhci_device *dev,
+static void xhci_process_trb_into_request(struct xhci_device  *dev,
                                           struct xhci_request *request,
-                                          struct xhci_trb *trb) {
-    request->completion_code = TRB_CC(trb->status);
-    request->return_status = trb->status;
-    request->return_control = trb->control;
+                                          struct xhci_trb     *trb) {
+    request->completion_code  = TRB_CC(trb->status);
+    request->return_status    = trb->status;
+    request->return_control   = trb->control;
     request->return_parameter = trb->parameter;
-    request->status = xhci_make_request_status(dev, request);
+    request->status           = xhci_make_request_status(dev, request);
 }
 
 static bool xhci_trb_slot_exists(struct xhci_device *dev, struct xhci_trb *trb,
                                  struct xhci_request *request) {
     struct xhci_trb *source = request->last_trb;
-    uint8_t type = TRB_TYPE(source->control);
+    uint8_t          type   = TRB_TYPE(source->control);
     if (type == TRB_TYPE_ENABLE_SLOT || type == TRB_TYPE_NO_OP ||
         type == TRB_TYPE_ADDRESS_DEVICE || type == TRB_TYPE_DISABLE_SLOT ||
         type == TRB_TYPE_RESET_DEVICE)
@@ -593,7 +593,7 @@ static bool xhci_trb_slot_exists(struct xhci_device *dev, struct xhci_trb *trb,
 }
 
 static void xhci_process_request(struct xhci_device *dev,
-                                 struct xhci_trb *trb) {
+                                 struct xhci_trb    *trb) {
     struct xhci_request *found = xhci_lookup_trb(dev, trb);
 
     /* No owner left for the completion: hotplug can create this scenario:
@@ -616,7 +616,7 @@ static void xhci_process_request(struct xhci_device *dev,
 /* ack the change bits. multiple changes can coalesce into one event. only
  * write back a 1 for the bits we saw */
 static void xhci_ack_port_changes(uint32_t cc_mem_io *portsc_ptr,
-                                  uint32_t observed) {
+                                  uint32_t            observed) {
     uint32_t change = observed & XHCI_PORTSC_CHANGE_MASK;
     if (!change)
         return;
@@ -628,13 +628,13 @@ static void xhci_ack_port_changes(uint32_t cc_mem_io *portsc_ptr,
 }
 
 static void xhci_start_port_connect(struct xhci_device *dev,
-                                    struct xhci_port *port) {
+                                    struct xhci_port   *port) {
     xhci_port_set_state(port, XHCI_PORT_STATE_CONNECTING);
     semaphore_post(&dev->port_connect);
 }
 
 static void xhci_start_port_disconnect(struct xhci_device *dev,
-                                       struct xhci_port *port) {
+                                       struct xhci_port   *port) {
     xhci_warn("dsc");
     xhci_port_set_state(port, XHCI_PORT_STATE_DISCONNECTING);
 
@@ -651,9 +651,9 @@ static void xhci_start_port_disconnect(struct xhci_device *dev,
  * from the CCS level makes missed edges fix themselves, as lost transitions
  * are fixed on the next reconcile which converges the port to match HW */
 static void xhci_reconcile_port_locked(struct xhci_device *dev,
-                                       struct xhci_port *port) {
-    bool present = xhci_read_portsc(dev, port->port_id) & PORTSC_CCS;
-    bool tracked = port->slot != NULL;
+                                       struct xhci_port   *port) {
+    bool present            = xhci_read_portsc(dev, port->port_id) & PORTSC_CCS;
+    bool tracked            = port->slot != NULL;
     enum xhci_port_state st = port->state;
 
     if (present && !tracked && st != XHCI_PORT_STATE_CONNECTING)
@@ -667,7 +667,7 @@ static void xhci_reconcile_port_locked(struct xhci_device *dev,
 
 static void xhci_scan_ports_locked(struct xhci_device *dev) {
     for (size_t i = 0; i < dev->ports; i++) {
-        struct xhci_port *port = &dev->port_info[i];
+        struct xhci_port   *port       = &dev->port_info[i];
         uint32_t cc_mem_io *portsc_ptr = xhci_portsc_ptr(dev, port->port_id);
         xhci_ack_port_changes(portsc_ptr, mmio_read_32(portsc_ptr));
         xhci_reconcile_port_locked(dev, port);
@@ -675,7 +675,7 @@ static void xhci_scan_ports_locked(struct xhci_device *dev) {
 }
 
 static void xhci_process_port_status_change(struct xhci_device *dev,
-                                            struct xhci_trb *evt) {
+                                            struct xhci_trb    *evt) {
     cc_var_unused(evt);
     /* Scan all ports */
     xhci_scan_ports_locked(dev);
@@ -706,7 +706,7 @@ void xhci_process_event_ring(struct xhci_device *xhci) {
 
     while (true) {
         struct xhci_trb *evt = &ring->trbs[ring->dequeue_index];
-        uint32_t control = mmio_read_32((void cc_mem_io *) &evt->control);
+        uint32_t control     = mmio_read_32((void cc_mem_io *) &evt->control);
 
         if ((control & TRB_CYCLE_BIT) != ring->cycle)
             break;
@@ -740,11 +740,11 @@ enum irq_result xhci_isr(void *ctx, uint8_t vector, struct irq_context *rsp) {
 }
 
 static struct usb_controller_ops xhci_ctrl_ops = {
-    .submit_control_transfer = xhci_control_transfer,
-    .submit_bulk_transfer = NULL,
+    .submit_control_transfer   = xhci_control_transfer,
+    .submit_bulk_transfer      = NULL,
     .submit_interrupt_transfer = xhci_submit_interrupt_transfer,
-    .reset_slot = xhci_reset_slot,
-    .configure_endpoint = xhci_configure_device_endpoints,
+    .reset_slot                = xhci_reset_slot,
+    .configure_endpoint        = xhci_configure_device_endpoints,
 };
 
 void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
@@ -754,14 +754,14 @@ void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
 
     cpu_mask_set_all(&cmask);
     struct workqueue_attributes attrs = {
-        .capacity = WORKQUEUE_DEFAULT_CAPACITY,
-        .idle_check = WORKQUEUE_DEFAULT_IDLE_CHECK,
-        .min_workers = 1,
-        .max_workers = 1,
-        .spawn_delay = WORKQUEUE_DEFAULT_SPAWN_DELAY,
+        .capacity        = WORKQUEUE_DEFAULT_CAPACITY,
+        .idle_check      = WORKQUEUE_DEFAULT_IDLE_CHECK,
+        .min_workers     = 1,
+        .max_workers     = 1,
+        .spawn_delay     = WORKQUEUE_DEFAULT_SPAWN_DELAY,
         .worker_cpu_mask = cmask,
         .worker_niceness = 0,
-        .flags = WORKQUEUE_FLAG_DEFAULTS | WORKQUEUE_FLAG_ISR_SAFE,
+        .flags           = WORKQUEUE_FLAG_DEFAULTS | WORKQUEUE_FLAG_ISR_SAFE,
     };
 
     xhci_wq = workqueue_create("xhci_wq", &attrs);
@@ -805,15 +805,15 @@ void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
     struct usb_controller *ctrl =
         kmalloc(sizeof(struct usb_controller), ALLOC_ZERO);
     ctrl->driver_data = dev;
-    ctrl->type = USB_CONTROLLER_XHCI;
-    ctrl->ops = &xhci_ctrl_ops;
-    dev->controller = ctrl;
+    ctrl->type        = USB_CONTROLLER_XHCI;
+    ctrl->ops         = &xhci_ctrl_ops;
+    dev->controller   = ctrl;
 
     enum irql irql = spin_lock_irq_disable(&dev->lock);
     for (uint32_t port = 1; port <= dev->ports; port++) {
-        struct xhci_port *p = &dev->port_info[port - 1];
+        struct xhci_port   *p          = &dev->port_info[port - 1];
         uint32_t cc_mem_io *portsc_ptr = xhci_portsc_ptr(dev, port);
-        uint32_t v = mmio_read_32(portsc_ptr);
+        uint32_t            v          = mmio_read_32(portsc_ptr);
         xhci_ack_port_changes(portsc_ptr, v);
         if ((v & PORTSC_CCS) && p->state == XHCI_PORT_STATE_DISCONNECTED)
             xhci_port_set_state(p, XHCI_PORT_STATE_CONNECTING);

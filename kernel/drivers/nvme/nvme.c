@@ -48,7 +48,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
     void cc_mem_io *mmio = mmio_map(phys_addr, size);
 
     struct nvme_regs cc_mem_io *regs = (struct nvme_regs cc_mem_io *) mmio;
-    uint64_t cap = ((uint64_t) regs->cap_hi << 32) | regs->cap_lo;
+    uint64_t cap     = ((uint64_t) regs->cap_hi << 32) | regs->cap_lo;
     uint32_t version = regs->version;
 
     uint32_t dstrd = (cap >> 32) & 0xF;
@@ -58,13 +58,13 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
         panic("Could not allocate space for NVMe drive");
 
     nvme->doorbell_stride = 4U << dstrd;
-    nvme->page_size = PAGE_SIZE;
-    nvme->cap = cap;
+    nvme->page_size       = PAGE_SIZE;
+    nvme->cap             = cap;
 
-    nvme->version = version;
-    nvme->regs = regs;
+    nvme->version       = version;
+    nvme->regs          = regs;
     nvme->admin_q_depth = ((nvme->cap) & 0xFFFF) + 1;
-    nvme->io_queues = kmalloc(sizeof(struct nvme_queue *), ALLOC_ZERO);
+    nvme->io_queues     = kmalloc(sizeof(struct nvme_queue *), ALLOC_ZERO);
     if (!nvme->io_queues)
         panic("Could not allocate space for NVMe IO queues");
 
@@ -79,8 +79,8 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
         nvme->admin_q_depth = 32;
 
     struct nvme_cc cc = {0};
-    cc.raw = (uint32_t) mmio_read_32(&nvme->regs->cc);
-    cc.en = 0;
+    cc.raw            = (uint32_t) mmio_read_32(&nvme->regs->cc);
+    cc.en             = 0;
 
     mmio_write_32(&nvme->regs->cc, cc.raw);
 
@@ -93,7 +93,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
     struct nvme_identify_controller *c =
         (void *) nvme_identify_controller(nvme);
 
-    uint32_t actual = nvme_set_num_queues(nvme, core_count, core_count);
+    uint32_t actual   = nvme_set_num_queues(nvme, core_count, core_count);
     uint32_t total_sq = actual & 0xffff;
     uint32_t total_cq = actual >> 16;
     nvme_log(LOG_INFO, "Controller supports %u SQs and %u CQs", total_sq,
@@ -101,7 +101,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
 
     nvme_set_num_queues(nvme, total_sq, total_cq);
 
-    uint64_t supported_sqs = total_sq;
+    uint64_t supported_sqs    = total_sq;
     uint64_t sqs_to_make_wide = MIN(core_count, supported_sqs);
     kassert(sqs_to_make_wide <= UINT32_MAX);
     uint32_t sqs_to_make = (uint32_t) sqs_to_make_wide;
@@ -110,7 +110,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
 
     /* Commands describe one page via PRP1 and the rest through one
      * PRP List page, so we just cap the transfer at that */
-    uint64_t prp_limit = NVME_PRPS_PER_PAGE * PAGE_SIZE;
+    uint64_t prp_limit      = NVME_PRPS_PER_PAGE * PAGE_SIZE;
     nvme->max_transfer_size = MIN(nvme->max_transfer_size, prp_limit);
     nvme_log(LOG_INFO, "Controller max transfer size is %u bytes",
              nvme->max_transfer_size);
@@ -148,12 +148,12 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
     cpu_mask_set_all(&mask);
 
     struct workqueue_attributes attrs = {
-        .capacity = 64, /* small, oneshots are rare */
-        .idle_check = WORKQUEUE_DEFAULT_IDLE_CHECK,
+        .capacity    = 64, /* small, oneshots are rare */
+        .idle_check  = WORKQUEUE_DEFAULT_IDLE_CHECK,
         .max_workers = 1,
         .spawn_delay = WORKQUEUE_DEFAULT_SPAWN_DELAY,
-        .flags = WORKQUEUE_FLAG_DEFAULTS | WORKQUEUE_FLAG_NO_WORKER_GC |
-                 WORKQUEUE_FLAG_ISR_SAFE,
+        .flags       = WORKQUEUE_FLAG_DEFAULTS | WORKQUEUE_FLAG_NO_WORKER_GC |
+                       WORKQUEUE_FLAG_ISR_SAFE,
         .worker_cpu_mask = mask,
     };
 
@@ -170,7 +170,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
 
 void nvme_print_wrapper(struct block_device *d) {
     struct nvme_device *dev = (struct nvme_device *) d->driver_data;
-    uint8_t *n = nvme_identify_namespace(dev, 1);
+    uint8_t            *n   = nvme_identify_namespace(dev, 1);
     nvme_print_namespace((struct nvme_identify_namespace *) n);
     uint8_t *i = nvme_identify_controller(dev);
     nvme_print_identify((struct nvme_identify_controller *) i);
@@ -178,27 +178,27 @@ void nvme_print_wrapper(struct block_device *d) {
 
 static struct bio_scheduler_ops nvme_bio_sched_ops = {
     .should_coalesce = noop_should_coalesce,
-    .reorder = noop_reorder,
-    .do_coalesce = noop_do_coalesce,
+    .reorder         = noop_reorder,
+    .do_coalesce     = noop_do_coalesce,
     .max_wait_time =
         {
             [BIO_RQ_BACKGROUND] = 20,
-            [BIO_RQ_LOW] = 15,
-            [BIO_RQ_MEDIUM] = 10,
-            [BIO_RQ_HIGH] = 4,
-            [BIO_RQ_URGENT] = 0,
+            [BIO_RQ_LOW]        = 15,
+            [BIO_RQ_MEDIUM]     = 10,
+            [BIO_RQ_HIGH]       = 4,
+            [BIO_RQ_URGENT]     = 0,
         },
     .dispatch_threshold = 128,
     .boost_occupance_limit =
         {
             [BIO_RQ_BACKGROUND] = 64,
-            [BIO_RQ_LOW] = 56,
-            [BIO_RQ_MEDIUM] = 48,
-            [BIO_RQ_HIGH] = 40,
-            [BIO_RQ_URGENT] = 32,
+            [BIO_RQ_LOW]        = 56,
+            [BIO_RQ_MEDIUM]     = 48,
+            [BIO_RQ_HIGH]       = 40,
+            [BIO_RQ_URGENT]     = 32,
         },
     .min_wait_ms = 1,
-    .tick_ms = 20,
+    .tick_ms     = 20,
 };
 
 struct block_device *nvme_create_generic(struct nvme_device *nvme) {
@@ -206,20 +206,20 @@ struct block_device *nvme_create_generic(struct nvme_device *nvme) {
     if (!d)
         panic("Could not allocate space for NVMe device");
 
-    d->driver_data = nvme;
-    d->sector_size = nvme->sector_size;
-    d->read_sector = nvme_read_sector_wrapper;
-    d->write_sector = nvme_write_sector_wrapper;
+    d->driver_data      = nvme;
+    d->sector_size      = nvme->sector_size;
+    d->read_sector      = nvme_read_sector_wrapper;
+    d->write_sector     = nvme_write_sector_wrapper;
     d->submit_bio_async = nvme_submit_bio_request;
-    d->flags = BDEV_FLAG_NO_REORDER | BDEV_FLAG_NO_COALESCE;
-    d->cache = kmalloc(sizeof(struct bcache), ALLOC_ZERO);
+    d->flags            = BDEV_FLAG_NO_REORDER | BDEV_FLAG_NO_COALESCE;
+    d->cache            = kmalloc(sizeof(struct bcache), ALLOC_ZERO);
     if (cc_unlikely(!d->cache))
         panic("Could not allocate space for NVMe block cache");
 
     d->scheduler = bio_sched_create(d, &nvme_bio_sched_ops);
 
     bcache_init(d->cache, DEFAULT_BLOCK_CACHE_SIZE);
-    d->type = BDEV_NVME_DRIVE;
+    d->type            = BDEV_NVME_DRIVE;
     nvme->generic_disk = d;
     return d;
 }
@@ -230,7 +230,7 @@ static enum err nvme_pci_init(struct device *d) {
     struct pci_device *dev = d->driver_data;
     uint8_t bus = dev->bus, device = dev->dev, function = dev->function;
 
-    struct nvme_device *nd = nvme_discover_device(bus, device, function);
+    struct nvme_device  *nd   = nvme_discover_device(bus, device, function);
     struct block_device *disk = nvme_create_generic(nd);
     registry_mkname(disk, "nvme", nvme_cnt++);
     registry_register(disk);

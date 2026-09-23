@@ -25,7 +25,7 @@ void ide_print_info(struct block_device *d) {
 
 static void swap_str(char *dst, const uint16_t *src, uint64_t word_len) {
     for (uint64_t i = 0; i < word_len; i++) {
-        dst[2 * i] = (src[i] >> 8) & 0xFF;
+        dst[2 * i]     = (src[i] >> 8) & 0xFF;
         dst[2 * i + 1] = src[i] & 0xFF;
     }
     dst[2 * word_len] = '\0';
@@ -115,10 +115,10 @@ static struct bio_scheduler_ops ide_bio_ops = {
     .max_wait_time =
         {
             [BIO_RQ_BACKGROUND] = 35,
-            [BIO_RQ_LOW] = 25,
-            [BIO_RQ_MEDIUM] = 10,
-            [BIO_RQ_HIGH] = 4,
-            [BIO_RQ_URGENT] = 0,
+            [BIO_RQ_LOW]        = 25,
+            [BIO_RQ_MEDIUM]     = 10,
+            [BIO_RQ_HIGH]       = 4,
+            [BIO_RQ_URGENT]     = 0,
         },
 
     .dispatch_threshold = 96,
@@ -126,13 +126,13 @@ static struct bio_scheduler_ops ide_bio_ops = {
     .boost_occupance_limit =
         {
             [BIO_RQ_BACKGROUND] = 64,
-            [BIO_RQ_LOW] = 56,
-            [BIO_RQ_MEDIUM] = 48,
-            [BIO_RQ_HIGH] = 40,
-            [BIO_RQ_URGENT] = 32,
+            [BIO_RQ_LOW]        = 56,
+            [BIO_RQ_MEDIUM]     = 48,
+            [BIO_RQ_HIGH]       = 40,
+            [BIO_RQ_URGENT]     = 32,
         },
     .min_wait_ms = 1,
-    .tick_ms = 25,
+    .tick_ms     = 25,
 };
 
 struct block_device *ide_create_generic(struct ata_drive *ide) {
@@ -151,10 +151,10 @@ struct block_device *ide_create_generic(struct ata_drive *ide) {
 
     struct block_device *d = kmalloc_or_die(sizeof(struct block_device));
 
-    d->driver_data = ide;
-    d->sector_size = ide->sector_size;
-    d->read_sector = ide_read_sector_wrapper;
-    d->write_sector = ide_write_sector_wrapper;
+    d->driver_data      = ide;
+    d->sector_size      = ide->sector_size;
+    d->read_sector      = ide_read_sector_wrapper;
+    d->write_sector     = ide_write_sector_wrapper;
     d->submit_bio_async = ide_submit_bio_async;
 
     d->flags = BDEV_FLAG_NO_COALESCE | BDEV_FLAG_NO_REORDER;

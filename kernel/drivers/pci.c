@@ -13,7 +13,7 @@
 #include <stdint.h>
 
 static struct pci_device *pci_devices = NULL;
-static uint64_t pci_device_count;
+static uint64_t           pci_device_count;
 LOG_HANDLE_DECLARE_PRINT(pci);
 LOG_SITE_DECLARE_PRINT(pci);
 
@@ -45,14 +45,14 @@ const char *pci_class_name(uint8_t class_code, uint8_t subclass) {
 
 static void init_device(struct pci_device *dev) {
     struct pci_driver *start = __skernel_pci_devices;
-    struct pci_driver *end = __ekernel_pci_devices;
+    struct pci_driver *end   = __ekernel_pci_devices;
 
     for (struct pci_driver *d = start; d < end; d++) {
         bool class, subclass, prog_if, vendor;
 
-        class = dev->class_code == d->class_code;
+        class    = dev->class_code == d->class_code;
         subclass = dev->subclass == d->subclass;
-        prog_if = d->prog_if == 0xFF ? true : dev->prog_if == d->prog_if;
+        prog_if  = d->prog_if == 0xFF ? true : dev->prog_if == d->prog_if;
         vendor = d->vendor_id == 0xFFFF ? true : dev->vendor_id == d->vendor_id;
         dev->device.driver_data = dev;
 
@@ -64,7 +64,7 @@ static void init_device(struct pci_device *dev) {
 
 void pci_init_devices(struct pci_device *devices, uint64_t count) {
     struct pci_driver *start = __skernel_pci_devices;
-    struct pci_driver *end = __ekernel_pci_devices;
+    struct pci_driver *end   = __ekernel_pci_devices;
 
     pci_log(LOG_INFO, "There are %u PCI drivers", end - start);
 
@@ -92,7 +92,7 @@ void pci_scan_devices(struct pci_device **devices_out, uint64_t *count_out) {
                 union pci_command_reg cmd;
                 cmd.value = pci_read_config16(bus, device, function, 0x04);
 
-                cmd.bus_master = 1;
+                cmd.bus_master   = 1;
                 cmd.memory_space = 1;
 
                 pci_write_config16(bus, device, function, 0x04, cmd.value);
@@ -120,21 +120,21 @@ void pci_scan_devices(struct pci_device **devices_out, uint64_t *count_out) {
 
                 uint16_t device_id = pci_read_word(bus, device, function, 0x02);
                 uint32_t class_info = pci_read(bus, device, function, 0x08);
-                uint8_t class_code = (class_info >> 24) & 0xFF;
-                uint8_t subclass = (class_info >> 16) & 0xFF;
-                uint8_t prog_if = (class_info >> 8) & 0xFF;
-                uint8_t revision = class_info & 0xFF;
+                uint8_t  class_code = (class_info >> 24) & 0xFF;
+                uint8_t  subclass   = (class_info >> 16) & 0xFF;
+                uint8_t  prog_if    = (class_info >> 8) & 0xFF;
+                uint8_t  revision   = class_info & 0xFF;
 
                 pci_devices[pci_device_count++] =
-                    (struct pci_device){.bus = bus,
-                                        .dev = device,
-                                        .function = function,
-                                        .vendor_id = vendor_id,
-                                        .device_id = device_id,
+                    (struct pci_device){.bus        = bus,
+                                        .dev        = device,
+                                        .function   = function,
+                                        .vendor_id  = vendor_id,
+                                        .device_id  = device_id,
                                         .class_code = class_code,
-                                        .subclass = subclass,
-                                        .prog_if = prog_if,
-                                        .revision = revision};
+                                        .subclass   = subclass,
+                                        .prog_if    = prog_if,
+                                        .revision   = revision};
 
                 pci_log(LOG_INFO, "Found device '%s' at %02x:%02x.%x",
                         pci_class_name(class_code, subclass), bus, device,
@@ -151,7 +151,7 @@ void pci_scan_devices(struct pci_device **devices_out, uint64_t *count_out) {
     }
 
     *devices_out = pci_devices;
-    *count_out = pci_device_count;
+    *count_out   = pci_device_count;
 }
 
 uint8_t pci_find_capability(uint8_t bus, uint8_t slot, uint8_t func,
@@ -177,8 +177,8 @@ uint32_t pci_read_bar(uint8_t bus, uint8_t device, uint8_t function,
 
 static uint64_t pci_read_bar64(uint8_t bus, uint8_t slot, uint8_t func,
                                uint8_t bar_index) {
-    uint32_t low = pci_read(bus, slot, func, 0x10 + 4 * bar_index);
-    uint8_t type = (low >> 1) & 0x3;
+    uint32_t low  = pci_read(bus, slot, func, 0x10 + 4 * bar_index);
+    uint8_t  type = (low >> 1) & 0x3;
     if (type == 0x2) {
         uint32_t high = pci_read(bus, slot, func, 0x10 + 4 * (bar_index + 1));
         return (((uint64_t) high) << 32) | (low & ~0xFULL);
@@ -197,8 +197,8 @@ void pci_program_msix_entry(uint8_t bus, uint8_t slot, uint8_t func,
     }
 
     uint32_t table_offset_bir = pci_read(bus, slot, func, cap + 4);
-    uint8_t bir = table_offset_bir & 0x7;
-    uint32_t table_offset = table_offset_bir & ~0x7;
+    uint8_t  bir              = table_offset_bir & 0x7;
+    uint32_t table_offset     = table_offset_bir & ~0x7;
 
     if (bir > 5) {
         pci_log(LOG_ERROR, "MSIX BIR out of range");
@@ -211,12 +211,12 @@ void pci_program_msix_entry(uint8_t bus, uint8_t slot, uint8_t func,
         return;
     }
 
-    size_t entry_size = sizeof(struct pci_msix_table_entry);
+    size_t   entry_size = sizeof(struct pci_msix_table_entry);
     uint64_t table_base = bar_addr + table_offset; // physical
     uint64_t entry_phys = table_base + (uint64_t) table_index * entry_size;
 
     uint64_t map_base = PAGE_ALIGN_DOWN(entry_phys);
-    size_t map_size =
+    size_t   map_size =
         PAGE_ALIGN_UP((entry_phys & (PAGE_SIZE - 1)) + entry_size);
 
     void cc_mem_io *map = mmio_map(map_base, map_size);
@@ -249,10 +249,10 @@ void pci_enable_msix_on_core(uint8_t bus, uint8_t slot, uint8_t func,
     }
     uint32_t table_offset_bir = pci_read(bus, slot, func, cap + 4);
 
-    uint8_t bir = table_offset_bir & 0x7;
+    uint8_t  bir          = table_offset_bir & 0x7;
     uint32_t table_offset = table_offset_bir & ~0x7;
 
-    uint32_t bar_low = pci_read(bus, slot, func, 0x10 + 4 * bir);
+    uint32_t bar_low  = pci_read(bus, slot, func, 0x10 + 4 * bir);
     uint32_t bar_high = pci_read(bus, slot, func, 0x10 + 4 * bir + 4);
 
     uint64_t bar_addr = 0;
@@ -265,7 +265,7 @@ void pci_enable_msix_on_core(uint8_t bus, uint8_t slot, uint8_t func,
 
     uint64_t map_size =
         (vector_index + 1) * sizeof(struct pci_msix_table_entry);
-    map_size = MAX(map_size, PAGE_SIZE);
+    map_size                   = MAX(map_size, PAGE_SIZE);
     void cc_mem_io *msix_table = mmio_map(bar_addr + table_offset, map_size);
 
     struct pci_msix_table_entry cc_mem_io *entry_addr =

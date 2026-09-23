@@ -151,7 +151,8 @@ climb_pressure_scale_indirect(climb_pressure_t direct) {
 static size_t climb_count_handles(struct climb_thread_state *cts) {
     size_t agg = 0;
     struct list_head *iter;
-    list_for_each(iter, &cts->handles) agg++;
+    list_for_each(iter, &cts->handles)
+        agg++;
     return agg;
 }
 

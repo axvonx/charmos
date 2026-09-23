@@ -83,10 +83,10 @@ static size_t sd_chain_count(uintptr_t *trace, size_t len) {
     size_t n = 0;
 
     enum irql irql = spin_lock(&chain->lock);
-    list_for_each_entry(pos, &chain->list,
-                        hash_list) if (pos->num_entries == len &&
-                                       !memcmp(pos->entries, trace,
-                                               len * sizeof(uintptr_t))) n++;
+    list_for_each_entry(pos, &chain->list, hash_list)
+        if (pos->num_entries == len &&
+            !memcmp(pos->entries, trace, len * sizeof(uintptr_t)))
+            n++;
     spin_unlock(&chain->lock, irql);
 
     return n;

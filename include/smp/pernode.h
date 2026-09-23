@@ -44,8 +44,8 @@ LINKER_SECTION_DEFINE(struct pernode_descriptor, pernode_desc);
         cc_unused = &__pernode_desc_##__n
 
 #define PERNODE_EXPORT_AS(sym_name, name)                                      \
-    extern struct pernode_descriptor __pernode_desc_sym_##sym_name cc_alias(   \
-        __pernode_desc_##name) cc_used
+    extern struct pernode_descriptor __pernode_desc_sym_##sym_name             \
+        cc_alias(__pernode_desc_##name) cc_used
 
 #define PERNODE_EXPORT(name) PERNODE_EXPORT_AS(name, name)
 

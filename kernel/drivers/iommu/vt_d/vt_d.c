@@ -53,7 +53,7 @@ enum iommu_error vtd_iq_init(struct vtd_unit *u) {
     mmio_write_64(&u->regs->invalidation_queue_tail, 0);
     mmio_write_64(&u->regs->invalidation_queue_head, 0);
 
-    u->iq_size = 256;
+    u->iq_size   = 256;
     paddr_t phys = pmm_alloc_page();
     if (!phys)
         return IOMMU_ERR_NO_MEM;
@@ -101,7 +101,7 @@ enum iommu_error vtd_root_table_init(struct vtd_unit *u) {
         return IOMMU_ERR_NO_MEM;
 
     u->root_table_phys = phys;
-    u->root_table = mmio_map_dma(phys, PAGE_SIZE);
+    u->root_table      = mmio_map_dma(phys, PAGE_SIZE);
     memset(u->root_table, 0, PAGE_SIZE);
 
     mmio_write_64(&u->regs->root_table_addr,
@@ -264,15 +264,15 @@ struct iommu *vtd_unit_create(uint64_t base_phys, uint16_t segment,
     memset(unit, 0, sizeof(*unit));
     memset(u, 0, sizeof(*u));
 
-    u->segment = segment;
-    u->regs = mmio_map(base_phys, 1u << (size_field + 12));
-    u->cap = u->regs->capabilities;
-    u->ecap = u->regs->extended_capabilities;
+    u->segment      = segment;
+    u->regs         = mmio_map(base_phys, 1u << (size_field + 12));
+    u->cap          = u->regs->capabilities;
+    u->ecap         = u->regs->extended_capabilities;
     u->domain_count = vtd_cap_domain_count(u->cap);
 
-    unit->ops = &vtd_iommu_ops;
+    unit->ops     = &vtd_iommu_ops;
     unit->private = u;
-    unit->status = IOMMU_STATUS_INACTIVE;
+    unit->status  = IOMMU_STATUS_INACTIVE;
 
     vtd_unit_init(unit);
     return unit;

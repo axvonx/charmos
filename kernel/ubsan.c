@@ -137,14 +137,16 @@ void __ubsan_handle_nullability_arg(data_nonnull_arg_t *data) {
            data->arg_index);
     HALT
 }
-void __ubsan_handle_nonnull_return_v1(
-    data_only_location_t *data cc_maybe_unused, source_location_t *location) {
+void __ubsan_handle_nonnull_return_v1(data_only_location_t *data
+                                      cc_maybe_unused,
+                                      source_location_t *location) {
     printf("UBSAN: nonnull_return @ %s:%u:%u\n", location->filename,
            location->line, location->column);
     HALT
 }
-void __ubsan_handle_nullability_return_v1(
-    data_only_location_t *data cc_maybe_unused, source_location_t *location) {
+void __ubsan_handle_nullability_return_v1(data_only_location_t *data
+                                          cc_maybe_unused,
+                                          source_location_t *location) {
     printf("UBSAN: nullability_return @ %s:%u:%u\n", location->filename,
            location->line, location->column);
     HALT

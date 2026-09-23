@@ -40,35 +40,35 @@ static uint64_t *vtd_sl_ensure_child(sl_pte_atomic_t *entry) {
 static enum iommu_error vtd_sl_map_page(uint64_t *sl_pgd, iova_t iova,
                                         paddr_t pa, uint32_t perm) {
     sl_pte_atomic_t *locked[PT_LEVELS] = {NULL, NULL, NULL, NULL};
-    enum irql saved[PT_LEVELS];
+    enum irql        saved[PT_LEVELS];
 
     sl_pte_atomic_t *e4 = (sl_pte_atomic_t *) &sl_pgd[SL_PML4_INDEX(iova)];
-    saved[0] = vtd_pt_lock(e4);
-    locked[0] = e4;
+    saved[0]            = vtd_pt_lock(e4);
+    locked[0]           = e4;
 
     uint64_t *pdp = vtd_sl_ensure_child(e4);
     if (!pdp)
         goto fail;
 
     sl_pte_atomic_t *e3 = (sl_pte_atomic_t *) &pdp[SL_PDPT_INDEX(iova)];
-    saved[1] = vtd_pt_lock(e3);
-    locked[1] = e3;
+    saved[1]            = vtd_pt_lock(e3);
+    locked[1]           = e3;
 
     uint64_t *pd = vtd_sl_ensure_child(e3);
     if (!pd)
         goto fail;
 
     sl_pte_atomic_t *e2 = (sl_pte_atomic_t *) &pd[SL_PD_INDEX(iova)];
-    saved[2] = vtd_pt_lock(e2);
-    locked[2] = e2;
+    saved[2]            = vtd_pt_lock(e2);
+    locked[2]           = e2;
 
     uint64_t *pt = vtd_sl_ensure_child(e2);
     if (!pt)
         goto fail;
 
     sl_pte_atomic_t *e1 = (sl_pte_atomic_t *) &pt[SL_PT_INDEX(iova)];
-    saved[3] = vtd_pt_lock(e1);
-    locked[3] = e1;
+    saved[3]            = vtd_pt_lock(e1);
+    locked[3]           = e1;
 
     atomic_store_release(e1, SL_PAGE_ENTRY(pa, perm));
 
@@ -94,12 +94,12 @@ static cc_unused bool vtd_sl_unmap_page(uint64_t *sl_pgd, iova_t iova) {
         return false;
 
     uint64_t *pdp = hhdm_paddr_to_ptr(SL_PTE_ADDR(pte));
-    pte = pdp[SL_PDPT_INDEX(iova)];
+    pte           = pdp[SL_PDPT_INDEX(iova)];
     if (!(pte & SL_PTE_READ))
         return false;
 
     uint64_t *pd = hhdm_paddr_to_ptr(SL_PTE_ADDR(pte));
-    pte = pd[SL_PD_INDEX(iova)];
+    pte          = pd[SL_PD_INDEX(iova)];
     if (!(pte & SL_PTE_READ))
         return false;
 
@@ -119,17 +119,17 @@ static cc_unused paddr_t vtd_sl_translate(uint64_t *sl_pgd, iova_t iova) {
         return 0;
 
     uint64_t *pdp = hhdm_paddr_to_ptr(SL_PTE_ADDR(pte));
-    pte = pdp[SL_PDPT_INDEX(iova)];
+    pte           = pdp[SL_PDPT_INDEX(iova)];
     if (!(pte & SL_PTE_READ))
         return 0;
 
     uint64_t *pd = hhdm_paddr_to_ptr(SL_PTE_ADDR(pte));
-    pte = pd[SL_PD_INDEX(iova)];
+    pte          = pd[SL_PD_INDEX(iova)];
     if (!(pte & SL_PTE_READ))
         return 0;
 
     uint64_t *pt = hhdm_paddr_to_ptr(SL_PTE_ADDR(pte));
-    pte = pt[SL_PT_INDEX(iova)];
+    pte          = pt[SL_PT_INDEX(iova)];
     if (!(pte & SL_PTE_READ))
         return 0;
 
@@ -139,7 +139,7 @@ static cc_unused paddr_t vtd_sl_translate(uint64_t *sl_pgd, iova_t iova) {
 static cc_unused enum iommu_error vtd_map(struct iommu_domain *domain,
                                           iova_t iova, paddr_t pa, size_t size,
                                           uint32_t perm) {
-    struct vtd_unit *u = domain->unit->private;
+    struct vtd_unit   *u  = domain->unit->private;
     struct vtd_domain *vd = domain->priv;
 
     if (!IS_PAGE_ALIGNED(iova) || !IS_PAGE_ALIGNED(pa) ||
@@ -160,7 +160,7 @@ static cc_unused enum iommu_error vtd_map(struct iommu_domain *domain,
 }
 
 static cc_unused void vtd_flush_iotlb_domain(struct iommu_domain *domain) {
-    struct vtd_unit *u = domain->unit->private;
+    struct vtd_unit   *u  = domain->unit->private;
     struct vtd_domain *vd = domain->priv;
 
     vtd_iq_submit(u, IOTLB_INVAL_DESC_DOMAIN(vd->domain_id));
@@ -169,7 +169,7 @@ static cc_unused void vtd_flush_iotlb_domain(struct iommu_domain *domain) {
 
 static cc_unused void vtd_flush_iotlb_range(struct iommu_domain *domain,
                                             iova_t iova, size_t size) {
-    struct vtd_unit *u = domain->unit->private;
+    struct vtd_unit   *u  = domain->unit->private;
     struct vtd_domain *vd = domain->priv;
 
     if (CAP_PAGE_SELECTIVE_INVALIDATION(u->cap) && size <= 32 * PAGE_SIZE) {
@@ -185,15 +185,15 @@ static cc_unused void vtd_flush_iotlb_range(struct iommu_domain *domain,
 
 struct vtd_walk_state {
     uint64_t *tables[PT_LEVELS];
-    size_t indices[PT_LEVELS];
+    size_t    indices[PT_LEVELS];
 };
 
 static bool vtd_sl_unmap_locked(uint64_t *sl_pgd, iova_t iova,
                                 struct vtd_walk_state *ws) {
     sl_pte_atomic_t *locked[PT_LEVELS];
-    enum irql saved[PT_LEVELS];
+    enum irql        saved[PT_LEVELS];
 
-    ws->tables[0] = sl_pgd;
+    ws->tables[0]  = sl_pgd;
     ws->indices[0] = SL_PML4_INDEX(iova);
     ws->indices[1] = SL_PDPT_INDEX(iova);
     ws->indices[2] = SL_PD_INDEX(iova);
@@ -203,8 +203,8 @@ static bool vtd_sl_unmap_locked(uint64_t *sl_pgd, iova_t iova,
 
     for (int lvl = 0; lvl < PT_LEVELS; lvl++) {
         sl_pte_atomic_t *entry = (sl_pte_atomic_t *) &cur[ws->indices[lvl]];
-        saved[lvl] = vtd_pt_lock(entry);
-        locked[lvl] = entry;
+        saved[lvl]             = vtd_pt_lock(entry);
+        locked[lvl]            = entry;
 
         uint64_t val = atomic_load_relaxed(entry);
         val &= ~SL_PTE_LOCK_BIT;
@@ -221,7 +221,7 @@ static bool vtd_sl_unmap_locked(uint64_t *sl_pgd, iova_t iova,
             atomic_store_release(entry, SL_PTE_LOCK_BIT);
         } else {
             ws->tables[lvl + 1] = hhdm_paddr_to_ptr(SL_PTE_ADDR(val));
-            cur = ws->tables[lvl + 1];
+            cur                 = ws->tables[lvl + 1];
         }
     }
 
@@ -267,7 +267,7 @@ static void vtd_sl_reclaim_walk(struct vtd_walk_state *ws) {
 
 static cc_unused void vtd_unmap(struct iommu_domain *domain, iova_t iova,
                                 size_t size) {
-    struct vtd_unit *u = domain->unit->private;
+    struct vtd_unit   *u  = domain->unit->private;
     struct vtd_domain *vd = domain->priv;
 
     if (!IS_PAGE_ALIGNED(iova) || !IS_PAGE_ALIGNED(size))
@@ -275,8 +275,8 @@ static cc_unused void vtd_unmap(struct iommu_domain *domain, iova_t iova,
 
     size_t page_count = size / PAGE_SIZE;
 
-    struct vtd_walk_state *walks = kmalloc(page_count * sizeof(*walks));
-    bool *unmapped = kmalloc(page_count * sizeof(bool));
+    struct vtd_walk_state *walks    = kmalloc(page_count * sizeof(*walks));
+    bool                  *unmapped = kmalloc(page_count * sizeof(bool));
     if (!walks || !unmapped) {
         for (size_t off = 0; off < size; off += PAGE_SIZE) {
             struct vtd_walk_state dummy;

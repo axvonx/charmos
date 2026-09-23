@@ -18,10 +18,10 @@ void xhci_setup_event_ring(struct xhci_device *dev) {
 
     paddr_t erst_phys = vmm_get_phys((vaddr_t) erst, VMM_FLAG_NONE);
 
-    dev->event_ring = xhci_allocate_event_ring();
+    dev->event_ring           = xhci_allocate_event_ring();
     erst[0].ring_segment_base = dev->event_ring->phys;
     erst[0].ring_segment_size = dev->event_ring->size;
-    erst[0].reserved = 0;
+    erst[0].reserved          = 0;
 
     struct xhci_interrupter_regs cc_mem_io *ir = dev->intr_regs;
 
@@ -33,8 +33,8 @@ void xhci_setup_event_ring(struct xhci_device *dev) {
 
 void xhci_setup_command_ring(struct xhci_device *dev) {
     struct xhci_op_regs cc_mem_io *op = dev->op_regs;
-    dev->cmd_ring = xhci_allocate_ring();
-    uintptr_t trb_phys = dev->cmd_ring->phys;
+    dev->cmd_ring                     = xhci_allocate_ring();
+    uintptr_t trb_phys                = dev->cmd_ring->phys;
 
     struct xhci_dcbaa *dcbaa_virt =
         kmalloc_aligned(PAGE_SIZE, PAGE_SIZE, ALLOC_ZERO);
@@ -47,23 +47,23 @@ void xhci_setup_command_ring(struct xhci_device *dev) {
 
 void xhci_nop(struct xhci_device *dev) {
     struct xhci_request request = {0};
-    struct xhci_command cmd = {0};
+    struct xhci_command cmd     = {0};
     xhci_request_init_blocking(&request, &cmd, /* port = */ 0,
                                XHCI_CMD_TYPE_NO_OP);
 
     struct xhci_trb outgoing = {
         .parameter = 0,
-        .control = TRB_SET_TYPE(TRB_TYPE_NO_OP),
-        .status = 0,
+        .control   = TRB_SET_TYPE(TRB_TYPE_NO_OP),
+        .status    = 0,
     };
 
     cmd = (struct xhci_command){
-        .private = &outgoing,
-        .emit = xhci_emit_singular,
-        .ep_id = 0,
-        .slot = NULL,
-        .ring = dev->cmd_ring,
-        .request = &request,
+        .private  = &outgoing,
+        .emit     = xhci_emit_singular,
+        .ep_id    = 0,
+        .slot     = NULL,
+        .ring     = dev->cmd_ring,
+        .request  = &request,
         .num_trbs = 1,
     };
 
@@ -72,23 +72,23 @@ void xhci_nop(struct xhci_device *dev) {
 
 uint8_t xhci_enable_slot(struct xhci_device *dev) {
     struct xhci_request request = {0};
-    struct xhci_command cmd = {0};
+    struct xhci_command cmd     = {0};
     xhci_request_init_blocking(&request, &cmd, /* port = */ 0,
                                XHCI_CMD_TYPE_ENABLE_SLOT);
 
     struct xhci_trb outgoing = {
         .parameter = 0,
-        .control = TRB_SET_TYPE(TRB_TYPE_ENABLE_SLOT),
-        .status = 0,
+        .control   = TRB_SET_TYPE(TRB_TYPE_ENABLE_SLOT),
+        .status    = 0,
     };
 
     cmd = (struct xhci_command){
-        .private = &outgoing,
-        .emit = xhci_emit_singular,
-        .ep_id = 0,
-        .slot = NULL,
-        .ring = dev->cmd_ring,
-        .request = &request,
+        .private  = &outgoing,
+        .emit     = xhci_emit_singular,
+        .ep_id    = 0,
+        .slot     = NULL,
+        .ring     = dev->cmd_ring,
+        .request  = &request,
         .num_trbs = 1,
     };
 
@@ -102,10 +102,10 @@ uint8_t xhci_enable_slot(struct xhci_device *dev) {
 struct xhci_disable_slot_async {
     struct xhci_request req;
     struct xhci_command cmd;
-    struct xhci_trb trb;
+    struct xhci_trb     trb;
 };
 
-static void xhci_disable_slot_done(struct xhci_device *dev,
+static void xhci_disable_slot_done(struct xhci_device  *dev,
                                    struct xhci_request *req) {
     cc_var_unused(dev);
     kfree(container_of(req, struct xhci_disable_slot_async, req));
@@ -132,22 +132,22 @@ void xhci_disable_slot(struct xhci_device *dev, uint8_t slot_id) {
     xhci_request_init(&a->req, &a->cmd, NULL, XHCI_CMD_TYPE_DISABLE_SLOT);
 
     a->req.callback = xhci_disable_slot_done;
-    a->req.port = 0;
+    a->req.port     = 0;
 
     a->trb = (struct xhci_trb){
         .parameter = 0,
-        .status = 0,
+        .status    = 0,
         .control =
             TRB_SET_TYPE(TRB_TYPE_DISABLE_SLOT) | TRB_SET_SLOT_ID(slot_id),
     };
 
     a->cmd = (struct xhci_command){
-        .private = &a->trb,
-        .emit = xhci_emit_singular,
-        .ep_id = 0,
-        .slot = NULL,
-        .ring = dev->cmd_ring,
-        .request = &a->req,
+        .private  = &a->trb,
+        .emit     = xhci_emit_singular,
+        .ep_id    = 0,
+        .slot     = NULL,
+        .ring     = dev->cmd_ring,
+        .request  = &a->req,
         .num_trbs = 1,
     };
 
@@ -156,9 +156,9 @@ void xhci_disable_slot(struct xhci_device *dev, uint8_t slot_id) {
 }
 
 static enum usb_error xhci_spin_wait_port_reset(uint32_t cc_mem_io *portsc,
-                                                bool is_usb3) {
+                                                bool                is_usb3) {
     const uint64_t timeout_us = 100 * 1000;
-    uint64_t start = time_get_us();
+    uint64_t       start      = time_get_us();
 
     while (time_get_us() - start < timeout_us) {
         uint32_t v = mmio_read_32(portsc);
@@ -187,8 +187,8 @@ static enum usb_error xhci_spin_wait_port_reset(uint32_t cc_mem_io *portsc,
 }
 
 enum usb_error xhci_reset_port(struct xhci_device *dev, uint32_t portnum) {
-    uint32_t cc_mem_io *portsc = xhci_portsc_ptr(dev, portnum);
-    bool is_usb3 = dev->port_info[portnum - 1].usb3;
+    uint32_t cc_mem_io *portsc  = xhci_portsc_ptr(dev, portnum);
+    bool                is_usb3 = dev->port_info[portnum - 1].usb3;
 
     uint32_t v = mmio_read_32(portsc);
 
@@ -230,7 +230,7 @@ enum usb_error xhci_reset_port(struct xhci_device *dev, uint32_t portnum) {
 
 void xhci_parse_ext_caps(struct xhci_device *dev) {
     uint32_t hcc_params1 = mmio_read_32(&dev->cap_regs->hcc_params1);
-    uint32_t offset = (hcc_params1 >> 16) & 0xFFFF;
+    uint32_t offset      = (hcc_params1 >> 16) & 0xFFFF;
 
     while (offset) {
         void cc_mem_io *ext_cap_addr =
@@ -238,7 +238,7 @@ void xhci_parse_ext_caps(struct xhci_device *dev) {
         uint32_t cap_header = mmio_read_32(ext_cap_addr);
 
         uint8_t cap_id = cap_header & 0xFF;
-        uint8_t next = (cap_header >> 8) & 0xFF;
+        uint8_t next   = (cap_header >> 8) & 0xFF;
 
         if (cap_id != XHCI_EXT_CAP_ID_LEGACY_SUPPORT) {
             offset = next;
@@ -246,7 +246,7 @@ void xhci_parse_ext_caps(struct xhci_device *dev) {
         }
 
         void cc_mem_io *bios_owns_addr = (uint8_t cc_mem_io *) ext_cap_addr + 4;
-        void cc_mem_io *os_owns_addr = (uint8_t cc_mem_io *) ext_cap_addr + 8;
+        void cc_mem_io *os_owns_addr   = (uint8_t cc_mem_io *) ext_cap_addr + 8;
 
         mmio_write_32(os_owns_addr, 1);
 
@@ -268,7 +268,7 @@ void xhci_parse_ext_caps(struct xhci_device *dev) {
 
 void xhci_detect_usb3_ports(struct xhci_device *dev) {
     uint32_t hcc_params1 = mmio_read_32(&dev->cap_regs->hcc_params1);
-    uint32_t offset = (hcc_params1 >> 16) & 0xFFFF;
+    uint32_t offset      = (hcc_params1 >> 16) & 0xFFFF;
 
     while (offset) {
         void cc_mem_io *ext_cap_addr =
@@ -276,7 +276,7 @@ void xhci_detect_usb3_ports(struct xhci_device *dev) {
         uint32_t cap_header = mmio_read_32(ext_cap_addr);
 
         uint8_t cap_id = cap_header & 0xFF;
-        uint8_t next = (cap_header >> 8) & 0xFF;
+        uint8_t next   = (cap_header >> 8) & 0xFF;
 
         if (cap_id == XHCI_EXT_CAP_ID_USB) {
             uint32_t cap[4];
@@ -284,9 +284,9 @@ void xhci_detect_usb3_ports(struct xhci_device *dev) {
                 cap[i] =
                     mmio_read_32((uint8_t cc_mem_io *) ext_cap_addr + i * 4);
 
-            uint8_t portcount = (cap[2] >> 8) & 0xFF;
+            uint8_t portcount  = (cap[2] >> 8) & 0xFF;
             uint8_t portoffset = (cap[2]) & 0xFF;
-            uint8_t major = (cap[0] >> 24) & 0xFF;
+            uint8_t major      = (cap[0] >> 24) & 0xFF;
 
             if (portoffset == 0 || portcount == 0) {
                 xhci_warn("USB capability with invalid port offset/count");
@@ -323,8 +323,8 @@ struct xhci_device *xhci_device_create(void cc_mem_io *mmio) {
         panic("Could not allocate space for XHCI device");
 
     struct xhci_cap_regs cc_mem_io *cap = mmio;
-    struct xhci_op_regs cc_mem_io *op = mmio + cap->cap_length;
-    void cc_mem_io *runtime_regs = (void cc_mem_io *) mmio + cap->rtsoff;
+    struct xhci_op_regs cc_mem_io  *op  = mmio + cap->cap_length;
+    void cc_mem_io *runtime_regs        = (void cc_mem_io *) mmio + cap->rtsoff;
     struct xhci_interrupter_regs cc_mem_io *ir_base =
         (void cc_mem_io *) ((uint8_t cc_mem_io *) runtime_regs + 0x20);
 
@@ -333,11 +333,11 @@ struct xhci_device *xhci_device_create(void cc_mem_io *mmio) {
     }
 
     dev->num_devices = 0;
-    dev->port_regs = op->regs;
-    dev->intr_regs = ir_base;
-    dev->cap_regs = cap;
-    dev->op_regs = op;
-    dev->ports = cap->hcs_params1 & 0xff;
+    dev->port_regs   = op->regs;
+    dev->intr_regs   = ir_base;
+    dev->cap_regs    = cap;
+    dev->op_regs     = op;
+    dev->ports       = cap->hcs_params1 & 0xff;
     INIT_LIST_HEAD(&dev->devices);
     semaphore_init(&dev->port_disconnect, 0, SEMAPHORE_INIT_IRQ_DISABLE);
     semaphore_init(&dev->port_connect, 0, SEMAPHORE_INIT_IRQ_DISABLE);
@@ -345,20 +345,20 @@ struct xhci_device *xhci_device_create(void cc_mem_io *mmio) {
 
     for (uint32_t i = 0; i < XHCI_PORT_COUNT; i++) {
         struct xhci_port *p = &dev->port_info[i];
-        p->generation = 0;
-        p->usb3 = false;
-        p->state = XHCI_PORT_STATE_DISCONNECTED;
-        uint32_t portsc = xhci_read_portsc(dev, i + 1);
-        uint8_t speed = portsc & 0xF;
-        p->speed = speed;
-        p->dev = dev;
-        p->port_id = (i + 1);
+        p->generation       = 0;
+        p->usb3             = false;
+        p->state            = XHCI_PORT_STATE_DISCONNECTED;
+        uint32_t portsc     = xhci_read_portsc(dev, i + 1);
+        uint8_t  speed      = portsc & 0xF;
+        p->speed            = speed;
+        p->dev              = dev;
+        p->port_id          = (i + 1);
         spinlock_init(&p->update_lock, LOCK_UNCHKD);
     }
 
     for (size_t i = 0; i < XHCI_SLOT_COUNT; i++) {
         struct xhci_slot *xs = &dev->slots[i];
-        xs->dev = dev;
+        xs->dev              = dev;
         atomic_init(&xs->state, XHCI_SLOT_STATE_DISCONNECTED);
         xs->slot_id = (i + 1);
     }
@@ -375,11 +375,11 @@ void xhci_device_start_interrupts(uint8_t bus, uint8_t slot, uint8_t func,
 }
 
 enum usb_error xhci_port_init(struct xhci_port *p) {
-    struct xhci_device *dev = p->dev;
-    uint8_t port = p->port_id;
-    enum usb_error err = USB_OK;
-    uint8_t slot_id;
-    struct usb_device *usb;
+    struct xhci_device *dev  = p->dev;
+    uint8_t             port = p->port_id;
+    enum usb_error      err  = USB_OK;
+    uint8_t             slot_id;
+    struct usb_device  *usb;
     if (!(usb = kmalloc(sizeof(struct usb_device), ALLOC_ZERO))) {
         return USB_ERR_OOM;
     }
@@ -404,7 +404,7 @@ enum usb_error xhci_port_init(struct xhci_port *p) {
     struct xhci_slot temp_slot = {0};
     atomic_init(&temp_slot.state, XHCI_SLOT_STATE_ENABLED);
     temp_slot.slot_id = slot_id;
-    temp_slot.dev = dev;
+    temp_slot.dev     = dev;
 
     /* The device can be yanked from the port in the window between Enable Slot
      * completing and Address Device being processed... Once the device is gone
@@ -432,10 +432,10 @@ enum usb_error xhci_port_init(struct xhci_port *p) {
     }
     xhci_trace("address_device returned");
 
-    usb->speed = p->speed;
-    usb->port = port;
-    usb->configured = false;
-    usb->host = dev->controller;
+    usb->speed          = p->speed;
+    usb->port           = port;
+    usb->configured     = false;
+    usb->host           = dev->controller;
     usb->driver_private = dev;
 
     refcount_init(&usb->refcount, 1);
@@ -446,7 +446,7 @@ enum usb_error xhci_port_init(struct xhci_port *p) {
 
     xhci_port_set_state(p, XHCI_PORT_STATE_CONNECTED);
     refcount_init(&this_slot->refcount, 1);
-    p->slot = this_slot;
+    p->slot         = this_slot;
     this_slot->port = p;
     this_slot->udev = usb;
 

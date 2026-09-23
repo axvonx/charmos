@@ -45,7 +45,7 @@ LINKER_SECTION_DEFINE(struct perdomain_descriptor, perdomain_desc);
 
 #define PERDOMAIN_EXPORT_AS(sym_name, name)                                    \
     extern struct perdomain_descriptor __perdomain_desc_sym_##sym_name         \
-    cc_alias(__perdomain_desc_##name) cc_used
+        cc_alias(__perdomain_desc_##name) cc_used
 
 #define PERDOMAIN_EXPORT(name) PERDOMAIN_EXPORT_AS(name, name)
 

@@ -28,11 +28,11 @@ static void setup_port_slots(struct ahci_device *dev, uint32_t port_id) {
         struct ahci_cmd_header *cmd_header =
             (port->cmd_list_base + slot * sizeof(struct ahci_cmd_header));
 
-        cmd_header->ctba = (uint32_t) (cmdtbl_phys & 0xFFFFFFFF);
-        cmd_header->ctbau = (uint32_t) (cmdtbl_phys >> 32);
-        cmd_header->prdtl = 1;
+        cmd_header->ctba       = (uint32_t) (cmdtbl_phys & 0xFFFFFFFF);
+        cmd_header->ctbau      = (uint32_t) (cmdtbl_phys >> 32);
+        cmd_header->prdtl      = 1;
         port->cmd_tables[slot] = cmdtbl_virt;
-        port->cmd_hdrs[slot] = cmd_header;
+        port->cmd_hdrs[slot]   = cmd_header;
     }
 }
 
@@ -50,12 +50,12 @@ static void ahci_port_quiesce(struct ahci_port cc_mem_io *port) {
     mmio_write_32(&port->fbu, 0);
 }
 
-static void allocate_port(struct ahci_device *dev,
+static void allocate_port(struct ahci_device         *dev,
                           struct ahci_port cc_mem_io *port, uint32_t port_num) {
     uint64_t cmdlist_phys = pmm_alloc_page();
-    uint64_t fis_phys = pmm_alloc_page();
-    void *cmdlist = mmio_map_dma(cmdlist_phys, PAGE_SIZE);
-    void *fis = mmio_map_dma(fis_phys, PAGE_SIZE);
+    uint64_t fis_phys     = pmm_alloc_page();
+    void    *cmdlist      = mmio_map_dma(cmdlist_phys, PAGE_SIZE);
+    void    *fis          = mmio_map_dma(fis_phys, PAGE_SIZE);
     memset(cmdlist, 0, PAGE_SIZE);
     memset(fis, 0, PAGE_SIZE);
 
@@ -71,15 +71,15 @@ static void allocate_port(struct ahci_device *dev,
     if (!arr || !hdr)
         panic("Could not allocate space for AHCI commands");
 
-    struct ahci_full_port p = {.port = port,
-                               .fis = fis,
+    struct ahci_full_port p = {.port          = port,
+                               .fis           = fis,
                                .cmd_list_base = cmdlist,
-                               .cmd_tables = arr,
-                               .cmd_hdrs = hdr};
-    dev->regs[port_num] = p;
+                               .cmd_tables    = arr,
+                               .cmd_hdrs      = hdr};
+    dev->regs[port_num]     = p;
 }
 
-static struct ahci_disk *device_setup(struct ahci_device *dev,
+static struct ahci_disk *device_setup(struct ahci_device               *dev,
                                       struct ahci_controller cc_mem_io *ctrl,
                                       uint32_t *disk_count) {
     uint32_t pi = mmio_read_32(&ctrl->pi);
@@ -96,8 +96,8 @@ static struct ahci_disk *device_setup(struct ahci_device *dev,
         ahci_port_quiesce(port);
 
         uint32_t ssts = mmio_read_32(&port->ssts);
-        uint32_t det = ssts & 0x0F;
-        uint32_t ipm = (ssts >> 8) & 0x0F;
+        uint32_t det  = ssts & 0x0F;
+        uint32_t ipm  = (ssts >> 8) & 0x0F;
         if (!(det == AHCI_DET_PRESENT && ipm == AHCI_IPM_ACTIVE))
             continue;
 
@@ -134,7 +134,7 @@ static struct ahci_disk *device_setup(struct ahci_device *dev,
             continue;
 
         struct ahci_port cc_mem_io *port = ahci_get_port(dev, i);
-        uint32_t ssts = mmio_read_32(&port->ssts);
+        uint32_t                    ssts = mmio_read_32(&port->ssts);
 
         if ((ssts & 0x0F) == AHCI_DET_PRESENT &&
             ((ssts >> 8) & 0x0F) == AHCI_IPM_ACTIVE) {
@@ -143,7 +143,7 @@ static struct ahci_disk *device_setup(struct ahci_device *dev,
             if (sig != 0x00000101)
                 continue;
 
-            disks[disks_ind].port = i;
+            disks[disks_ind].port   = i;
             disks[disks_ind].device = dev;
 
             mmio_write_32(&port->is, 0xFFFFFFFF);
@@ -183,12 +183,12 @@ struct ahci_disk *ahci_setup_controller(struct ahci_controller cc_mem_io *ctrl,
     if (!dev)
         panic("Could not allocate space for AHCI device setup");
 
-    dev->ctrl = ctrl;
+    dev->ctrl    = ctrl;
     dev->irq_num = irq_alloc_entry();
 
-    uint32_t disk_count = 0;
-    struct ahci_disk *d = device_setup(dev, ctrl, &disk_count);
-    *d_cnt = disk_count;
+    uint32_t          disk_count = 0;
+    struct ahci_disk *d          = device_setup(dev, ctrl, &disk_count);
+    *d_cnt                       = disk_count;
     ahci_log(LOG_INFO,
              "Device initialized successfully, %u usable port(s) present",
              disk_count);

@@ -246,32 +246,32 @@ enum workqueue_error workqueue_enqueue(struct workqueue *queue,
                                        struct work *work);
 
 /* Permanent workqueues */
-enum workqueue_error
-workqueue_add_oneshot(work_function func,
-                      struct work_args args) cc_warn_unused_result;
+enum workqueue_error workqueue_add_oneshot(work_function func,
+                                           struct work_args args)
+    cc_warn_unused_result;
 
-enum workqueue_error
-workqueue_add_remote_oneshot(work_function func,
-                             struct work_args args) cc_warn_unused_result;
+enum workqueue_error workqueue_add_remote_oneshot(work_function func,
+                                                  struct work_args args)
+    cc_warn_unused_result;
 
-enum workqueue_error
-workqueue_add_local_oneshot(work_function func,
-                            struct work_args args) cc_warn_unused_result;
+enum workqueue_error workqueue_add_local_oneshot(work_function func,
+                                                 struct work_args args)
+    cc_warn_unused_result;
 
-enum workqueue_error
-workqueue_add_fast_oneshot(work_function func,
-                           struct work_args args) cc_warn_unused_result;
+enum workqueue_error workqueue_add_fast_oneshot(work_function func,
+                                                struct work_args args)
+    cc_warn_unused_result;
 
 enum workqueue_error workqueue_add(struct work *work) cc_warn_unused_result;
 
-enum workqueue_error
-workqueue_add_remote(struct work *work) cc_warn_unused_result;
+enum workqueue_error workqueue_add_remote(struct work *work)
+    cc_warn_unused_result;
 
-enum workqueue_error
-workqueue_add_local(struct work *work) cc_warn_unused_result;
+enum workqueue_error workqueue_add_local(struct work *work)
+    cc_warn_unused_result;
 
-enum workqueue_error
-workqueue_add_fast(struct work *work) cc_warn_unused_result;
+enum workqueue_error workqueue_add_fast(struct work *work)
+    cc_warn_unused_result;
 
 void work_execute(struct work *task);
 bool workqueue_should_spawn_worker(struct workqueue *queue);

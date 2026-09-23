@@ -17,7 +17,7 @@
 typedef atomic_uint64_t sl_pte_atomic_t;
 
 static inline bool vtd_pt_trylock(sl_pte_atomic_t *pte,
-                                  enum irql *irql_out) TSA_NO_ANALYSIS {
+                                  enum irql       *irql_out) TSA_NO_ANALYSIS {
     *irql_out = irql_raise(IRQL_DISPATCH_LEVEL);
 
     uint64_t old = atomic_load_relaxed(pte);
@@ -84,7 +84,7 @@ static inline enum irql vtd_pt_lock(sl_pte_atomic_t *pte) TSA_NO_ANALYSIS {
 }
 
 static inline void vtd_pt_unlock(sl_pte_atomic_t *pte,
-                                 enum irql old_irql) TSA_NO_ANALYSIS {
+                                 enum irql        old_irql) TSA_NO_ANALYSIS {
     vtd_pt_unlock_internal(pte);
     irql_lower(old_irql);
 }

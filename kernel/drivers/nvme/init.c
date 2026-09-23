@@ -61,8 +61,8 @@ void nvme_setup_admin_queues(struct nvme_device *nvme) {
     mmio_write_32(&nvme->regs->acq_lo, (nvme->admin_cq_phys & 0xFFFFFFFF));
     mmio_write_32(&nvme->regs->acq_hi, (nvme->admin_cq_phys >> 32));
 
-    nvme->admin_sq_tail = 0;
-    nvme->admin_cq_head = 0;
+    nvme->admin_sq_tail  = 0;
+    nvme->admin_cq_head  = 0;
     nvme->admin_cq_phase = 1;
 }
 
@@ -89,9 +89,9 @@ void nvme_alloc_admin_queues(struct nvme_device *nvme) {
 
     memset(acq_virt, 0, acq_pages * nvme->page_size);
 
-    nvme->admin_sq = asq_virt;
+    nvme->admin_sq      = asq_virt;
     nvme->admin_sq_phys = asq_phys;
-    nvme->admin_cq = acq_virt;
+    nvme->admin_cq      = acq_virt;
     nvme->admin_cq_phys = acq_phys;
 }
 
@@ -121,10 +121,10 @@ void nvme_alloc_io_queues(struct nvme_device *nvme, uint32_t qid) {
         vmm_map_bump(cq_phys, cq_pages * nvme->page_size, PAGE_NO_FLAGS);
     memset(this_queue->cq, 0, cq_pages * nvme->page_size);
 
-    this_queue->sq_phys = sq_phys;
-    this_queue->cq_phys = cq_phys;
-    this_queue->sq_tail = 0;
-    this_queue->cq_head = 0;
+    this_queue->sq_phys  = sq_phys;
+    this_queue->cq_phys  = cq_phys;
+    this_queue->sq_tail  = 0;
+    this_queue->cq_head  = 0;
     this_queue->cq_phase = 1;
     /* match sizes */
     this_queue->sq_depth = 64; // TODO: #define these or something
@@ -145,8 +145,8 @@ void nvme_alloc_io_queues(struct nvme_device *nvme, uint32_t qid) {
 
     // complete queue
     struct nvme_command cq_cmd = {0};
-    cq_cmd.opc = NVME_OP_ADMIN_CREATE_IOCQ;
-    cq_cmd.prp1 = cq_phys;
+    cq_cmd.opc                 = NVME_OP_ADMIN_CREATE_IOCQ;
+    cq_cmd.prp1                = cq_phys;
 
     cq_cmd.cdw10 = (this_queue->cq_depth - 1) << 16 | qid;
 
@@ -164,8 +164,8 @@ void nvme_alloc_io_queues(struct nvme_device *nvme, uint32_t qid) {
 
     // submit queue
     struct nvme_command sq_cmd = {0};
-    sq_cmd.opc = NVME_OP_ADMIN_CREATE_IOSQ;
-    sq_cmd.prp1 = sq_phys;
+    sq_cmd.opc                 = NVME_OP_ADMIN_CREATE_IOSQ;
+    sq_cmd.prp1                = sq_phys;
 
     sq_cmd.cdw10 = (this_queue->sq_depth - 1) << 16 | qid;
     sq_cmd.cdw11 = qid << 16 | 1;

@@ -11,5 +11,5 @@
 #include <compiler/core.h>
 #include <linker/symbol_table.h>
 
-cc_section(".kernel_syms") cc_used cc_aligned(16) const
-    char kernel_syms_blob[KERNEL_SYMS_RESERVE] = "NOSYMS";
+cc_section(".kernel_syms") cc_used cc_aligned(16)
+const char kernel_syms_blob[KERNEL_SYMS_RESERVE] = "NOSYMS";

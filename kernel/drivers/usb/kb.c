@@ -48,7 +48,7 @@ static inline bool generic_keyboard_is_modifier(uint32_t keycode) {
 
 static cc_unused void generic_keyboard_dispatch(struct generic_keyboard *kbd,
                                                 uint32_t keycode,
-                                                bool pressed) {
+                                                bool     pressed) {
     if (generic_keyboard_is_modifier(keycode)) {
         uint8_t bit = keycode - USB_HID_MODIFIER_BASE;
         if (pressed)
@@ -87,7 +87,7 @@ static bool key_in_report(uint8_t key, const struct usb_kbd_report *r) {
     return false;
 }
 
-void usb_kbd_process_report(struct usb_hid_keyboard *kbd,
+void usb_kbd_process_report(struct usb_hid_keyboard     *kbd,
                             const struct usb_kbd_report *cur) {
     const struct usb_kbd_report *prev = &kbd->last;
 
@@ -98,7 +98,7 @@ void usb_kbd_process_report(struct usb_hid_keyboard *kbd,
                 continue;
 
             uint32_t keycode = USB_HID_MODIFIER_BASE + bit;
-            bool pressed = BIT_TEST(cur->modifiers, bit);
+            bool     pressed = BIT_TEST(cur->modifiers, bit);
 
             kbd->gkbd.emit(&kbd->gkbd, keycode, pressed);
         }
@@ -126,7 +126,7 @@ void usb_kbd_process_report(struct usb_hid_keyboard *kbd,
 }
 
 enum usb_error usb_keyboard_get_descriptor(struct usb_device *dev,
-                                           uint8_t interface_number,
+                                           uint8_t            interface_number,
                                            uint16_t len, void *buf) {
     uint8_t bm = usb_construct_rq_bitmap(USB_REQUEST_TRANS_DTH,
                                          USB_REQUEST_TYPE_STANDARD,
@@ -134,16 +134,16 @@ enum usb_error usb_keyboard_get_descriptor(struct usb_device *dev,
 
     struct usb_setup_packet setup = {
         .bitmap_request_type = bm,
-        .request = USB_RQ_CODE_GET_DESCRIPTOR,
-        .value = USB_HID_DESC_TYPE_REPORT << 8,
-        .length = len,
-        .index = interface_number,
+        .request             = USB_RQ_CODE_GET_DESCRIPTOR,
+        .value               = USB_HID_DESC_TYPE_REPORT << 8,
+        .length              = len,
+        .index               = interface_number,
     };
 
     struct usb_request req = {
-        .setup = &setup,
+        .setup  = &setup,
         .buffer = buf,
-        .dev = dev,
+        .dev    = dev,
     };
 
     return usb_transfer_sync(dev->host->ops->submit_control_transfer, &req,
@@ -165,12 +165,12 @@ static void usb_kbd_worker(void *arg) {
     atomic_store(&kbd->worker_here, false);
 }
 
-struct usb_hid_keyboard *usb_keyboard_create(struct usb_device *dev,
+struct usb_hid_keyboard *usb_keyboard_create(struct usb_device   *dev,
                                              struct usb_endpoint *ep) {
     struct usb_hid_keyboard *kbd = kmalloc(sizeof(*kbd), ALLOC_ZERO);
 
     kbd->dev = dev;
-    kbd->ep = ep;
+    kbd->ep  = ep;
 
     kbd->gkbd.emit = tty_keyboard_emit;
     kbd->gkbd.priv = kbd;
@@ -178,8 +178,8 @@ struct usb_hid_keyboard *usb_keyboard_create(struct usb_device *dev,
     kbd->req = (struct usb_request){
         .buffer = &kbd->cur,
         .length = sizeof(kbd->cur),
-        .ep = kbd->ep,
-        .dev = dev,
+        .ep     = kbd->ep,
+        .dev    = dev,
     };
 
     thread_spawn("usb_kbd_worker", usb_kbd_worker, kbd);

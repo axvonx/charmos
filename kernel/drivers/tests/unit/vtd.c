@@ -2,7 +2,7 @@
 
 TEST_GROUP_DECLARE(vtd_unit, .intensity_desc = {
                                  .curve = SCALE_PIECEWISE_LOG,
-                                 .unit = "iov_addrs",
+                                 .unit  = "iov_addrs",
                              });
 
 TEST_DECLARE_UNIT(vtd_unit, sl_iova_tiling, TEST_INTENSITY(1, 16, 4096)) {
@@ -11,10 +11,10 @@ TEST_DECLARE_UNIT(vtd_unit, sl_iova_tiling, TEST_INTENSITY(1, 16, 4096)) {
         uint64_t iova =
             (0x00007FEDCBA98765ULL + (i * 0x1000000003ULL)) & (BIT(48) - 1);
 
-        uint64_t pml4 = SL_PML4_INDEX(iova);
-        uint64_t pdpt = SL_PDPT_INDEX(iova);
-        uint64_t pd = SL_PD_INDEX(iova);
-        uint64_t pt = SL_PT_INDEX(iova);
+        uint64_t pml4   = SL_PML4_INDEX(iova);
+        uint64_t pdpt   = SL_PDPT_INDEX(iova);
+        uint64_t pd     = SL_PD_INDEX(iova);
+        uint64_t pt     = SL_PT_INDEX(iova);
         uint64_t offset = SL_PAGE_OFFSET(iova);
 
         /* indices must strictly fit in (0..511), 9 bits */

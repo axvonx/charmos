@@ -33,27 +33,27 @@ typedef bool (*sync_fn)(struct block_device *, uint64_t, uint8_t *, uint16_t,
 
 static bool rw_async(struct block_device *disk, uint64_t lba, uint8_t *buf,
                      uint16_t count, struct ahci_request *req, bool write) {
-    struct ahci_disk *ahci_disk = (struct ahci_disk *) disk->driver_data;
+    struct ahci_disk      *ahci_disk = (struct ahci_disk *) disk->driver_data;
     struct ahci_full_port *port = &ahci_disk->device->regs[ahci_disk->port];
 
     uint32_t slot = req->slot;
     ahci_prepare_command(port, slot, write, buf, count * disk->sector_size);
 
     struct ahci_cmd_table *tbl = port->cmd_tables[slot];
-    uint8_t cmd = write ? AHCI_CMD_WRITE_DMA_EXT : AHCI_CMD_READ_DMA_EXT;
-    bool is_atapi = false;
+    uint8_t cmd      = write ? AHCI_CMD_WRITE_DMA_EXT : AHCI_CMD_READ_DMA_EXT;
+    bool    is_atapi = false;
 
     ahci_setup_fis(tbl, cmd, is_atapi);
 
     ahci_set_lba_cmd((struct ahci_fis_reg_h2d *) tbl->cfis, lba, count);
 
-    req->port = ahci_disk->port;
-    req->lba = lba;
-    req->buffer = buf;
+    req->port         = ahci_disk->port;
+    req->lba          = lba;
+    req->buffer       = buf;
     req->sector_count = count;
-    req->write = write;
-    req->done = false;
-    req->status = -1;
+    req->write        = write;
+    req->done         = false;
+    req->status       = -1;
 
     ahci_send_command(ahci_disk, port, req);
     return true;
@@ -62,13 +62,13 @@ static bool rw_async(struct block_device *disk, uint64_t lba, uint8_t *buf,
 static bool rw_sync(struct block_device *disk, uint64_t lba, uint8_t *buf,
                     uint16_t count, async_fn function,
                     struct io_wait_token *io_wait_tok) {
-    struct ahci_request req = {0};
-    struct ahci_disk *ahci_disk = (struct ahci_disk *) disk->driver_data;
-    struct ahci_device *dev = ahci_disk->device;
-    struct ahci_full_port *port = &dev->regs[ahci_disk->port];
+    struct ahci_request    req       = {0};
+    struct ahci_disk      *ahci_disk = (struct ahci_disk *) disk->driver_data;
+    struct ahci_device    *dev       = ahci_disk->device;
+    struct ahci_full_port *port      = &dev->regs[ahci_disk->port];
 
     enum irql irql = spin_lock(&dev->lock);
-    req.slot = ahci_find_slot(port);
+    req.slot       = ahci_find_slot(port);
 
     /* tells ISR handler to mark status properly */
     req.trigger_completion = true;
@@ -96,7 +96,7 @@ static bool rw_sync_wrapper(struct block_device *disk, uint64_t lba,
                             uint8_t *buf, uint64_t cnt, sync_fn function) {
     struct io_wait_token wt = IO_WAIT_TOKEN_EMPTY;
     while (cnt > 0) {
-        uint16_t chunk = (cnt > 65535) ? 0 : (uint16_t) cnt;
+        uint16_t chunk   = (cnt > 65535) ? 0 : (uint16_t) cnt;
         uint64_t sectors = (chunk == 0) ? 65536 : chunk;
 
         if (!function(disk, lba, buf, chunk, &wt)) {
@@ -117,7 +117,7 @@ static bool rw_async_wrapper(struct block_device *disk, uint64_t lba,
                              uint8_t *buf, uint64_t cnt,
                              struct ahci_request *req, async_fn function) {
     while (cnt > 0) {
-        uint16_t chunk = (cnt > 65535) ? 0 : (uint16_t) cnt;
+        uint16_t chunk   = (cnt > 65535) ? 0 : (uint16_t) cnt;
         uint64_t sectors = (chunk == 0) ? 65536 : chunk;
 
         req->trigger_completion = (cnt == sectors);

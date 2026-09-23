@@ -25,7 +25,7 @@ void ata_soft_reset(struct ata_drive *ata_drive) {
     outb(ctrl, 0x00); // nIEN=0, SRST=0
     io_port_wait();
 
-    uint16_t base = ata_drive->io_base;
+    uint16_t base    = ata_drive->io_base;
     uint64_t timeout = IDE_CMD_TIMEOUT_MS * 1000;
 
     while (inb(REG_STATUS(base)) & STATUS_BSY) {
@@ -75,14 +75,14 @@ bool ata_setup_drive(struct ata_drive *ide, struct pci_device *devices,
 
             uint32_t ctrl_bar = pci_read_bar(curr->bus, curr->dev,
                                              curr->function, channel * 2 + 1);
-            ide->io_base = (bar & 1) ? (bar & 0xFFFFFFFC)
-                                     : ((channel == 0) ? ATA_PRIMARY_IO
-                                                       : ATA_SECONDARY_IO);
+            ide->io_base      = (bar & 1) ? (bar & 0xFFFFFFFC)
+                                          : ((channel == 0) ? ATA_PRIMARY_IO
+                                                            : ATA_SECONDARY_IO);
 
             uint8_t prog_if = pci_read_config8(curr->bus, curr->dev,
                                                curr->function, PCI_PROG_IF);
-            bool primary_native = (prog_if & 0x01);
-            bool secondary_native = (prog_if & 0x04);
+            bool    primary_native   = (prog_if & 0x01);
+            bool    secondary_native = (prog_if & 0x04);
 
             if ((channel == 0 && !primary_native) ||
                 (channel == 1 && !secondary_native)) {
@@ -97,7 +97,7 @@ bool ata_setup_drive(struct ata_drive *ide, struct pci_device *devices,
                     ? (ctrl_bar & 0xFFFFFFFC)
                     : ((channel == 0) ? ATA_PRIMARY_CTRL : ATA_SECONDARY_CTRL);
 
-            ide->slave = is_slave;
+            ide->slave         = is_slave;
             ide->identify_data = kmalloc(512);
             if (!ide->identify_data)
                 panic("Could not allocate space for IDE Identify");
@@ -106,11 +106,11 @@ bool ata_setup_drive(struct ata_drive *ide, struct pci_device *devices,
             ata_soft_reset(ide);
 
             if (ata_identify(ide)) {
-                ide->type = IDE_TYPE_ATA;
+                ide->type        = IDE_TYPE_ATA;
                 ide->sector_size = 512;
                 return true;
             } else if (atapi_identify(ide)) {
-                ide->type = IDE_TYPE_ATAPI;
+                ide->type        = IDE_TYPE_ATAPI;
                 ide->sector_size = 2048;
                 return true;
             }
@@ -119,9 +119,9 @@ bool ata_setup_drive(struct ata_drive *ide, struct pci_device *devices,
         }
     }
 
-    ide->io_base = 0;
+    ide->io_base   = 0;
     ide->ctrl_base = 0;
-    ide->slave = 0;
+    ide->slave     = 0;
     return false;
 }
 

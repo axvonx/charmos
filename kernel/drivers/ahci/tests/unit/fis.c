@@ -5,7 +5,7 @@ TEST_GROUP_DECLARE(ahci_unit);
 TEST_DECLARE_UNIT(ahci_unit, fis_h2d_lba48_pack) {
     struct ahci_fis_reg_h2d fis = {0};
 
-    uint64_t lba = 0x0000123456789ABCULL;
+    uint64_t lba          = 0x0000123456789ABCULL;
     uint16_t sector_count = 0x4321;
 
     TEST_CALL(ahci_set_lba_cmd)(&fis, lba, sector_count);
