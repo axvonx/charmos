@@ -73,7 +73,7 @@ static void test_fleet_deadline(struct timer *timer) {
 
 struct test_fleet *test_fleet_init(struct test_context *ctx,
                                    const struct test_fleet_opts *opts) {
-    struct test_fleet *f = kmalloc(sizeof(*f), .flags = ALLOC_FLAGS_ZERO);
+    struct test_fleet *f = kmalloc(sizeof(*f), ALLOC_ZERO);
     if (!f)
         return NULL;
 
@@ -288,8 +288,7 @@ static void test_fleet_put(struct test_fleet *f) {
 }
 
 void *test_fleet_alloc(struct test_fleet *f, size_t size) {
-    struct test_fleet_alloc *a =
-        kmalloc(sizeof(*a) + size, .flags = ALLOC_FLAGS_ZERO);
+    struct test_fleet_alloc *a = kmalloc(sizeof(*a) + size, ALLOC_ZERO);
     if (!a)
         return NULL;
 

@@ -48,7 +48,7 @@ int percpu_rc_init(struct percpu_rc *rc, percpu_rc_release_fn release,
     }
 
     size_t size = sizeof(int64_t) * global.core_count;
-    int64_t *counters = kmalloc(size, .flags = ALLOC_FLAGS_ZERO);
+    int64_t *counters = kmalloc(size, ALLOC_ZERO);
     if (!counters)
         return ERR_NO_MEM;
 

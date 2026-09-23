@@ -188,8 +188,7 @@ static enum err prefetch(struct block_device *disk, struct bcache *cache,
         return ERR_NO_MEM;
 
     pf->cache = cache;
-    pf->new_entry =
-        kmalloc(sizeof(struct bcache_entry), .flags = ALLOC_FLAGS_ZERO);
+    pf->new_entry = kmalloc(sizeof(struct bcache_entry), ALLOC_ZERO);
     if (!pf->new_entry)
         return ERR_NO_MEM;
 
@@ -392,7 +391,7 @@ void *bcache_create_ent(struct block_device *disk, uint64_t lba,
             return NULL;
         }
 
-        ent = kmalloc(sizeof(struct bcache_entry), .flags = ALLOC_FLAGS_ZERO);
+        ent = kmalloc(sizeof(struct bcache_entry), ALLOC_ZERO);
         if (!ent)
             return NULL;
 
@@ -421,6 +420,6 @@ void bcache_init(struct bcache *cache, uint64_t capacity) {
     spinlock_init(&cache->lock);
     cache->capacity = capacity;
     cache->count = 0;
-    cache->entries = alloc_or_die(kmalloc(
-        sizeof(struct bcache_wrapper *) * capacity, .flags = ALLOC_FLAGS_ZERO));
+    cache->entries =
+        kmalloc_or_die(sizeof(struct bcache_wrapper *) * capacity, ALLOC_ZERO);
 }

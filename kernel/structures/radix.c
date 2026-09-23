@@ -18,8 +18,7 @@ int32_t radix_insert(struct radix_tree *tree, void *item) {
     int32_t level = tree->height;
 
     if (!tree->root) {
-        tree->root =
-            kmalloc(sizeof(struct radix_node), .flags = ALLOC_FLAGS_ZERO);
+        tree->root = kmalloc(sizeof(struct radix_node), ALLOC_ZERO);
         if (!tree->root)
             return ERR_NO_MEM;
     }
@@ -31,7 +30,7 @@ int32_t radix_insert(struct radix_tree *tree, void *item) {
 
         if (!node->slots[idx]) {
             struct radix_node *mid =
-                kmalloc(sizeof(struct radix_node), .flags = ALLOC_FLAGS_ZERO);
+                kmalloc(sizeof(struct radix_node), ALLOC_ZERO);
             if (!mid) {
                 radix_prune_up(node, tree);
                 return ERR_NO_MEM;

@@ -159,7 +159,7 @@ struct block_device *ide_create_generic(struct ata_drive *ide) {
 
     d->flags = BDEV_FLAG_NO_COALESCE | BDEV_FLAG_NO_REORDER;
 
-    d->cache = kmalloc(sizeof(struct bcache), .flags = ALLOC_FLAGS_ZERO);
+    d->cache = kmalloc(sizeof(struct bcache), ALLOC_ZERO);
     if (!d->cache)
         panic("Could not allocate space for IDE drive block cache");
 

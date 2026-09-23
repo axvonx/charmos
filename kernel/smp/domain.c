@@ -24,8 +24,8 @@ LOG_HANDLE_DECLARE_PRINT(domain);
 
 static void init_global_domain(uint64_t domain_count) {
     global.domain_count = domain_count;
-    global.domains = alloc_or_die(kmalloc(
-        sizeof(struct domain *) * domain_count, .flags = ALLOC_FLAGS_ZERO));
+    global.domains =
+        kmalloc_or_die(sizeof(struct domain *) * domain_count, ALLOC_ZERO);
 
     for (size_t i = 0; i < domain_count; i++) {
 
@@ -48,8 +48,8 @@ static void construct_domains_from_numa_nodes(void) {
         alloc_or_die(cpu_mask_init(&cd->cpu_mask, global.core_count));
         cpu_mask_copy(&cd->cpu_mask, &nn->cpus);
         cd->associated_node = nn;
-        cd->cores = kmalloc_or_die(sizeof(struct core *) * cd->num_cores,
-                                   .flags = ALLOC_FLAGS_ZERO);
+        cd->cores =
+            kmalloc_or_die(sizeof(struct core *) * cd->num_cores, ALLOC_ZERO);
     }
 }
 
@@ -83,7 +83,7 @@ static void construct_domains_from_cores(void) {
             cpu_mask_set(&cd->cpu_mask, core_index);
         }
         cd->cores = kmalloc_or_die(sizeof(struct core *) * cores_this_domain,
-                                   .flags = ALLOC_FLAGS_ZERO);
+                                   ALLOC_ZERO);
     }
 }
 

@@ -44,7 +44,7 @@ TEST_DECLARE_INTEGRATION(bio_sched, delay_enqueue,
     for (uint64_t i = 0; i < test_runs; i++) {
         uint8_t *buf = kmalloc_aligned(PAGE_SIZE, PAGE_SIZE);
         struct bio_request *rq =
-            kmalloc(sizeof(struct bio_request), .flags = ALLOC_FLAGS_ZERO);
+            kmalloc(sizeof(struct bio_request), ALLOC_ZERO);
         TEST_ASSERT_NONNULL(rq);
         TEST_ASSERT_NONNULL(buf);
         TEST_ASSERT(IS_PAGE_ALIGNED(buf));
@@ -101,7 +101,7 @@ TEST_DECLARE_INTEGRATION(bio_sched, delay_enqueue,
             avg_complete_time[i] = total_complete_time[i] / runs_per_lvl[i];
         else
             avg_complete_time[i] = 0;
-        char *lvl_msg = kmalloc(100, .flags = ALLOC_FLAGS_ZERO);
+        char *lvl_msg = kmalloc(100, ALLOC_ZERO);
         TEST_ASSERT_NONNULL(lvl_msg);
         snprintf(lvl_msg, 100, "Average completion time of level %lu is %lu ms",
                  i, avg_complete_time[i]);

@@ -95,14 +95,13 @@ enum usb_error xhci_submit_interrupt_transfer(struct usb_request *req) {
     control |= TRB_IOC_BIT;
 
     struct xhci_request *xreq =
-        kmalloc(sizeof(struct xhci_request), .flags = ALLOC_FLAGS_ZERO);
+        kmalloc(sizeof(struct xhci_request), ALLOC_ZERO);
     if (!xreq) {
         return_status = USB_ERR_OOM;
         goto out;
     }
 
-    struct xhci_command *cmd =
-        kmalloc(sizeof(struct xhci_command), .flags = ALLOC_FLAGS_ZERO);
+    struct xhci_command *cmd = kmalloc(sizeof(struct xhci_command), ALLOC_ZERO);
 
     if (!cmd) {
         return_status = USB_ERR_OOM;
@@ -195,11 +194,9 @@ enum usb_error xhci_send_control_transfer(struct xhci_device *dev,
         return fail_control_transfer(USB_ERR_NO_DEVICE);
     }
 
-    struct xhci_request *xreq =
-        kmalloc(sizeof(*xreq), .flags = ALLOC_FLAGS_ZERO);
-    struct xhci_command *cmd = kmalloc(sizeof(*cmd), .flags = ALLOC_FLAGS_ZERO);
-    struct xhci_ctrl_emit *emit =
-        kmalloc(sizeof(*emit), .flags = ALLOC_FLAGS_ZERO);
+    struct xhci_request *xreq = kmalloc(sizeof(*xreq), ALLOC_ZERO);
+    struct xhci_command *cmd = kmalloc(sizeof(*cmd), ALLOC_ZERO);
+    struct xhci_ctrl_emit *emit = kmalloc(sizeof(*emit), ALLOC_ZERO);
 
     if (!xreq || !cmd || !emit) {
         /* drop USB dev ref, drop slot ref, dealloc, bye bye */

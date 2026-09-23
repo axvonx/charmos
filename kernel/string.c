@@ -827,7 +827,7 @@ int vasprintf(char **strp, const char *fmt, va_list args) {
 
     size_t size = (size_t) needed + 1;
 
-    char *buf = (char *) kmalloc(size, .flags = ALLOC_FLAGS_ZERO);
+    char *buf = (char *) kmalloc(size, ALLOC_ZERO);
     if (!buf)
         return ERR_NO_MEM;
 

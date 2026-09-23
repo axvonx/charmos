@@ -738,9 +738,8 @@ void watchdog_init(void) {
         cpu_mask_init(&watchdog_master.scratch_mask, global.core_count));
 
     cpu_mask_set_all(&watchdog_master.cpu_masks[WATCHDOG_STATE_NORMAL]);
-    watchdog_master.cpus =
-        kmalloc_or_die(sizeof(struct watchdog_master_cpu) * global.core_count,
-                       .flags = ALLOC_FLAGS_ZERO);
+    watchdog_master.cpus = kmalloc_or_die(
+        sizeof(struct watchdog_master_cpu) * global.core_count, ALLOC_ZERO);
 
     watchdog_global.critical_test_irq = irq_alloc_entry();
     irq_register("watchdog_test", watchdog_global.critical_test_irq,

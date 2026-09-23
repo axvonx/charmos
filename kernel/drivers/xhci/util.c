@@ -88,14 +88,12 @@ void xhci_cleanup(struct xhci_device *dev, struct xhci_request *req) {
 }
 
 struct xhci_ring *xhci_allocate_ring() {
-    struct xhci_trb *trbs =
-        kmalloc_aligned(PAGE_SIZE, PAGE_SIZE, .flags = ALLOC_FLAGS_ZERO);
+    struct xhci_trb *trbs = kmalloc_aligned(PAGE_SIZE, PAGE_SIZE, ALLOC_ZERO);
     if (!trbs)
         return NULL;
 
     paddr_t phys = vmm_get_phys((vaddr_t) trbs, VMM_FLAG_NONE);
-    struct xhci_ring *ring =
-        kmalloc(sizeof(struct xhci_ring), .flags = ALLOC_FLAGS_ZERO);
+    struct xhci_ring *ring = kmalloc(sizeof(struct xhci_ring), ALLOC_ZERO);
     if (!ring)
         return NULL;
 
@@ -117,9 +115,9 @@ struct xhci_ring *xhci_allocate_ring() {
 }
 
 struct xhci_ring *xhci_allocate_event_ring(void) {
-    struct xhci_ring *er = kmalloc(sizeof(*er), .flags = ALLOC_FLAGS_ZERO);
+    struct xhci_ring *er = kmalloc(sizeof(*er), ALLOC_ZERO);
 
-    er->trbs = kmalloc_aligned(PAGE_SIZE, PAGE_SIZE, .flags = ALLOC_FLAGS_ZERO);
+    er->trbs = kmalloc_aligned(PAGE_SIZE, PAGE_SIZE, ALLOC_ZERO);
     er->phys = vmm_get_phys((vaddr_t) er->trbs, VMM_FLAG_NONE);
 
     er->size = TRB_RING_SIZE;

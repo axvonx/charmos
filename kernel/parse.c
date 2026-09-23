@@ -561,7 +561,7 @@ static bool parse_list_internal(const char *str, struct parse_list *out) {
     if (!out)
         return true;
 
-    char **items = kmalloc(count * sizeof(char *), .flags = ALLOC_FLAGS_ZERO);
+    char **items = kmalloc(count * sizeof(char *), ALLOC_ZERO);
     if (!items)
         return false;
 
@@ -586,8 +586,7 @@ static bool parse_list_internal(const char *str, struct parse_list *out) {
                 begin++;
                 end--;
             }
-            char *text =
-                kmalloc((size_t) (end - begin) + 1, .flags = ALLOC_FLAGS_ZERO);
+            char *text = kmalloc((size_t) (end - begin) + 1, ALLOC_ZERO);
             if (!text) {
                 for (size_t k = 0; k < item; k++)
                     kfree(items[k]);

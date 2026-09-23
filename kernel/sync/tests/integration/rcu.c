@@ -55,14 +55,12 @@ static void rcu_writer_thread(void *arg) {
 
     struct rcu_test_data *old = atomic_load_relaxed(&shared_ptr);
 
-    struct rcu_test_data *new =
-        kmalloc(sizeof(*new), .flags = ALLOC_FLAGS_ZERO);
+    struct rcu_test_data *new = kmalloc(sizeof(*new), ALLOC_ZERO);
     new->value = 43;
     rcu_assign_pointer(shared_ptr, new);
 
     rcu_synchronize();
-    rcu_defer(kmalloc(sizeof(struct rcu_cb), .flags = ALLOC_FLAGS_ZERO),
-              rcu_free_fn, old);
+    rcu_defer(kmalloc(sizeof(struct rcu_cb), ALLOC_ZERO), rcu_free_fn, old);
 }
 
 TEST_DECLARE_INTEGRATION(rcu, basic, TEST_INTENSITY(40, 50, 200)) {
@@ -74,8 +72,7 @@ TEST_DECLARE_INTEGRATION(rcu, basic, TEST_INTENSITY(40, 50, 200)) {
     atomic_store(&rcu_reads_done, 0);
     atomic_store(&rcu_deferred_freed, false);
 
-    struct rcu_test_data *initial =
-        kmalloc(sizeof(*initial), .flags = ALLOC_FLAGS_ZERO);
+    struct rcu_test_data *initial = kmalloc(sizeof(*initial), ALLOC_ZERO);
     initial->value = 42;
     rcu_assign_pointer(shared_ptr, initial);
 
@@ -179,8 +176,7 @@ static void rcu_stress_writer(void *arg) {
     uint64_t local_iter = 0;
 
     while (!atomic_load(&stress_stop)) {
-        struct rcu_stress_node *new =
-            kmalloc(sizeof(*new), .flags = ALLOC_FLAGS_ZERO);
+        struct rcu_stress_node *new = kmalloc(sizeof(*new), ALLOC_ZERO);
         if (!new) {
             atomic_store(&stress_failed, true);
             test_info("RCU stress writer kmalloc failed");
@@ -194,7 +190,7 @@ static void rcu_stress_writer(void *arg) {
         struct rcu_stress_node *old = atomic_xchg_acq_rel(&stress_shared, new);
 
         if (old)
-            rcu_defer(kmalloc(sizeof(struct rcu_cb), .flags = ALLOC_FLAGS_ZERO),
+            rcu_defer(kmalloc(sizeof(struct rcu_cb), ALLOC_ZERO),
                       stress_free_cb, old);
 
         if ((local_iter & 0x1f) == 0) {
@@ -225,8 +221,7 @@ TEST_DECLARE_INTEGRATION(rcu, stress, TEST_INTENSITY(200, 2000, 10000)) {
     atomic_store(&stress_replacements, 0);
     atomic_store(&gen_freed, 0);
 
-    struct rcu_stress_node *initial =
-        kmalloc(sizeof(*initial), .flags = ALLOC_FLAGS_ZERO);
+    struct rcu_stress_node *initial = kmalloc(sizeof(*initial), ALLOC_ZERO);
     initial->seq = 0;
     initial->value = 42;
     rcu_assign_pointer(stress_shared, initial);

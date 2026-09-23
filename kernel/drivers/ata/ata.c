@@ -129,7 +129,7 @@ static uint64_t ide_cnt = 1, atapi_cnt = 1;
 
 void ata_init(struct pci_device *devices, uint64_t count) {
     struct ata_drive *drives =
-        kmalloc(sizeof(struct ata_drive) * 4, .flags = ALLOC_FLAGS_ZERO);
+        kmalloc(sizeof(struct ata_drive) * 4, ALLOC_ZERO);
     if (!drives)
         panic("Could not allocate space for devices");
 

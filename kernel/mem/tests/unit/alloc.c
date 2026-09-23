@@ -4,7 +4,7 @@
 TEST_DECLARE_UNIT(mem, kmalloc_zero_large_reuse) {
     const size_t size = KIB(64);
     for (uint32_t iteration = 0; iteration < 32; iteration++) {
-        uint8_t *buffer = kmalloc(size, .flags = ALLOC_FLAGS_ZERO,
+        uint8_t *buffer = kmalloc(size, ALLOC_ZERO,
                                   .behavior = ALLOC_BEHAVIOR_NORMAL |
                                               ALLOC_BEHAVIOR_FLAG_MINIMAL);
         TEST_ASSERT_NONNULL(buffer);

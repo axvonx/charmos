@@ -3,8 +3,7 @@
 TEST_DECLARE_UNIT(slab, random_free_stress, TEST_INTENSITY(256, 2048, 32768),
                   .min_ram_mib = 8) {
     size_t n = ctx->intensity_val ? ctx->intensity_val : 2048;
-    void **stress_alloc_free_ptrs =
-        kmalloc(sizeof(void *) * n, .flags = ALLOC_FLAGS_ZERO);
+    void **stress_alloc_free_ptrs = kmalloc(sizeof(void *) * n, ALLOC_ZERO);
     TEST_ASSERT_NONNULL(stress_alloc_free_ptrs);
 
     for (size_t i = 0; i < n; i++) {

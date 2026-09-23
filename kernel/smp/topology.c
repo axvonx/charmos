@@ -110,8 +110,7 @@ void topology_dump(void) {
     } while (0);
 
 static size_t build_smt_nodes(size_t n_cpus) {
-    smt_nodes = kmalloc(n_cpus * sizeof(struct topology_node),
-                        .flags = ALLOC_FLAGS_ZERO);
+    smt_nodes = kmalloc(n_cpus * sizeof(struct topology_node), ALLOC_ZERO);
 
     for (size_t i = 0; i < n_cpus; i++) {
         struct core *c = global.cores[i];
@@ -157,8 +156,7 @@ static size_t build_smt_nodes(size_t n_cpus) {
 
 static size_t build_core_nodes(size_t n_cpus) {
     size_t core_count = 0;
-    core_nodes = kmalloc(n_cpus * sizeof(struct topology_node),
-                         .flags = ALLOC_FLAGS_ZERO);
+    core_nodes = kmalloc(n_cpus * sizeof(struct topology_node), ALLOC_ZERO);
 
     for (size_t i = 0; i < n_cpus; i++) {
         struct core *c = global.cores[i];
@@ -209,8 +207,8 @@ static size_t build_numa_nodes(size_t n_cores, size_t n_llc) {
             max_numa = core_nodes[i].core->numa_node;
 
     size_t n_numa_nodes = max_numa + 1;
-    numa_nodes = kmalloc(n_numa_nodes * sizeof(struct topology_node),
-                         .flags = ALLOC_FLAGS_ZERO);
+    numa_nodes =
+        kmalloc(n_numa_nodes * sizeof(struct topology_node), ALLOC_ZERO);
 
     for (size_t i = 0; i < n_numa_nodes; i++) {
         struct topology_node *numa = &numa_nodes[i];
@@ -274,8 +272,7 @@ static size_t build_numa_nodes(size_t n_cores, size_t n_llc) {
 }
 
 static size_t build_llc_nodes(size_t n_cores) {
-    llc_nodes = kmalloc(n_cores * sizeof(struct topology_node),
-                        .flags = ALLOC_FLAGS_ZERO);
+    llc_nodes = kmalloc(n_cores * sizeof(struct topology_node), ALLOC_ZERO);
     size_t llc_count = 0;
 
     for (size_t i = 0; i < n_cores; i++) {
@@ -369,8 +366,8 @@ static size_t build_package_nodes(size_t n_cores, size_t n_llc) {
             max_pkg_id = core_nodes[i].core->package_id;
 
     size_t n_packages = max_pkg_id + 1;
-    package_nodes = kmalloc(n_packages * sizeof(struct topology_node),
-                            .flags = ALLOC_FLAGS_ZERO);
+    package_nodes =
+        kmalloc(n_packages * sizeof(struct topology_node), ALLOC_ZERO);
 
     for (size_t i = 0; i < n_packages; i++) {
         struct topology_node *pkg = &package_nodes[i];

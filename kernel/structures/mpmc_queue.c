@@ -24,7 +24,7 @@ bool mpmc_queue_init(struct mpmc_queue *q, size_t capacity) {
     size_t cap = MAX(next_pow2(capacity), MPMC_QUEUE_MIN_CAPACITY);
 
     struct mpmc_slot *slots =
-        kmalloc(sizeof(struct mpmc_slot) * cap, .flags = ALLOC_FLAGS_ZERO);
+        kmalloc(sizeof(struct mpmc_slot) * cap, ALLOC_ZERO);
     if (!slots) {
         return false;
     }

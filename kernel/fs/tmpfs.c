@@ -14,11 +14,9 @@
 struct vfs_node *tmpfs_create_vfs_node(struct tmpfs_node *tnode);
 
 struct vfs_node *tmpfs_mkroot(const char *mount_point) {
-    struct tmpfs_fs *fs =
-        kmalloc(sizeof(struct tmpfs_fs), .flags = ALLOC_FLAGS_ZERO);
+    struct tmpfs_fs *fs = kmalloc(sizeof(struct tmpfs_fs), ALLOC_ZERO);
 
-    struct tmpfs_node *root =
-        kmalloc(sizeof(struct tmpfs_node), .flags = ALLOC_FLAGS_ZERO);
+    struct tmpfs_node *root = kmalloc(sizeof(struct tmpfs_node), ALLOC_ZERO);
     if (!fs || !root)
         return false;
 
@@ -174,7 +172,7 @@ static enum err tmpfs_create_common(struct vfs_node *parent, const char *name,
     if (tmpfs_find_child(pt, name))
         return ERR_EXIST;
 
-    struct tmpfs_node *node = kmalloc(sizeof(*node), .flags = ALLOC_FLAGS_ZERO);
+    struct tmpfs_node *node = kmalloc(sizeof(*node), ALLOC_ZERO);
     if (cc_unlikely(!node))
         return ERR_NO_MEM;
 
@@ -494,8 +492,7 @@ static const struct vfs_ops tmpfs_ops = {.read = tmpfs_read,
                                          .finddir = tmpfs_finddir};
 
 struct vfs_node *tmpfs_create_vfs_node(struct tmpfs_node *tnode) {
-    struct vfs_node *vnode =
-        kmalloc(sizeof(struct vfs_node), .flags = ALLOC_FLAGS_ZERO);
+    struct vfs_node *vnode = kmalloc(sizeof(struct vfs_node), ALLOC_ZERO);
     if (!vnode || !tnode)
         return NULL;
 

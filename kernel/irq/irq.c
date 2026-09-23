@@ -164,7 +164,7 @@ void irq_register(char *name, uint8_t vector, irq_handler_t handler, void *ctx,
         panic("need to be shared to have many, registered by %s", me->name);
 
     struct irq_action *act =
-        kmalloc_or_die(sizeof(struct irq_action), .flags = ALLOC_FLAGS_ZERO);
+        kmalloc_or_die(sizeof(struct irq_action), ALLOC_ZERO);
 
     act->handler = handler;
     INIT_LIST_HEAD(&act->list);

@@ -120,6 +120,7 @@ enum alloc_flags : uint32_t {
      ALLOC_FLAG_NONMOVABLE | ALLOC_FLAG_NONPAGEABLE |                          \
      ALLOC_FLAG_NO_CACHE_ALIGN | ALLOC_LOCALITY_TO_FLAGS(ALLOC_LOCALITY_MIN))
 #define ALLOC_FLAGS_ZERO (ALLOC_FLAGS_DEFAULT | ALLOC_FLAG_ZERO_ON_ALLOC)
+#define ALLOC_ZERO .flags = ALLOC_FLAGS_ZERO
 
 #define ALLOC_FLAGS_PAGEABLE                                                   \
     ALLOC_FLAG_PAGEABLE | ALLOC_FLAG_CLASS_DEFAULT |                           \

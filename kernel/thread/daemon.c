@@ -158,7 +158,7 @@ void daemon_main(void *a) {
 
 struct daemon_thread *daemon_thread_create(struct daemon *daemon) {
     struct daemon_thread *thread =
-        kmalloc(sizeof(struct daemon_thread), .flags = ALLOC_FLAGS_ZERO);
+        kmalloc(sizeof(struct daemon_thread), ALLOC_ZERO);
     if (!thread)
         return NULL;
 
@@ -219,8 +219,7 @@ struct daemon *daemon_create(const char *fmt, struct daemon_attributes *attrs,
     va_list args;
     va_start(args, wq_attrs);
 
-    struct daemon *daemon =
-        kmalloc(sizeof(struct daemon), .flags = ALLOC_FLAGS_ZERO);
+    struct daemon *daemon = kmalloc(sizeof(struct daemon), ALLOC_ZERO);
     struct daemon_thread *dt = NULL, *bg = NULL;
 
     if (!daemon)
@@ -242,7 +241,7 @@ struct daemon *daemon_create(const char *fmt, struct daemon_attributes *attrs,
         int needed = vsnprintf(NULL, 0, fmt, args_copy) + 1;
         va_end(args_copy);
 
-        char *name = kmalloc(needed, .flags = ALLOC_FLAGS_ZERO);
+        char *name = kmalloc(needed, ALLOC_ZERO);
         if (!name)
             goto err;
 

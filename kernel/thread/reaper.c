@@ -18,7 +18,7 @@ void reaper_enqueue(struct thread *t) {
 void reaper_init(void) {
     size_t reaper_count = global.domain_count;
     reapers = kmalloc_or_die(sizeof(struct reaper_thread *) * reaper_count,
-                             .flags = ALLOC_FLAGS_ZERO);
+                             ALLOC_ZERO);
 
     for (size_t i = 0; i < reaper_count; i++) {
         reapers[i] =
