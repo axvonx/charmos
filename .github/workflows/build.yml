@@ -26,7 +26,7 @@ concurrency:
 jobs:
   build:
     name: Build (${{ matrix.compiler }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -43,7 +43,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Verify clang toolchain
         if: matrix.compiler == 'clang'
@@ -68,7 +68,7 @@ jobs:
         run: ./scripts/build.sh -t Debug --compiler ${{ matrix.compiler }}
 
       - name: Upload Debug artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: iso-${{ matrix.compiler }}-Debug
           path: build/charmos-x86_64.iso
@@ -78,7 +78,7 @@ jobs:
         run: ./scripts/build.sh -t Release --compiler ${{ matrix.compiler }}
 
       - name: Upload Release artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: iso-${{ matrix.compiler }}-Release
           path: build/charmos-x86_64.iso

@@ -31,7 +31,7 @@ env:
 jobs:
   test:
     name: Test (${{ matrix.compiler }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -48,7 +48,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Verify clang toolchain
         if: matrix.compiler == 'clang'
@@ -69,7 +69,7 @@ jobs:
         run: ./scripts/build.sh -t RelWithDebInfo --compiler ${{ matrix.compiler }} -C
 
       - name: Upload ISO
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: iso-${{ matrix.compiler }}
           path: build/charmos-x86_64.iso
@@ -129,7 +129,7 @@ jobs:
 
       - name: Upload results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: results-${{ matrix.compiler }}
           path: results/
@@ -139,13 +139,13 @@ jobs:
     name: Report
     needs: test
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Download all results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: results-*
           path: artifacts
@@ -159,7 +159,7 @@ jobs:
 
       - name: Upload report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: report
           path: report.json

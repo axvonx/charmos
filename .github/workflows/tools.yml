@@ -36,14 +36,14 @@ concurrency:
 jobs:
   python:
     name: Python
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Symlink node for act
         run: ln -sf $(which node) /usr/local/bin/node || true
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
@@ -90,9 +90,9 @@ jobs:
 
   shell:
     name: Shell
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
 
       # Install shellcheck TODO: maybe find a better way to do this

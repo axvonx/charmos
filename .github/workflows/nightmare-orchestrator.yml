@@ -46,20 +46,20 @@ env:
 
 jobs:
   plan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       accepted: ${{ steps.result.outputs.accepted }}
       deferred: ${{ steps.result.outputs.deferred }}
       build_matrix: ${{ steps.result.outputs.build_matrix }}
       source_sha: ${{ steps.result.outputs.source_sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
       - name: Download plan
         if: inputs.queued_run_id != ''
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: nightmare-queue
           path: queued-plan
@@ -149,7 +149,7 @@ jobs:
 
       - name: Persist deferred accepted plan
         if: steps.timing.outputs.deferred == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nightmare-queue
           path: |
@@ -162,7 +162,7 @@ jobs:
 
       - name: Upload authoritative plan
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nightmare-plan
           path: |
@@ -176,7 +176,7 @@ jobs:
   build:
     needs: plan
     if: needs.plan.outputs.accepted == 'true' && needs.plan.outputs.deferred != 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -187,12 +187,12 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.plan.outputs.source_sha }}
           submodules: recursive
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: nightmare-plan
           path: plan-download
@@ -206,7 +206,7 @@ jobs:
             --receipt receipt.json
 
       - name: Upload immutable build bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
           path: |
@@ -217,18 +217,18 @@ jobs:
   materialize:
     needs: [plan, build]
     if: always() && needs.plan.outputs.accepted == 'true' && needs.build.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       runner_matrix: ${{ steps.matrix.outputs.runner_matrix }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: nightmare-plan
           path: plan-download
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: nightmare-build-*
           path: builds
@@ -246,7 +246,7 @@ jobs:
           matrix=$(python3 -m charm nightmare matrix runner materialized/plan_bundle.json)
           echo "runner_matrix=$matrix" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: nightmare-plan-bundle
           path: materialized/
@@ -255,7 +255,7 @@ jobs:
   runner:
     needs: [plan, materialize]
     if: needs.materialize.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       max-parallel: 12
@@ -266,17 +266,17 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.plan.outputs.source_sha }}
           submodules: recursive
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: nightmare-plan-bundle
           path: plan-bundle
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: ${{ matrix.bundle_artifact }}
           path: build-download
@@ -291,7 +291,7 @@ jobs:
 
       - name: Retain result
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.manifest_artifact }}
           path: |
@@ -310,28 +310,28 @@ jobs:
   aggregate:
     needs: [plan, build, materialize, runner]
     if: always() && needs.plan.outputs.accepted == 'true' && needs.plan.outputs.deferred != 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: nightmare-plan
           path: plan-download
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: nightmare-plan-bundle
           path: plan-bundle
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           pattern: nightmare-build-*
           path: builds
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           pattern: nightmare-result-*
@@ -351,7 +351,7 @@ jobs:
 
       - name: Upload aggregate report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nightmare-report
           path: |
