@@ -4,6 +4,7 @@
 #include <compiler/intrinsic.h>
 #include <compiler/wrapper.h>
 #include <kassert.h>
+#include <math/bit_api_internal.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
