@@ -5,7 +5,7 @@
 #include <uacpi/status.h>
 #include <uacpi/tables.h>
 
-static LOG_HANDLE_DECLARE_PRINT(madt);
+LOG_HANDLE_DECLARE_PRINT_STATIC(madt);
 
 static struct madt_ioapic_info madt_ioapic = {0};
 static uint32_t isa_irq_to_gsi[MADT_MAX_ISO];

@@ -77,7 +77,7 @@ static enum err detect_mbr_partitions(struct block_device *disk,
 
     disk->partition_count = count;
     disk->partitions =
-        kmalloc(sizeof(struct partition) * count, ALLOC_FLAGS_ZERO);
+        kmalloc(sizeof(struct partition) * count, .flags = ALLOC_FLAGS_ZERO);
     if (cc_unlikely(!disk->partitions))
         return ERR_NO_MEM;
 
@@ -124,8 +124,8 @@ static enum err detect_gpt_partitions(struct block_device *disk,
         return ERR_NO_ENT;
 
     disk->partition_count = valid_count;
-    disk->partitions =
-        kmalloc(sizeof(struct partition) * valid_count, ALLOC_FLAGS_ZERO);
+    disk->partitions = kmalloc(sizeof(struct partition) * valid_count,
+                               .flags = ALLOC_FLAGS_ZERO);
 
     int idx = 0;
     for (uint32_t i = 0; i < count; i++) {
@@ -232,7 +232,8 @@ enum fs_type detect_fs(struct block_device *disk) {
     if (found_partitions_err < 0) {
         /* No partition table - create one big partition spanning the disk */
         disk->partition_count = 1;
-        disk->partitions = kmalloc(sizeof(struct partition), ALLOC_FLAGS_ZERO);
+        disk->partitions =
+            kmalloc(sizeof(struct partition), .flags = ALLOC_FLAGS_ZERO);
         if (!disk->partitions)
             return FS_UNKNOWN;
 

@@ -8,7 +8,8 @@ TEST_GROUP_DECLARE(prng, .intensity_desc = {
 TEST_DECLARE_UNIT(prng, determinism, TEST_INTENSITY(16, 256, 65536)) {
     size_t samples = ctx->intensity_val ? ctx->intensity_val : 256;
     uint64_t seed_val = 0xDEADBEEFCAFEULL;
-    uint64_t *seq1 = kmalloc(samples * sizeof(uint64_t), ALLOC_FLAGS_NONE);
+    uint64_t *seq1 =
+        kmalloc(samples * sizeof(uint64_t), .flags = ALLOC_FLAGS_NONE);
     TEST_ASSERT_NONNULL(seq1);
 
     prng_seed(seed_val);
@@ -32,7 +33,8 @@ TEST_DECLARE_UNIT(prng, splitmix64_determinism,
                   TEST_INTENSITY(16, 256, 65536)) {
     size_t samples = ctx->intensity_val ? ctx->intensity_val : 256;
     uint64_t seed_val = 0x123456789ABCDEF0ULL;
-    uint64_t *seq1 = kmalloc(samples * sizeof(uint64_t), ALLOC_FLAGS_NONE);
+    uint64_t *seq1 =
+        kmalloc(samples * sizeof(uint64_t), .flags = ALLOC_FLAGS_NONE);
     TEST_ASSERT_NONNULL(seq1);
 
     uint64_t state1 = seed_val;

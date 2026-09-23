@@ -1,9 +1,10 @@
 #include "internal.h"
 
-static CMDLINE_DECLARE_STRING(
-    root, global.root_partition,
-    .desc = "Root filesystem partition to mount at boot", .arg = "<device>",
-    .default_val = NULL, .flags = CMDLINE_ENTRY_REQUIRED);
+CMDLINE_DECLARE_VAR_STATIC(root, global.root_partition,
+                           .types = CMDLINE_TYPES(CMDLINE_TYPE_STRING),
+                           .desc = "Root filesystem partition to mount at boot",
+                           .arg = "<device>", .default_val = NULL,
+                           .flags = CMDLINE_ENTRY_REQUIRED);
 
 static const char *parse_escaped_string(const char *input, char *buf,
                                         size_t max_len, bool in_quotes) {

@@ -53,9 +53,9 @@ TEST_DECLARE_UNIT(chacha20, block_seams, TEST_INTENSITY(128, 512, 65536)) {
     size_t total = ctx->intensity_val ? ctx->intensity_val : 512;
     uint8_t key[32] = {0x42};
     uint8_t nonce[12] = {0x24};
-    uint8_t *src = kmalloc(total, ALLOC_FLAGS_NONE);
-    uint8_t *dst = kmalloc(total, ALLOC_FLAGS_NONE);
-    uint8_t *roundtrip = kmalloc(total, ALLOC_FLAGS_NONE);
+    uint8_t *src = kmalloc(total, .flags = ALLOC_FLAGS_NONE);
+    uint8_t *dst = kmalloc(total, .flags = ALLOC_FLAGS_NONE);
+    uint8_t *roundtrip = kmalloc(total, .flags = ALLOC_FLAGS_NONE);
     TEST_ASSERT_NONNULL(src);
     TEST_ASSERT_NONNULL(dst);
     TEST_ASSERT_NONNULL(roundtrip);

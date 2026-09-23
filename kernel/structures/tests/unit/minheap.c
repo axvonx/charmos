@@ -9,7 +9,7 @@ static void mhtest_do_inserts(struct minheap *mh, struct minheap_node **nodes,
                               size_t count) {
     for (size_t i = 0; i < count; i++) {
         struct minheap_node *mhn =
-            kmalloc(sizeof(struct minheap_node), ALLOC_FLAGS_ZERO);
+            kmalloc(sizeof(struct minheap_node), .flags = ALLOC_FLAGS_ZERO);
         MINHEAP_NODE_SET_KEY(mhn, count - i);
         nodes[i] = mhn;
         minheap_insert(mh, mhn, MINHEAP_NODE_KEY(mhn));
@@ -18,8 +18,8 @@ static void mhtest_do_inserts(struct minheap *mh, struct minheap_node **nodes,
 
 TEST_DECLARE_UNIT(minheap, basic_ops, TEST_INTENSITY(10, 50, 1024)) {
     size_t count = ctx->intensity_val ? ctx->intensity_val : 50;
-    struct minheap_node **nodes =
-        kmalloc(sizeof(struct minheap_node *) * count, ALLOC_FLAGS_ZERO);
+    struct minheap_node **nodes = kmalloc(sizeof(struct minheap_node *) * count,
+                                          .flags = ALLOC_FLAGS_ZERO);
     TEST_ASSERT_NONNULL(nodes);
 
     struct minheap *mh = minheap_create();

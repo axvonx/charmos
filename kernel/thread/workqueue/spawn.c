@@ -84,7 +84,7 @@ struct worker *workqueue_worker_create(struct workqueue *queue) {
         spin_unlock(&queue->worker_array_lock, irql);
         return ret;
     } else {
-        return kmalloc(sizeof(struct worker), ALLOC_FLAGS_ZERO);
+        return kmalloc(sizeof(struct worker), .flags = ALLOC_FLAGS_ZERO);
     }
 }
 

@@ -29,7 +29,7 @@ TEST_DECLARE_INTEGRATION(apc, delivery) {
     atomic_store(&apc_ran, false);
     atomic_store(&apc_destroyed, 0);
     ted = thread_spawn_joinable("apc_test_thread", apc_thread, NULL);
-    struct apc *a = kmalloc(sizeof(struct apc), ALLOC_FLAGS_ZERO);
+    struct apc *a = kmalloc(sizeof(struct apc), .flags = ALLOC_FLAGS_ZERO);
     if (!a || !ted) {
         if (a)
             kfree(a);

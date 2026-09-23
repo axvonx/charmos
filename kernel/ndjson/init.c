@@ -11,7 +11,7 @@ static bool ndjson_enabled = true;
 static bool ndjson_schema_dump = true;
 static bool ndjson_selftest_enabled = false;
 
-static CMDLINE_DECLARE(ndjson, .flags = CMDLINE_ENTRY_SYMBOLIC,
+CMDLINE_DECLARE_STATIC(ndjson, .flags = CMDLINE_ENTRY_SYMBOLIC,
                        .desc = "NDJSON symbolic parent");
 
 CMDLINE_CHILDREN_DECLARE(

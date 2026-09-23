@@ -281,8 +281,8 @@ static void late_init_non_numa(size_t domain_count) {
 
 void domain_buddies_init(void) {
     size_t domain_count = global.domain_count;
-    global.domain_buddies =
-        kmalloc(sizeof(struct domain_buddy) * domain_count, ALLOC_FLAGS_ZERO);
+    global.domain_buddies = kmalloc(sizeof(struct domain_buddy) * domain_count,
+                                    .flags = ALLOC_FLAGS_ZERO);
 
     if (global.numa_node_count > 1) {
         late_init_from_numa(domain_count);

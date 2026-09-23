@@ -16,7 +16,7 @@ void percpu_obj_init(void) {
         size_t cpu;
         for_each_cpu_id(cpu) {
             d->percpu_ptrs[cpu] = alloc_or_die(
-                kmalloc_aligned(d->size, d->align, ALLOC_FLAGS_ZERO));
+                kmalloc_aligned(d->size, d->align, .flags = ALLOC_FLAGS_ZERO));
 
             if (d->constructor)
                 d->constructor(d->percpu_ptrs[cpu], cpu);
@@ -34,7 +34,7 @@ void perdomain_obj_init(void) {
         domain_for_each_domain(dom) {
             size_t id = dom->id;
             d->perdomain_ptrs[id] = alloc_or_die(
-                kmalloc_aligned(d->size, d->align, ALLOC_FLAGS_ZERO));
+                kmalloc_aligned(d->size, d->align, .flags = ALLOC_FLAGS_ZERO));
 
             if (d->constructor)
                 d->constructor(d->perdomain_ptrs[id], id);
@@ -50,7 +50,7 @@ void pernode_obj_init(void) {
 
         for (size_t i = 0; i < global.numa_node_count; i++) {
             d->pernode_ptrs[i] = alloc_or_die(
-                kmalloc_aligned(d->size, d->align, ALLOC_FLAGS_ZERO));
+                kmalloc_aligned(d->size, d->align, .flags = ALLOC_FLAGS_ZERO));
             if (d->constructor)
                 d->constructor(d->pernode_ptrs[i], i);
         }

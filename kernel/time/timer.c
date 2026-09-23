@@ -8,7 +8,7 @@
 
 #include "internal.h"
 
-static CMDLINE_DECLARE(timer, .flags = CMDLINE_ENTRY_SYMBOLIC,
+CMDLINE_DECLARE_STATIC(timer, .flags = CMDLINE_ENTRY_SYMBOLIC,
                        .desc = "Timer subsystem cmdline entries");
 
 CMDLINE_CHILDREN_DECLARE(

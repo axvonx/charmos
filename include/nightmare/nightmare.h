@@ -135,7 +135,8 @@ LINKER_SECTION_DEFINE(struct nightmare, nightmares);
                         .seed_policy = NIGHTMARE_SEED_IGNORED,                 \
                         .requires = NIGHTMARE_REQ_NONE,                        \
                         .intensity = NIGHTMARE_INTENSITY_SENTINEL,             \
-                        __VA_ARGS__} cc_wno_override_init_end
+                        __VA_ARGS__};                                          \
+    cc_wno_override_init_end
 
 #define NIGHTMARE(id) (&__nightmare_##id)
 #define NIGHTMARE_DEFINE(id) extern struct nightmare __nightmare_##id

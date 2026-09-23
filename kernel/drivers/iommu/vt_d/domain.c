@@ -64,6 +64,6 @@ ssize_t vtd_domain_free(struct vtd_unit *unit, size_t domain) {
 
 bool vtd_domain_init(struct vtd_unit *unit) {
     spinlock_init(&unit->domain_bitmap_lock);
-    return (unit->domain_bitmap =
-                kmalloc(DIV_ROUND_UP(unit->domain_count, 8), ALLOC_FLAGS_ZERO));
+    return (unit->domain_bitmap = kmalloc(DIV_ROUND_UP(unit->domain_count, 8),
+                                          .flags = ALLOC_FLAGS_ZERO));
 }

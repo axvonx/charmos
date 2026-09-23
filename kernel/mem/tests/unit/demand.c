@@ -25,7 +25,7 @@ static void dp_hammer(void *arg) {
 
 static bool dp_alloc_bufs(atomic_uint64_t **bufs, size_t nbuf, size_t pages) {
     for (size_t b = 0; b < nbuf; b++) {
-        bufs[b] = page_alloc_demand(pages, ALLOC_FLAGS_ZERO);
+        bufs[b] = page_alloc_demand(pages, .flags = ALLOC_FLAGS_ZERO);
         if (!bufs[b]) {
             for (size_t j = 0; j < b; j++)
                 page_free((void *) bufs[j], pages);

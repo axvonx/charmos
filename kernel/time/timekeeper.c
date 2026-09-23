@@ -22,7 +22,7 @@ static struct timekeeper timekeeper = {
     .base_ns = 0,
 };
 
-static CMDLINE_DECLARE(timekeeper, .flags = CMDLINE_ENTRY_SYMBOLIC,
+CMDLINE_DECLARE_STATIC(timekeeper, .flags = CMDLINE_ENTRY_SYMBOLIC,
                        .desc = "Timekeeper subsystem parent node");
 
 static char *clock_to_use = NULL;

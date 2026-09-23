@@ -5,32 +5,16 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define page_alloc_1(n_pages)                                                  \
-    page_alloc_internal((n_pages), ((struct alloc_params) {                    \
-                                       .flags = ALLOC_FLAGS_NONE,              \
-                                       .behavior = ALLOC_BEHAVIOR_NORMAL}))
-#define page_alloc_2(n_pages, fl)                                              \
-    page_alloc_internal(                                                       \
-        (n_pages), ((struct alloc_params) {                                    \
-                       .flags = (fl), .behavior = ALLOC_BEHAVIOR_NORMAL}))
-#define page_alloc_3(n_pages, fl, bh)                                          \
-    page_alloc_internal(                                                       \
-        (n_pages), ((struct alloc_params) {.flags = (fl), .behavior = (bh)}))
-#define page_alloc(...) PP_CALL(page_alloc, __VA_ARGS__)
+#define page_alloc(n_pages, ...)                                               \
+    page_alloc_internal((n_pages), alloc_params_with_defaults(                 \
+                                       ALLOC_FLAGS_NONE,                       \
+                                       ALLOC_BEHAVIOR_NORMAL, ##__VA_ARGS__))
 
-#define page_alloc_demand_1(n_pages)                                           \
+#define page_alloc_demand(n_pages, ...)                                        \
     page_alloc_demand_internal(                                                \
         (n_pages),                                                             \
-        ((struct alloc_params) {.flags = ALLOC_FLAGS_NONE,                     \
-                                .behavior = ALLOC_BEHAVIOR_NORMAL}))
-#define page_alloc_demand_2(n_pages, fl)                                       \
-    page_alloc_demand_internal(                                                \
-        (n_pages), ((struct alloc_params) {                                    \
-                       .flags = (fl), .behavior = ALLOC_BEHAVIOR_NORMAL}))
-#define page_alloc_demand_3(n_pages, fl, bh)                                   \
-    page_alloc_demand_internal(                                                \
-        (n_pages), ((struct alloc_params) {.flags = (fl), .behavior = (bh)}))
-#define page_alloc_demand(...) PP_CALL(page_alloc_demand, __VA_ARGS__)
+        alloc_params_with_defaults(ALLOC_FLAGS_NONE, ALLOC_BEHAVIOR_NORMAL,    \
+                                   ##__VA_ARGS__))
 
 #define page_free_2(ptr, n_pages)                                              \
     page_free_internal((ptr), (n_pages), ALLOC_BEHAVIOR_NORMAL)

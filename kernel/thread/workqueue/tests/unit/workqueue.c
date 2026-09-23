@@ -32,7 +32,7 @@ TEST_DECLARE_UNIT(workqueue, fast_oneshot, TEST_INTENSITY(32, 256, 4096)) {
     while (!atomic_load(&workqueue_ran))
         cpu_pause();
 
-    char *msg = kmalloc(100, ALLOC_FLAGS_ZERO);
+    char *msg = kmalloc(100, .flags = ALLOC_FLAGS_ZERO);
     TEST_ASSERT_NONNULL(msg);
     snprintf(msg, 100, "Took %lu clock cycles to add to event pool %lu times",
              total, times);
@@ -41,7 +41,7 @@ TEST_DECLARE_UNIT(workqueue, fast_oneshot, TEST_INTENSITY(32, 256, 4096)) {
 
     TEST_ASSERT(atomic_load(&workqueue_ran));
 
-    msg = kmalloc(100, ALLOC_FLAGS_ZERO);
+    msg = kmalloc(100, .flags = ALLOC_FLAGS_ZERO);
     TEST_ASSERT_NONNULL(msg);
     snprintf(msg, 100,
              "Event pool ran %u times, tests should've had it run %lu times",
@@ -121,7 +121,7 @@ TEST_DECLARE_UNIT(workqueue, concurrent_enqueue_scaling,
 
     uint64_t workers = atomic_load_relaxed(&wq->num_workers);
 
-    char *msg = kmalloc(100, ALLOC_FLAGS_ZERO);
+    char *msg = kmalloc(100, .flags = ALLOC_FLAGS_ZERO);
     if (msg) {
         snprintf(msg, 100, "There are %lu workers", workers);
         test_info(msg);

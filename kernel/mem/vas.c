@@ -696,8 +696,9 @@ static struct vas *space_create(vaddr_t base, vaddr_t limit, bool bootstrap) {
         vas = hhdm_paddr_to_ptr(phys);
         memset(vas, 0, pages * PAGE_SIZE);
     } else {
-        vas = kmalloc(bytes, ALLOC_FLAGS_ZERO,
-                      ALLOC_BEHAVIOR_NORMAL | ALLOC_BEHAVIOR_FLAG_MINIMAL);
+        vas = kmalloc(bytes, .flags = ALLOC_FLAGS_ZERO,
+                      .behavior =
+                          ALLOC_BEHAVIOR_NORMAL | ALLOC_BEHAVIOR_FLAG_MINIMAL);
         if (!vas)
             return NULL;
     }

@@ -11,7 +11,7 @@
 #include <stdint.h>
 
 static struct ioapic_info ioapic;
-static LOG_HANDLE_DECLARE_PRINT(ioapic);
+LOG_HANDLE_DECLARE_PRINT_STATIC(ioapic);
 
 void ioapic_write(uint8_t reg, uint32_t val) {
     mmio_write_32(&ioapic.mmio_base[IOAPIC_REGSEL_INDEX], reg);

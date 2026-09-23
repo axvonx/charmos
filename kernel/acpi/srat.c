@@ -16,7 +16,7 @@
 #include "uacpi/acpi.h"
 #include "uacpi/status.h"
 
-static LOG_HANDLE_DECLARE_PRINT(srat);
+LOG_HANDLE_DECLARE_PRINT_STATIC(srat);
 
 void srat_init(void) {
     struct uacpi_table srat_table;
@@ -25,7 +25,7 @@ void srat_init(void) {
                         "SRAT table not found, assuming single NUMA node");
 
         global.numa_nodes =
-            kmalloc_or_die(sizeof(struct numa_node), ALLOC_FLAGS_ZERO);
+            kmalloc_or_die(sizeof(struct numa_node), .flags = ALLOC_FLAGS_ZERO);
 
         global.numa_nodes[0].topo = NULL;
         global.numa_nodes[0].mem_base = 0;
@@ -67,16 +67,16 @@ void srat_init(void) {
 
     global.numa_node_count = max_prox_domain + 1;
     size_t numa_node_count = global.numa_node_count;
-    global.numa_nodes = alloc_or_die(
-        kmalloc(numa_node_count * sizeof(struct numa_node), ALLOC_FLAGS_ZERO));
+    global.numa_nodes = alloc_or_die(kmalloc(
+        numa_node_count * sizeof(struct numa_node), .flags = ALLOC_FLAGS_ZERO));
 
     for (size_t i = 0; i < numa_node_count; i++) {
         global.numa_nodes[i].topo = NULL;
         global.numa_nodes[i].mem_base = 0;
         global.numa_nodes[i].mem_size = 0;
         global.numa_nodes[i].distances_cnt = numa_node_count;
-        global.numa_nodes[i].distance = alloc_or_die(
-            kmalloc(numa_node_count * sizeof(uint8_t), ALLOC_FLAGS_ZERO));
+        global.numa_nodes[i].distance = alloc_or_die(kmalloc(
+            numa_node_count * sizeof(uint8_t), .flags = ALLOC_FLAGS_ZERO));
 
         alloc_or_die(
             cpu_mask_init(&global.numa_nodes[i].cpus, global.core_count));

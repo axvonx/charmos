@@ -259,15 +259,7 @@ folio_mapcount_dec(struct folio *f) { /* true if dropped to 0 */
                          ((p) = folio_get_vaddr_for((f), __i), true);          \
          __i++)
 
-#define folio_alloc_1(sz)                                                      \
-    folio_alloc_internal(                                                      \
-        (sz), ((struct alloc_params) {.flags = ALLOC_FLAGS_DEFAULT,            \
-                                      .behavior = ALLOC_BEHAVIOR_DEFAULT}))
-#define folio_alloc_2(sz, fl)                                                  \
-    folio_alloc_internal(                                                      \
-        (sz), ((struct alloc_params) {.flags = (fl),                           \
-                                      .behavior = ALLOC_BEHAVIOR_DEFAULT}))
-#define folio_alloc_3(sz, fl, bh)                                              \
-    folio_alloc_internal(                                                      \
-        (sz), ((struct alloc_params) {.flags = (fl), .behavior = (bh)}))
-#define folio_alloc(...) PP_CALL(folio_alloc, __VA_ARGS__)
+#define folio_alloc(order, ...)                                                \
+    folio_alloc_internal((order), alloc_params_with_defaults(                  \
+                                      ALLOC_FLAGS_DEFAULT,                     \
+                                      ALLOC_BEHAVIOR_DEFAULT, ##__VA_ARGS__))

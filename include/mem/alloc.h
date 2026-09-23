@@ -209,6 +209,9 @@ enum alloc_priority : uint16_t {
 };
 static_assert(ALLOC_PRIORITY_MAX < 256);
 
+/* TODO: */
+#define ALLOC_PRIORITY_DEFAULT ALLOC_PRIORITY_MIN
+
 struct alloc_params {
     enum alloc_flags flags;
     enum alloc_behavior behavior;

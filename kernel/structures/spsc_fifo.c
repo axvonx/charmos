@@ -17,7 +17,7 @@ void spsc_fifo_init_with(struct spsc_fifo *fifo, void *buffer, size_t size) {
 bool spsc_fifo_init(struct spsc_fifo *fifo, size_t size) {
     size_t cap = MAX(next_pow2(size), SPSC_FIFO_MIN_CAPACITY);
 
-    uint8_t *buf = kmalloc(cap, ALLOC_FLAGS_ZERO);
+    uint8_t *buf = kmalloc(cap, .flags = ALLOC_FLAGS_ZERO);
     if (!buf) {
         return false;
     }

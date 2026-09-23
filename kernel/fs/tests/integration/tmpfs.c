@@ -20,7 +20,7 @@ TEST_DECLARE_INTEGRATION(tmpfs, file_lifecycle, TEST_INTENSITY(1, 16, 256)) {
     const char *lstr = large_test_string;
     uint64_t len = strlen(lstr);
 
-    char *out_buf = kmalloc(len + 1, ALLOC_FLAGS_ZERO);
+    char *out_buf = kmalloc(len + 1, .flags = ALLOC_FLAGS_ZERO);
     TEST_ASSERT_NONNULL(out_buf);
 
     for (size_t iter = 0; iter < ops; iter++) {
@@ -67,7 +67,7 @@ TEST_DECLARE_INTEGRATION(tmpfs, dir_ops, TEST_INTENSITY(1, 8, 128)) {
     const char *lstr = large_test_string;
     uint64_t len = strlen(lstr);
 
-    char *out_buf = kmalloc(len + 1, ALLOC_FLAGS_ZERO);
+    char *out_buf = kmalloc(len + 1, .flags = ALLOC_FLAGS_ZERO);
     TEST_ASSERT_NONNULL(out_buf);
 
     for (size_t iter = 0; iter < ops; iter++) {
@@ -130,7 +130,7 @@ TEST_DECLARE_INTEGRATION(tmpfs, attributes_and_symlinks) {
     bang = ent.node;
     TEST_ASSERT_NONNULL(bang);
 
-    char *buf = kmalloc(10, ALLOC_FLAGS_ZERO);
+    char *buf = kmalloc(10, .flags = ALLOC_FLAGS_ZERO);
     TEST_ASSERT_NONNULL(buf);
 
     TEST_ASSERT(!ERR_IS_FATAL(bang->ops->readlink(bang, buf, 10)));

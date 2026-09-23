@@ -141,7 +141,7 @@ TEST_DECLARE_UNIT(stack_depot, hash_bucket) {
 TEST_DECLARE_UNIT(stack_depot, many, TEST_INTENSITY(128, 1024, 4096)) {
     size_t count = ctx->intensity_val ? ctx->intensity_val : SD_MANY;
     stack_handle_t *handles =
-        kmalloc(sizeof(*handles) * count, ALLOC_FLAGS_ZERO);
+        kmalloc(sizeof(*handles) * count, .flags = ALLOC_FLAGS_ZERO);
     TEST_ASSERT_NONNULL(handles);
 
     prng_seed(SD_SEED);

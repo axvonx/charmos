@@ -109,7 +109,7 @@ struct ext2_full_inode *ext2_find_file_in_dir(struct ext2_fs *fs,
 
     /* TODO: handle this allocation failure case */
     struct ext2_full_inode *out_node =
-        kmalloc(sizeof(struct ext2_full_inode), ALLOC_FLAGS_ZERO);
+        kmalloc(sizeof(struct ext2_full_inode), .flags = ALLOC_FLAGS_ZERO);
     struct search_ctx ctx = {.target = fname, .result = out_node, .type = 0};
     ext2_walk_dir(fs, dir_inode, search_callback, &ctx);
 

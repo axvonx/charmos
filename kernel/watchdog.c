@@ -55,7 +55,7 @@ LOG_SITE_DECLARE(watchdog_master);
 LOG_HANDLE_DECLARE(watchdog_master);
 
 PERCPU_DECLARE(struct watchdog_percpu, watchdog_percpu, watchdog_percpu_ctor);
-static CMDLINE_DECLARE(watchdog, .flags = CMDLINE_ENTRY_SYMBOLIC,
+CMDLINE_DECLARE_STATIC(watchdog, .flags = CMDLINE_ENTRY_SYMBOLIC,
                        .desc = "Watchdog command line namespace");
 
 CMDLINE_CHILD_DECLARE(watchdog, master, .flags = CMDLINE_ENTRY_SYMBOLIC);
@@ -740,7 +740,7 @@ void watchdog_init(void) {
     cpu_mask_set_all(&watchdog_master.cpu_masks[WATCHDOG_STATE_NORMAL]);
     watchdog_master.cpus =
         kmalloc_or_die(sizeof(struct watchdog_master_cpu) * global.core_count,
-                       ALLOC_FLAGS_ZERO);
+                       .flags = ALLOC_FLAGS_ZERO);
 
     watchdog_global.critical_test_irq = irq_alloc_entry();
     irq_register("watchdog_test", watchdog_global.critical_test_irq,

@@ -59,7 +59,7 @@ static void chaos_diag_attach(struct thread *t, size_t slot) {
         return;
 
     struct thread_diag *d =
-        kmalloc_or_die(sizeof(struct thread_diag), ALLOC_FLAGS_ZERO);
+        kmalloc_or_die(sizeof(struct thread_diag), .flags = ALLOC_FLAGS_ZERO);
 
     if (!thread_diag_attach(t, d)) {
         kfree(d);
@@ -126,7 +126,7 @@ static void chaos_apc_spammer(void *arg) {
             continue;
         }
 
-        struct apc *a = kmalloc(sizeof(struct apc), ALLOC_FLAGS_ZERO);
+        struct apc *a = kmalloc(sizeof(struct apc), .flags = ALLOC_FLAGS_ZERO);
         if (a) {
             apc_init(a, chaos_apc_fn, NULL, apc_destroy_free);
             CHAOS_LOG("queue apc to %p", states[id].t);

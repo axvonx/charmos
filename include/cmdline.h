@@ -147,9 +147,8 @@ struct cmdline_flag {
 #define CMDLINE_CHOICES(...) ((const char *const[]) {__VA_ARGS__, NULL})
 #define CMDLINE_PARSER(fn) .value.parse = (fn)
 
-#define CMDLINE_DECLARE(n, ...)                                                \
-    cc_wno_override_init_start LINKER_SECTION_OBJECT(struct cmdline_entry,     \
-                                                     cmdline_entries)          \
+#define _CMDLINE_DECLARE(n, storage, ...)                                      \
+    storage LINKER_SECTION_OBJECT(struct cmdline_entry, cmdline_entries)       \
         __cmdline_##n = {.name = #n,                                           \
                          .status = CMDLINE_ENTRY_NOT_FOUND,                    \
                          .types = 0,                                           \
@@ -160,11 +159,10 @@ struct cmdline_flag {
                          .value.mode = CMDLINE_MODE_POLYMORPHIC,               \
                          .value.type = CMDLINE_TYPE_NONE,                      \
                          .flags = CMDLINE_ENTRY_FLAGS_NONE,                    \
-                         __VA_ARGS__} cc_wno_override_init_end
+                         __VA_ARGS__}
 
-#define CMDLINE_DECLARE_VAR(n, var, ...)                                       \
-    cc_wno_override_init_start LINKER_SECTION_OBJECT(struct cmdline_entry,     \
-                                                     cmdline_entries)          \
+#define _CMDLINE_DECLARE_VAR(n, storage, var, ...)                             \
+    storage LINKER_SECTION_OBJECT(struct cmdline_entry, cmdline_entries)       \
         __cmdline_##n = {.name = #n,                                           \
                          .status = CMDLINE_ENTRY_NOT_FOUND,                    \
                          .types = 0,                                           \
@@ -177,7 +175,24 @@ struct cmdline_flag {
                          .value.c_type = TYPE_TO_ENUM((var)),                  \
                          .value.parse = NULL,                                  \
                          .flags = CMDLINE_ENTRY_FLAGS_NONE,                    \
-                         __VA_ARGS__} cc_wno_override_init_end
+                         __VA_ARGS__}
+
+#define CMDLINE_DECLARE(n, ...)                                                \
+    cc_wno_override_init_start _CMDLINE_DECLARE(n, , __VA_ARGS__);             \
+    cc_wno_override_init_end
+
+#define CMDLINE_DECLARE_VAR(n, var, ...)                                       \
+    cc_wno_override_init_start _CMDLINE_DECLARE_VAR(n, , var, __VA_ARGS__);    \
+    cc_wno_override_init_end
+
+#define CMDLINE_DECLARE_STATIC(n, ...)                                         \
+    cc_wno_override_init_start _CMDLINE_DECLARE(n, static, __VA_ARGS__);       \
+    cc_wno_override_init_end
+
+#define CMDLINE_DECLARE_VAR_STATIC(n, var, ...)                                \
+    cc_wno_override_init_start _CMDLINE_DECLARE_VAR(n, static, var,            \
+                                                    __VA_ARGS__);              \
+    cc_wno_override_init_end
 
 #define CMDLINE_CHILD_DECLARE(parent_n, n, ...)                                \
     CMDLINE_DECLARE(parent_n##_##n, .name = #n, .parent = CMDLINE(parent_n),   \
@@ -303,7 +318,8 @@ struct cmdline_schema {
         .resolve = (resolver_fn),                                              \
         .props = __cmdline_schema_props_##n,                                   \
         .prop_count = ct_array_size(__cmdline_schema_props_##n),               \
-    } cc_wno_override_init_end
+    };                                                                         \
+    cc_wno_override_init_end
 
 #define CMDLINE_GET(key, type, fallback)                                       \
     ({                                                                         \

@@ -266,7 +266,7 @@ struct thread *thread_create_internal(char *name, void (*entry_point)(void *),
                                       va_list args) {
     kassert(name);
     struct thread *new_thread =
-        kmalloc(sizeof(struct thread), ALLOC_FLAGS_ZERO);
+        kmalloc(sizeof(struct thread), .flags = ALLOC_FLAGS_ZERO);
     if (cc_unlikely(!new_thread))
         goto err;
 
@@ -275,7 +275,7 @@ struct thread *thread_create_internal(char *name, void (*entry_point)(void *),
         goto err;
 
     new_thread->activity_data =
-        kmalloc(sizeof(struct thread_activity_data), ALLOC_FLAGS_ZERO);
+        kmalloc(sizeof(struct thread_activity_data), .flags = ALLOC_FLAGS_ZERO);
     if (cc_unlikely(!new_thread->activity_data))
         goto err;
 
@@ -283,8 +283,8 @@ struct thread *thread_create_internal(char *name, void (*entry_point)(void *),
     if (cc_unlikely(!new_thread->turnstile))
         goto err;
 
-    new_thread->activity_stats =
-        kmalloc(sizeof(struct thread_activity_stats), ALLOC_FLAGS_ZERO);
+    new_thread->activity_stats = kmalloc(sizeof(struct thread_activity_stats),
+                                         .flags = ALLOC_FLAGS_ZERO);
     if (cc_unlikely(!new_thread->activity_stats))
         goto err;
 
@@ -299,7 +299,7 @@ struct thread *thread_create_internal(char *name, void (*entry_point)(void *),
     size_t needed = vsnprintf(NULL, 0, name, args_copy) + 1;
     va_end(args_copy);
 
-    new_thread->name = kmalloc(needed, ALLOC_FLAGS_ZERO);
+    new_thread->name = kmalloc(needed, .flags = ALLOC_FLAGS_ZERO);
     if (!new_thread->name)
         goto err;
 

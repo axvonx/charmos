@@ -8,7 +8,7 @@
 
 struct clock_evdev_group *clock_evdev_group_create(const char *name, ...) {
     struct clock_evdev_group *cedg =
-        kmalloc(sizeof(struct clock_evdev_group), ALLOC_FLAGS_ZERO);
+        kmalloc(sizeof(struct clock_evdev_group), .flags = ALLOC_FLAGS_ZERO);
 
     if (!cedg)
         return NULL;
@@ -29,7 +29,7 @@ struct clock_evdev_group *clock_evdev_group_create(const char *name, ...) {
 
 struct clock_evdev *clock_evdev_create(const char *name, ...) {
     struct clock_evdev *ced =
-        kmalloc(sizeof(struct clock_evdev), ALLOC_FLAGS_ZERO);
+        kmalloc(sizeof(struct clock_evdev), .flags = ALLOC_FLAGS_ZERO);
     if (!ced)
         return NULL;
 

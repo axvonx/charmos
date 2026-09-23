@@ -38,7 +38,7 @@ TEST_DECLARE_INTEGRATION(ext2, file_lifecycle, TEST_INTENSITY(1, 4, 64),
     size_t ops = ctx->intensity_val ? ctx->intensity_val : 4;
     const char *lstr = large_test_string;
     uint64_t len = strlen(lstr);
-    char *out_buf = kmalloc(len + 1, ALLOC_FLAGS_ZERO);
+    char *out_buf = kmalloc(len + 1, .flags = ALLOC_FLAGS_ZERO);
     TEST_ASSERT_NONNULL(out_buf);
 
     for (size_t iter = 0; iter < ops; iter++) {

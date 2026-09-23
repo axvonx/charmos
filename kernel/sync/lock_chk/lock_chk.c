@@ -10,7 +10,7 @@
 
 struct lock_chk_globals lock_chk_global = {0};
 
-static CMDLINE_DECLARE(lock_chk, .flags = CMDLINE_ENTRY_SYMBOLIC,
+CMDLINE_DECLARE_STATIC(lock_chk, .flags = CMDLINE_ENTRY_SYMBOLIC,
                        .desc = "Lock validator command line namespace");
 
 CMDLINE_CHILDREN_DECLARE(

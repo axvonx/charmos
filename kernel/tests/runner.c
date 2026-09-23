@@ -653,8 +653,9 @@ static void test_group_run(struct test_group *tg) {
             size_t result_times[TEST_RESULT_MAX] = {0}, run_times = 0;
 
             /* TODO: allocation failure */
-            struct test_verdict *verdicts = kmalloc(
-                sizeof(struct test_verdict) * t->run_times, ALLOC_FLAGS_ZERO);
+            struct test_verdict *verdicts =
+                kmalloc(sizeof(struct test_verdict) * t->run_times,
+                        .flags = ALLOC_FLAGS_ZERO);
             struct test_verdict singular_verdict = {0};
 
             char intst_str[512] = {0};

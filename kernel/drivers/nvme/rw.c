@@ -127,7 +127,7 @@ static bool rw_send_command(struct block_device *disk, struct nvme_request *req,
     }
 
     struct nvme_bio_data *data =
-        kmalloc(sizeof(struct nvme_bio_data), ALLOC_FLAGS_ZERO);
+        kmalloc(sizeof(struct nvme_bio_data), .flags = ALLOC_FLAGS_ZERO);
     if (!data)
         return false;
 

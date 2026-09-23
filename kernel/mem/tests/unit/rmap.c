@@ -91,7 +91,7 @@ TEST_DECLARE_UNIT(rmap, itree_differential, TEST_INTENSITY(200, 2000, 10000)) {
     prng_seed(ctx->seed ? ctx->seed : RMAP_SEED);
 
     struct range_rec *r =
-        kmalloc(sizeof(*r) * (RMAP_CHILDREN + 1), ALLOC_FLAGS_ZERO);
+        kmalloc(sizeof(*r) * (RMAP_CHILDREN + 1), .flags = ALLOC_FLAGS_ZERO);
     TEST_ASSERT_NONNULL(r);
 
     struct mm *pmm = mm_alloc();

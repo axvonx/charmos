@@ -582,7 +582,7 @@ void nightmare_run(void) {
     size_t worker_count =
         nightmare_runtime.ctx.worker_count + nightmare_runtime.perturber_count;
     struct test_conc_worker *workers =
-        kmalloc(worker_count * sizeof(*workers), ALLOC_FLAGS_ZERO);
+        kmalloc(worker_count * sizeof(*workers), .flags = ALLOC_FLAGS_ZERO);
 
     nightmare_runtime.conc.workers = workers;
     nightmare_runtime.conc.worker_count = worker_count;

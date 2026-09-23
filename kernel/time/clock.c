@@ -15,7 +15,8 @@ void clocks_init(void) {
 }
 
 struct clock *clock_create(const char *fmt, ...) {
-    struct clock *clock = kmalloc(sizeof(struct clock), ALLOC_FLAGS_ZERO);
+    struct clock *clock =
+        kmalloc(sizeof(struct clock), .flags = ALLOC_FLAGS_ZERO);
     if (!clock)
         return NULL;
 

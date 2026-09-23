@@ -90,8 +90,9 @@ void gdt_init(struct gdt_entry *gdt, struct tss *tss) {
 
 void gdt_load(void) {
     struct gdt_entry *gdt = kmalloc_aligned(
-        sizeof(struct gdt_entry) * GDT_ENTRIES, 64, ALLOC_FLAGS_ZERO);
-    struct tss *tss = kmalloc_aligned(sizeof(struct tss), 64, ALLOC_FLAGS_ZERO);
+        sizeof(struct gdt_entry) * GDT_ENTRIES, 64, .flags = ALLOC_FLAGS_ZERO);
+    struct tss *tss =
+        kmalloc_aligned(sizeof(struct tss), 64, .flags = ALLOC_FLAGS_ZERO);
     if (!gdt || !tss)
         panic("GDT INIT NOT OK!!!");
 

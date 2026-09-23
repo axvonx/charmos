@@ -178,7 +178,7 @@ static inline void submit_and_wait(struct ata_drive *d, struct ide_request *req,
 static struct ide_request *request_init(uint64_t lba, uint8_t *buffer,
                                         uint8_t count, bool write) {
     struct ide_request *req =
-        kmalloc(sizeof(struct ide_request), ALLOC_FLAGS_ZERO);
+        kmalloc(sizeof(struct ide_request), .flags = ALLOC_FLAGS_ZERO);
     if (!req)
         return NULL;
 

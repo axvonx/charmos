@@ -249,6 +249,7 @@ struct test_globals {
 #define TEST_GROUP_DEFINE(name) extern struct test_group __test_group_##name
 
 #define TEST(grp, id) __test_##grp##_##id
+
 #define TEST_DECLARE(grp, id, ...)                                             \
     cc_wno_override_init_start static struct test_verdict                      \
     __test_fn_##grp##_##id(struct test_context *ctx);                          \
@@ -292,7 +293,8 @@ struct test_globals {
                         .integration_enabled = TEST_STATE_SENTINEL,            \
                         .default_intensity = TEST_INTENSITY_SENTINEL,          \
                         .intensity_desc = TEST_INTENSITY_DESC_SENTINEL,        \
-                        ##__VA_ARGS__} cc_wno_override_init_end
+                        ##__VA_ARGS__};                                        \
+    cc_wno_override_init_end
 
 #define TEST_SUCCESS ((struct test_verdict) {.result = TEST_RESULT_OK})
 #define TEST_FAIL(m)                                                           \

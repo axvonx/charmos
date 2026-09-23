@@ -561,7 +561,7 @@ void log_sites_init(void) {
         struct log_ringbuf *lrb = &s->rb;
         kassert(s->capacity);
         lrb->slots = kmalloc_or_die(sizeof(struct log_ring_slot) * s->capacity,
-                                    ALLOC_FLAGS_ZERO);
+                                    .flags = ALLOC_FLAGS_ZERO);
 
         for (size_t i = 0; i < s->capacity; i++) {
             atomic_store_release(&lrb->slots[i].seq, i);
@@ -599,8 +599,9 @@ void log_site_free(struct log_site *site) {
 }
 
 struct log_site *log_site_create(struct log_site_options opts) {
-    struct log_site *ret = kmalloc_aligned(
-        sizeof(struct log_site), _Alignof(struct log_site), ALLOC_FLAGS_ZERO);
+    struct log_site *ret =
+        kmalloc_aligned(sizeof(struct log_site), _Alignof(struct log_site),
+                        .flags = ALLOC_FLAGS_ZERO);
     if (!ret)
         return NULL;
 
@@ -609,14 +610,15 @@ struct log_site *log_site_create(struct log_site_options opts) {
         goto err;
 
     struct log_ring_slot *slots =
-        kmalloc(sizeof(struct log_ring_slot) * opts.capacity, ALLOC_FLAGS_ZERO);
+        kmalloc(sizeof(struct log_ring_slot) * opts.capacity,
+                .flags = ALLOC_FLAGS_ZERO);
     if (!slots)
         goto err;
 
     if (opts.flags & LOG_SITE_DUP_MESSAGES) {
         size_t len = kassert(opts.msg_max_len);
         for (size_t i = 0; i < opts.capacity; i++) {
-            slots[i].shadow_buf = kmalloc(len, ALLOC_FLAGS_ZERO);
+            slots[i].shadow_buf = kmalloc(len, .flags = ALLOC_FLAGS_ZERO);
             if (!slots->shadow_buf) {
                 for (size_t j = 0; j < i; j++) {
                     kfree(slots[j].shadow_buf);
