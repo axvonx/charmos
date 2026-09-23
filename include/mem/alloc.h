@@ -13,9 +13,16 @@ LOG_SITE_EXTERN(slab);
 LOG_HANDLE_EXTERN(slab_flags);
 
 /*
- * TL;DR: ALLOCATION FLAGS TELL THE ALLOCATOR WHAT KIND OF MEMORY
- *        YOU WANT, ALLOCATION BEHAVIORS TELL THE ALLOCATOR
- *        WHAT IT IS ALLOWED TO DO TO GET THAT MEMORY.
+ * TL;DR:
+ *
+ *   FLAGS: TELL THE ALLOCATOR WHAT
+ *          KIND OF MEMORY YOU WANT
+ *
+ *   BEHAVIORS:  TELL THE ALLOCATOR WHAT IT IS ALLOWED
+ *               TO DO TO GET THAT MEMORY
+ *
+ *   PRIORITIES: TELL THE ALLOCATOR HOW MUCH YOU
+ *               WANT YOUR ALLOCATION TO SUCCEED
  */
 
 /* ─────────────────────────── ALLOC FLAGS ─────────────────────────── */
@@ -169,10 +176,50 @@ enum alloc_behavior : uint16_t {
 };
 #define ALLOC_BEHAVIOR_DEFAULT ALLOC_BEHAVIOR_NORMAL
 
+/* ─────────────────────────── ALLOC PRIORITIES ─────────────────────────── */
+
+#define ALLOC_PRIORITY_STEP 8
+#define ALLOC_PRIORITY_HALFSTEP (ALLOC_PRIORITY_STEP / 2)
+#define ALLOC_PRIORITY_ABOVE(p) ((p) + ALLOC_PRIORITY_HALFSTEP)
+#define ALLOC_PRIORITY_BELOW(p) ((p) - ALLOC_PRIORITY_HALFSTEP)
+
+/* alloc_priority: 16 bit bitflags
+ *
+ * Do note that with allocation priorities, the default ones given are
+ * in increments of 8. This gives allocators room to interpret the priorities
+ * as a continuous curve instead of discrete steps.
+ *
+ *      ┌──────────────────────────┐
+ * Bits │ 15..12 11..8  7..4  3..0 │
+ * Use  │  AAAA   AAAA  %%%%  %%%% │
+ *      └──────────────────────────┘
+ *
+ * %%%% - Priority
+ * A - Unused (available)
+ * * - Unused (unavailable)
+ *
+ */
+enum alloc_priority : uint16_t {
+    ALLOC_PRIORITY_MIN = 0,
+    ALLOC_PRIORITY_LOW = 8,
+    ALLOC_PRIORITY_NORMAL = 16,
+    ALLOC_PRIORITY_HIGH = 24,
+    ALLOC_PRIORITY_CRITICAL = 32,
+    ALLOC_PRIORITY_MAX,
+};
+static_assert(ALLOC_PRIORITY_MAX < 256);
+
+struct alloc_params {
+    enum alloc_flags flags;
+    enum alloc_behavior behavior;
+    enum alloc_priority priority;
+};
+
 struct alloc_capabilities {
     enum alloc_flags flags;             /* A bitmask */
     enum alloc_behavior behaviors;      /* Bitmask 1 << base */
     enum alloc_behavior behavior_flags; /* Bitmask for remaining flags */
+    enum alloc_priority priorities; /* Supported priorities, 1 << base bitmap */
 };
 
 /* Extract base behavior (mask out flags) */
