@@ -11,6 +11,7 @@
 /* Must be a plain expression, not a statement,
  * due to use in enums and whatnot */
 #define BIT(n) (1ull << (n))
+#define BITS_PER_BYTE (8)
 
 /* Verify that we aren't going OOB at runtime */
 #define __bit_index_ok(n, bits)                                                \
