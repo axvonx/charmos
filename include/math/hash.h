@@ -65,6 +65,7 @@ static inline uint32_t hash_jenkins_one_at_a_time(const void *key, size_t len) {
     return hash;
 }
 
+#define HASH_MURMUR3_SEED_DEFAULT 104729
 static inline uint32_t hash_murmur3_32(const void *key, size_t len,
                                        uint32_t seed) {
     const uint8_t *data = (const uint8_t *) key;
