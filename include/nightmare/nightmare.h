@@ -3,6 +3,7 @@
 #include <atomic.h>
 #include <cmdline.h>
 #include <compiler/core.h>
+#include <compiler/diagnostic.h>
 #include <crypto/prng.h>
 #include <kassert.h>
 #include <linker/symbols.h>
@@ -127,14 +128,14 @@ struct nightmare {
 LINKER_SECTION_DEFINE(struct nightmare, nightmares);
 
 #define NIGHTMARE_DECLARE(id, ...)                                             \
-    extern struct nightmare __nightmare_##id;                                  \
+    cc_wno_override_init_start extern struct nightmare __nightmare_##id;       \
     LINKER_SECTION_OBJECT(struct nightmare, nightmares)                        \
     __nightmare_##id = {.name = #id,                                           \
                         .fname = __RELFILE__,                                  \
                         .seed_policy = NIGHTMARE_SEED_IGNORED,                 \
                         .requires = NIGHTMARE_REQ_NONE,                        \
                         .intensity = NIGHTMARE_INTENSITY_SENTINEL,             \
-                        __VA_ARGS__}
+                        __VA_ARGS__} cc_wno_override_init_end
 
 #define NIGHTMARE(id) (&__nightmare_##id)
 #define NIGHTMARE_DEFINE(id) extern struct nightmare __nightmare_##id

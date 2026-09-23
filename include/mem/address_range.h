@@ -1,6 +1,7 @@
 /* @title: Address Ranges */
 #pragma once
 #include <compiler/core.h>
+#include <compiler/diagnostic.h>
 #include <linker/symbols.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -27,9 +28,11 @@ struct address_range {
 };
 
 #define ADDRESS_RANGE_DECLARE(sym, ...)                                        \
-    LINKER_SECTION_OBJECT(struct address_range, address_ranges)                \
-    __address_range_##sym = {                                                  \
-        .name = #sym, __VA_ARGS__, .rbt_node_internal = RBT_NODE_INIT}
+    cc_wno_override_init_start LINKER_SECTION_OBJECT(                          \
+        struct address_range, address_ranges) __address_range_##sym = {        \
+        .name = #sym,                                                          \
+        __VA_ARGS__,                                                           \
+        .rbt_node_internal = RBT_NODE_INIT} cc_wno_override_init_end
 
 #define ADDRESS_RANGE(sym) (__address_range_##sym)
 

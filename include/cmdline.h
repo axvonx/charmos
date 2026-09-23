@@ -1,6 +1,7 @@
 /* @title: Command Line */
 #pragma once
 #include <compiler/core.h>
+#include <compiler/diagnostic.h>
 #include <err.h>
 #include <linker/symbols.h>
 #include <math/bit.h>
@@ -147,34 +148,36 @@ struct cmdline_flag {
 #define CMDLINE_PARSER(fn) .value.parse = (fn)
 
 #define CMDLINE_DECLARE(n, ...)                                                \
-    LINKER_SECTION_OBJECT(struct cmdline_entry, cmdline_entries)               \
-    __cmdline_##n = {.name = #n,                                               \
-                     .status = CMDLINE_ENTRY_NOT_FOUND,                        \
-                     .types = 0,                                               \
-                     .range = RANGE(1, 0),                                     \
-                     .choices = NULL,                                          \
-                     .mappings = NULL,                                         \
-                     .flags_table = NULL,                                      \
-                     .value.mode = CMDLINE_MODE_POLYMORPHIC,                   \
-                     .value.type = CMDLINE_TYPE_NONE,                          \
-                     .flags = CMDLINE_ENTRY_FLAGS_NONE,                        \
-                     __VA_ARGS__}
+    cc_wno_override_init_start LINKER_SECTION_OBJECT(struct cmdline_entry,     \
+                                                     cmdline_entries)          \
+        __cmdline_##n = {.name = #n,                                           \
+                         .status = CMDLINE_ENTRY_NOT_FOUND,                    \
+                         .types = 0,                                           \
+                         .range = RANGE(1, 0),                                 \
+                         .choices = NULL,                                      \
+                         .mappings = NULL,                                     \
+                         .flags_table = NULL,                                  \
+                         .value.mode = CMDLINE_MODE_POLYMORPHIC,               \
+                         .value.type = CMDLINE_TYPE_NONE,                      \
+                         .flags = CMDLINE_ENTRY_FLAGS_NONE,                    \
+                         __VA_ARGS__} cc_wno_override_init_end
 
 #define CMDLINE_DECLARE_VAR(n, var, ...)                                       \
-    LINKER_SECTION_OBJECT(struct cmdline_entry, cmdline_entries)               \
-    __cmdline_##n = {.name = #n,                                               \
-                     .status = CMDLINE_ENTRY_NOT_FOUND,                        \
-                     .types = 0,                                               \
-                     .range = RANGE(1, 0),                                     \
-                     .choices = NULL,                                          \
-                     .mappings = NULL,                                         \
-                     .flags_table = NULL,                                      \
-                     .value.mode = CMDLINE_MODE_VAR,                           \
-                     .value.write_to = &(var),                                 \
-                     .value.c_type = TYPE_TO_ENUM((var)),                      \
-                     .value.parse = NULL,                                      \
-                     .flags = CMDLINE_ENTRY_FLAGS_NONE,                        \
-                     __VA_ARGS__}
+    cc_wno_override_init_start LINKER_SECTION_OBJECT(struct cmdline_entry,     \
+                                                     cmdline_entries)          \
+        __cmdline_##n = {.name = #n,                                           \
+                         .status = CMDLINE_ENTRY_NOT_FOUND,                    \
+                         .types = 0,                                           \
+                         .range = RANGE(1, 0),                                 \
+                         .choices = NULL,                                      \
+                         .mappings = NULL,                                     \
+                         .flags_table = NULL,                                  \
+                         .value.mode = CMDLINE_MODE_VAR,                       \
+                         .value.write_to = &(var),                             \
+                         .value.c_type = TYPE_TO_ENUM((var)),                  \
+                         .value.parse = NULL,                                  \
+                         .flags = CMDLINE_ENTRY_FLAGS_NONE,                    \
+                         __VA_ARGS__} cc_wno_override_init_end
 
 #define CMDLINE_CHILD_DECLARE(parent_n, n, ...)                                \
     CMDLINE_DECLARE(parent_n##_##n, .name = #n, .parent = CMDLINE(parent_n),   \
@@ -290,8 +293,8 @@ struct cmdline_schema {
 
 #define CMDLINE_SCHEMA_DECLARE(n, prefix_str, path_hint_str, desc_str,         \
                                resolver_fn, ...)                               \
-    static const struct cmdline_schema_prop __cmdline_schema_props_##n[] = {   \
-        __VA_ARGS__};                                                          \
+    cc_wno_override_init_start static const struct cmdline_schema_prop         \
+        __cmdline_schema_props_##n[] = {__VA_ARGS__};                          \
     LINKER_SECTION_OBJECT(struct cmdline_schema, cmdline_schemas)              \
     __cmdline_schema_##n = {                                                   \
         .prefix = (prefix_str),                                                \
@@ -300,7 +303,7 @@ struct cmdline_schema {
         .resolve = (resolver_fn),                                              \
         .props = __cmdline_schema_props_##n,                                   \
         .prop_count = ct_array_size(__cmdline_schema_props_##n),               \
-    }
+    } cc_wno_override_init_end
 
 #define CMDLINE_GET(key, type, fallback)                                       \
     ({                                                                         \

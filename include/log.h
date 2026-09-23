@@ -2,6 +2,7 @@
 #pragma once
 #include <bootstage.h>
 #include <colors.h>
+#include <compiler/diagnostic.h>
 #include <compiler/intrinsic.h>
 #include <linker/symbols.h>
 #include <sch/irql.h>
@@ -277,23 +278,24 @@ static inline size_t log_site_message_count(struct log_site *site) {
 #define LOG_SITE_ALL UINT32_MAX
 
 #define LOG_SITE_DECLARE(_name, ...)                                           \
-    LINKER_SECTION_ATTRIBUTE(log_sites)                                        \
-    struct log_site __log_site_##_name = {.capacity =                          \
-                                              LOG_SITE_CAPACITY_DEFAULT,       \
-                                          .enabled_mask = LOG_SITE_ALL,        \
-                                          .dump_opts = LOG_DUMP_CONSOLE,       \
-                                          .name = #_name,                      \
-                                          __VA_ARGS__}
-
-#define LOG_SITE_DECLARE_PRINT(_name, ...)                                     \
-    LINKER_SECTION_ATTRIBUTE(log_sites)                                        \
+    cc_wno_override_init_start LINKER_SECTION_ATTRIBUTE(log_sites)             \
     struct log_site __log_site_##_name = {                                     \
-        .name = #_name,                                                        \
-        .flags = LOG_SITE_DEFAULT,                                             \
         .capacity = LOG_SITE_CAPACITY_DEFAULT,                                 \
         .enabled_mask = LOG_SITE_ALL,                                          \
         .dump_opts = LOG_DUMP_CONSOLE,                                         \
-        __VA_ARGS__} /* Rest will get initialized at boot */
+        .name = #_name,                                                        \
+        __VA_ARGS__} cc_wno_override_init_end
+
+#define LOG_SITE_DECLARE_PRINT(_name, ...)                                     \
+    cc_wno_override_init_start LINKER_SECTION_ATTRIBUTE(log_sites)             \
+    struct log_site __log_site_##_name =                                       \
+        {.name = #_name,                                                       \
+         .flags = LOG_SITE_DEFAULT,                                            \
+         .capacity = LOG_SITE_CAPACITY_DEFAULT,                                \
+         .enabled_mask = LOG_SITE_ALL,                                         \
+         .dump_opts = LOG_DUMP_CONSOLE,                                        \
+         __VA_ARGS__} /* Rest will get initialized at boot */                  \
+    cc_wno_override_init_end
 
 #define LOG_SITE(name) (&(__log_site_##name))
 
@@ -301,14 +303,17 @@ static inline size_t log_site_message_count(struct log_site *site) {
 #define LOG_HANDLE_EXTERN(name) extern struct log_handle __log_handle_##name
 
 #define LOG_HANDLE_DECLARE(_name, ...)                                         \
-    struct log_handle __log_handle_##_name = {                                 \
-        .seen_internal = 0, .last_ts_internal = 0, __VA_ARGS__}
+    cc_wno_override_init_start struct log_handle __log_handle_##_name = {      \
+        .seen_internal = 0,                                                    \
+        .last_ts_internal = 0,                                                 \
+        __VA_ARGS__} cc_wno_override_init_end
 
 #define LOG_HANDLE_DECLARE_PRINT(n, ...)                                       \
-    struct log_handle __log_handle_##n = {.flags = LOG_HANDLE_PRINT,           \
-                                          .seen_internal = 0,                  \
-                                          .last_ts_internal = 0,               \
-                                          __VA_ARGS__}
+    cc_wno_override_init_start struct log_handle __log_handle_##n = {          \
+        .flags = LOG_HANDLE_PRINT,                                             \
+        .seen_internal = 0,                                                    \
+        .last_ts_internal = 0,                                                 \
+        __VA_ARGS__} cc_wno_override_init_end
 
 #define LOG_HANDLE(name) &(__log_handle_##name)
 

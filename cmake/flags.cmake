@@ -19,9 +19,7 @@ set(KERNEL_WARNINGS
     -Werror=shift-negative-value)
 
 if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
-    list(APPEND KERNEL_WARNINGS -Wno-initializer-overrides -Wthread-safety -Werror=thread-safety -Watomic-implicit-seq-cst)
-else ()
-    list(APPEND KERNEL_WARNINGS -Wno-override-init)
+    list(APPEND KERNEL_WARNINGS -Wthread-safety -Werror=thread-safety -Watomic-implicit-seq-cst)
 endif ()
 
 set(KERNEL_WARNINGS_RELEASE -Wunused -Wvla -Wnull-dereference)

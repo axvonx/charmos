@@ -2,6 +2,7 @@
 #pragma once
 #include <cmdline.h>
 #include <compiler/core.h>
+#include <compiler/diagnostic.h>
 #include <console/printf.h>
 #include <err.h>
 #include <fs/detect.h>
@@ -249,8 +250,8 @@ struct test_globals {
 
 #define TEST(grp, id) __test_##grp##_##id
 #define TEST_DECLARE(grp, id, ...)                                             \
-    static struct test_verdict __test_fn_##grp##_##id(                         \
-        struct test_context *ctx);                                             \
+    cc_wno_override_init_start static struct test_verdict                      \
+    __test_fn_##grp##_##id(struct test_context *ctx);                          \
     extern struct test_group __test_group_##grp;                               \
     extern struct test __test_##grp##_##id;                                    \
     LINKER_SECTION_OBJECT(struct test, tests)                                  \
@@ -272,12 +273,13 @@ struct test_globals {
                            .min_ram_mib = 0,                                   \
                            .required_fs = FS_UNKNOWN,                          \
                            ##__VA_ARGS__};                                     \
+    cc_wno_override_init_end                                                   \
                                                                                \
-    static struct test_verdict __test_fn_##grp##_##id(                         \
-        struct test_context *ctx cc_unused)
+        static struct test_verdict                                             \
+        __test_fn_##grp##_##id(struct test_context *ctx cc_unused)
 
 #define TEST_GROUP_DECLARE(n, ...)                                             \
-    extern struct test_group __test_group_##n;                                 \
+    cc_wno_override_init_start extern struct test_group __test_group_##n;      \
     LINKER_SECTION_OBJECT(struct test_group, test_groups)                      \
     __test_group_##n = {.name = #n,                                            \
                         .incremental = false,                                  \
@@ -290,7 +292,7 @@ struct test_globals {
                         .integration_enabled = TEST_STATE_SENTINEL,            \
                         .default_intensity = TEST_INTENSITY_SENTINEL,          \
                         .intensity_desc = TEST_INTENSITY_DESC_SENTINEL,        \
-                        ##__VA_ARGS__}
+                        ##__VA_ARGS__} cc_wno_override_init_end
 
 #define TEST_SUCCESS ((struct test_verdict) {.result = TEST_RESULT_OK})
 #define TEST_FAIL(m)                                                           \

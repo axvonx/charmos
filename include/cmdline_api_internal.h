@@ -1,6 +1,7 @@
 /* @title: Command Line Macro Internals */
 #pragma once
 #include <compiler/core.h>
+#include <compiler/diagnostic.h>
 #include <math/bit.h>
 #include <types/type_enum.h>
 
@@ -47,36 +48,42 @@ struct cpu_mask;
     PP_CONCAT(__cmdline_, PP_CONCAT(parent_n, _##n))
 
 #define _CMDLINE_CHILD_DECL_1(parent_n, n, _var, ...)                          \
-    LINKER_SECTION_OBJECT(struct cmdline_entry, cmdline_entries)               \
-    _CMDLINE_CHILD_SYM(parent_n, n) = {.name = #n,                             \
-                                       .status = CMDLINE_ENTRY_NOT_FOUND,      \
-                                       .parent = CMDLINE(parent_n),            \
-                                       .types = 0,                             \
-                                       .range = RANGE(1, 0),                   \
-                                       .choices = NULL,                        \
-                                       .mappings = NULL,                       \
-                                       .flags_table = NULL,                    \
-                                       .value.mode = CMDLINE_MODE_POLYMORPHIC, \
-                                       .value.type = CMDLINE_TYPE_NONE,        \
-                                       .flags = CMDLINE_ENTRY_FLAGS_NONE,      \
-                                       ##__VA_ARGS__};
+    cc_wno_override_init_start LINKER_SECTION_OBJECT(struct cmdline_entry,     \
+                                                     cmdline_entries)          \
+        _CMDLINE_CHILD_SYM(parent_n,                                           \
+                           n) = {.name = #n,                                   \
+                                 .status = CMDLINE_ENTRY_NOT_FOUND,            \
+                                 .parent = CMDLINE(parent_n),                  \
+                                 .types = 0,                                   \
+                                 .range = RANGE(1, 0),                         \
+                                 .choices = NULL,                              \
+                                 .mappings = NULL,                             \
+                                 .flags_table = NULL,                          \
+                                 .value.mode = CMDLINE_MODE_POLYMORPHIC,       \
+                                 .value.type = CMDLINE_TYPE_NONE,              \
+                                 .flags = CMDLINE_ENTRY_FLAGS_NONE,            \
+                                 ##__VA_ARGS__};                               \
+    cc_wno_override_init_end
 
 #define _CMDLINE_CHILD_DECL_2(parent_n, n, var, ...)                           \
-    LINKER_SECTION_OBJECT(struct cmdline_entry, cmdline_entries)               \
-    _CMDLINE_CHILD_SYM(parent_n, n) = {.name = #n,                             \
-                                       .status = CMDLINE_ENTRY_NOT_FOUND,      \
-                                       .parent = CMDLINE(parent_n),            \
-                                       .types = 0,                             \
-                                       .range = RANGE(1, 0),                   \
-                                       .choices = NULL,                        \
-                                       .mappings = NULL,                       \
-                                       .flags_table = NULL,                    \
-                                       .value.mode = CMDLINE_MODE_VAR,         \
-                                       .value.write_to = &(var),               \
-                                       .value.c_type = TYPE_TO_ENUM((var)),    \
-                                       .value.parse = NULL,                    \
-                                       .flags = CMDLINE_ENTRY_FLAGS_NONE,      \
-                                       ##__VA_ARGS__};
+    cc_wno_override_init_start LINKER_SECTION_OBJECT(struct cmdline_entry,     \
+                                                     cmdline_entries)          \
+        _CMDLINE_CHILD_SYM(parent_n,                                           \
+                           n) = {.name = #n,                                   \
+                                 .status = CMDLINE_ENTRY_NOT_FOUND,            \
+                                 .parent = CMDLINE(parent_n),                  \
+                                 .types = 0,                                   \
+                                 .range = RANGE(1, 0),                         \
+                                 .choices = NULL,                              \
+                                 .mappings = NULL,                             \
+                                 .flags_table = NULL,                          \
+                                 .value.mode = CMDLINE_MODE_VAR,               \
+                                 .value.write_to = &(var),                     \
+                                 .value.c_type = TYPE_TO_ENUM((var)),          \
+                                 .value.parse = NULL,                          \
+                                 .flags = CMDLINE_ENTRY_FLAGS_NONE,            \
+                                 ##__VA_ARGS__};                               \
+    cc_wno_override_init_end
 
 #define _CMDLINE_CHILD_DECL_DISPATCH(parent_n, kind, n, var, ...)              \
     _CMDLINE_CHILD_DECL_##kind(parent_n, n, var, ##__VA_ARGS__)
