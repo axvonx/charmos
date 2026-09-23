@@ -160,3 +160,9 @@ fx32_32_t fx_ln(fx32_32_t x);
 fx32_32_t fx_sin(fx32_32_t angle);
 fx32_32_t fx_cos(fx32_32_t angle);
 void fx_sincos(fx32_32_t angle, fx32_32_t *sin_out, fx32_32_t *cos_out);
+
+fx32_32_t fx_exp_series(fx32_32_t x);
+fx32_32_t fx_ln_series(fx32_32_t x);
+fx32_32_t fx_sin_series(fx32_32_t angle);
+fx32_32_t fx_cos_series(fx32_32_t angle);
+void fx_sincos_series(fx32_32_t angle, fx32_32_t *sin_out, fx32_32_t *cos_out);

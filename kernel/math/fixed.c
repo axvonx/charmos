@@ -117,7 +117,7 @@ static fx32_32_t _fx_reduce_pi(fx32_32_t angle) {
     return angle;
 }
 
-fx32_32_t fx_sin_t(fx32_32_t angle) {
+fx32_32_t fx_sin_series(fx32_32_t angle) {
 
     angle = _fx_reduce_pi(angle);
 
@@ -146,7 +146,7 @@ fx32_32_t fx_sin_t(fx32_32_t angle) {
     return negate ? -result : result;
 }
 
-fx32_32_t fx_cos_t(fx32_32_t angle) {
+fx32_32_t fx_cos_series(fx32_32_t angle) {
 
     angle = _fx_reduce_pi(angle);
 
@@ -174,7 +174,7 @@ fx32_32_t fx_cos_t(fx32_32_t angle) {
     return negate ? -result : result;
 }
 
-void fx_sincos_t(fx32_32_t angle, fx32_32_t *sin_out, fx32_32_t *cos_out) {
+void fx_sincos_series(fx32_32_t angle, fx32_32_t *sin_out, fx32_32_t *cos_out) {
     angle = _fx_reduce_pi(angle);
 
     int sin_neg = 0, cos_neg = 0;
@@ -214,7 +214,7 @@ void fx_sincos_t(fx32_32_t angle, fx32_32_t *sin_out, fx32_32_t *cos_out) {
     *cos_out = cos_neg ? -c : c;
 }
 
-fx32_32_t fx_ln_t(fx32_32_t x) {
+fx32_32_t fx_ln_series(fx32_32_t x) {
     static const fx32_32_t LN2 = FX(0.69314718055994530941);
 
     if (x <= 0)
@@ -260,7 +260,7 @@ fx32_32_t fx_ln_t(fx32_32_t x) {
     return fx_mul(z, series) + fx_mul(fx_from_int(k), LN2);
 }
 
-fx32_32_t fx_exp_t(fx32_32_t x) {
+fx32_32_t fx_exp_series(fx32_32_t x) {
     static const fx32_32_t LN2 = FX(0.69314718055994530941);
     static const fx32_32_t LOG2_E = FX(1.44269504088896340735);
 
