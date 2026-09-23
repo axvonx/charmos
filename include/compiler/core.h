@@ -291,7 +291,7 @@
 #define ct_is_pointer(x) (__builtin_classify_type(x) == 5)
 #define ct_is_integral(x)                                                      \
     (__builtin_classify_type(x) == 1 &&                                        \
-     !__builtin_types_compatible_p(__typeof__(x), _Bool))
+     !__builtin_types_compatible_p(__typeof__(x), bool))
 #define ct_is_bool(x) __builtin_types_compatible_p(__typeof__(x), _Bool)
 #define ct_is_struct(x) (__builtin_classify_type(x) == 12)
 #define ct_is_union(x) (__builtin_classify_type(x) == 13)

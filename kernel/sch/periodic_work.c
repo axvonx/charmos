@@ -42,7 +42,7 @@ scheduler_percpu_work_ctor(struct scheduler_periodic_work_percpu *pcpu,
 }
 
 static void
-linker_object_work_to_work(struct scheduler_periodic_work_linker_object *lobj,
+linker_object_work_to_work(struct scheduler_periodic_work_linker_record *lobj,
                            struct scheduler_periodic_work *pw) {
     pw->name = lobj->name;
     pw->fn = lobj->fn;
@@ -52,7 +52,7 @@ linker_object_work_to_work(struct scheduler_periodic_work_linker_object *lobj,
 }
 
 static void
-attach_work_to_cpus(struct scheduler_periodic_work_linker_object *spwlo) {
+attach_work_to_cpus(struct scheduler_periodic_work_linker_record *spwlo) {
     for (size_t i = 0; i < global.core_count; i++) {
         struct scheduler_periodic_work *w = alloc_or_die(
             kmalloc(sizeof(struct scheduler_periodic_work), ALLOC_FLAGS_ZERO));
@@ -73,7 +73,7 @@ attach_work_to_cpus(struct scheduler_periodic_work_linker_object *spwlo) {
 }
 
 void scheduler_periodic_work_init(void) {
-    for (struct scheduler_periodic_work_linker_object *spw =
+    for (struct scheduler_periodic_work_linker_record *spw =
              __skernel_sched_periodic_work;
          spw < __ekernel_sched_periodic_work; spw++) {
         attach_work_to_cpus(spw);

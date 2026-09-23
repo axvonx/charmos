@@ -89,7 +89,7 @@ enum alloc_flags : uint32_t {
     ALLOC_FLAG_MOVABLE = (1 << 3),
     ALLOC_FLAG_NONMOVABLE = 0,
 
-    /* Contiguous - applies only to page_alloc() */
+    /* Contiguous */
     ALLOC_FLAG_CONTIGUOUS = (1 << 4),
     ALLOC_FLAG_NONCONTIGUOUS = 0,
 
@@ -154,10 +154,12 @@ static inline bool alloc_flags_valid(enum alloc_flags flags) {
  * are selected, then the allocator cannot allocate pageable memory */
 enum alloc_behavior : uint16_t {
     ALLOC_BEHAVIOR_NORMAL,
-    ALLOC_BEHAVIOR_ATOMIC,
-    ALLOC_BEHAVIOR_NO_WAIT,
-    ALLOC_BEHAVIOR_NO_RECLAIM,
+    ALLOC_BEHAVIOR_NMI_SAFE,
+    ALLOC_BEHAVIOR_IRQ_SAFE,
     ALLOC_BEHAVIOR_FAULT_SAFE,
+    ALLOC_BEHAVIOR_NO_BLOCK,
+    ALLOC_BEHAVIOR_NO_APC,
+    ALLOC_BEHAVIOR_MAX,
     ALLOC_BEHAVIOR_FLAG_FAST = 1 << ALLOC_BEHAVIOR_FLAG_SHIFT,
 
     /* Used by various allocators to prevent
@@ -167,35 +169,11 @@ enum alloc_behavior : uint16_t {
 };
 #define ALLOC_BEHAVIOR_DEFAULT ALLOC_BEHAVIOR_NORMAL
 
-/* ────────────────────────────────────────────────────────────────────────── */
-
-/* Allocation Behavior Semantics
- *
- * Behaviors define what the allocator is ALLOWED to do
- * Behaviors allow/forbid blocking, faulting, and use in ISRs
- *
- *              ┌───────────────────────┐
- *              │   Allowed Behaviors   │
- * ┌────────────┼───────┬───────┬───────┼──────────────────────────────────────┐
- * │ Behavior   │ Fault │ Block │  ISR  │ Comments                             │
- * ├────────────┼───────┼───────┼───────┼──────────────────────────────────────┤
- * │ NORMAL     │  ✅   │  ✅   │  ❌   │ General-purpose + unrestricted       │
- * ├────────────┼───────┼───────┼───────┼──────────────────────────────────────┤
- * │ ATOMIC     │  ❌   │  ❌   │  ✅   │ For ISRs or hard contexts. Only uses │
- * │            │       │       │       │ preresident, nonpageable memory      │
- * ├────────────┼───────┼───────┼───────┼──────────────────────────────────────┤
- * │ NO_WAIT    │  ✅   │  ❌   │  ❌   │ Nonblocking but can fault. For soft  │
- * │            │       │       │       │ realtime / fastpath code             │
- * ├────────────┼───────┼───────┼───────┼──────────────────────────────────────┤
- * │ NO_RECLAIM │  ✅   │  ✅   │  ❌   │ May block but cannot trigger GC or   │
- * │            │       │       │       │ reclaim. For paging or lowmem code   │
- * ├────────────┼───────┼───────┼───────┼──────────────────────────────────────┤
- * │ FAULT_SAFE │  ❌   │  ✅   │  ❌   │ Must not fault, but may block        │
- * └────────────┴───────┴───────┴───────┴──────────────────────────────────────┘
- *
- */
-
-/* ────────────────────────────────────────────────────────────────────────── */
+struct alloc_capabilities {
+    enum alloc_flags flags;             /* A bitmask */
+    enum alloc_behavior behaviors;      /* Bitmask 1 << base */
+    enum alloc_behavior behavior_flags; /* Bitmask for remaining flags */
+};
 
 /* Extract base behavior (mask out flags) */
 static inline enum alloc_behavior alloc_behavior_base(enum alloc_behavior raw) {
@@ -205,7 +183,7 @@ static inline enum alloc_behavior alloc_behavior_base(enum alloc_behavior raw) {
 /* Does this behavior allow page faults? */
 static inline bool alloc_behavior_may_fault(enum alloc_behavior raw) {
     switch (alloc_behavior_base(raw)) {
-    case ALLOC_BEHAVIOR_ATOMIC:
+    case ALLOC_BEHAVIOR_IRQ_SAFE:
     case ALLOC_BEHAVIOR_FAULT_SAFE: return false;
     default: return true;
     }
@@ -214,21 +192,16 @@ static inline bool alloc_behavior_may_fault(enum alloc_behavior raw) {
 /* Does this behavior allow blocking or waiting? */
 static inline bool alloc_behavior_may_block(enum alloc_behavior raw) {
     switch (alloc_behavior_base(raw)) {
-    case ALLOC_BEHAVIOR_ATOMIC:
-    case ALLOC_BEHAVIOR_NO_WAIT: return false;
+    case ALLOC_BEHAVIOR_IRQ_SAFE:
+    case ALLOC_BEHAVIOR_NO_BLOCK: return false;
     default: return true;
     }
 }
 
 /* Is this behavior ISR-safe? */
 static inline bool alloc_behavior_is_isr_safe(enum alloc_behavior raw) {
-    return alloc_behavior_base(raw) == ALLOC_BEHAVIOR_ATOMIC;
-}
-
-/* Does this behavior skip reclamation (e.g., GC, slab draining)? */
-static inline bool alloc_behavior_no_reclaim(enum alloc_behavior raw) {
-    return alloc_behavior_base(raw) == ALLOC_BEHAVIOR_NO_RECLAIM ||
-           alloc_behavior_base(raw) == ALLOC_BEHAVIOR_ATOMIC;
+    return alloc_behavior_base(raw) == ALLOC_BEHAVIOR_IRQ_SAFE ||
+           alloc_behavior_base(raw) == ALLOC_BEHAVIOR_NMI_SAFE;
 }
 
 /* Fast hint: should this allocation prefer short paths? */

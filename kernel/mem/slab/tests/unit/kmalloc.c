@@ -55,7 +55,7 @@ TEST_DECLARE_UNIT(slab, atomic_behavior_flags) {
        return NULL for such a request. */
     uint16_t f = ALLOC_FLAG_NONPAGEABLE | ALLOC_FLAG_NONMOVABLE |
                  ALLOC_FLAG_NO_CACHE_ALIGN;
-    void *p = kmalloc_new(256, f, ALLOC_BEHAVIOR_ATOMIC);
+    void *p = kmalloc_new(256, f, ALLOC_BEHAVIOR_IRQ_SAFE);
     if (!p) {
         test_info("kmalloc_new failed for ATOMIC nonpageable request");
         return TEST_FAIL(NULL);

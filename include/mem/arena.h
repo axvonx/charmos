@@ -2,6 +2,7 @@
 #pragma once
 #include <err.h>
 #include <mem/alloc.h>
+#include <mem/arena_types.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -12,24 +13,12 @@
  *
  * Broadly, everything (or almost everything) is built with substantial
  * room for extensibility, which allows for very different arenas that
- * all funnel through this API, which exists at all to enforce safety
+ * all funnel through this API, which exists to enforce safety
  * and provide a unified substrate.
  *
  * The STRATEGY is the underlying allocation strategy, such as freelists,
  * bumps, etc. Strategies cannot arbitrarily change, and an explicit
  * strategy change function must be used (TODO: reconsider)
- *
- * The STRATEGY has CAPABILITIES that state what exactly a strategy supports.
- * For instance, some strategies are thread safe, whereas other strategies
- * maybe don't support object-granularity deallocations, etc.
- *
- * Capabilities govern the errors that the arena allocator might return,
- * and the checks that it might perform around the allocator.
- *
- * For instance, if an allocator does not proclaim to be thread safe,
- * then the arena allocator, in debug mode, might insert checks
- * that verify that the caller is always a single thread,
- * and panic if any entry comes from another.
  *
  * Then, there are arena PARAMS and ATTRIBUTES. Parameters are arbitrary
  * opaque data that can be passed into arena allocators (meaning whatever),
@@ -47,30 +36,34 @@
  */
 struct arena;
 
-/* arena_strategy_flags: 64 bit bitflags
+/* arena_flags: 64 bit bitflags
  *
- * The entire upper dword is available for whomever and whatever wants extra
- * flags to define.
+ * These flags denote the subset of globally recognized arena capabilities
+ *
+ * Upper 32 bits are available for whatever needs it in the arena
+ * allocator internally
+ *
  *      ┌─────────────────────────────────────────────────────────────┐
- * Bits │ 63..32 31..28 27..24 23..20 19..16 15..12 11..8  7..4  3..0 │
- * Use  │  A--A   AAAA   AAAA   AAAA   AAAA   AAAA   AAAA  AAAA  AAAA │
+ * Bits │ 63--32 31..28 27..24 23..20 19..16 15..12 11..8  7..4  3..0 │
+ * Use  │  AAAA   AAAA   AAAA   AAAA   AAAA   AAAA   AAAA  AAAA  AAAA │
  *      └─────────────────────────────────────────────────────────────┘
  *
  * A - Unused (available)
  * * - Unused (unavailable)
  *
  */
-enum arena_strategy_flags : uint64_t {
-    /* NOTE: IRQ safety merely permits the irq_in_interrupt context to enter
-     * the arena allocator. It does NOT enforce any safety, largely because
-     * this is not possible in the ISR.
-     *
-     * IRQ safe arenas are not necessarily thread safe: one can imagine
-     * a static struct arena *a; that is only ever accessed from within
-     * an ISR, and only has one IRQ that could possibly access it from
-     * that ISR. Such an arena is IRQ safe but not thread safe. */
-    ARENA_STRATEGY_FLAG_IRQ_SAFE = 1 << 0,
-    ARENA_STRATEGY_FLAG_THREAD_SAFE = 1 << 1,
+enum arena_flags : uint64_t {
+    /* "tagging at the per-object granularity */
+    ARENA_FLAG_TAGGED = 1 << 0,
+
+    /* "stack depot injection at the per-object granularity" */
+    ARENA_FLAG_TRACKED = 1 << 1,
+
+    /* Has a log site */
+    ARENA_FLAG_LOGGED = 1 << 2,
+
+    /* Use locks */
+    ARENA_FLAG_LOCKED = 1 << 3,
 };
 
 /* There are 31 default arena policies (1-31, 0 is omitted
@@ -96,20 +89,17 @@ enum arena_strategy {
     ARENA_STRATEGY_SLAB,
 
     /* DIFFERENT. Notably significantly lighter-weight
-     * than the full slab allocator, but not supporting
-     * things like concurrency and locking */
+     * than the full slab allocator */
     ARENA_STRATEGY_MINI_SLAB,
 
     ARENA_STRATEGY_BUDDY,
 
+    /* Reserve allocators are explicitly fed memory in,
+     * so they never perform an underlying allocation operation */
     ARENA_STRATEGY_RESERVE,
 
     ARENA_STRATEGY_MAX = 32
 };
-
-enum arena_tag { ARENA_TAG_NONE = 0 };
-
-struct arena_strategy_capabilities {};
 
 /* These are generally passed into the arena allocation creation
  * as a generic way of giving parameters. Notably NOT
@@ -117,11 +107,8 @@ struct arena_strategy_capabilities {};
  *
  * Also usable in arena_alloc_special in substitution of the size
  * parameter, which is relevant to some allocators */
-
-/* TODO: Revise and expand this past 4 arguments, making generic
- * void *arg and whatnot */
 struct arena_params {
-    void *arg;
+    void *ptr;
     union {
         struct {
             uint64_t param1;
@@ -139,8 +126,14 @@ struct arena_attributes {
     struct arena_params params;
 };
 
+/* The output of the extended arena functions */
+struct arena_result {
+    enum err err;
+    struct arena_params params;
+};
+
 extern struct err_facility arena_err_facility;
-void *arena_alloc_internal(struct arena *arena, size_t size, enum arena_tag tag,
+void *arena_alloc_internal(struct arena *arena, size_t size, arena_tag_t tag,
                            enum alloc_flags flags, enum alloc_behavior bh)
     cw_alloc(2);
 
@@ -148,6 +141,6 @@ enum err arena_free_internal(struct arena *arena, void *ptr,
                              enum alloc_behavior bh) cc_warn_unused_result;
 
 void *arena_alloc_special_internal(struct arena *arena,
-                                   struct arena_params *params,
-                                   enum arena_tag tag, enum alloc_flags flags,
+                                   struct arena_params *params, arena_tag_t tag,
+                                   enum alloc_flags flags,
                                    enum alloc_behavior bh) cw_alloc();

@@ -106,9 +106,7 @@ static void stress_worker(void *arg) {
             flags &= ~ALLOC_FLAG_NONMOVABLE;
         }
 
-        enum alloc_behavior behavior = (prng_next() & 3)
-                                           ? ALLOC_BEHAVIOR_NORMAL
-                                           : ALLOC_BEHAVIOR_NO_RECLAIM;
+        enum alloc_behavior behavior = ALLOC_BEHAVIOR_NORMAL;
 
         void *p = kmalloc_new(sz, flags, behavior);
         if (!p)

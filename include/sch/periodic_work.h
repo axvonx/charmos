@@ -18,7 +18,7 @@ enum scheduler_periodic_work_type {
     PERIODIC_WORK_TIME_BASED,
 };
 
-struct scheduler_periodic_work_linker_object {
+struct scheduler_periodic_work_linker_record {
     char *name;
     void (*fn)(void);
 
@@ -87,11 +87,11 @@ struct scheduler_periodic_work_percpu {
     bool executing;
 };
 
-LINKER_SECTION_DEFINE(struct scheduler_periodic_work_linker_object,
+LINKER_SECTION_DEFINE(struct scheduler_periodic_work_linker_record,
                       sched_periodic_work);
 
 #define SCHEDULER_PERIODIC_WORK_REGISTER(_fn, _type, _prio, _interval)         \
-    LINKER_SECTION_OBJECT(struct scheduler_periodic_work_linker_object,        \
+    LINKER_SECTION_OBJECT(struct scheduler_periodic_work_linker_record,        \
                           sched_periodic_work)                                 \
     __spw_##_fn = {.name = #_fn,                                               \
                    .fn = _fn,                                                  \
