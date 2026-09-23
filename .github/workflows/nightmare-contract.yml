@@ -5,7 +5,8 @@ on:
     branches: [main]
     paths:
       - 'scripts/charm/nightmare/**'
-      - 'scripts/charm/orchestrator/**'
+      - 'scripts/charm/*.py'
+      - 'scripts/gen_limine_conf.py'
       - 'scripts/tests/**'
       - 'nightmare/**'
       - '.github/workflows/nightmare-contract.yml'
@@ -14,7 +15,8 @@ on:
   pull_request:
     paths:
       - 'scripts/charm/nightmare/**'
-      - 'scripts/charm/orchestrator/**'
+      - 'scripts/charm/*.py'
+      - 'scripts/gen_limine_conf.py'
       - 'scripts/tests/**'
       - 'nightmare/**'
       - '.github/workflows/nightmare-contract.yml'

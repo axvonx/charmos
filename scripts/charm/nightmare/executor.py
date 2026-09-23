@@ -101,11 +101,7 @@ def _result_document(
     manifest: contract_model.RunnerManifest | None = None,
     campaign: campaign_model.CampaignResult | None = None,
 ) -> dict[str, Any]:
-    campaign_doc = (
-        json.loads(campaign_model.render_json(campaign))
-        if campaign is not None
-        else None
-    )
+    campaign_doc = campaign.to_dict() if campaign is not None else None
     return {
         "schema_version": 1,
         "result_id": f"result_{manifest_sha256[:24]}",
@@ -214,7 +210,6 @@ def execute_manifest(
     )
 
     if bundle_path is not None:
-        from ..paths import repo_root
         from . import build_bundle as bundle_model
 
         configuration = manifest.suite.resolved["build"]
@@ -262,7 +257,7 @@ def execute_manifest(
             _write_json(result_path, document)
             return RunnerExecution(out_dir, result_path, document, 2)
         if boot_runner is None and not manifest.campaign.dry_run:
-            boot_runner = campaign_model.BundleBootRunner(verified, repo_root())
+            boot_runner = campaign_model.BundleBootRunner(verified)
     elif boot_runner is None and not manifest.campaign.dry_run:
         document = _result_document(
             manifest_sha256=manifest_sha256,

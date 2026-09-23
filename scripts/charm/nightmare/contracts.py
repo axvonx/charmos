@@ -3,10 +3,11 @@
 import hashlib
 import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Literal, NewType, NotRequired, TypeAlias, TypedDict
+from typing import Any, NewType, TypeAlias
 
 from . import grammar
 from . import suite as suite_model
@@ -22,88 +23,14 @@ CommandId = NewType("CommandId", str)
 RunnerId = NewType("RunnerId", str)
 SnapshotVersion = NewType("SnapshotVersion", str)
 
-
-class FieldDiagnostic(TypedDict):
-    field: str
-    message: str
-    line: NotRequired[int]
-    column: NotRequired[int]
-
-
-class ValidationAccepted(TypedDict):
-    kind: Literal["accepted"]
-    plan: dict[str, Any]
-
-
-class ValidationRejected(TypedDict):
-    kind: Literal["rejected"]
-    code: Literal["invalid_definition", "no_capacity"]
-    message: str
-    diagnostics: list[FieldDiagnostic]
-    alternatives: list[dict[str, Any]]
-
-
-class ValidationStale(TypedDict):
-    kind: Literal["stale"]
-    code: Literal["snapshot_changed"]
-    message: str
-    currentVersion: SnapshotVersion
-
-
-ValidationResult: TypeAlias = ValidationAccepted | ValidationRejected | ValidationStale
-
-
-class SubmissionAccepted(TypedDict):
-    kind: Literal["accepted"]
-    snapshot: dict[str, Any]
-    batch: dict[str, Any]
-
-
-class SubmissionRejected(TypedDict):
-    kind: Literal["rejected"]
-    code: Literal["submission_rejected"]
-    message: str
-
-
-class SubmissionStale(TypedDict):
-    kind: Literal["stale"]
-    code: Literal["plan_expired", "snapshot_changed"]
-    message: str
-    currentVersion: SnapshotVersion
-
-
-SubmissionResult: TypeAlias = SubmissionAccepted | SubmissionRejected | SubmissionStale
-
-
-class TailAccepted(TypedDict):
-    kind: Literal["accepted"]
-    plan: dict[str, Any]
-
-
-class TailRejected(TypedDict):
-    kind: Literal["rejected"]
-    code: Literal["immutable", "no_tail_capacity", "commit_rejected"]
-    message: str
-    diagnostics: NotRequired[list[FieldDiagnostic]]
-
-
-class TailConflict(TypedDict):
-    kind: Literal["conflict"]
-    code: Literal["batch_changed"]
-    message: str
-    currentVersion: SnapshotVersion
-
-
-TailResult: TypeAlias = TailAccepted | TailRejected | TailConflict
-
-_ID_RE = re.compile(r"^[a-z][a-z0-9_:-]{0,127}$")
-_REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
-_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
-_COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
-_IMAGE_RE = re.compile(
+ID_RE = re.compile(r"^[a-z][a-z0-9_:-]{0,127}$")
+REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
+IMAGE_RE = re.compile(
     r"^ghcr\.io/[A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+@sha256:[0-9a-f]{64}$"
 )
-_ARTIFACT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+ARTIFACT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 
 class DiscoveryKind(StrEnum):
@@ -276,296 +203,170 @@ def suite_to_dict(suite: suite_model.Suite) -> dict[str, Any]:
     }
 
 
-def _object(
-    value: Any,
-    path: str,
-    required: frozenset[str],
-    diagnostics: list[Diagnostic],
-) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        diagnostics.append(Diagnostic(path, "expected an object"))
-        return {}
-    keys = set(value)
-    for key in sorted(required - keys):
-        diagnostics.append(Diagnostic(f"{path}.{key}", "is required"))
-    for key in sorted(keys - required):
-        diagnostics.append(Diagnostic(f"{path}.{key}", "is not allowed"))
-    return value
+# A shape maps each required key to a nested shape or to a rule that returns
+# an error message (or None) for the value. Keys outside the shape are rejected.
+Rule: TypeAlias = Callable[[Any], str | None]
+Shape: TypeAlias = dict[str, "Shape | Rule"]
 
 
-def _string(
-    value: Any,
-    path: str,
-    diagnostics: list[Diagnostic],
-    pattern: re.Pattern[str] | None = None,
-) -> str:
+def string(pattern: re.Pattern[str] | None = None) -> Rule:
+    def rule(value: Any) -> str | None:
+        if not isinstance(value, str):
+            return "expected a string"
+        if pattern is not None and not pattern.fullmatch(value):
+            return "has an invalid format"
+        return None
+
+    return rule
+
+
+def integer(minimum: int = 0) -> Rule:
+    def rule(value: Any) -> str | None:
+        if type(value) is not int:
+            return "expected an integer"
+        if value < minimum:
+            return f"must be at least {minimum}"
+        return None
+
+    return rule
+
+
+def boolean(value: Any) -> str | None:
+    return None if isinstance(value, bool) else "expected a boolean"
+
+
+def constant(expected: Any) -> Rule:
+    return lambda value: None if value == expected else f"must be {expected!r}"
+
+
+def any_object(value: Any) -> str | None:
+    return None if isinstance(value, dict) else "expected an object"
+
+
+def _base_seed(value: Any) -> str | None:
+    if value is None:
+        return None
     if not isinstance(value, str):
-        diagnostics.append(Diagnostic(path, "expected a string"))
-        return ""
-    if pattern is not None and not pattern.fullmatch(value):
-        diagnostics.append(Diagnostic(path, "has an invalid format"))
-    return value
+        return "expected a string or null"
+    try:
+        grammar.parse_uint(value)
+    except grammar.GrammarError as error:
+        return str(error)
+    return None
 
 
-def _integer(
-    value: Any,
-    path: str,
-    diagnostics: list[Diagnostic],
-    minimum: int = 0,
-) -> int:
-    if not isinstance(value, int) or isinstance(value, bool):
-        diagnostics.append(Diagnostic(path, "expected an integer"))
-        return minimum
-    if value < minimum:
-        diagnostics.append(Diagnostic(path, f"must be at least {minimum}"))
-    return value
+def check_shape(value: Any, shape: Shape, path: str) -> list[Diagnostic]:
+    if not isinstance(value, dict):
+        return [Diagnostic(path, "expected an object")]
+    diagnostics = [
+        Diagnostic(f"{path}.{key}", "is required")
+        for key in sorted(set(shape) - set(value))
+    ]
+    diagnostics += [
+        Diagnostic(f"{path}.{key}", "is not allowed")
+        for key in sorted(set(value) - set(shape))
+    ]
+    for key, rule in shape.items():
+        if key not in value:
+            continue
+        if isinstance(rule, dict):
+            diagnostics += check_shape(value[key], rule, f"{path}.{key}")
+        elif (message := rule(value[key])) is not None:
+            diagnostics.append(Diagnostic(f"{path}.{key}", message))
+    return diagnostics
 
 
-def _boolean(value: Any, path: str, diagnostics: list[Diagnostic]) -> bool:
-    if not isinstance(value, bool):
-        diagnostics.append(Diagnostic(path, "expected a boolean"))
-        return False
-    return value
+MANIFEST_SHAPE: Shape = {
+    "schema_version": constant(SCHEMA_VERSION),
+    "manifest_id": string(ID_RE),
+    "plan_id": string(ID_RE),
+    "batch_id": string(ID_RE),
+    "task_id": string(ID_RE),
+    "attempt": integer(minimum=1),
+    "source": {"repository": string(REPOSITORY_RE), "commit": string(COMMIT_RE)},
+    "suite": {"id": string(ID_RE), "sha256": string(SHA256_RE), "resolved": any_object},
+    "build": {
+        "bundle_id": string(ID_RE),
+        "sha256": string(SHA256_RE),
+        "runner_image": string(IMAGE_RE),
+    },
+    "campaign": {
+        "campaign_id": string(ID_RE),
+        "runner_index": integer(),
+        "total_runners": integer(minimum=1),
+        "base_seed": _base_seed,
+        "soft_budget_ms": integer(minimum=1),
+        "hard_budget_ms": integer(minimum=1),
+        "actions_job_budget_ms": integer(minimum=1),
+        "gate_first": boolean,
+        "dry_run": boolean,
+    },
+    "result": {
+        "schema_version": constant(SCHEMA_VERSION),
+        "artifact_name": string(ARTIFACT_RE),
+    },
+}
 
 
 def validate_manifest(document: Any) -> list[Diagnostic]:
-    diagnostics: list[Diagnostic] = []
-    root = _object(
-        document,
-        "manifest",
-        frozenset(
-            {
-                "schema_version",
-                "manifest_id",
-                "plan_id",
-                "batch_id",
-                "task_id",
-                "attempt",
-                "source",
-                "suite",
-                "build",
-                "campaign",
-                "result",
-            }
-        ),
-        diagnostics,
-    )
+    diagnostics = check_shape(document, MANIFEST_SHAPE, "manifest")
+    if diagnostics:
+        return diagnostics
 
-    if root.get("schema_version") != SCHEMA_VERSION:
-        diagnostics.append(
-            Diagnostic("manifest.schema_version", f"must be {SCHEMA_VERSION}")
-        )
-    for key in ("manifest_id", "plan_id", "batch_id", "task_id"):
-        _string(root.get(key), f"manifest.{key}", diagnostics, _ID_RE)
-    _integer(root.get("attempt"), "manifest.attempt", diagnostics, minimum=1)
-
-    source = _object(
-        root.get("source"),
-        "manifest.source",
-        frozenset({"repository", "commit"}),
-        diagnostics,
-    )
-    _string(
-        source.get("repository"),
-        "manifest.source.repository",
-        diagnostics,
-        _REPOSITORY_RE,
-    )
-    _string(
-        source.get("commit"),
-        "manifest.source.commit",
-        diagnostics,
-        _COMMIT_RE,
-    )
-
-    suite = _object(
-        root.get("suite"),
-        "manifest.suite",
-        frozenset({"id", "sha256", "resolved"}),
-        diagnostics,
-    )
-    suite_id = _string(suite.get("id"), "manifest.suite.id", diagnostics, _ID_RE)
-    suite_digest = _string(
-        suite.get("sha256"), "manifest.suite.sha256", diagnostics, _SHA256_RE
-    )
-    resolved = suite.get("resolved")
-    if not isinstance(resolved, dict):
-        diagnostics.append(Diagnostic("manifest.suite.resolved", "expected an object"))
-    else:
-        if suite_digest and sha256_json(resolved) != suite_digest:
-            diagnostics.append(
-                Diagnostic(
-                    "manifest.suite.sha256",
-                    "does not match the canonical resolved suite",
-                )
-            )
-        try:
-            model = suite_model.from_dict(resolved, source="manifest.suite.resolved")
-        except suite_model.SuiteError as error:
-            diagnostics.extend(
-                Diagnostic(f"manifest.suite.resolved.{item.path}", item.message)
-                for item in error.diagnostics
-            )
-        else:
-            if suite_id and model.meta.name != suite_id:
-                diagnostics.append(
-                    Diagnostic(
-                        "manifest.suite.id",
-                        f"does not match resolved suite name {model.meta.name!r}",
-                    )
-                )
-
-    build = _object(
-        root.get("build"),
-        "manifest.build",
-        frozenset({"bundle_id", "sha256", "runner_image"}),
-        diagnostics,
-    )
-    _string(
-        build.get("bundle_id"),
-        "manifest.build.bundle_id",
-        diagnostics,
-        _ID_RE,
-    )
-    _string(
-        build.get("sha256"),
-        "manifest.build.sha256",
-        diagnostics,
-        _SHA256_RE,
-    )
-    _string(
-        build.get("runner_image"),
-        "manifest.build.runner_image",
-        diagnostics,
-        _IMAGE_RE,
-    )
-
-    campaign = _object(
-        root.get("campaign"),
-        "manifest.campaign",
-        frozenset(
-            {
-                "campaign_id",
-                "runner_index",
-                "total_runners",
-                "base_seed",
-                "soft_budget_ms",
-                "hard_budget_ms",
-                "actions_job_budget_ms",
-                "gate_first",
-                "dry_run",
-            }
-        ),
-        diagnostics,
-    )
-    _string(
-        campaign.get("campaign_id"),
-        "manifest.campaign.campaign_id",
-        diagnostics,
-        _ID_RE,
-    )
-    runner_index = _integer(
-        campaign.get("runner_index"),
-        "manifest.campaign.runner_index",
-        diagnostics,
-    )
-    total_runners = _integer(
-        campaign.get("total_runners"),
-        "manifest.campaign.total_runners",
-        diagnostics,
-        minimum=1,
-    )
-    if total_runners > 0 and runner_index >= total_runners:
+    suite = document["suite"]
+    campaign = document["campaign"]
+    if sha256_json(suite["resolved"]) != suite["sha256"]:
         diagnostics.append(
             Diagnostic(
-                "manifest.campaign.runner_index",
-                "must be less than total_runners",
+                "manifest.suite.sha256", "does not match the canonical resolved suite"
             )
         )
-    base_seed = campaign.get("base_seed")
-    if base_seed is not None:
-        if not isinstance(base_seed, str):
-            diagnostics.append(
-                Diagnostic("manifest.campaign.base_seed", "expected a string or null")
+    if campaign["runner_index"] >= campaign["total_runners"]:
+        diagnostics.append(
+            Diagnostic(
+                "manifest.campaign.runner_index", "must be less than total_runners"
             )
-        else:
-            try:
-                grammar.parse_uint(base_seed)
-            except grammar.GrammarError as error:
-                diagnostics.append(
-                    Diagnostic("manifest.campaign.base_seed", str(error))
-                )
-
-    soft = _integer(
-        campaign.get("soft_budget_ms"),
-        "manifest.campaign.soft_budget_ms",
-        diagnostics,
-        minimum=1,
-    )
-    hard = _integer(
-        campaign.get("hard_budget_ms"),
-        "manifest.campaign.hard_budget_ms",
-        diagnostics,
-        minimum=1,
-    )
-    actions = _integer(
-        campaign.get("actions_job_budget_ms"),
-        "manifest.campaign.actions_job_budget_ms",
-        diagnostics,
-        minimum=1,
-    )
-    if not soft < hard:
+        )
+    if not campaign["soft_budget_ms"] < campaign["hard_budget_ms"]:
         diagnostics.append(
             Diagnostic(
                 "manifest.campaign.hard_budget_ms",
                 "must be greater than soft_budget_ms",
             )
         )
-    if not hard < actions:
+    if not campaign["hard_budget_ms"] < campaign["actions_job_budget_ms"]:
         diagnostics.append(
             Diagnostic(
                 "manifest.campaign.actions_job_budget_ms",
                 "must be greater than hard_budget_ms",
             )
         )
-    _boolean(
-        campaign.get("gate_first"),
-        "manifest.campaign.gate_first",
-        diagnostics,
-    )
-    _boolean(campaign.get("dry_run"), "manifest.campaign.dry_run", diagnostics)
 
-    if isinstance(resolved, dict):
-        try:
-            model = suite_model.from_dict(resolved, source="manifest.suite.resolved")
-        except suite_model.SuiteError:
-            pass
-        else:
-            required = max(task.boot.host_timeout_ms for task in model.tasks)
-            if required > soft:
-                diagnostics.append(
-                    Diagnostic(
-                        "manifest.campaign.soft_budget_ms",
-                        f"must fit one host boot timeout ({required}ms)",
-                    )
-                )
-
-    result = _object(
-        root.get("result"),
-        "manifest.result",
-        frozenset({"schema_version", "artifact_name"}),
-        diagnostics,
-    )
-    if result.get("schema_version") != SCHEMA_VERSION:
-        diagnostics.append(
-            Diagnostic("manifest.result.schema_version", f"must be {SCHEMA_VERSION}")
+    try:
+        model = suite_model.from_dict(
+            suite["resolved"], source="manifest.suite.resolved"
         )
-    _string(
-        result.get("artifact_name"),
-        "manifest.result.artifact_name",
-        diagnostics,
-        _ARTIFACT_RE,
-    )
+    except suite_model.SuiteError as error:
+        diagnostics.extend(
+            Diagnostic(f"manifest.suite.resolved.{item.path}", item.message)
+            for item in error.diagnostics
+        )
+        return diagnostics
+    if model.meta.name != suite["id"]:
+        diagnostics.append(
+            Diagnostic(
+                "manifest.suite.id",
+                f"does not match resolved suite name {model.meta.name!r}",
+            )
+        )
+    required = max(task.boot.host_timeout_ms for task in model.tasks)
+    if required > campaign["soft_budget_ms"]:
+        diagnostics.append(
+            Diagnostic(
+                "manifest.campaign.soft_budget_ms",
+                f"must fit one host boot timeout ({required}ms)",
+            )
+        )
     return diagnostics
 
 
@@ -573,7 +374,6 @@ def manifest_from_dict(document: Any, source: str = "<memory>") -> RunnerManifes
     diagnostics = validate_manifest(document)
     if diagnostics:
         raise ContractError(source, diagnostics)
-    assert isinstance(document, dict)
     source_doc = document["source"]
     suite_doc = document["suite"]
     build_doc = document["build"]

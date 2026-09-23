@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
-from pathlib import Path
 
 from charm.nightmare import planner, workflow
+from charm.paths import nightmare_dir
 
 
 def test_real_lock_suite_plans_as_one_batch_with_private_runner_fanout() -> None:
@@ -20,7 +20,7 @@ tests = ["overnight_locks"]
         now=now,
         runner_capacity=12,
     )
-    result = planner.Planner(Path("nightmare/suites")).plan(
+    result = planner.Planner(nightmare_dir() / "suites").plan(
         command,
         snapshot,
         source=planner.Source("axvonx/charmos", "a" * 40),

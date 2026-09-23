@@ -237,7 +237,7 @@ class QemuInfrastructureRetryTests(unittest.TestCase):
             iso = root / "image.iso"
             iso.write_text("iso", encoding="utf-8")
             bundle = SimpleNamespace(pristine_disk=pristine)
-            runner = C.BundleBootRunner(bundle, root)
+            runner = C.BundleBootRunner(bundle)
             manifest = C.CampaignManifest(
                 suite=suite,
                 campaign_id="test-campaign",

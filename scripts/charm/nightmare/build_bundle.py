@@ -2,7 +2,6 @@ import json
 import re
 import shutil
 import subprocess
-import sys
 import tarfile
 import tempfile
 import time
@@ -13,15 +12,34 @@ from typing import Any
 
 from ..paths import repo_root as default_repo_root
 from . import contracts
+from . import suite as suite_model
 
 METADATA_NAME = "bundle.json"
 ARTIFACT_DIR = "artifacts"
-_ID = re.compile(r"^[a-z][a-z0-9_:-]{0,127}$")
-_SHA256 = re.compile(r"^[0-9a-f]{64}$")
-_COMMIT = re.compile(r"^[0-9a-f]{40}$")
-_REPOSITORY = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
-_IMAGE = re.compile(r"^ghcr\.io/[A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+@sha256:[0-9a-f]{64}$")
-_DEFINITION = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=[^\s]*$")
+
+LIMINE_BOOT_ASSETS = ("limine-bios.sys", "limine-bios-cd.bin", "limine-uefi-cd.bin")
+EFI_ASSETS = ("BOOTX64.EFI", "BOOTIA32.EFI")
+XORRISO_FLAGS = (
+    "-as",
+    "mkisofs",
+    "-R",
+    "-r",
+    "-J",
+    "-b",
+    "boot/limine/limine-bios-cd.bin",
+    "-no-emul-boot",
+    "-boot-load-size",
+    "4",
+    "-boot-info-table",
+    "-hfsplus",
+    "-apm-block-size",
+    "2048",
+    "--efi-boot",
+    "boot/limine/limine-uefi-cd.bin",
+    "-efi-boot-part",
+    "--efi-boot-image",
+    "--protective-msdos-label",
+)
 
 
 class BundleError(ValueError):
@@ -236,105 +254,72 @@ def _bundle_digest(document: dict[str, Any]) -> str:
     return contracts.sha256_json(payload)
 
 
-def _validate_configuration(configuration: Any) -> None:
-    if not isinstance(configuration, dict) or set(configuration) != {
-        "compiler",
-        "type",
-        "cmake_definitions",
-        "smp",
-        "memory_mib",
-    }:
-        raise BundleError("bundle configuration has an invalid shape")
-    if configuration["compiler"] not in ("gcc", "clang"):
-        raise BundleError("bundle compiler is not allowlisted")
-    if configuration["type"] not in (
-        "Debug",
-        "Release",
-        "RelWithDebInfo",
-        "MinSizeRel",
+_DEFINITION_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=[^\s]*$")
+_PROVENANCE = ({"mode": "compiled_clean"}, {"mode": "prebuilt_development"})
+
+
+def _one_of(allowed: tuple[Any, ...]) -> contracts.Rule:
+    return lambda value: None if value in allowed else "is not allowlisted"
+
+
+def _definitions(value: Any) -> str | None:
+    if not isinstance(value, list) or not all(
+        isinstance(item, str) and _DEFINITION_RE.fullmatch(item) for item in value
     ):
-        raise BundleError("bundle build type is not allowlisted")
-    definitions = configuration["cmake_definitions"]
-    if (
-        not isinstance(definitions, list)
-        or not all(
-            isinstance(item, str) and _DEFINITION.fullmatch(item)
-            for item in definitions
-        )
-        or len(definitions) != len(set(definitions))
-    ):
-        raise BundleError("bundle CMake definitions are invalid")
-    smp = configuration["smp"]
-    if (
-        not isinstance(smp, dict)
-        or set(smp) != {"sockets", "cores", "threads"}
-        or not all(type(smp[field]) is int and smp[field] >= 1 for field in smp)
-    ):
-        raise BundleError("bundle SMP topology is invalid")
-    if type(configuration["memory_mib"]) is not int or configuration["memory_mib"] < 64:
-        raise BundleError("bundle memory_mib is invalid")
+        return "expected a list of NAME=VALUE definitions"
+    if len(value) != len(set(value)):
+        return "contains duplicates"
+    return None
+
+
+def _created_at(value: Any) -> str | None:
+    try:
+        instant = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except (AttributeError, ValueError):
+        return "expected an ISO-8601 timestamp"
+    return None if instant.tzinfo is not None else "must include a UTC offset"
+
+
+def _artifact_list(value: Any) -> str | None:
+    return None if isinstance(value, list) and value else "expected a non-empty list"
+
+
+_METADATA_SHAPE: contracts.Shape = {
+    "schema_version": contracts.constant(1),
+    "bundle_id": contracts.string(contracts.ID_RE),
+    "request_sha256": contracts.string(contracts.SHA256_RE),
+    "sha256": contracts.string(contracts.SHA256_RE),
+    "source": {
+        "repository": contracts.string(contracts.REPOSITORY_RE),
+        "commit": contracts.string(contracts.COMMIT_RE),
+    },
+    "runner_image": contracts.string(contracts.IMAGE_RE),
+    "configuration": {
+        "compiler": _one_of(suite_model.COMPILERS),
+        "type": _one_of(suite_model.BUILD_TYPES),
+        "cmake_definitions": _definitions,
+        "smp": {
+            "sockets": contracts.integer(minimum=1),
+            "cores": contracts.integer(minimum=1),
+            "threads": contracts.integer(minimum=1),
+        },
+        "memory_mib": contracts.integer(minimum=64),
+    },
+    "provenance": _one_of(_PROVENANCE),
+    "artifacts": _artifact_list,
+    "created_at": _created_at,
+}
 
 
 def _validate_metadata(document: dict[str, Any]) -> None:
-    required = {
-        "schema_version",
-        "bundle_id",
-        "request_sha256",
-        "sha256",
-        "source",
-        "runner_image",
-        "configuration",
-        "provenance",
-        "artifacts",
-        "created_at",
-    }
-    if set(document) != required or document.get("schema_version") != 1:
-        raise BundleError("bundle metadata has an invalid top-level shape")
-    if not isinstance(document["bundle_id"], str) or not _ID.fullmatch(
-        document["bundle_id"]
-    ):
-        raise BundleError("bundle_id is invalid")
-    if not isinstance(document["request_sha256"], str) or not _SHA256.fullmatch(
-        document["request_sha256"]
-    ):
-        raise BundleError("bundle request_sha256 is invalid")
-    if not isinstance(document["sha256"], str) or not _SHA256.fullmatch(
-        document["sha256"]
-    ):
-        raise BundleError("bundle sha256 is invalid")
-    source = document["source"]
-    if (
-        not isinstance(source, dict)
-        or set(source) != {"repository", "commit"}
-        or not isinstance(source["repository"], str)
-        or not _REPOSITORY.fullmatch(source["repository"])
-        or not isinstance(source["commit"], str)
-        or not _COMMIT.fullmatch(source["commit"])
-    ):
-        raise BundleError("bundle source identity is invalid")
-    if not isinstance(document["runner_image"], str) or not _IMAGE.fullmatch(
-        document["runner_image"]
-    ):
-        raise BundleError("bundle runner image is not immutable")
-    _validate_configuration(document["configuration"])
-    if document["provenance"] not in (
-        {"mode": "compiled_clean"},
-        {"mode": "prebuilt_development"},
-    ):
-        raise BundleError("bundle provenance is invalid")
-    if not isinstance(document["created_at"], str):
-        raise BundleError("bundle created_at is invalid")
-    try:
-        created_at = datetime.fromisoformat(
-            document["created_at"].replace("Z", "+00:00")
+    diagnostics = contracts.check_shape(document, _METADATA_SHAPE, "bundle")
+    if diagnostics:
+        raise BundleError(
+            "bundle metadata is invalid: " + "; ".join(map(str, diagnostics))
         )
-    except ValueError:
-        raise BundleError("bundle created_at is invalid") from None
-    if created_at.tzinfo is None:
-        raise BundleError("bundle created_at must include a UTC offset")
     request_digest = contracts.sha256_json(
         {
-            "source": source,
+            "source": document["source"],
             "runner_image": document["runner_image"],
             "configuration": document["configuration"],
         }
@@ -477,11 +462,9 @@ def verify_bundle(
             expected_digest = artifact["sha256"]
         except (KeyError, TypeError) as error:
             raise BundleError(f"malformed artifact record: {error}") from None
-        if not isinstance(name, str) or not _ID.fullmatch(name):
+        if not isinstance(name, str):
             raise BundleError("invalid artifact name")
-        if not isinstance(expected_digest, str) or not _SHA256.fullmatch(
-            expected_digest
-        ):
+        if not isinstance(expected_digest, str):
             raise BundleError(f"invalid artifact digest: {name}")
         if name in names:
             raise BundleError(f"duplicate artifact name: {name}")
@@ -525,40 +508,74 @@ def restore_executable_bits(bundle: VerifiedBundle) -> None:
         path.chmod(path.stat().st_mode | 0o111)
 
 
+def _run_cmd(command: list[str]) -> None:
+    completed = subprocess.run(command, capture_output=True, text=True, check=False)
+    if completed.returncode != 0:
+        raise BundleError(
+            f"{Path(command[0]).name} failed with exit code {completed.returncode}: "
+            f"{completed.stdout}{completed.stderr}"
+        )
+
+
+def repack_iso(
+    bundle_dir: Path, cmdline: Path, output_iso: Path, work_dir: Path
+) -> None:
+    import gen_limine_conf
+
+    artifacts = bundle_dir / ARTIFACT_DIR
+    iso_root = work_dir / "iso_root"
+
+    shutil.rmtree(iso_root, ignore_errors=True)
+    (iso_root / "boot" / "limine").mkdir(parents=True)
+    (iso_root / "EFI" / "BOOT").mkdir(parents=True)
+
+    shutil.copyfile(artifacts / "kernel", iso_root / "boot" / "kernel")
+
+    try:
+        line = gen_limine_conf.resolve_cmdline(
+            {
+                "CMDLINE": str(cmdline),
+                "NIGHTMARE_TESTS": "",
+                "TESTS": "",
+                "EXTRA_CMDLINE": "",
+            }
+        )
+    except gen_limine_conf.ConfError as error:
+        raise BundleError(str(error)) from error
+
+    conf = (artifacts / "limine.conf").read_text(encoding="utf-8")
+    destination = iso_root / "boot" / "limine" / "limine.conf"
+    destination.write_text(gen_limine_conf.render(conf, line), encoding="utf-8")
+
+    for asset in LIMINE_BOOT_ASSETS:
+        shutil.copyfile(artifacts / asset, iso_root / "boot" / "limine" / asset)
+    for asset in EFI_ASSETS:
+        shutil.copyfile(artifacts / asset, iso_root / "EFI" / "BOOT" / asset)
+
+    output_iso.parent.mkdir(parents=True, exist_ok=True)
+    _run_cmd(["xorriso", *XORRISO_FLAGS, str(iso_root), "-o", str(output_iso)])
+    _run_cmd([str(artifacts / "limine"), "bios-install", str(output_iso)])
+
+
 def repack(
     bundle: VerifiedBundle,
     *,
     cmdline: Path,
     out_dir: Path,
-    repo_root: Path | None = None,
 ) -> RepackMeasurement:
-    root = (repo_root or default_repo_root()).resolve()
     verify_bundle(bundle.root, expected_sha256=bundle.sha256)
     restore_executable_bits(bundle)
     out_dir = out_dir.resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
     iso_path = out_dir / "charmos-x86_64.iso"
     started = time.perf_counter()
-    completed = subprocess.run(
-        [
-            sys.executable,
-            str(root / "scripts" / "repack_nightmare_bundle.py"),
-            f"--bundle-dir={bundle.root}",
-            f"--cmdline={cmdline.resolve()}",
-            f"--output-iso={iso_path}",
-            f"--work-dir={out_dir / 'repack-work'}",
-        ],
-        cwd=root,
-        check=False,
-        capture_output=True,
-        text=True,
+    repack_iso(
+        bundle.root,
+        cmdline=cmdline.resolve(),
+        output_iso=iso_path,
+        work_dir=out_dir / "repack-work",
     )
     elapsed_ms = (time.perf_counter() - started) * 1000
-    if completed.returncode != 0:
-        raise BundleError(
-            f"bundle repack failed with exit code {completed.returncode}: "
-            f"{completed.stdout}{completed.stderr}"
-        )
     return RepackMeasurement(iso_path, elapsed_ms, iso_path.stat().st_size)
 
 

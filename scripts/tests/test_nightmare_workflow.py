@@ -1,10 +1,11 @@
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 
 import pytest
 
 from charm.nightmare import workflow
+from charm.paths import repo_root
 
+WORKFLOWS = repo_root() / ".github" / "workflows"
 NOW = datetime(2026, 9, 1, 12, 0, tzinfo=UTC)
 
 
@@ -41,7 +42,7 @@ def test_inline_command_rejects_malformed_batch() -> None:
 
 
 def test_workflow_dispatch_is_batch_scoped_and_validates_before_queueing() -> None:
-    text = Path(".github/workflows/nightmare-orchestrator.yml").read_text()
+    text = (WORKFLOWS / "nightmare-orchestrator.yml").read_text()
     assert "batch_id:" in text
     assert "claim-{1}" in text
     assert text.index("- name: Validate and place") < text.index(
@@ -131,7 +132,7 @@ tests = ["harness_smoke"]
 
 
 def test_periodic_waker_is_lightweight_and_can_dispatch() -> None:
-    text = Path(".github/workflows/nightmare-waker.yml").read_text()
+    text = (WORKFLOWS / "nightmare-waker.yml").read_text()
     assert "cron: '7/15 * * * *'" in text
     assert "actions: write" in text
     assert "runs-on: ubuntu-slim" in text

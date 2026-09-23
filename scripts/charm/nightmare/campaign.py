@@ -15,6 +15,7 @@ from typing import Any, ClassVar, Protocol
 
 from .. import protocol as P
 from .. import record as R
+from .. import report as RP
 from . import codec
 from .contracts import DiscoveryKind, ExecutionHealth
 from .suite import FLUSH_MARGIN_MS, Suite, Task
@@ -89,6 +90,21 @@ class FindingSummary:
     def repro_count(self) -> int:
         return len(self.repro_boots)
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "sig": self.sig,
+            "tier": self.tier,
+            "kind": self.kind,
+            "site": self.site,
+            "msg": self.msg,
+            "occurrences": self.occurrences,
+            "repro_boots": self.repro_boots,
+            "first_boot": self.first_boot,
+            "last_boot": self.last_boot,
+            "evidence_count": len(self.evidence),
+            "evidence": self.evidence,
+        }
+
 
 @dataclass(frozen=True)
 class TraceSample:
@@ -97,6 +113,15 @@ class TraceSample:
     boot_index: int
     task_name: str
     is_boundary: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "at_ms": self.at_ms,
+            "cumulative_progress": self.cumulative_progress,
+            "boot_index": self.boot_index,
+            "task_name": self.task_name,
+            "is_boundary": self.is_boundary,
+        }
 
 
 @dataclass
@@ -129,6 +154,30 @@ class BootResult:
         return self.ok and any(
             attempt.status == BootStatus.INFRA.value for attempt in self.attempts[:-1]
         )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "boot_index": self.boot_index,
+            "task_name": self.task_name,
+            "seed": hex(self.seed) if self.seed is not None else None,
+            "duration_ms": self.duration_ms,
+            "exit_code": self.exit_code,
+            "status": self.status,
+            "reason": self.reason,
+            "progress": self.progress,
+            "findings_count": len(self.findings),
+            "recovered_infrastructure": self.recovered_infrastructure,
+            "attempts": [
+                {
+                    "attempt": attempt.attempt,
+                    "duration_ms": attempt.duration_ms,
+                    "exit_code": attempt.exit_code,
+                    "status": attempt.status,
+                    "reason": attempt.reason,
+                }
+                for attempt in self.attempts
+            ],
+        }
 
 
 @dataclass(frozen=True)
@@ -227,6 +276,41 @@ class CampaignResult:
         if any(boot.status in INFRASTRUCTURE_STATUSES for boot in self.all_boots):
             return ExecutionHealth.INFRASTRUCTURE
         return ExecutionHealth.HEALTHY
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "campaign_id": self.campaign_id,
+            "suite_name": self.suite_name,
+            "runner_index": self.runner_index,
+            "total_runners": self.total_runners,
+            "status": self.status,
+            "ok": self.ok,
+            "discovery": {
+                "kind": self.discovery_kind.value,
+                "finding_count": sum(f.occurrences for f in self.findings),
+            },
+            "execution": {"health": self.execution_health.value},
+            "summary": {
+                "total_boots": self.total_boots,
+                "completed_boots": self.completed_boots,
+                "finding_boots": self.finding_boots,
+                "failed_boots": self.failed_boots,
+                "stalled_boots": self.stalled_boots,
+                "skipped_boots": self.skipped_boots,
+                "total_progress": self.total_progress,
+                "total_duration_ms": self.total_duration_ms,
+                "tail_unused_ms": self.tail_unused_ms,
+                "crashed_boots": self.crashed_boots,
+                "unique_findings": len(self.findings),
+                "recovered_infrastructure_boots": sum(
+                    boot.recovered_infrastructure for boot in self.all_boots
+                ),
+            },
+            "findings": [f.to_dict() for f in self.findings],
+            "gate": self.gate.to_dict() if self.gate is not None else None,
+            "boots": [b.to_dict() for b in self.boots],
+            "trace": [t.to_dict() for t in self.trace],
+        }
 
 
 class CampaignClock:
@@ -735,9 +819,8 @@ class BundleBootRunner:
         13: 6,
     }
 
-    def __init__(self, bundle: Any, repo_root: Path):
+    def __init__(self, bundle: Any):
         self.bundle = bundle
-        self.repo_root = repo_root
 
     def run_boot(
         self,
@@ -767,7 +850,6 @@ class BundleBootRunner:
                 self.bundle,
                 cmdline=cmdline_path,
                 out_dir=runtime_dir,
-                repo_root=self.repo_root,
             )
             disk_path = runtime_dir / "disk.img"
             qmp_socket = runtime_dir / "qmp.sock"
@@ -1075,90 +1157,8 @@ class CampaignRunner:
         )
 
 
-def _boot_document(b: BootResult) -> dict[str, Any]:
-    return {
-        "boot_index": b.boot_index,
-        "task_name": b.task_name,
-        "seed": hex(b.seed) if b.seed is not None else None,
-        "duration_ms": b.duration_ms,
-        "exit_code": b.exit_code,
-        "status": b.status,
-        "reason": b.reason,
-        "progress": b.progress,
-        "findings_count": len(b.findings),
-        "recovered_infrastructure": b.recovered_infrastructure,
-        "attempts": [
-            {
-                "attempt": attempt.attempt,
-                "duration_ms": attempt.duration_ms,
-                "exit_code": attempt.exit_code,
-                "status": attempt.status,
-                "reason": attempt.reason,
-            }
-            for attempt in b.attempts
-        ],
-    }
-
-
 def render_json(result: CampaignResult) -> str:
-    data = {
-        "campaign_id": result.campaign_id,
-        "suite_name": result.suite_name,
-        "runner_index": result.runner_index,
-        "total_runners": result.total_runners,
-        "status": result.status,
-        "ok": result.ok,
-        "discovery": {
-            "kind": result.discovery_kind.value,
-            "finding_count": sum(f.occurrences for f in result.findings),
-        },
-        "execution": {"health": result.execution_health.value},
-        "summary": {
-            "total_boots": result.total_boots,
-            "completed_boots": result.completed_boots,
-            "finding_boots": result.finding_boots,
-            "failed_boots": result.failed_boots,
-            "stalled_boots": result.stalled_boots,
-            "skipped_boots": result.skipped_boots,
-            "total_progress": result.total_progress,
-            "total_duration_ms": result.total_duration_ms,
-            "tail_unused_ms": result.tail_unused_ms,
-            "crashed_boots": result.crashed_boots,
-            "unique_findings": len(result.findings),
-            "recovered_infrastructure_boots": sum(
-                boot.recovered_infrastructure for boot in result.all_boots
-            ),
-        },
-        "findings": [
-            {
-                "sig": f.sig,
-                "tier": f.tier,
-                "kind": f.kind,
-                "site": f.site,
-                "msg": f.msg,
-                "occurrences": f.occurrences,
-                "repro_boots": f.repro_boots,
-                "first_boot": f.first_boot,
-                "last_boot": f.last_boot,
-                "evidence_count": len(f.evidence),
-                "evidence": f.evidence,
-            }
-            for f in result.findings
-        ],
-        "gate": _boot_document(result.gate) if result.gate is not None else None,
-        "boots": [_boot_document(b) for b in result.boots],
-        "trace": [
-            {
-                "at_ms": t.at_ms,
-                "cumulative_progress": t.cumulative_progress,
-                "boot_index": t.boot_index,
-                "task_name": t.task_name,
-                "is_boundary": t.is_boundary,
-            }
-            for t in result.trace
-        ],
-    }
-    return json.dumps(data, indent=2) + "\n"
+    return json.dumps(result.to_dict(), indent=2) + "\n"
 
 
 def render_markdown(result: CampaignResult) -> str:
@@ -1176,38 +1176,66 @@ def render_markdown(result: CampaignResult) -> str:
     ]
 
     if result.findings:
-        lines.extend(
-            [
-                "## Findings",
-                "",
-                "| Signature | Tier | Kind | Site | Occurrences | Boots | Message |",
-                "|---|---|---|---|---|---|---|",
-            ]
-        )
+        lines.extend(["## Findings", ""])
+        headers = [
+            "Signature",
+            "Tier",
+            "Kind",
+            "Site",
+            "Occurrences",
+            "Boots",
+            "Message",
+        ]
+        rows = []
         for f in result.findings:
             boots_str = ", ".join(str(b) for b in f.repro_boots[:10])
             if len(f.repro_boots) > 10:
                 boots_str += f", ... (+{len(f.repro_boots) - 10} more)"
-            lines.append(
-                f"| `{f.sig}` | `{f.tier}` | `{f.kind}` | `{f.site}` | {f.occurrences} | {boots_str} | {f.msg} |"
+            rows.append(
+                [
+                    RP.md_code(f.sig),
+                    RP.md_code(f.tier),
+                    RP.md_code(f.kind),
+                    RP.md_code(f.site),
+                    str(f.occurrences),
+                    RP.md_cell(boots_str),
+                    RP.md_cell(f.msg),
+                ]
             )
+        RP.md_table(lines.append, headers, rows)
         lines.append("")
     else:
         lines.extend(["## Findings", "", "No findings detected in this campaign.", ""])
 
-    lines.extend(
-        [
-            "## Boots",
-            "",
-            "| Boot | Task | Seed | Duration | Exit | Status | Attempts | Progress | Findings |",
-            "|---|---|---|---|---|---|---|---|---|",
-        ]
-    )
+    lines.extend(["## Boots", ""])
+    headers = [
+        "Boot",
+        "Task",
+        "Seed",
+        "Duration",
+        "Exit",
+        "Status",
+        "Attempts",
+        "Progress",
+        "Findings",
+    ]
+    rows = []
     for b in result.boots:
         seed_str = f"0x{b.seed:016x}" if b.seed is not None else "-"
-        lines.append(
-            f"| {b.boot_index} | {b.task_name} | {seed_str} | {b.duration_ms}ms | {b.exit_code} | `{b.status}` | {max(1, len(b.attempts))} | {b.progress:,} | {len(b.findings)} |"
+        rows.append(
+            [
+                str(b.boot_index),
+                RP.md_cell(b.task_name),
+                seed_str,
+                f"{b.duration_ms}ms",
+                str(b.exit_code),
+                RP.md_code(b.status),
+                str(max(1, len(b.attempts))),
+                f"{b.progress:,}",
+                str(len(b.findings)),
+            ]
         )
+    RP.md_table(lines.append, headers, rows)
     lines.append("")
 
     return "\n".join(lines)
