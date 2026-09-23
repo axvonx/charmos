@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 /* ==== cc_ Attributes, Markers, and Compiler Directives ==== */
+#define cc_align_as(x) _Alignas(x)
 
 #define cc_code_init /* Nothing for now, TODO: */
 
