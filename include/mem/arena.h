@@ -1,7 +1,7 @@
 /* @title: Memory Arenas */
 #pragma once
 #include <err.h>
-#include <mem/alloc.h>
+#include <mem/alloc_param.h>
 #include <mem/arena_types.h>
 #include <stddef.h>
 #include <stdint.h>

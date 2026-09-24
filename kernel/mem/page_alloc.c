@@ -8,6 +8,7 @@
 #include <mem/pmm.h>
 #include <mem/vas.h>
 
+ALLOC_FLAG_EX_REGISTER(PG, CONTIGUOUS);
 static bool page_alloc_pf_valid(struct page_fault_info *pfi);
 
 static struct page_fault_handler_ops page_alloc_pfho = {

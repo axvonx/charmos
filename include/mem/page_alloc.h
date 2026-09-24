@@ -1,7 +1,7 @@
 /* @title: Page Allocation */
 #pragma once
 #include <compiler/core.h>
-#include <mem/alloc.h>
+#include <mem/alloc_param.h>
 #include <stddef.h>
 #include <stdint.h>
 

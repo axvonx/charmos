@@ -120,6 +120,12 @@ SECTIONS {
         __ekernel_address_ranges = .;
         . = ALIGN(64);
     } :data
+    .kernel_alloc_flag_ex_descs : ALIGN(64) {
+        __skernel_alloc_flag_ex_descs = .;
+        KEEP(*(.kernel_alloc_flag_ex_descs))
+        __ekernel_alloc_flag_ex_descs = .;
+        . = ALIGN(64);
+    } :data
 
     .kernel_percpu_desc : ALIGN(64) {
         __skernel_percpu_desc = .;

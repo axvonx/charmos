@@ -21,14 +21,25 @@ Implications and the AUTO state:
 ]]
 
 set(DEBUG_FLAGS
+    #
+    # Synchronization
     DEBUG_LOCK_CHK
+    #
+    # Scheduling and threads
     DEBUG_SCHED_NESTING
     DEBUG_CLIMB
+    #
+    # Drivers
     DEBUG_USB
     DEBUG_USB_XHCI
+    #
+    # Memory management
     DEBUG_ARENA
     DEBUG_SLAB
     DEBUG_SLAB_DEEP
+    DEBUG_ALLOC_PARAM
+    #
+    # Misc.
     DEBUG_LIST
     DEBUG_CMDLINE
     DEBUG_ASSERT # Debug assertions
@@ -36,10 +47,7 @@ set(DEBUG_FLAGS
 
 set(PROFILING_FLAGS PROFILING_SCHED)
 
-set(TEST_NIGHTMARE_FLAGS
-    TEST_NIGHTMARE_LOCKS
-    TEST_NIGHTMARE_WAKE
-    TEST_NIGHTMARE_SMOKE)
+set(TEST_NIGHTMARE_FLAGS TEST_NIGHTMARE_LOCKS TEST_NIGHTMARE_WAKE TEST_NIGHTMARE_SMOKE)
 
 # driver:implied -- soft, overridable by setting the implied flag to OFF
 set(DEBUG_FLAG_MAP DEBUG_ASAN:DEBUG_SLAB_DEEP)
