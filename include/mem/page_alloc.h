@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define ALLOC_FLAG_EX_PG_CONTIGUOUS ALLOC_FLAG_AVAIL_BIT(0)
+
 #define page_alloc(n_pages, ...)                                               \
     page_alloc_internal((n_pages), alloc_params_with_defaults(                 \
                                        ALLOC_FLAGS_NONE,                       \

@@ -86,7 +86,7 @@ static bool page_alloc_pf_valid(struct page_fault_info *pfi) {
 
 void *page_alloc_internal(size_t n_pages, struct alloc_params params) {
     void *ret;
-    if (n_pages == 1 || params.flags & ALLOC_FLAG_CONTIGUOUS) {
+    if (n_pages == 1 || params.flags & ALLOC_FLAG_EX(PG, CONTIGUOUS)) {
         paddr_t phys = pmm_alloc_pages(n_pages);
         if (!phys)
             return NULL;

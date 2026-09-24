@@ -56,8 +56,8 @@ enum arena_flags : uint64_t {
     /* "tagging at the per-object granularity */
     ARENA_FLAG_TAGGED = 1 << 0,
 
-    /* "stack depot injection at the per-object granularity" */
-    ARENA_FLAG_TRACKED = 1 << 1,
+    /* "stack trace at the per-object granularity" */
+    ARENA_FLAG_TRACED = 1 << 1,
 
     /* Has a log site */
     ARENA_FLAG_LOGGED = 1 << 2,

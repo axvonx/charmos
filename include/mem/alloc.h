@@ -46,14 +46,21 @@ LOG_HANDLE_EXTERN(slab_flags);
 #define ALLOC_FLAG_CLASS(flags)                                                \
     ((flags >> ALLOC_CLASS_SHIFT) & ALLOC_CLASS_MASK)
 
-/* Bits 16..23 are available, this gives the 0-indexed Nth available bit */
+/* Bits 16..23 are available, this gives the 0-indexed Nth available bit.
+ *
+ * Do note that this is a compile-time constant, not an expression, because
+ * it should be usable in enum definitions and other places, thus,
+ * bounds safety is not enforceable (unfortunate) */
 #define ALLOC_FLAG_AVAIL_BIT(n) (1 << (ALLOC_CLASS_SHIFT - 4 + (n)))
+
+#define ALLOC_FLAG_EX_JOIN(subsys, flag) ALLOC_FLAG_EX_##subsys##_##flag
+#define ALLOC_FLAG_EX(subsys, flag) ALLOC_FLAG_EX_JOIN(subsys, flag)
 
 /* alloc_flags: 32 bit bitflags
  *
  *      ┌──────────────────────────────────────────────────────┐
  * Bits │ 31..28 27..24 23..20 19..16 15..12 11..8  7..4  3..0 │
- * Use  │  %%%%   ###*   AAAA   AAAA   ****   ****  **Zc  MPFC │
+ * Use  │  %%%%   ###*   AAAA   AAAA   ****   ****  ***Z  MPFC │
  *      └──────────────────────────────────────────────────────┘
  *
  * C - "Prefer cache alignment"
@@ -63,8 +70,6 @@ LOG_HANDLE_EXTERN(slab_flags);
  * P - "Allow memory to be pageable"
  *
  * M - "Allow memory to be movable"
- *
- * c - Physically contiguous - applies only to page_alloc
  *
  * Z - Zero on alloc, memory is zeroed
  *
@@ -96,12 +101,8 @@ enum alloc_flags : uint32_t {
     ALLOC_FLAG_MOVABLE = (1 << 3),
     ALLOC_FLAG_NONMOVABLE = 0,
 
-    /* Contiguous */
-    ALLOC_FLAG_CONTIGUOUS = (1 << 4),
-    ALLOC_FLAG_NONCONTIGUOUS = 0,
-
     /* Zero on alloc */
-    ALLOC_FLAG_ZERO_ON_ALLOC = (1 << 5),
+    ALLOC_FLAG_ZERO_ON_ALLOC = (1 << 4),
     ALLOC_FLAG_NON_ZERO = 0,
 
     /* Allocation classes */
@@ -136,6 +137,8 @@ static inline bool alloc_flags_valid(enum alloc_flags flags) {
 #define ALLOC_BEHAVIOR_FLAG_SHIFT 4
 #define ALLOC_BEHAVIOR_MASK (0xF)
 #define ALLOC_BEHAVIOR_AVAILABLE_SHIFT 12
+
+/* Bits 12..15 are available, this gives the 0-indexed Nth available bit */
 #define ALLOC_BEHAVIOR_AVAIL_BIT(n) (1 << (ALLOC_BEHAVIOR_AVAILABLE_SHIFT + n))
 
 /* alloc_behavior: 16 bits for a behavior and flags
