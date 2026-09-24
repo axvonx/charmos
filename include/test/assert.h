@@ -473,7 +473,7 @@
 #define TEST_WORKER_EXPECT(fleet, cond)                                        \
     do {                                                                       \
         if (cc_unlikely(!(cond))) {                                            \
-            cc_var_unused(fleet);                                              \
+            cc_unused(fleet);                                                  \
             test_err("worker expect \"%s\" failed", #cond);                    \
             test_global.current_test->soft_fails++;                            \
         }                                                                      \

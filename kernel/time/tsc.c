@@ -28,7 +28,7 @@ static bool tsc_use_tsc_for_timekeeping = false;
 static struct clock *tsc_clock_inst = NULL;
 
 static uint64_t tsc_clock_read(struct clock *clk) {
-    cc_var_unused(clk);
+    cc_unused(clk);
     return rdtsc_ordered();
 }
 

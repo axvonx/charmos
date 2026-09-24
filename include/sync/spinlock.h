@@ -223,38 +223,38 @@ static inline void spinlock_policy_set_internal(struct spinlock *lock,
 
 static inline void spinlock_policy_init_internal(struct spinlock *lock,
                                                  enum lock_chk_flags flags) {
-    cc_var_unused(lock, flags);
+    cc_unused(lock, flags);
 }
 
 static inline void spinlock_shallow_init_internal(struct spinlock *lock) {
-    cc_var_unused(lock);
+    cc_unused(lock);
 }
 
 static inline void
 spinlock_map_init_internal(struct spinlock *lock,
                            const struct lock_chk_class *class,
                            enum lock_chk_flags flags) {
-    cc_var_unused(lock, class, flags);
+    cc_unused(lock, class, flags);
 }
 
 static inline void spinlock_note_use(struct spinlock *lock,
                                      enum lock_op_flags flags) {
-    cc_var_unused(lock, flags);
+    cc_unused(lock, flags);
 }
 
 static inline bool spinlock_order_checked(struct spinlock *lock) {
-    cc_var_unused(lock);
+    cc_unused(lock);
     return false;
 }
 
 static inline void spinlock_classify(struct spinlock *lock,
                                      enum lock_op_flags usage,
                                      const struct lock_chk_site *site) {
-    cc_var_unused(lock, usage, site);
+    cc_unused(lock, usage, site);
 }
 
 static inline bool spinlock_deep_checked(struct spinlock *lock) {
-    cc_var_unused(lock);
+    cc_unused(lock);
     return false;
 }
 
@@ -271,56 +271,56 @@ static inline void spinlock_acq_begin(struct spinlock_acq_scope *scope,
                                       const struct lock_chk_site *site,
                                       uint8_t subclass,
                                       enum lock_op_flags flags) {
-    cc_var_unused(scope, lock, site, subclass, flags);
+    cc_unused(scope, lock, site, subclass, flags);
 }
 
 static inline void spinlock_acq_commit(struct spinlock_acq_scope *scope) {
-    cc_var_unused(scope);
+    cc_unused(scope);
 }
 
 static inline void spinlock_acq_abort(struct spinlock_acq_scope *scope) {
-    cc_var_unused(scope);
+    cc_unused(scope);
 }
 
 static inline void spinlock_rel_begin(struct spinlock_rel_scope *scope,
                                       struct spinlock *lock,
                                       const struct lock_chk_site *site) {
-    cc_var_unused(scope, lock, site);
+    cc_unused(scope, lock, site);
 }
 
 static inline void spinlock_rel_commit(struct spinlock_rel_scope *scope) {
-    cc_var_unused(scope);
+    cc_unused(scope);
 }
 
 static inline void spinlock_shallow_push(struct spinlock *lock, enum irql irql,
                                          const struct lock_chk_site *site) {
-    cc_var_unused(lock, irql, site);
+    cc_unused(lock, irql, site);
 }
 
 static inline void
 spinlock_shallow_validate_top(struct spinlock *lock, enum irql old,
                               const struct lock_chk_site *site) {
-    cc_var_unused(lock, old, site);
+    cc_unused(lock, old, site);
 }
 
 static inline void spinlock_shallow_pop(struct spinlock *lock) {
-    cc_var_unused(lock);
+    cc_unused(lock);
 }
 
 static inline bool spinlock_assert_held_deep(struct spinlock *lock,
                                              bool want_held,
                                              const struct lock_chk_site *site) {
-    cc_var_unused(lock, want_held, site);
+    cc_unused(lock, want_held, site);
     return false;
 }
 
 static inline void spinlock_assert_initialized(struct spinlock *lock) {
-    cc_var_unused(lock);
+    cc_unused(lock);
 }
 
 static inline void spinlock_policy_set_internal(struct spinlock *lock,
                                                 enum lock_chk_flags flags) {
-    cc_var_unused(lock, flags);
+    cc_unused(lock, flags);
 }
 
 #endif /* DEBUG_LOCK_CHK */

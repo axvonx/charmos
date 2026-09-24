@@ -162,7 +162,7 @@ cc_no_asan void k_main(void) {
 }
 
 void k_sch_main(void *nop) {
-    cc_var_unused(nop);
+    cc_unused(nop);
     /* make sure everyone else is idle before we
      * advance the bootstage here... */
     smp_wait_for_others_to_idle();

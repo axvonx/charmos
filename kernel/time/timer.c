@@ -142,7 +142,7 @@ static inline void timer_sync_wait_spin() {
 }
 
 static void timer_dpc(void *ctx, void *unused) {
-    cc_var_unused(unused);
+    cc_unused(unused);
     struct timer_percpu *pcpu = ctx;
 
     while (true) {
@@ -586,7 +586,7 @@ void timer_base_reprogram_hardware(cpu_id_t cpu) {
 }
 
 enum irq_result timer_isr(void *ctx, uint8_t vec, struct irq_context *rsp) {
-    cc_var_unused(ctx, vec, rsp);
+    cc_unused(ctx, vec, rsp);
     cpu_id_t cpu = smp_id(TOPC_IRQ);
     if (!PERCPU_READY(timer_percpu))
         return IRQ_HANDLED;

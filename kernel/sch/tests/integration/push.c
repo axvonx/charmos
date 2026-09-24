@@ -6,7 +6,7 @@ static atomic_uint32_t left = 0;
 static atomic_bool at_least_one_migrated = false;
 
 static void sched_push_try(void *arg) {
-    cc_var_unused(arg);
+    cc_unused(arg);
     while (smp_id(TOPC_NONE) == 0 && !atomic_load(&at_least_one_migrated))
         scheduler_yield();
 

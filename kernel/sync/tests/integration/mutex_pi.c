@@ -10,7 +10,7 @@ static atomic_bool pi_ts_got = false;
 static atomic_uint pi_done = 0;
 
 static void pi_dummy(void *nothing) {
-    cc_var_unused(nothing);
+    cc_unused(nothing);
     test_info("dummy");
     while (atomic_load(&pi_done) < 1)
         scheduler_yield();
@@ -20,7 +20,7 @@ static void pi_dummy(void *nothing) {
 }
 
 static void pi_rt_thread(void *nothing) {
-    cc_var_unused(nothing);
+    cc_unused(nothing);
     mutex_lock(&pi_mutex);
     test_info("lock");
     kassert(mutex_read_owner(&pi_mutex) == thread_get_current());
@@ -31,7 +31,7 @@ static void pi_rt_thread(void *nothing) {
 }
 
 static void pi_ts_thread(void *nothing) {
-    cc_var_unused(nothing);
+    cc_unused(nothing);
     mutex_lock(&pi_mutex);
     test_info("lock");
     atomic_store(&pi_ts_got, true);
@@ -99,7 +99,7 @@ static atomic_bool ts1_grabbed_a = false;
 static atomic_bool ts2_grabbed_b = false;
 
 static void pi_chain_ts2(void *arg) {
-    cc_var_unused(arg);
+    cc_unused(arg);
     mutex_lock(&pi_mtx_b);
     test_info("ts2 lock b");
     atomic_store(&ts2_grabbed_b, true);
@@ -113,7 +113,7 @@ static void pi_chain_ts2(void *arg) {
 }
 
 static void pi_chain_ts1(void *arg) {
-    cc_var_unused(arg);
+    cc_unused(arg);
     mutex_lock(&pi_mtx_a);
     test_info("ts1 lock a");
     atomic_store(&ts1_grabbed_a, true);
@@ -130,7 +130,7 @@ static void pi_chain_ts1(void *arg) {
 }
 
 static void pi_chain_rt(void *arg) {
-    cc_var_unused(arg);
+    cc_unused(arg);
     test_info("rt lock");
     mutex_lock(&pi_mtx_a);
     test_info("rt lock got");
@@ -185,7 +185,7 @@ static atomic_uint pi_multi_done = 0;
 static atomic_bool ts_got = false;
 
 static void pi_multi_ts(void *arg) {
-    cc_var_unused(arg);
+    cc_unused(arg);
     mutex_lock(&pi_multi_mtx);
     test_info("multi_ts running");
     atomic_store(&ts_got, true);
@@ -199,7 +199,7 @@ static void pi_multi_ts(void *arg) {
 }
 
 static void pi_multi_rt(void *arg) {
-    cc_var_unused(arg);
+    cc_unused(arg);
     test_info("multi_rt running");
     mutex_lock(&pi_multi_mtx);
     mutex_unlock(&pi_multi_mtx);
@@ -254,7 +254,7 @@ static atomic_bool pi_revert_got = false;
 static atomic_uint pi_reverted_done = 0;
 
 static void pi_revert_ts(void *arg) {
-    cc_var_unused(arg);
+    cc_unused(arg);
     mutex_lock(&pi_revert_mtx);
 
     atomic_store(&pi_revert_got, true);
@@ -272,7 +272,7 @@ static void pi_revert_ts(void *arg) {
 }
 
 static void pi_revert_rt(void *arg) {
-    cc_var_unused(arg);
+    cc_unused(arg);
     mutex_lock(&pi_revert_mtx);
     mutex_unlock(&pi_revert_mtx);
     atomic_inc(&pi_reverted_done);

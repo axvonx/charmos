@@ -277,7 +277,7 @@ struct test_globals {
     cc_wno_override_init_end                                                   \
                                                                                \
         static struct test_verdict                                             \
-        __test_fn_##grp##_##id(struct test_context *ctx cc_unused)
+        __test_fn_##grp##_##id(struct test_context *ctx cc_fn_unused)
 
 #define TEST_GROUP_DECLARE(n, ...)                                             \
     cc_wno_override_init_start extern struct test_group __test_group_##n;      \

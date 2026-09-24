@@ -58,7 +58,7 @@ void lapic_timer_enable() {
 }
 
 void lapic_eoi(struct irq_desc *unused) {
-    cc_var_unused(unused);
+    cc_unused(unused);
     lapic_write(LAPIC_REG_EOI, 0);
 }
 
@@ -221,7 +221,7 @@ void lapic_timer_init_bsp(void) {
 
 static enum err lapic_evdev_set_next_event(struct clock_evdev *ced,
                                            time_ns_t delta_ns) {
-    cc_var_unused(ced);
+    cc_unused(ced);
 
     /* The timer context guarantees that set_next_event happens under HIGH */
     freq_khz_t freq_khz = smp_core(TOPC_IRQL)->lapic_khz;
@@ -246,7 +246,7 @@ static enum err lapic_evdev_set_next_event(struct clock_evdev *ced,
 
 static enum err lapic_evdev_change_state(struct clock_evdev *ced,
                                          enum clock_evdev_state state) {
-    cc_var_unused(ced);
+    cc_unused(ced);
     uint32_t lvt = lapic_read(LAPIC_REG_LVT_TIMER);
 
     switch (state) {

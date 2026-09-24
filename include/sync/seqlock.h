@@ -17,7 +17,7 @@
  * the general naming conventions of the lock primitives with lock
  * in their name (see spinlock.h, rwlock.h)
  *
- * (begin_|end_)(read|write)(_raw)(_irq_disable)(_retry)
+ * (begin_|end_)(read|write)(_raw)(_high)(_retry)
  *
  * is the syntax ordering, broadly */
 
@@ -110,7 +110,7 @@ typedef struct seqlock seqlock_t;
 static inline void seqlock_init_chk_internal(struct seqlock *sl,
                                              const struct lock_chk_class *class,
                                              enum lock_chk_flags flags) {
-    cc_var_unused(class, flags);
+    cc_unused(class, flags);
     seqcount_init(&sl->seqcount);
     spinlock_init_chk(&sl->lock, class, flags);
 }

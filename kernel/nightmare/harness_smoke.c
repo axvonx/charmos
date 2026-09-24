@@ -57,7 +57,7 @@ NIGHTMARE_WORKER(harness_smoke_worker) {
 
 static struct nightmare_verdict
 harness_smoke_quiesce(struct nightmare_ctx *ctx) {
-    cc_var_unused(ctx);
+    cc_unused(ctx);
     return NIGHTMARE_OK;
 }
 

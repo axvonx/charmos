@@ -676,12 +676,12 @@ static void xhci_scan_ports_locked(struct xhci_device *dev) {
 
 static void xhci_process_port_status_change(struct xhci_device *dev,
                                             struct xhci_trb    *evt) {
-    cc_var_unused(evt);
+    cc_unused(evt);
     /* Scan all ports */
     xhci_scan_ports_locked(dev);
 }
 
-static cc_unused void xhci_scan_ports(struct xhci_device *dev) {
+static cc_fn_unused void xhci_scan_ports(struct xhci_device *dev) {
     enum irql irql = spin_lock_high(&dev->lock);
     xhci_scan_ports_locked(dev);
     spin_unlock(&dev->lock, irql);
@@ -726,7 +726,7 @@ void xhci_process_event_ring(struct xhci_device *xhci) {
 }
 
 enum irq_result xhci_isr(void *ctx, uint8_t vector, struct irq_context *rsp) {
-    cc_var_unused(vector, rsp);
+    cc_unused(vector, rsp);
     xhci_trace("Interrupt caught");
     struct xhci_device *dev = ctx;
 

@@ -66,7 +66,7 @@ void fixed_size_range_init(struct fixed_size_range *fsr,
                            struct fixed_size_range_attributes *attrs);
 
 #define FIXED_SIZE_RANGE_PERDOMAIN_DECLARE(name, ...)                          \
-    static cc_unused bool __fsr_##name##_enabled = false;                      \
+    static cc_fn_unused bool __fsr_##name##_enabled = false;                   \
     static void __##name##_fsr_init(struct fixed_size_range *__fsr,            \
                                     size_t __domain) {                         \
         static struct fixed_size_range **__perdomain_fsrs_##name = NULL;       \

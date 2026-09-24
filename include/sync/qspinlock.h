@@ -271,49 +271,49 @@ qspinlock_assert_held_deep(struct qspinlock *lock, bool want_held,
 
 static inline void qspinlock_policy_init_internal(struct qspinlock *lock,
                                                   enum lock_chk_flags flags) {
-    cc_var_unused(lock, flags);
+    cc_unused(lock, flags);
 }
 
 static inline void
 qspinlock_map_init_internal(struct qspinlock *lock,
                             const struct lock_chk_class *class,
                             enum lock_chk_flags flags) {
-    cc_var_unused(lock, class, flags);
+    cc_unused(lock, class, flags);
 }
 
 static inline void qspinlock_shallow_init_internal(struct qspinlock *lock) {
-    cc_var_unused(lock);
+    cc_unused(lock);
 }
 
 static inline void qspinlock_set_chk_flags(struct qspinlock *lock,
                                            enum lock_chk_flags flags) {
-    cc_var_unused(lock, flags);
+    cc_unused(lock, flags);
 }
 
 static inline void qspinlock_reinit_chk(struct qspinlock *lock,
                                         const struct lock_chk_class *class,
                                         enum lock_chk_flags flags) {
-    cc_var_unused(lock, class, flags);
+    cc_unused(lock, class, flags);
 }
 
 static inline void qspinlock_note_use(struct qspinlock *lock,
                                       enum lock_op_flags flags) {
-    cc_var_unused(lock, flags);
+    cc_unused(lock, flags);
 }
 
 static inline bool qspinlock_order_checked(struct qspinlock *lock) {
-    cc_var_unused(lock);
+    cc_unused(lock);
     return false;
 }
 
 static inline void qspinlock_classify(struct qspinlock *lock,
                                       enum lock_op_flags usage,
                                       const struct lock_chk_site *site) {
-    cc_var_unused(lock, usage, site);
+    cc_unused(lock, usage, site);
 }
 
 static inline bool qspinlock_deep_checked(struct qspinlock *lock) {
-    cc_var_unused(lock);
+    cc_unused(lock);
     return false;
 }
 
@@ -330,47 +330,47 @@ static inline void qspinlock_acq_begin(struct qspinlock_acq_scope *scope,
                                        const struct lock_chk_site *site,
                                        uint8_t subclass,
                                        enum lock_op_flags flags) {
-    cc_var_unused(scope, lock, site, subclass, flags);
+    cc_unused(scope, lock, site, subclass, flags);
 }
 
 static inline void qspinlock_acq_commit(struct qspinlock_acq_scope *scope) {
-    cc_var_unused(scope);
+    cc_unused(scope);
 }
 
 static inline void qspinlock_acq_abort(struct qspinlock_acq_scope *scope) {
-    cc_var_unused(scope);
+    cc_unused(scope);
 }
 
 static inline void qspinlock_rel_begin(struct qspinlock_rel_scope *scope,
                                        struct qspinlock *lock,
                                        const struct lock_chk_site *site) {
-    cc_var_unused(scope, lock, site);
+    cc_unused(scope, lock, site);
 }
 
 static inline void qspinlock_rel_commit(struct qspinlock_rel_scope *scope) {
-    cc_var_unused(scope);
+    cc_unused(scope);
 }
 
 static inline void qspinlock_shallow_push(struct qspinlock *lock,
                                           enum irql irql,
                                           const struct lock_chk_site *site) {
-    cc_var_unused(lock, irql, site);
+    cc_unused(lock, irql, site);
 }
 
 static inline void
 qspinlock_shallow_validate_top(struct qspinlock *lock, enum irql old,
                                const struct lock_chk_site *site) {
-    cc_var_unused(lock, old, site);
+    cc_unused(lock, old, site);
 }
 
 static inline void qspinlock_shallow_pop(struct qspinlock *lock) {
-    cc_var_unused(lock);
+    cc_unused(lock);
 }
 
 static inline bool
 qspinlock_assert_held_deep(struct qspinlock *lock, bool want_held,
                            const struct lock_chk_site *site) {
-    cc_var_unused(lock, want_held, site);
+    cc_unused(lock, want_held, site);
     return false;
 }
 

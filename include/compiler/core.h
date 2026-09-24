@@ -12,7 +12,7 @@
 #define cc_noinline __attribute__((noinline))
 #define cc_always_inline __attribute__((always_inline))
 #define cc_noreturn __attribute__((noreturn))
-#define cc_unused __attribute__((unused))
+#define cc_fn_unused __attribute__((unused))
 #define cc_maybe_unused __attribute__((unused))
 #define cc_warn_unused_result __attribute__((warn_unused_result))
 #define cc_nodiscard __attribute__((warn_unused_result))
@@ -63,7 +63,6 @@
 #define cc_constfn __attribute__((const))
 #define cc_noclone __attribute__((noclone))
 #define cc_malloc_like __attribute__((malloc))
-#define cc_nullable __attribute__((nullable))
 #define cc_naked __attribute__((naked))
 #define cc_interrupt __attribute__((interrupt))
 #define cc_no_caller_saved_registers __attribute__((no_caller_saved_registers))
@@ -76,6 +75,14 @@
 
 #define cc_alloc_size(...) __attribute__((alloc_size(__VA_ARGS__)))
 #define cc_alloc_align(param_idx) __attribute__((alloc_align(param_idx)))
+
+#if defined(__clang__)
+#define cc_nullable _Nullable
+#define cc_nonnull_ptr _Nonnull
+#else
+#define cc_nullable
+#define cc_nonnull_ptr
+#endif
 
 #if defined(__GNUC__) && !defined(__clang__) && (__GNUC__ >= 11)
 #define cc_dealloc(fn, arg_idx) __attribute__((malloc(fn, arg_idx)))
@@ -199,7 +206,7 @@
     ((void) (a), (void) (b), (void) (c), (void) (d), (void) (e), (void) (f),   \
      (void) (g), (void) (h))
 
-#define cc_var_unused(...) PP_CALL(PP_CC_VAR_UNUSED, __VA_ARGS__)
+#define cc_unused(...) PP_CALL(PP_CC_VAR_UNUSED, __VA_ARGS__)
 
 /* ==== ct_ Compile-Time & Static Assertions ==== */
 

@@ -269,12 +269,12 @@ nightmare_preflight(const struct nightmare *nm,
 }
 
 static void nightmare_soft_deadline(struct timer *timer) {
-    cc_var_unused(timer);
+    cc_unused(timer);
     nightmare_publish_stop(TEST_STOP_BUDGET);
 }
 
 static void nightmare_hard_deadline(struct timer *timer) {
-    cc_var_unused(timer);
+    cc_unused(timer);
     bool expected = false;
     if (!atomic_cas_strong(&nightmare_runtime.terminal, &expected, true,
                            mo_acq_rel, mo_acquire))

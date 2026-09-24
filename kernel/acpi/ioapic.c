@@ -57,7 +57,7 @@ static void ioapic_chip_unmask(struct irq_desc *desc) {
 }
 
 static void ioapic_chip_eoi(struct irq_desc *desc) {
-    cc_var_unused(desc);
+    cc_unused(desc);
     lapic_write(LAPIC_REG_EOI, 0);
 }
 

@@ -350,7 +350,7 @@ static void move_buddy(struct domain_buddy *buddy) {
 }
 
 static void domain_buddy_movealloc(void *a, void *b) {
-    cc_var_unused(a, b);
+    cc_unused(a, b);
     for (size_t i = 0; i < global.domain_count; i++)
         move_buddy(global.domains[i]->domain_buddy);
 }

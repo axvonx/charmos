@@ -22,7 +22,7 @@ struct pernode_descriptor {
 LINKER_SECTION_DEFINE(struct pernode_descriptor, pernode_desc);
 
 #define PERNODE_DECLARE(__type, __n, __ctor)                                   \
-    static typeof(__type) __pernode_##__n cc_unused;                           \
+    static typeof(__type) __pernode_##__n cc_fn_unused;                        \
     static struct pernode_descriptor __pernode_desc_##__n;                     \
     static void __pernode_ctor_##__n(void *inst, size_t node) {                \
         void (*const __typed_ctor)(typeof(__type) *, size_t) = (__ctor);       \
@@ -41,7 +41,7 @@ LINKER_SECTION_DEFINE(struct pernode_descriptor, pernode_desc);
             .ready = false,                                                    \
     };                                                                         \
     static struct pernode_descriptor *const __pernode_desc_ref_##__n           \
-        cc_unused = &__pernode_desc_##__n
+        cc_fn_unused = &__pernode_desc_##__n
 
 #define PERNODE_EXPORT_AS(sym_name, name)                                      \
     extern struct pernode_descriptor __pernode_desc_sym_##sym_name             \
@@ -51,9 +51,9 @@ LINKER_SECTION_DEFINE(struct pernode_descriptor, pernode_desc);
 
 #define PERNODE_DEFINE_AS(type, name, sym_name)                                \
     extern struct pernode_descriptor __pernode_desc_sym_##sym_name;            \
-    static typeof(type) __pernode_##name cc_unused;                            \
+    static typeof(type) __pernode_##name cc_fn_unused;                         \
     static struct pernode_descriptor *const __pernode_desc_ref_##name          \
-        cc_unused = &__pernode_desc_sym_##sym_name
+        cc_fn_unused = &__pernode_desc_sym_##sym_name
 
 #define PERNODE_DEFINE(type, name) PERNODE_DEFINE_AS(type, name, name)
 

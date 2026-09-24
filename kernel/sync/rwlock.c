@@ -19,7 +19,7 @@ static inline void rwlock_chk_stamp(struct rwlock *lock) {
 #endif /* DEBUG_LOCK_CHK */
 
 /* for debugging purposes - upon panic we save data in here */
-static cc_unused struct rwlock panic_rwlock;
+static cc_fn_unused struct rwlock panic_rwlock;
 static atomic(struct rwlock *) panic_rwlock_addr;
 
 static void rwlock_panic(char *msg, struct rwlock *offending_lock) {
@@ -144,11 +144,11 @@ void rwlock_reinit_chk(struct rwlock *lock, enum thread_prio_class ceiling,
 static void rwlock_chk_state_init(struct rwlock *lock,
                                   const struct lock_chk_class *class,
                                   enum lock_chk_flags flags) {
-    cc_var_unused(lock, class, flags);
+    cc_unused(lock, class, flags);
 }
 
 void rwlock_set_chk_flags(struct rwlock *lock, enum lock_chk_flags flags) {
-    cc_var_unused(lock, flags);
+    cc_unused(lock, flags);
 }
 
 void rwlock_reinit_chk(struct rwlock *lock, enum thread_prio_class ceiling,
@@ -172,7 +172,7 @@ void rwlock_init_chk_internal(struct rwlock *lock,
 void rw_lock_internal(struct rwlock *lock, enum rwlock_acquire_type acq_type,
                       uint8_t subclass,
                       const struct lock_chk_site *site) TSA_NO_ANALYSIS {
-    cc_var_unused(site);
+    cc_unused(site);
     kassert(subclass < LOCK_CHK_MAX_SUBCLASSES);
     kassert(acq_type == RWLOCK_READ || acq_type == RWLOCK_WRITE);
 
@@ -366,7 +366,7 @@ static uintptr_t rwlock_unlock_get_val_to_sub(struct rwlock *lock) {
 
 void rw_unlock_internal(struct rwlock *lock,
                         const struct lock_chk_site *site) TSA_NO_ANALYSIS {
-    cc_var_unused(site);
+    cc_unused(site);
     kassert(irq_not_in_interrupt());
     kassert(irql_get() <= IRQL_APC_LEVEL);
 
@@ -486,7 +486,7 @@ void rwlock_assert_held_internal(struct rwlock *lock,
                                   site))
         return;
 #else
-    cc_var_unused(site);
+    cc_unused(site);
 #endif
     kassert(rwlock_locked(lock, type), "rwlock not held");
 }
@@ -500,7 +500,7 @@ void rwlock_assert_not_held_internal(struct rwlock *lock,
                                   /*want_held=*/false, site))
         return;
 #else
-    cc_var_unused(site);
+    cc_unused(site);
 #endif
     /* Raw fallback can only check write mode ownership, which is
      * a small caveat of the system here, as reads can be

@@ -10,7 +10,7 @@ TEST_GROUP_DECLARE(bio_sched, .intensity_desc = {
 static atomic_bool cb1d = false;
 
 static void bio_sch_callback1(struct bio_request *req) {
-    cc_var_unused(req);
+    cc_unused(req);
 
     atomic_store(&cb1d, true);
     test_info("cb 1 success");

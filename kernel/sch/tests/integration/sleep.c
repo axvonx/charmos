@@ -6,7 +6,7 @@ TEST_GROUP_DECLARE(sched, .intensity_desc = {
                           });
 
 static void sleepy_entry(void *arg) {
-    cc_var_unused(arg);
+    cc_unused(arg);
     thread_sleep_for_ms(50);
 }
 
@@ -21,7 +21,7 @@ TEST_DECLARE_INTEGRATION(sched, sleep_ms) {
 static atomic_bool slept_for_us = false;
 
 static void micro_sleep_entry(void *arg) {
-    cc_var_unused(arg);
+    cc_unused(arg);
     thread_sleep_for_us(200);
     atomic_store(&slept_for_us, true);
 }
@@ -40,7 +40,7 @@ static atomic_bool short_sleep_stop = false;
 static atomic_size_t short_sleep_count = 0;
 
 static void short_sleep_entry(void *arg) {
-    cc_var_unused(arg);
+    cc_unused(arg);
     for (size_t i = 0; i < 200 && !atomic_load(&short_sleep_stop); i++) {
         thread_sleep_for_us(1);
         atomic_inc(&short_sleep_count);
@@ -78,12 +78,12 @@ static atomic_bool si_ok = false;
 static atomic_bool si_started = false;
 
 static void apc_si(void *apc) {
-    cc_var_unused(apc);
+    cc_unused(apc);
     atomic_store(&si_apc_ran, true);
 }
 
 static void apc_enqueue_thread(void *arg) {
-    cc_var_unused(arg);
+    cc_unused(arg);
     struct apc *apc = apc_create();
     apc_init(apc, apc_si, NULL, apc_destroy_free);
 
@@ -102,7 +102,7 @@ static void apc_enqueue_thread(void *arg) {
 }
 
 static void sleeping_thread(void *arg) {
-    cc_var_unused(arg);
+    cc_unused(arg);
     thread_wait_prepare_to_sleep(&si_wait, &si_wait, THREAD_WAIT_INTERRUPTIBLE);
     atomic_store(&si_started, true);
     thread_wait_complete();
@@ -111,7 +111,7 @@ static void sleeping_thread(void *arg) {
 }
 
 static void waking_thread(void *arg) {
-    cc_var_unused(arg);
+    cc_unused(arg);
     while (!atomic_load(&si_apc_ran))
         scheduler_yield();
 
@@ -149,12 +149,12 @@ static atomic_bool sub_interrupted = false;
 static atomic_bool sub_started = false;
 
 static void apc_sub(void *apc) {
-    cc_var_unused(apc);
+    cc_unused(apc);
     atomic_store(&sub_apc_ran, true);
 }
 
 static void apc_sub_enq_thread(void *arg) {
-    cc_var_unused(arg);
+    cc_unused(arg);
     struct apc *apc = apc_create();
     apc_init(apc, apc_sub, NULL, apc_destroy_free);
 
@@ -176,7 +176,7 @@ static void apc_sub_enq_thread(void *arg) {
 }
 
 static void sleeping_sub_thread(void *arg) {
-    cc_var_unused(arg);
+    cc_unused(arg);
     atomic_store(&sub_started, true);
 
     thread_park();
@@ -210,7 +210,7 @@ static atomic_bool arb_started = false;
 static atomic_bool arb_matched = false;
 
 static void arbitrary_sleeping_thread(void *arg) {
-    cc_var_unused(arg);
+    cc_unused(arg);
     atomic_store(&arb_started, true);
 
     thread_park();
@@ -218,7 +218,7 @@ static void arbitrary_sleeping_thread(void *arg) {
 }
 
 static void arbitrary_waking_thread(void *arg) {
-    cc_var_unused(arg);
+    cc_unused(arg);
     while (!atomic_load(&arb_started))
         cpu_pause();
 

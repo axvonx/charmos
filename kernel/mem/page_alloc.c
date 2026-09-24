@@ -117,7 +117,7 @@ void *page_alloc_demand_internal(size_t n_pages, struct alloc_params params) {
 }
 
 void page_free_internal(void *ptr, size_t n_pages, enum alloc_behavior b) {
-    cc_var_unused(b);
+    cc_unused(b);
 #ifdef DEBUG_ASAN
     if (ptr)
         asan_poison(ptr, n_pages * PAGE_SIZE);

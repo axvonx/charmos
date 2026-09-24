@@ -41,7 +41,7 @@ void condvar_init(struct condvar *cv, bool irq_disable) {
 }
 
 static void nop_callback(struct thread *unused) {
-    cc_var_unused(unused);
+    cc_unused(unused);
 }
 
 struct thread *condvar_signal_callback(struct condvar *cv,

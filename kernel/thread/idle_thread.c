@@ -8,7 +8,7 @@
 #include <thread/workqueue.h>
 
 void scheduler_idle_main(void *nop) {
-    cc_var_unused(nop);
+    cc_unused(nop);
     struct scheduler *sched = global.schedulers[smp_id_raw()];
 
     while (true) {

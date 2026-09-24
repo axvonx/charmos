@@ -125,7 +125,7 @@ TEST_DECLARE_INTEGRATION(mem, tlb_shootdown_flush_all,
 #define TLB_CONTENTION_MAX_THREADS ((size_t) 64)
 
 static void tlb_spammer(void *arg) {
-    cc_var_unused(arg);
+    cc_unused(arg);
     paddr_t p = pmm_alloc_page();
     void *va = vmm_map_bump(p, PAGE_SIZE, 0);
 

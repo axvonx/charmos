@@ -265,7 +265,7 @@ static inline void set_core_awake(void) {
 }
 
 void smp_wakeup(struct limine_mp_info *info) {
-    cc_var_unused(info);
+    cc_unused(info);
     irq_disable();
 
     asm volatile("mov %0, %%cr3" ::"r"(cr3));
@@ -367,7 +367,7 @@ static uint8_t entry = 0;
 
 static enum irq_result tick_op_isr(void *ctx, uint8_t vector,
                                    struct irq_context *rsp) {
-    cc_var_unused(ctx, vector, rsp);
+    cc_unused(ctx, vector, rsp);
     if (enable) {
         scheduler_tick_enable();
     } else {

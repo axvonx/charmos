@@ -20,19 +20,19 @@ bool __list_splice_valid(const struct list_head *list,
 static inline bool __list_add_valid(const struct list_head *new,
                                     const struct list_head *prev,
                                     const struct list_head *next) {
-    cc_var_unused(new, prev, next);
+    cc_unused(new, prev, next);
     return true;
 }
 
 static inline bool __list_del_entry_valid(const struct list_head *entry) {
-    cc_var_unused(entry);
+    cc_unused(entry);
     return true;
 }
 
 static inline bool __list_splice_valid(const struct list_head *list,
                                        const struct list_head *prev,
                                        const struct list_head *next) {
-    cc_var_unused(list, prev, next);
+    cc_unused(list, prev, next);
     return true;
 }
 #endif /* DEBUG_LIST */

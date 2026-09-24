@@ -139,7 +139,7 @@ void nightmare_perturb_waker(struct nightmare_ctx *ctx,
 }
 
 static void nightmare_apc_probe(void *arg) {
-    cc_var_unused(arg);
+    cc_unused(arg);
 }
 
 void nightmare_perturb_apc_spammer(struct nightmare_ctx *ctx,
@@ -177,7 +177,7 @@ void nightmare_perturb_apc_spammer(struct nightmare_ctx *ctx,
 
 void nightmare_perturb_stutter(struct nightmare_ctx *ctx,
                                struct test_conc_worker *worker) {
-    cc_var_unused(worker);
+    cc_unused(worker);
     const struct nightmare_perturb_config *cfg =
         nightmare_perturb_config_lookup("stutter");
     time_ms_t period_ms =
@@ -269,7 +269,7 @@ void nightmare_perturb_stutter(struct nightmare_ctx *ctx,
 
 void nightmare_perturb_alloc_pressure(struct nightmare_ctx *ctx,
                                       struct test_conc_worker *worker) {
-    cc_var_unused(ctx);
+    cc_unused(ctx);
     const struct nightmare_perturb_config *cfg =
         nightmare_perturb_config_lookup("alloc_pressure");
     time_us_t interval_us =
@@ -330,7 +330,7 @@ void nightmare_perturb_alloc_pressure(struct nightmare_ctx *ctx,
 
 void nightmare_perturb_inject_armer(struct nightmare_ctx *ctx,
                                     struct test_conc_worker *worker) {
-    cc_var_unused(ctx);
+    cc_unused(ctx);
     const struct nightmare_perturb_config *cfg =
         nightmare_perturb_config_lookup("inject_armer");
     time_us_t interval_us =
