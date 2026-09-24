@@ -273,7 +273,7 @@ static void send_to_compatible_cpu(struct thread *t) {
     size_t go_to = find_migration_target(t);
     struct rt_scheduler *next =
         global.schedulers[go_to]->rt->active_mapping->rts;
-    enum irql irql = spin_lock_irq_disable(&next->lock);
+    enum irql irql = spin_lock_high(&next->lock);
 
     /* TODO: Wrap around thread add/remove to better work with counters and
      * stuff.
@@ -295,7 +295,7 @@ static bool try_migrate_all_before_switch(struct rt_scheduler *rts,
      * allows us to take our own rt_scheduler lock, and perform proper
      * lock ordering after we move all the threads off of its runqueues.
      */
-    enum irql irql = spin_lock_irq_disable(&rts->lock);
+    enum irql irql = spin_lock_high(&rts->lock);
 
     /* Tell the `st` to give us all of its threads so we can take a gander */
     /* TODO: Write a wrapper macro around any operation call */
@@ -352,7 +352,7 @@ static void re_enqueue_threads(struct rt_scheduler *rts,
 
     list_for_each_entry_safe(iter, tmp, threads, rt_list_node) {
         list_del_init(&iter->rt_list_node);
-        enum irql irql = spin_lock_irq_disable(&rts->lock);
+        enum irql irql = spin_lock_high(&rts->lock);
 
         /* TODO: remember to wrap these! */
         rts->mapping_source->static_bptr->ops.add_thread(rts, iter);
@@ -432,7 +432,7 @@ void rt_scheduler_switch() {
         return clear_switch_and_post(pcpu, RT_SCHEDULER_ERR_NOT_FOUND);
 
     struct rt_scheduler_static *from = pcpu->active_mapping->static_bptr;
-    enum irql girql = spin_lock_irq_disable(&rt_global.switch_lock);
+    enum irql girql = spin_lock_high(&rt_global.switch_lock);
     enum rt_scheduler_error err = RT_SCHEDULER_ERR_OK;
     bool put_into = false;
 

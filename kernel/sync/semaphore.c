@@ -23,7 +23,7 @@ void semaphore_init(struct semaphore *s, int value, bool irq_disable) {
 static enum irql
 semaphore_lock_internal(struct semaphore *sem) TSA_NO_ANALYSIS {
     if (sem->irq_disable)
-        return spin_lock_irq_disable(&sem->lock);
+        return spin_lock_high(&sem->lock);
 
     return spin_lock(&sem->lock);
 }

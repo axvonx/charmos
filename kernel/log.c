@@ -572,7 +572,7 @@ void log_sites_init(void) {
 }
 
 void log_dump_all(void) {
-    enum irql irql = spin_lock_irq_disable(&log_global.list.lock);
+    enum irql irql = spin_lock_high(&log_global.list.lock);
 
     struct log_site *site;
     list_for_each_entry(site, &log_global.list.list, list) {

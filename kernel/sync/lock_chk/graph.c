@@ -375,7 +375,7 @@ enum lock_chk_result lock_chk_graph_resolve_node(const struct lock_chk_ctx *ctx,
                                                  struct lock_chk_map *map,
                                                  uint8_t subclass,
                                                  struct lock_chk_node **out) {
-    bool irqs_enabled = raw_spin_lock_irq_disable(&ctx->graph->lock);
+    bool irqs_enabled = raw_spin_lock_high(&ctx->graph->lock);
     enum lock_chk_result result =
         resolve_node(ctx->graph, map, subclass, ctx->req, out);
     raw_spin_unlock_irq_restore(&ctx->graph->lock, irqs_enabled);
@@ -430,7 +430,7 @@ static void make_cap_fail(const struct lock_chk_ctx *ctx,
 enum lock_chk_result lock_chk_graph_add_dep(const struct lock_chk_ctx *ctx,
                                             struct lock_chk_dep from,
                                             struct lock_chk_dep to) {
-    bool irqs_enabled = raw_spin_lock_irq_disable(&ctx->graph->lock);
+    bool irqs_enabled = raw_spin_lock_high(&ctx->graph->lock);
     enum lock_chk_result result = LOCK_CHK_RESULT_OK;
 
     if (find_edge(from, to) != NULL)
@@ -536,7 +536,7 @@ enum lock_chk_result lock_chk_graph_prepare_acq(const struct lock_chk_ctx *ctx,
                                                 struct lock_chk_node **out) {
     struct lock_chk_graph *graph = ctx->graph;
     const struct lock_chk_acq_req *request = ctx->req;
-    bool irqs_enabled = raw_spin_lock_irq_disable(&graph->lock);
+    bool irqs_enabled = raw_spin_lock_high(&graph->lock);
     uint16_t old_node_count = graph->node_count;
     struct lock_chk_node *old_base = atomic_load_relaxed(&map->base_node);
     const struct lock_chk_class *class = lock_chk_map_class(map);

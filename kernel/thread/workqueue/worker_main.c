@@ -59,7 +59,7 @@ static void worker_reset(struct worker *worker) {
 
 static void worker_destroy(struct workqueue *queue, struct worker *worker) {
     if (queue->attrs.flags & WORKQUEUE_FLAG_STATIC_WORKERS) {
-        enum irql irql = spin_lock_irq_disable(&queue->worker_array_lock);
+        enum irql irql = spin_lock_high(&queue->worker_array_lock);
 
         bool found = false;
 

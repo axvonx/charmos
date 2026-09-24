@@ -56,7 +56,7 @@ void timekeeper_init(void) {
 void timekeeper_set_clock(struct clock *clk) {
     kassert(clk != NULL, "timekeeper_set_clock called with NULL clock");
 
-    enum irql irql = seq_write_lock_irq_disable(&timekeeper.lock);
+    enum irql irql = seq_write_lock_high(&timekeeper.lock);
     if (timekeeper.clock) {
         uint64_t now = timekeeper.clock->read(timekeeper.clock);
         uint64_t delta = (now >= timekeeper.raw_base_cycles)

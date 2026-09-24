@@ -199,7 +199,7 @@ static void wake_storm_sleeper_main(struct nightmare_ctx *ctx,
 
         wake_storm_contend(state, self);
 
-        enum irql irql = spin_lock_irq_disable(&me->lock);
+        enum irql irql = spin_lock_high(&me->lock);
         bool object_completion = true;
         if (!me->permit) {
             thread_wait_prepare_to_sleep(&me->wait, me,
@@ -211,7 +211,7 @@ static void wake_storm_sleeper_main(struct nightmare_ctx *ctx,
 
             struct thread_wait_result result = thread_wait_complete();
             object_completion = result.status == THREAD_WAIT_SATISFIED;
-            irql = spin_lock_irq_disable(&me->lock);
+            irql = spin_lock_high(&me->lock);
         }
 
         if (object_completion)
@@ -233,7 +233,7 @@ static void wake_storm_sleeper_main(struct nightmare_ctx *ctx,
 
 static void wake_storm_signal(struct wake_storm_sleeper *sleeper,
                               bool counted) {
-    enum irql irql = spin_lock_irq_disable(&sleeper->lock);
+    enum irql irql = spin_lock_high(&sleeper->lock);
     if (counted)
         atomic_inc_release(&sleeper->issued);
 

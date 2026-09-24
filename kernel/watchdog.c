@@ -291,7 +291,7 @@ static void watchdog_worker_timer_func(struct timer *t) {
     kassert(irq_in_interrupt());
 
     struct watchdog_percpu *pcpu = PERCPU_PTR(TOPC_IRQ, watchdog_percpu);
-    enum irql irql = spin_lock_irq_disable(&pcpu->callback_list.lock);
+    enum irql irql = spin_lock_high(&pcpu->callback_list.lock);
 
     struct watchdog_callback *cb;
     list_for_each_entry(cb, &pcpu->callback_list.list, list) {

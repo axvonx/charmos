@@ -390,13 +390,13 @@ void thread_queue_init(struct thread_queue *q) {
 }
 
 void thread_queue_push_back(struct thread_queue *q, struct thread *t) {
-    enum irql irql = spin_lock_irq_disable(&q->lock);
+    enum irql irql = spin_lock_high(&q->lock);
     list_add_tail(&t->wq_list_node, &q->list);
     spin_unlock(&q->lock, irql);
 }
 
 bool thread_queue_remove(struct thread_queue *q, struct thread *t) {
-    enum irql irql = spin_lock_irq_disable(&q->lock);
+    enum irql irql = spin_lock_high(&q->lock);
     struct list_head *pos;
 
     list_for_each(pos, &q->list) {
@@ -413,7 +413,7 @@ bool thread_queue_remove(struct thread_queue *q, struct thread *t) {
 }
 
 struct thread *thread_queue_pop_front(struct thread_queue *q) {
-    enum irql irql = spin_lock_irq_disable(&q->lock);
+    enum irql irql = spin_lock_high(&q->lock);
     struct list_head *lhead = list_pop_front_init(&q->list);
     spin_unlock(&q->lock, irql);
     if (!lhead)
@@ -455,7 +455,7 @@ enum irql thread_lock_scheduler(struct thread *t, struct scheduler **out_sched)
     do {
         size_t gen1 = thread_get_migration_generation(t);
         struct scheduler *sched = thread_get_scheduler_unsafe(t);
-        enum irql sirql = spin_lock_irq_disable(&sched->lock);
+        enum irql sirql = spin_lock_high(&sched->lock);
         size_t gen2 = thread_get_migration_generation(t);
 
         if (gen1 == gen2 && !(gen1 & 1)) {
@@ -509,10 +509,10 @@ retry:
         second = rq_a;
     }
 
-    *irq_a = spin_lock_irq_disable(&first->lock);
+    *irq_a = spin_lock_high(&first->lock);
 
     if (second)
-        *irq_b = spin_lock_irq_disable(&second->lock);
+        *irq_b = spin_lock_high(&second->lock);
 
     if (thread_get_migration_generation(a) != gen_a1 ||
         thread_get_migration_generation(b) != gen_b1 ||
@@ -564,10 +564,10 @@ retry:
         second = thread_rq;
     }
 
-    *irq_first = spin_lock_irq_disable(&first->lock);
+    *irq_first = spin_lock_high(&first->lock);
 
     if (second)
-        *irq_second = spin_lock_irq_disable(&second->lock);
+        *irq_second = spin_lock_high(&second->lock);
 
     if (thread_get_migration_generation(t) != gen1 ||
         thread_get_scheduler_unsafe(t) != thread_rq) {

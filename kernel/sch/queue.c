@@ -44,7 +44,7 @@ void scheduler_add_thread_locked(struct scheduler *sched, struct thread *task) {
 }
 
 void scheduler_add_thread(struct scheduler *sched, struct thread *task) {
-    enum irql irql = spin_lock_irq_disable(&sched->lock);
+    enum irql irql = spin_lock_high(&sched->lock);
     scheduler_add_thread_locked(sched, task);
     spin_unlock(&sched->lock, irql);
 }
@@ -62,7 +62,7 @@ void scheduler_remove_thread_locked(struct scheduler *sched, struct thread *t) {
 }
 
 void scheduler_remove_thread(struct scheduler *sched, struct thread *t) {
-    enum irql irql = spin_lock_irq_disable(&sched->lock);
+    enum irql irql = spin_lock_high(&sched->lock);
     scheduler_remove_thread_locked(sched, t);
     spin_unlock(&sched->lock, irql);
 }
@@ -74,7 +74,7 @@ void thread_enqueue(struct thread *t) {
 
     /* hold the lock to prevent that thread from being ran
      * while we are going to signal the other core */
-    enum irql irql = spin_lock_irq_disable(&s->lock);
+    enum irql irql = spin_lock_high(&s->lock);
 
     scheduler_add_thread_locked(s, t);
     scheduler_force_resched(s);
@@ -84,7 +84,7 @@ void thread_enqueue(struct thread *t) {
 
 void thread_enqueue_on_core(struct thread *t, uint64_t core_id) {
     struct scheduler *s = global.schedulers[core_id];
-    enum irql irql = spin_lock_irq_disable(&s->lock);
+    enum irql irql = spin_lock_high(&s->lock);
     scheduler_add_thread_locked(s, t);
     scheduler_force_resched(s);
     spin_unlock(&s->lock, irql);

@@ -365,7 +365,7 @@ void apc_rundown_thread(struct thread *t) {
 
     /* Every other queue mutator will hold t->lock,
      * and rundown has to do that too */
-    enum irql irql = spin_lock_irq_disable(&t->lock);
+    enum irql irql = spin_lock_high(&t->lock);
 
     for (size_t type = 0; type < APC_TYPE_COUNT; type++)
         apc_queue_splice(&t->apc_head[type], &drained);
@@ -483,7 +483,7 @@ void thread_exec_event_apcs(struct thread *t) {
         apc_enqueue_tail(&t->event_apcs, a);
     }
 
-    enum irql irql = spin_lock_irq_disable(&t->lock);
+    enum irql irql = spin_lock_high(&t->lock);
     if (apc_list_empty(t, APC_TYPE_KERNEL) &&
         apc_queue_empty(&t->to_exec_event_apcs))
         apc_unset_bitmask(t, APC_TYPE_KERNEL);

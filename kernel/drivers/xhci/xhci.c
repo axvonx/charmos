@@ -57,7 +57,7 @@ enum usb_error xhci_address_device(struct xhci_port *p, uint8_t slot_id,
 
     uintptr_t dev_ctx_phys = vmm_get_phys((uintptr_t) dev_ctx, VMM_FLAG_NONE);
 
-    enum irql irql                 = spin_lock_irq_disable(&xhci->lock);
+    enum irql irql                 = spin_lock_high(&xhci->lock);
     input_ctx->ctrl_ctx.add_flags  = XHCI_INPUT_CTX_ADD_FLAGS;
     input_ctx->ctrl_ctx.drop_flags = 0;
 
@@ -205,7 +205,7 @@ enum usb_error xhci_configure_device_endpoints(struct usb_device *usb) {
     if (!ret)
         return USB_ERR_NO_DEVICE;
 
-    enum irql irql = spin_lock_irq_disable(&xhci->lock);
+    enum irql irql = spin_lock_high(&xhci->lock);
 
     *xslot = local_copy;
 
@@ -235,7 +235,7 @@ static void xhci_work_port_disconnect(void *arg1) {
             struct xhci_slot  *slot = NULL;
             struct usb_device *dev  = NULL;
 
-            enum irql irql = spin_lock_irq_disable(&d->lock);
+            enum irql irql = spin_lock_high(&d->lock);
             for (size_t i = 0; i < XHCI_PORT_COUNT; i++) {
                 port = &d->port_info[i];
                 if (port->state == XHCI_PORT_STATE_DISCONNECTING) {
@@ -287,7 +287,7 @@ static void xhci_work_port_connect(void *arg1) {
         while (keep_going) {
             struct xhci_port *port = NULL;
 
-            enum irql irql = spin_lock_irq_disable(&d->lock);
+            enum irql irql = spin_lock_high(&d->lock);
             for (size_t i = 0; i < XHCI_PORT_COUNT; i++) {
                 if (d->port_info[i].state == XHCI_PORT_STATE_CONNECTING) {
                     port = &d->port_info[i];
@@ -325,7 +325,7 @@ static void xhci_work_port_connect(void *arg1) {
              * which would need the disconnect worker to handle it */
             spin_unlock_raw(&port->update_lock);
 
-            irql = spin_lock_irq_disable(&d->lock);
+            irql = spin_lock_high(&d->lock);
 
             if (port->state == XHCI_PORT_STATE_CONNECTING)
                 xhci_port_set_state(port, XHCI_PORT_STATE_DISCONNECTED);
@@ -337,7 +337,7 @@ static void xhci_work_port_connect(void *arg1) {
 
 static struct xhci_request *
 xhci_finished_requests_pop_front(struct xhci_device *dev) {
-    enum irql irql = spin_lock_irq_disable(&dev->lock);
+    enum irql irql = spin_lock_high(&dev->lock);
 
     struct xhci_request *ret = NULL;
     struct list_head    *lh =
@@ -354,7 +354,7 @@ out:
 
 static struct xhci_request *
 xhci_waiting_requests_pop_front(struct xhci_device *dev) {
-    enum irql            irql = spin_lock_irq_disable(&dev->lock);
+    enum irql            irql = spin_lock_high(&dev->lock);
     struct xhci_request *ret  = NULL;
     struct list_head    *lh =
         list_pop_front_init(&dev->requests[XHCI_REQ_LIST_WAITING]);
@@ -682,7 +682,7 @@ static void xhci_process_port_status_change(struct xhci_device *dev,
 }
 
 static cc_unused void xhci_scan_ports(struct xhci_device *dev) {
-    enum irql irql = spin_lock_irq_disable(&dev->lock);
+    enum irql irql = spin_lock_high(&dev->lock);
     xhci_scan_ports_locked(dev);
     spin_unlock(&dev->lock, irql);
 }
@@ -702,7 +702,7 @@ static void xhci_process_event(struct xhci_device *dev, struct xhci_trb *trb) {
 void xhci_process_event_ring(struct xhci_device *xhci) {
     struct xhci_ring *ring = xhci->event_ring;
 
-    enum irql irql = spin_lock_irq_disable(&xhci->lock);
+    enum irql irql = spin_lock_high(&xhci->lock);
 
     while (true) {
         struct xhci_trb *evt = &ring->trbs[ring->dequeue_index];
@@ -808,7 +808,7 @@ void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
     ctrl->ops         = &xhci_ctrl_ops;
     dev->controller   = ctrl;
 
-    enum irql irql = spin_lock_irq_disable(&dev->lock);
+    enum irql irql = spin_lock_high(&dev->lock);
     for (uint32_t port = 1; port <= dev->ports; port++) {
         struct xhci_port   *p          = &dev->port_info[port - 1];
         uint32_t cc_mem_io *portsc_ptr = xhci_portsc_ptr(dev, port);
@@ -833,7 +833,7 @@ void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
             continue;
         }
 
-        irql = spin_lock_irq_disable(&dev->lock);
+        irql = spin_lock_high(&dev->lock);
         if (p->state == XHCI_PORT_STATE_CONNECTING)
             xhci_port_set_state(p, XHCI_PORT_STATE_DISCONNECTED);
         spin_unlock(&dev->lock, irql);

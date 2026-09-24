@@ -51,7 +51,7 @@ void reaper_thread_main(void *unused) {
         struct list_head local;
         INIT_LIST_HEAD(&local);
 
-        enum irql tlist = spin_lock_irq_disable(&reaper->list.lock);
+        enum irql tlist = spin_lock_high(&reaper->list.lock);
         list_splice_init(&reaper->list.list, &local);
         spin_unlock(&reaper->list.lock, tlist);
 

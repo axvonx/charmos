@@ -104,7 +104,7 @@ struct apc_wait_case {
 static void satisfy_during_apc(void *arg) {
     struct apc_wait_case *c = arg;
     struct thread *t = thread_get_current();
-    enum irql irql = spin_lock_irq_disable(&t->wait_lock);
+    enum irql irql = spin_lock_high(&t->wait_lock);
     if (t->active_wait_blocks != t->wait_blocks || t->wait_epoch != c->epoch ||
         t->wait_blocks[0].state != THREAD_WAIT_BLOCK_ACTIVE || t->alert_pending)
         atomic_store(&c->lost_registration, true);

@@ -10,13 +10,13 @@ struct locked_list {
     struct spinlock lock;
     struct list_head list TSA_GUARDED_BY(&lock);
     size_t num_elems : 63;
-    bool lock_irq_disable : 1;
+    bool lock_high : 1;
 };
 
 static inline enum irql locked_list_lock(struct locked_list *ll)
     TSA_ACQUIRES(&ll->lock) {
-    if (ll->lock_irq_disable) {
-        return spin_lock_irq_disable(&ll->lock);
+    if (ll->lock_high) {
+        return spin_lock_high(&ll->lock);
     } else {
         return spin_lock(&ll->lock);
     }
@@ -30,7 +30,7 @@ static inline void locked_list_unlock(struct locked_list *ll, enum irql irql)
 #define LOCKED_LIST_INIT(ll, irq_disable)                                      \
     (struct locked_list) {                                                     \
         .list = LIST_HEAD_INIT(ll.list), .lock = SPINLOCK_INIT,                \
-        .num_elems = ATOMIC_VAR_INIT(0), .lock_irq_disable = irq_disable       \
+        .num_elems = ATOMIC_VAR_INIT(0), .lock_high = irq_disable              \
     }
 
 #define LOCKED_LIST_DEFINE(name, irq_disable)                                  \
@@ -79,5 +79,5 @@ static inline void locked_list_init(struct locked_list *ll, bool irq_disable) {
     INIT_LIST_HEAD(&ll->list);
     spinlock_init(&ll->lock);
     ll->num_elems = 0;
-    ll->lock_irq_disable = irq_disable;
+    ll->lock_high = irq_disable;
 }

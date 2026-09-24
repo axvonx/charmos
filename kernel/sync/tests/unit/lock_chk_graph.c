@@ -342,10 +342,10 @@ TEST_DECLARE_UNIT(lock_chk, spin_qspin_lifecycle) {
     TEST_ASSERT(spin_trylock(&spin_disp, &irql));
     spin_unlock(&spin_disp, irql);
 
-    irql = spin_lock_irq_disable(&spin_irq);
+    irql = spin_lock_high(&spin_irq);
     spin_unlock(&spin_irq, irql);
 
-    TEST_ASSERT(spin_trylock_irq_disable(&spin_irq, &irql));
+    TEST_ASSERT(spin_trylock_high(&spin_irq, &irql));
     spin_unlock(&spin_irq, irql);
 
     spin_lock_raw(&spin_raw);
@@ -360,10 +360,10 @@ TEST_DECLARE_UNIT(lock_chk, spin_qspin_lifecycle) {
     TEST_ASSERT(qspin_trylock(&qspin_disp, &irql));
     qspin_unlock(&qspin_disp, irql);
 
-    irql = qspin_lock_irq_disable(&qspin_irq);
+    irql = qspin_lock_high(&qspin_irq);
     qspin_unlock(&qspin_irq, irql);
 
-    TEST_ASSERT(qspin_trylock_irq_disable(&qspin_irq, &irql));
+    TEST_ASSERT(qspin_trylock_high(&qspin_irq, &irql));
     qspin_unlock(&qspin_irq, irql);
 
     qspin_lock_raw(&qspin_raw);

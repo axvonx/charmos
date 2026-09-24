@@ -162,7 +162,7 @@ static void enqueue_pt_free(paddr_t phys) {
     n->phys = phys;
     n->epoch = e;
 
-    enum irql irql = spin_lock_irq_disable(&pt_free_lock);
+    enum irql irql = spin_lock_high(&pt_free_lock);
     n->next = pt_free_list;
     pt_free_list = n;
     spin_unlock(&pt_free_lock, irql);
@@ -187,7 +187,7 @@ void vmm_reclaim_page_tables(void) {
     }
 
     enum irql irql = IRQL_NONE;
-    if (!spin_trylock_irq_disable(&pt_free_lock, &irql))
+    if (!spin_trylock_high(&pt_free_lock, &irql))
         goto out;
 
     struct pt_deferred_free *to_free = NULL;

@@ -6,7 +6,7 @@
 static inline enum irql workqueue_lock(struct workqueue *workqueue)
     TSA_ACQUIRES(&workqueue->lock) {
     if (workqueue->attrs.flags & WORKQUEUE_FLAG_ISR_SAFE) {
-        return spin_lock_irq_disable(&workqueue->lock);
+        return spin_lock_high(&workqueue->lock);
     } else {
         return spin_lock(&workqueue->lock);
     }
@@ -19,7 +19,7 @@ static inline uint64_t workqueue_current_worker_count(struct workqueue *q) {
 }
 
 static inline bool workqueue_works_empty(struct workqueue *queue) {
-    enum irql irql = spin_lock_irq_disable(&queue->work_lock);
+    enum irql irql = spin_lock_high(&queue->work_lock);
     bool empty = list_empty(&queue->works);
     spin_unlock(&queue->work_lock, irql);
     return empty;
@@ -51,14 +51,14 @@ static inline void workqueue_put(struct workqueue *queue) {
  * always be the list of workers we have */
 static inline void workqueue_add_worker(struct workqueue *wq,
                                         struct worker *wker) {
-    enum irql irql = spin_lock_irq_disable(&wq->worker_lock);
+    enum irql irql = spin_lock_high(&wq->worker_lock);
     list_add(&wker->list_node, &wq->workers);
     spin_unlock(&wq->worker_lock, irql);
 }
 
 static inline void workqueue_remove_worker(struct workqueue *wq,
                                            struct worker *worker) {
-    enum irql irql = spin_lock_irq_disable(&wq->worker_lock);
+    enum irql irql = spin_lock_high(&wq->worker_lock);
     list_del_init(&worker->list_node);
     spin_unlock(&wq->worker_lock, irql);
 }

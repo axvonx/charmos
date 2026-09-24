@@ -135,7 +135,7 @@ void xhci_free_ring(struct xhci_ring *ring) {
 }
 
 void xhci_teardown_slot(struct xhci_slot *me) {
-    enum irql         irql = spin_lock_irq_disable(&me->dev->lock);
+    enum irql         irql = spin_lock_high(&me->dev->lock);
     struct xhci_ring *copy_into[32];
     me->udev = NULL;
     me->port = NULL;

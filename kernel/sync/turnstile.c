@@ -66,7 +66,7 @@ void turnstiles_init(void) {
 
 static inline enum irql
 turnstile_hash_chain_lock(struct turnstile_hash_chain *chain) TSA_NO_ANALYSIS {
-    return spin_lock_irq_disable(&chain->lock);
+    return spin_lock_high(&chain->lock);
 }
 
 static inline void
@@ -172,7 +172,7 @@ struct turnstile_wait_snapshot {
 
 static bool turnstile_snapshot_wait(struct thread *thread,
                                     struct turnstile_wait_snapshot *wait) {
-    enum irql irql = spin_lock_irq_disable(&thread->wait_lock);
+    enum irql irql = spin_lock_high(&thread->wait_lock);
     struct thread_wait_block *block = thread->active_wait_blocks;
     bool valid =
         block == thread->wait_blocks &&

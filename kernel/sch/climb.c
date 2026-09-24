@@ -516,7 +516,7 @@ static struct climb_summary summarize_and_advance(struct rbt *tree,
 
 void climb_per_period_hook() {
     struct scheduler *sched = smp_core_scheduler();
-    enum irql irql = spin_lock_irq_disable(&sched->lock);
+    enum irql irql = spin_lock_high(&sched->lock);
 
     if (rbt_empty(climb_tree_local())) {
         spin_unlock(&sched->lock, irql);

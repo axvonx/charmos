@@ -182,11 +182,11 @@ scheduler_acquire_two_locks(struct scheduler *a, struct scheduler *b,
                             enum irql *b_irql_out) TSA_NO_ANALYSIS {
     kassert(a != b);
     if (a < b) {
-        *a_irql_out = spin_lock_irq_disable(&a->lock);
-        *b_irql_out = spin_lock_irq_disable(&b->lock);
+        *a_irql_out = spin_lock_high(&a->lock);
+        *b_irql_out = spin_lock_high(&b->lock);
     } else {
-        *b_irql_out = spin_lock_irq_disable(&b->lock);
-        *a_irql_out = spin_lock_irq_disable(&a->lock);
+        *b_irql_out = spin_lock_high(&b->lock);
+        *a_irql_out = spin_lock_high(&a->lock);
     }
 }
 

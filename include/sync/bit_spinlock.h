@@ -86,7 +86,7 @@
         irql_lower(old_irql);                                                  \
     } while (0)
 
-#define bit_spin_lock_irq_disable(bit, ptr)                                    \
+#define bit_spin_lock_high(bit, ptr)                                           \
     ({                                                                         \
         enum irql __old_irql = irql_raise(IRQL_HIGH_LEVEL);                    \
         bit_spin_lock_raw(bit, ptr);                                           \
@@ -108,7 +108,7 @@
         __ok;                                                                  \
     })
 
-#define bit_spin_trylock_irq_disable(bit, ptr, out_irql)                       \
+#define bit_spin_trylock_high(bit, ptr, out_irql)                              \
     ({                                                                         \
         *(out_irql) = irql_raise(IRQL_HIGH_LEVEL);                             \
         bool __ok = bit_spin_trylock_raw(bit, ptr);                            \

@@ -29,7 +29,7 @@ bool xhci_send_command(struct xhci_device *dev, struct xhci_command *cmd) {
     struct xhci_ring    *ring = cmd->ring;
     struct xhci_request *rq   = cmd->request;
 
-    enum irql irql = spin_lock_irq_disable(&dev->lock);
+    enum irql irql = spin_lock_high(&dev->lock);
 
     if (!xhci_ring_can_reserve(ring, cmd->num_trbs)) {
         xhci_request_move(dev, rq, XHCI_REQ_LIST_WAITING);

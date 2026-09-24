@@ -42,7 +42,7 @@ enum irq_result ide_irq_handler(void *ctx, irq_t irq_num,
     cc_var_unused(irq_num, rsp);
 
     struct ide_channel *chan = ctx;
-    enum irql           irql = spin_lock_irq_disable(&chan->lock);
+    enum irql           irql = spin_lock_high(&chan->lock);
 
     struct ide_request *req = chan->head;
 

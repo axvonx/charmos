@@ -71,7 +71,7 @@ static void workqueue_enqueue_thread(struct workqueue *queue,
 
 struct worker *workqueue_worker_create(struct workqueue *queue) {
     if (queue->attrs.flags & WORKQUEUE_FLAG_STATIC_WORKERS) {
-        enum irql irql = spin_lock_irq_disable(&queue->worker_array_lock);
+        enum irql irql = spin_lock_high(&queue->worker_array_lock);
         struct worker *ret = NULL;
         for (size_t i = 0; i < queue->attrs.max_workers; i++) {
             if (queue->worker_array[i].thread == NULL) {

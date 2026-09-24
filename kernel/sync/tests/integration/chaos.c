@@ -82,7 +82,7 @@ static void chaos_apc_fn(void *arg) {
     CHAOS_LOG("apc executed on %p", thread_get_current());
 
     enum irql irql;
-    if (!spin_trylock_irq_disable(&chaos_fuzz_spin, &irql)) {
+    if (!spin_trylock_high(&chaos_fuzz_spin, &irql)) {
         atomic_inc_relaxed(&chaos_apc_lock_skips);
         return;
     }
@@ -179,13 +179,13 @@ static void chaos_sleeper(void *arg) {
 
         /* Sleep and wait for waker */
         struct chaos_state *state = &states[id];
-        irql = spin_lock_irq_disable(&state->lock);
+        irql = spin_lock_high(&state->lock);
         if (!state->signaled) {
             thread_wait_prepare_to_sleep(&state->wait, state,
                                          THREAD_WAIT_INTERRUPTIBLE);
             spin_unlock(&state->lock, irql);
             thread_wait_complete();
-            irql = spin_lock_irq_disable(&state->lock);
+            irql = spin_lock_high(&state->lock);
         }
         state->signaled = false;
         spin_unlock(&state->lock, irql);
@@ -220,7 +220,7 @@ static void chaos_waker(void *arg) {
 
         CHAOS_LOG("wake %p", states[id].t);
         struct chaos_state *state = &states[id];
-        enum irql irql = spin_lock_irq_disable(&state->lock);
+        enum irql irql = spin_lock_high(&state->lock);
         state->signaled = true;
         thread_wait_header_satisfy(&state->wait,
                                    THREAD_WAKE_REASON_SLEEP_MANUAL, NULL);

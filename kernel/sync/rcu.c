@@ -89,7 +89,7 @@ static void rcu_propagate_done(struct rcu_node *node, uint64_t seq,
             return;
         }
 
-        irql = spin_lock_irq_disable(&parent->lock);
+        irql = spin_lock_high(&parent->lock);
         if (parent->gp_seq != seq) {
             spin_unlock(&parent->lock, irql);
             return;
@@ -145,7 +145,7 @@ static void rcu_unregister_reader(struct thread *t) TSA_NO_ANALYSIS {
 
     struct rcu_node *leaf = t->rcu_leaf;
     if (leaf) {
-        enum irql irql = spin_lock_irq_disable(&leaf->lock);
+        enum irql irql = spin_lock_high(&leaf->lock);
 
         list_del_init(&t->rcu_list_node);
         t->rcu_leaf = NULL;
@@ -201,7 +201,7 @@ void rcu_note_context_switch(struct thread *outgoing,
     struct rcu_node *leaf = rcu_leaf_for_cpu(cpu);
     uint64_t gp_seq_seen = atomic_load_acq(&rcu.gp_seq);
 
-    enum irql irql = spin_lock_irq_disable(&leaf->lock);
+    enum irql irql = spin_lock_high(&leaf->lock);
 
     if (atomic_load_relaxed(&incoming->state) == THREAD_STATE_IDLE_THREAD) {
         cpu_mask_set(&leaf->idle_cpus, cpu);
@@ -264,7 +264,7 @@ void rcu_note_irq_exit(void) TSA_NO_ANALYSIS {
 
     struct rcu_node *leaf = rcu_leaf_for_cpu(cpu);
 
-    enum irql irql = spin_lock_irq_disable(&leaf->lock);
+    enum irql irql = spin_lock_high(&leaf->lock);
     rcu_report_cpu_locked(leaf, cpu, gp_seq_seen, irql);
 
     irql_lower(outer);
@@ -294,7 +294,7 @@ void rcu_defer(struct rcu_cb *cb, rcu_fn func, void *arg) {
 
     struct rcu_cpu *q = &rcu.cpus[smp_id(TOPC_IRQL)];
 
-    enum irql irql = spin_lock_irq_disable(&q->lock);
+    enum irql irql = spin_lock_high(&q->lock);
     list_add_tail(&cb->list, &q->list);
     spin_unlock(&q->lock, irql);
 
@@ -307,7 +307,7 @@ static void rcu_detach_callbacks(struct list_head *batch) {
     for (cpu_id_t cpu = 0; cpu < global.core_count; cpu++) {
         struct rcu_cpu *q = &rcu.cpus[cpu];
 
-        enum irql irql = spin_lock_irq_disable(&q->lock);
+        enum irql irql = spin_lock_high(&q->lock);
         list_splice_tail_init(&q->list, batch);
         spin_unlock(&q->lock, irql);
     }
@@ -317,7 +317,7 @@ static bool rcu_callbacks_pending(void) {
     for (cpu_id_t cpu = 0; cpu < global.core_count; cpu++) {
         struct rcu_cpu *q = &rcu.cpus[cpu];
 
-        enum irql irql = spin_lock_irq_disable(&q->lock);
+        enum irql irql = spin_lock_high(&q->lock);
         bool empty = list_empty(&q->list);
         spin_unlock(&q->lock, irql);
 
@@ -350,7 +350,7 @@ static void rcu_kick_pending(uint64_t seq) {
 
         struct cpu_mask pending = CPU_MASK_INIT;
 
-        enum irql irql = spin_lock_irq_disable(&leaf->lock);
+        enum irql irql = spin_lock_high(&leaf->lock);
 
         if (leaf->gp_seq == seq)
             cpu_mask_copy(&pending, &leaf->qs_cpus);
@@ -377,7 +377,7 @@ static void rcu_report_stall(uint64_t seq, time_ms_t elapsed) {
 
         struct cpu_mask pending = CPU_MASK_INIT;
 
-        enum irql irql = spin_lock_irq_disable(&leaf->lock);
+        enum irql irql = spin_lock_high(&leaf->lock);
 
         if (leaf->gp_seq == seq)
             cpu_mask_copy(&pending, &leaf->qs_cpus);
@@ -431,7 +431,7 @@ static uint64_t rcu_gp_start(struct list_head *batch) TSA_NO_ANALYSIS {
     for (size_t i = 0; i < rcu.node_count; i++) {
         struct rcu_node *node = &rcu.nodes[i];
 
-        enum irql irql = spin_lock_irq_disable(&node->lock);
+        enum irql irql = spin_lock_high(&node->lock);
         node->gp_seq = seq;
         node->qs_children = node->full_children;
 
@@ -462,7 +462,7 @@ static uint64_t rcu_gp_start(struct list_head *batch) TSA_NO_ANALYSIS {
     for (size_t l = 0; l < rcu.leaf_count; l++) {
         struct rcu_node *leaf = &rcu.leaves[l];
 
-        enum irql irql = spin_lock_irq_disable(&leaf->lock);
+        enum irql irql = spin_lock_high(&leaf->lock);
         if (leaf->gp_seq != seq) {
             spin_unlock(&leaf->lock, irql);
             continue;

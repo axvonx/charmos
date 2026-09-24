@@ -625,7 +625,7 @@ static inline enum irql thread_acquire_internal(struct thread *t,
 
     if (success)
         *success = true;
-    return spin_lock_irq_disable(&t->lock);
+    return spin_lock_high(&t->lock);
 }
 
 static inline enum irql thread_acquire(struct thread *t,

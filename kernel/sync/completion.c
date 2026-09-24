@@ -25,7 +25,7 @@ void completion_init(struct completion *c, bool irq_disable) {
 static enum irql
 completion_lock_internal(struct completion *c) TSA_NO_ANALYSIS {
     if (c->irq_disable)
-        return spin_lock_irq_disable(&c->lock);
+        return spin_lock_high(&c->lock);
 
     return spin_lock(&c->lock);
 }

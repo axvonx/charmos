@@ -9,7 +9,7 @@
 static struct rt_slot_db slot_db;
 
 struct rt_slot *rt_slot_allocate(struct rt_scheduler_static *for_whom) {
-    enum irql irql = spin_lock_irq_disable(&slot_db.lock);
+    enum irql irql = spin_lock_high(&slot_db.lock);
 
     struct rt_slot *got = NULL;
     for (size_t i = 0; i < slot_db.num_slots; i++) {
@@ -27,7 +27,7 @@ struct rt_slot *rt_slot_allocate(struct rt_scheduler_static *for_whom) {
 
 size_t rt_slot_get_num_available(void) {
     size_t count = 0;
-    enum irql irql = spin_lock_irq_disable(&slot_db.lock);
+    enum irql irql = spin_lock_high(&slot_db.lock);
 
     for (size_t i = 0; i < slot_db.num_slots; i++) {
         if (!slot_db.slots[i].in_use)
@@ -39,7 +39,7 @@ size_t rt_slot_get_num_available(void) {
 }
 
 void rt_slot_free(size_t slot) {
-    enum irql irql = spin_lock_irq_disable(&slot_db.lock);
+    enum irql irql = spin_lock_high(&slot_db.lock);
 
     slot_db.slots[slot].in_use = NULL;
 

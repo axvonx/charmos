@@ -545,8 +545,8 @@ qspin_lock_internal(struct qspinlock *lock, const struct lock_chk_site *site)
 }
 
 static inline cc_warn_unused_result enum irql
-qspin_lock_irq_disable_internal(struct qspinlock *lock,
-                                const struct lock_chk_site *site)
+qspin_lock_high_internal(struct qspinlock *lock,
+                         const struct lock_chk_site *site)
     TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())
         panic("Attempted to take non-raw qspinlock from an NMI");
@@ -609,8 +609,8 @@ qspin_trylock_internal(struct qspinlock *lock, enum irql *out,
 }
 
 static inline cc_warn_unused_result bool
-qspin_trylock_irq_disable_internal(struct qspinlock *lock, enum irql *out,
-                                   const struct lock_chk_site *site)
+qspin_trylock_high_internal(struct qspinlock *lock, enum irql *out,
+                            const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())
         panic("Attempted to take non-raw qspinlock from an NMI");
@@ -644,16 +644,16 @@ qspin_trylock_irq_disable_internal(struct qspinlock *lock, enum irql *out,
 #define qspin_lock(lock_) qspin_lock_internal((lock_), LOCK_CHK_SITE_HERE())
 #define qspin_lock_subclass(lock_, subclass_)                                  \
     qspin_lock_subclass_internal((lock_), (subclass_), LOCK_CHK_SITE_HERE())
-#define qspin_lock_irq_disable(lock_)                                          \
-    qspin_lock_irq_disable_internal((lock_), LOCK_CHK_SITE_HERE())
+#define qspin_lock_high(lock_)                                                 \
+    qspin_lock_high_internal((lock_), LOCK_CHK_SITE_HERE())
 #define qspin_unlock(lock_, old_)                                              \
     qspin_unlock_internal((lock_), (old_), LOCK_CHK_SITE_HERE())
 #define qspin_unlock_irq_restore(lock_, old_)                                  \
     qspin_unlock_internal((lock_), (old_), LOCK_CHK_SITE_HERE())
 #define qspin_trylock(lock_, out_)                                             \
     qspin_trylock_internal((lock_), (out_), LOCK_CHK_SITE_HERE())
-#define qspin_trylock_irq_disable(lock_, out_)                                 \
-    qspin_trylock_irq_disable_internal((lock_), (out_), LOCK_CHK_SITE_HERE())
+#define qspin_trylock_high(lock_, out_)                                        \
+    qspin_trylock_high_internal((lock_), (out_), LOCK_CHK_SITE_HERE())
 #define qspin_lock_raw(lock_)                                                  \
     qspin_lock_raw_internal((lock_), LOCK_CHK_SITE_HERE())
 #define qspin_trylock_raw(lock_)                                               \

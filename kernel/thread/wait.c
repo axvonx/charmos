@@ -48,7 +48,7 @@ static void prepare_wait(const struct thread_wait_object *objects, size_t count,
         storage = t->wait_blocks; /* TODO: establish identities for the 4
                                    * wait blocks, we'll take 0 for now */
 
-    enum irql irql = spin_lock_irq_disable(&t->wait_lock);
+    enum irql irql = spin_lock_high(&t->wait_lock);
     kassert(!t->active_wait_blocks);
     t->active_wait_blocks = storage;
     t->wait_block_count = count;
@@ -58,7 +58,7 @@ static void prepare_wait(const struct thread_wait_object *objects, size_t count,
     t->wait_epoch++;
     t->wait_state = state;
 
-    enum irql tirql = spin_lock_irq_disable(&t->lock);
+    enum irql tirql = spin_lock_high(&t->lock);
     kassert(!t->object_wait);
     t->object_wait = true;
     atomic_store_relaxed(&t->wait_type, type);
@@ -90,7 +90,7 @@ static void prepare_wait(const struct thread_wait_object *objects, size_t count,
                                         .header = objects[i].header,
                                         .epoch = t->wait_epoch};
 
-        enum irql hirql = spin_lock_irq_disable(&b->header->lock);
+        enum irql hirql = spin_lock_high(&b->header->lock);
         list_add_tail(&b->object_link, &b->header->waiters);
         spin_unlock(&b->header->lock, hirql);
     }
@@ -127,7 +127,7 @@ static void unlink_blocks(struct thread *t, uint16_t got) {
         if (b->state != THREAD_WAIT_BLOCK_ACTIVE)
             continue;
 
-        enum irql irql = spin_lock_irq_disable(&b->header->lock);
+        enum irql irql = spin_lock_high(&b->header->lock);
 
         list_del_init(&b->object_link);
         b->state =
@@ -164,7 +164,7 @@ bool thread_wait_satisfy(struct thread_wait_block *b,
                          void (*callback)(struct thread *)) {
     struct thread *t = b->thread;
 
-    enum irql irql = spin_lock_irq_disable(&t->wait_lock);
+    enum irql irql = spin_lock_high(&t->wait_lock);
     bool won = satisfy(t, b->epoch, b->key, reason, callback);
     spin_unlock(&t->wait_lock, irql);
 
@@ -176,7 +176,7 @@ bool thread_wait_satisfy_epoch(struct thread_wait_block *b, uint64_t epoch,
                                void (*callback)(struct thread *)) {
     struct thread *t = b->thread;
 
-    enum irql irql = spin_lock_irq_disable(&t->wait_lock);
+    enum irql irql = spin_lock_high(&t->wait_lock);
     bool won = satisfy(t, epoch, b->key, reason, callback);
     spin_unlock(&t->wait_lock, irql);
 
@@ -187,7 +187,7 @@ struct thread *thread_wait_header_satisfy(struct thread_wait_header *header,
                                           enum thread_resume_reason reason,
                                           void (*callback)(struct thread *)) {
     while (true) {
-        enum irql irql = spin_lock_irq_disable(&header->lock);
+        enum irql irql = spin_lock_high(&header->lock);
 
         if (list_empty(&header->waiters)) {
             spin_unlock(&header->lock, irql);
@@ -204,7 +204,7 @@ struct thread *thread_wait_header_satisfy(struct thread_wait_header *header,
         kassert(thread_get(t));
         spin_unlock(&header->lock, irql);
 
-        irql = spin_lock_irq_disable(&t->wait_lock);
+        irql = spin_lock_high(&t->wait_lock);
         bool won = satisfy(t, epoch, key, reason, callback);
         spin_unlock(&t->wait_lock, irql);
 
@@ -218,7 +218,7 @@ static void finish_locked(struct thread *t) {
     t->active_wait_blocks = NULL;
     t->wait_block_count = 0;
 
-    enum irql irql = spin_lock_irq_disable(&t->lock);
+    enum irql irql = spin_lock_high(&t->lock);
 
     t->object_wait = false;
     atomic_store_relaxed(&t->wait_type, THREAD_WAIT_NONE);
@@ -239,7 +239,7 @@ struct thread_wait_result thread_wait_complete(void) {
     bool delivered = false;
 
     while (true) {
-        enum irql irql = spin_lock_irq_disable(&t->wait_lock);
+        enum irql irql = spin_lock_high(&t->wait_lock);
         kassert(t->active_wait_blocks);
 
         if (t->wait_done) {
@@ -252,7 +252,7 @@ struct thread_wait_result thread_wait_complete(void) {
             return result;
         }
 
-        enum irql tirql = spin_lock_irq_disable(&t->lock);
+        enum irql tirql = spin_lock_high(&t->lock);
 
         bool apc =
             atomic_load_relaxed(&t->wait_type) == THREAD_WAIT_INTERRUPTIBLE &&
@@ -278,7 +278,7 @@ struct thread_wait_result thread_wait_complete(void) {
 
 void thread_wait_cancel(void) {
     struct thread *t = thread_get_current();
-    enum irql irql = spin_lock_irq_disable(&t->wait_lock);
+    enum irql irql = spin_lock_high(&t->wait_lock);
     kassert(t->active_wait_blocks);
     unlink_blocks(t, THREAD_WAIT_KEY_NONE);
     finish_locked(t);
@@ -305,7 +305,7 @@ static void deliver_alert_locked(struct thread *t) {
 
 void thread_alert(struct thread *t) {
     kassert(t);
-    enum irql irql = spin_lock_irq_disable(&t->wait_lock);
+    enum irql irql = spin_lock_high(&t->wait_lock);
 
     if (!thread_test_flag(t, THREAD_FLAG_DYING)) {
         t->alert_pending = true;

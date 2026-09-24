@@ -6,7 +6,7 @@
 static enum irql condvar_lock_internal(struct condvar *cv,
                                        struct spinlock *lock) TSA_NO_ANALYSIS {
     if (cv->irq_disable)
-        return spin_lock_irq_disable(lock);
+        return spin_lock_high(lock);
 
     return spin_lock(lock);
 }

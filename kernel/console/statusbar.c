@@ -51,7 +51,7 @@ void status_bar_open(void) {
     if (term_size().rows < 3)
         return;
 
-    bool irqs_were_enabled = raw_spin_lock_irq_disable(&bar_lock);
+    bool irqs_were_enabled = raw_spin_lock_high(&bar_lock);
     if (bar_open) {
         raw_spin_unlock_irq_restore(&bar_lock, irqs_were_enabled);
         return;
@@ -80,7 +80,7 @@ void status_bar_close(void) {
     if (!term_available())
         return;
 
-    bool irqs_were_enabled = raw_spin_lock_irq_disable(&bar_lock);
+    bool irqs_were_enabled = raw_spin_lock_high(&bar_lock);
     if (!bar_open) {
         raw_spin_unlock_irq_restore(&bar_lock, irqs_were_enabled);
         return;
@@ -138,7 +138,7 @@ void status_bar_set(const char *fmt, ...) {
     va_end(ap);
 
     enum irql irql = printf_lock();
-    bool irqs_were_enabled = raw_spin_lock_irq_disable(&bar_lock);
+    bool irqs_were_enabled = raw_spin_lock_high(&bar_lock);
     bool open = bar_open;
     raw_spin_unlock_irq_restore(&bar_lock, irqs_were_enabled);
     if (open) {
@@ -244,7 +244,7 @@ static void status_bar_progress_v(size_t done, size_t total,
         return;
 
     enum irql irql = printf_lock();
-    bool irqs_were_enabled = raw_spin_lock_irq_disable(&bar_lock);
+    bool irqs_were_enabled = raw_spin_lock_high(&bar_lock);
     if (!bar_open) {
         raw_spin_unlock_irq_restore(&bar_lock, irqs_were_enabled);
         printf_unlock(irql);
@@ -291,7 +291,7 @@ static void bar_timer_fn(struct timer *timer) {
         return;
 
     enum irql irql = printf_lock();
-    bool irqs_were_enabled = raw_spin_lock_irq_disable(&bar_lock);
+    bool irqs_were_enabled = raw_spin_lock_high(&bar_lock);
     bool repaint = bar_open && bar_progress.active && bar_progress.timed;
     bool open = bar_open;
     raw_spin_unlock_irq_restore(&bar_lock, irqs_were_enabled);
@@ -307,7 +307,7 @@ void status_bar_reset(void) {
     if (!term_available())
         return;
 
-    bool irqs_were_enabled = raw_spin_lock_irq_disable(&bar_lock);
+    bool irqs_were_enabled = raw_spin_lock_high(&bar_lock);
     bar_open = false;
     bar_progress.active = false;
     raw_spin_unlock_irq_restore(&bar_lock, irqs_were_enabled);

@@ -133,7 +133,7 @@ TEST_DECLARE_UNIT(lock_chk, death_irq_unsafe_spin,
     spinlock_init_chk(&s, LOCK_CHK_CLASS(death_spin_class1), LOCK_CHKD_FULL);
     enum irql old = spin_lock(&s);
     spin_unlock(&s, old);
-    old = spin_lock_irq_disable(&s);
+    old = spin_lock_high(&s);
     spin_unlock(&s, old);
     return TEST_SUCCESS;
 }

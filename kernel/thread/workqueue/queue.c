@@ -30,7 +30,7 @@ static enum workqueue_error signal_worker(struct workqueue *queue) {
 }
 
 bool workqueue_dequeue_task(struct workqueue *queue, struct work **out) {
-    enum irql irql = spin_lock_irq_disable(&queue->work_lock);
+    enum irql irql = spin_lock_high(&queue->work_lock);
     struct list_head *lh = list_pop_front(&queue->works);
     spin_unlock(&queue->work_lock, irql);
 
@@ -47,7 +47,7 @@ bool workqueue_dequeue_task(struct workqueue *queue, struct work **out) {
 
 enum workqueue_error workqueue_enqueue(struct workqueue *queue,
                                        struct work *work) {
-    enum irql irql = spin_lock_irq_disable(&queue->work_lock);
+    enum irql irql = spin_lock_high(&queue->work_lock);
     if (atomic_exchange(&work->active, true)) {
         spin_unlock(&queue->work_lock, irql);
         return WORKQUEUE_ERROR_WORK_EXECUTING;

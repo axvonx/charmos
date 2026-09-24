@@ -32,13 +32,13 @@ TEST_DECLARE_UNIT(raw_spinlock, irq_restore) {
     struct raw_spinlock lock = RAW_SPINLOCK_INIT;
     bool entry_irqs_enabled = irqs_enabled();
 
-    bool saved_irqs_enabled = raw_spin_lock_irq_disable(&lock);
+    bool saved_irqs_enabled = raw_spin_lock_high(&lock);
     bool disabled_while_held = !irqs_enabled();
     raw_spin_unlock_irq_restore(&lock, saved_irqs_enabled);
     bool restored_entry_state = irqs_enabled() == entry_irqs_enabled;
 
     irq_disable();
-    bool saved_disabled_state = raw_spin_lock_irq_disable(&lock);
+    bool saved_disabled_state = raw_spin_lock_high(&lock);
     raw_spin_unlock_irq_restore(&lock, saved_disabled_state);
     bool remained_disabled = !irqs_enabled();
 

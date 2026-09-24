@@ -462,8 +462,7 @@ spin_lock_internal(struct spinlock *lock, const struct lock_chk_site *site)
 }
 
 static inline cc_warn_unused_result enum irql
-spin_lock_irq_disable_internal(struct spinlock *lock,
-                               const struct lock_chk_site *site)
+spin_lock_high_internal(struct spinlock *lock, const struct lock_chk_site *site)
     TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())
         panic("Attempted to take non-raw spinlock from an NMI");
@@ -525,8 +524,8 @@ spin_trylock_internal(struct spinlock *lock, enum irql *out,
 }
 
 static inline cc_warn_unused_result bool
-spin_trylock_irq_disable_internal(struct spinlock *lock, enum irql *out,
-                                  const struct lock_chk_site *site)
+spin_trylock_high_internal(struct spinlock *lock, enum irql *out,
+                           const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())
         panic("Attempted to take non-raw spinlock from an NMI");
@@ -558,12 +557,12 @@ spin_trylock_irq_disable_internal(struct spinlock *lock, enum irql *out,
 #define spin_lock(lock_) spin_lock_internal((lock_), LOCK_CHK_SITE_HERE())
 #define spin_lock_subclass(lock_, subclass_)                                   \
     spin_lock_subclass_internal((lock_), (subclass_), LOCK_CHK_SITE_HERE())
-#define spin_lock_irq_disable(lock_)                                           \
-    spin_lock_irq_disable_internal((lock_), LOCK_CHK_SITE_HERE())
+#define spin_lock_high(lock_)                                                  \
+    spin_lock_high_internal((lock_), LOCK_CHK_SITE_HERE())
 #define spin_trylock(lock_, out_)                                              \
     spin_trylock_internal((lock_), (out_), LOCK_CHK_SITE_HERE())
-#define spin_trylock_irq_disable(lock_, out_)                                  \
-    spin_trylock_irq_disable_internal((lock_), (out_), LOCK_CHK_SITE_HERE())
+#define spin_trylock_high(lock_, out_)                                         \
+    spin_trylock_high_internal((lock_), (out_), LOCK_CHK_SITE_HERE())
 #define spin_unlock(lock_, old_)                                               \
     spin_unlock_internal((lock_), (old_), LOCK_CHK_SITE_HERE())
 #define spin_lock_raw(lock_)                                                   \

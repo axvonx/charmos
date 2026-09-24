@@ -44,7 +44,7 @@ static inline void raw_spin_unlock(struct raw_spinlock *lock)
 
 /* whether interrupts were enabled on entry */
 static inline cc_warn_unused_result bool
-raw_spin_lock_irq_disable(struct raw_spinlock *lock)
+raw_spin_lock_high(struct raw_spinlock *lock)
     TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
     bool irqs_were_enabled = irq_disable_save();
     raw_spin_lock(lock);

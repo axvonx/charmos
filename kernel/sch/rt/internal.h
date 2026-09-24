@@ -25,11 +25,11 @@ static inline void rt_scheduler_acquire_two_mappings(
     struct rt_scheduler_mapping *a, struct rt_scheduler_mapping *b,
     enum irql *out_a, enum irql *out_b) TSA_NO_ANALYSIS {
     if (a < b) {
-        *out_a = spin_lock_irq_disable(&a->lock);
-        *out_b = spin_lock_irq_disable(&b->lock);
+        *out_a = spin_lock_high(&a->lock);
+        *out_b = spin_lock_high(&b->lock);
     } else if (b < a) {
-        *out_b = spin_lock_irq_disable(&b->lock);
-        *out_a = spin_lock_irq_disable(&a->lock);
+        *out_b = spin_lock_high(&b->lock);
+        *out_a = spin_lock_high(&a->lock);
     } else {
         panic("Trying to acquire two locks on the same mapping");
     }
@@ -53,16 +53,16 @@ static inline void
 rt_scheduler_acquire_two_locks(struct rt_scheduler *a, struct rt_scheduler *b,
                                enum irql *oa, enum irql *ob) TSA_NO_ANALYSIS {
     if (a == b) {
-        *oa = spin_lock_irq_disable(&a->lock);
+        *oa = spin_lock_high(&a->lock);
         return;
     }
 
     if (a < b) {
-        *oa = spin_lock_irq_disable(&a->lock);
-        *ob = spin_lock_irq_disable(&b->lock);
+        *oa = spin_lock_high(&a->lock);
+        *ob = spin_lock_high(&b->lock);
     } else {
-        *ob = spin_lock_irq_disable(&b->lock);
-        *oa = spin_lock_irq_disable(&a->lock);
+        *ob = spin_lock_high(&b->lock);
+        *oa = spin_lock_high(&a->lock);
     }
 }
 

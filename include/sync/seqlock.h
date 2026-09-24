@@ -178,8 +178,8 @@ static inline cc_warn_unused_result enum irql seq_write_lock(struct seqlock *sl)
 
 /* Writer APIs */
 static inline cc_warn_unused_result enum irql
-seq_write_lock_irq_disable(struct seqlock *sl) TSA_ACQUIRES(&sl->lock) {
-    enum irql irql = spin_lock_irq_disable(&sl->lock);
+seq_write_lock_high(struct seqlock *sl) TSA_ACQUIRES(&sl->lock) {
+    enum irql irql = spin_lock_high(&sl->lock);
     seqcount_begin_write(&sl->seqcount);
     return irql;
 }
@@ -215,9 +215,9 @@ static inline cc_warn_unused_result bool seq_try_write_lock(struct seqlock *sl,
 }
 
 static inline cc_warn_unused_result bool
-seq_try_write_lock_irq_disable(struct seqlock *sl, enum irql *out)
+seq_try_write_lock_high(struct seqlock *sl, enum irql *out)
     TSA_TRY_ACQUIRES(true, &sl->lock) {
-    if (spin_trylock_irq_disable(&sl->lock, out)) {
+    if (spin_trylock_high(&sl->lock, out)) {
         seqcount_begin_write(&sl->seqcount);
         return true;
     }
