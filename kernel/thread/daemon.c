@@ -354,14 +354,6 @@ struct daemon_thread *daemon_spawn_worker(struct daemon *daemon) {
     return dt;
 }
 
-enum workqueue_error daemon_submit_oneshot_work(struct daemon *daemon,
-                                                work_function function,
-                                                struct work_args args) {
-    kassert(daemon->workqueue &&
-            DAEMON_FLAG_TEST(daemon, DAEMON_FLAG_HAS_WORKQUEUE));
-    return workqueue_enqueue_oneshot(daemon->workqueue, function, args);
-}
-
 enum workqueue_error daemon_submit_work(struct daemon *daemon,
                                         struct work *work) {
     kassert(daemon->workqueue &&

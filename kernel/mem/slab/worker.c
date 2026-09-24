@@ -77,8 +77,6 @@ void slab_domain_init_workqueue(struct slab_domain *domain) {
     domain_set_cpu_mask(&mask, domain->domain);
 
     struct workqueue_attributes attrs = {
-        .capacity = WORKQUEUE_DEFAULT_CAPACITY,
-
         /* We set static_workers and spawn_via_request to make these safe
          * here since if those weren't set the dynamic memory allocation
          * could potentially spiral into bigger problems... */

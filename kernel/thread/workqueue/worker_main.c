@@ -115,17 +115,12 @@ void worker_main(void *unused) TSA_NO_ANALYSIS {
     while (true) {
 
         struct work *task = NULL;
-        struct work oneshot_task = {0};
-        int32_t dequeue = workqueue_dequeue_task(queue, &task, &oneshot_task);
-        if (dequeue > 0) {
+        bool dequeue = workqueue_dequeue_task(queue, &task);
+        if (dequeue) {
             w->last_active = time_get_ms();
             w->idle = false;
 
-            if (dequeue == DEQUEUE_FROM_ONESHOT_CODE) {
-                work_execute(&oneshot_task);
-            } else {
-                work_execute(task);
-            }
+            work_execute(task);
 
             continue;
         }

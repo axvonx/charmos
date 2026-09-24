@@ -38,7 +38,6 @@ static void page_zeroer_perdomain_init(struct page_zeroer *pz,
     struct workqueue_attributes wqattrs = {
         .max_workers = threads,
         .min_workers = threads,
-        .capacity = WORKQUEUE_DEFAULT_CAPACITY,
         .spawn_delay = 0,
         .idle_check = WORKQUEUE_DEFAULT_IDLE_CHECK,
         .worker_cpu_mask = cmask,

@@ -1,9 +1,6 @@
 #include <stdarg.h>
 #include <thread/workqueue.h>
 
-#define DEQUEUE_FROM_ONESHOT_CODE 2
-#define DEQUEUE_FROM_REGULAR_CODE 1
-
 #define work_from_worklist_node(node) container_of(node, struct work, list_node)
 
 static inline enum irql workqueue_lock(struct workqueue *workqueue)
@@ -83,8 +80,7 @@ static inline size_t workqueue_idlers(struct workqueue *wq) {
 }
 
 bool workqueue_try_spawn_worker(struct workqueue *queue);
-int32_t workqueue_dequeue_task(struct workqueue *queue, struct work **out,
-                               struct work *oneshot_out);
+bool workqueue_dequeue_task(struct workqueue *queue, struct work **out);
 void workqueue_link_thread_and_worker(struct worker *worker,
                                       struct thread *thread);
 bool workqueue_spawn_worker_internal(struct workqueue *queue);

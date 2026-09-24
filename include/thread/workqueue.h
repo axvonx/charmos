@@ -27,7 +27,6 @@ struct work {
 
     atomic_bool enqueued;
     atomic_bool active;
-    atomic_uint64_t seq;
 };
 
 struct delayed_work {
@@ -141,7 +140,6 @@ enum workqueue_state : uint16_t {
 struct workqueue_attributes {
     size_t min_workers; /* If set to 0, this field will be treated as a "1" */
     size_t max_workers;
-    size_t capacity;
     time_ms_t spawn_delay;
     nice_t worker_niceness;
     struct {
@@ -153,7 +151,6 @@ struct workqueue_attributes {
     struct cpu_mask worker_cpu_mask;
 };
 
-#define WORKQUEUE_DEFAULT_CAPACITY 512
 #define WORKQUEUE_DEFAULT_MAX_WORKERS 16
 #define WORKQUEUE_DEFAULT_SPAWN_DELAY 150
 #define WORKQUEUE_DEFAULT_MIN_IDLE_CHECK SECONDS_TO_MS(2)
@@ -174,7 +171,6 @@ struct workqueue {
 
     struct condvar queue_cv;
 
-    struct work *oneshot_works; /* Ringbuffer of ``capacity`` oneshot tasks */
     struct list_head workers;
     struct list_head works;
     struct worker *worker_array; /* if STATIC_WORKER is needed */
@@ -238,29 +234,9 @@ struct work *work_init(struct work *work, work_function fn,
                        struct work_args args);
 
 void workqueue_free(struct workqueue *queue);
-enum workqueue_error workqueue_enqueue_oneshot(struct workqueue *queue,
-                                               work_function func,
-                                               struct work_args args);
 
 enum workqueue_error workqueue_enqueue(struct workqueue *queue,
                                        struct work *work);
-
-/* Permanent workqueues */
-enum workqueue_error workqueue_add_oneshot(work_function func,
-                                           struct work_args args)
-    cc_warn_unused_result;
-
-enum workqueue_error workqueue_add_remote_oneshot(work_function func,
-                                                  struct work_args args)
-    cc_warn_unused_result;
-
-enum workqueue_error workqueue_add_local_oneshot(work_function func,
-                                                 struct work_args args)
-    cc_warn_unused_result;
-
-enum workqueue_error workqueue_add_fast_oneshot(work_function func,
-                                                struct work_args args)
-    cc_warn_unused_result;
 
 enum workqueue_error workqueue_add(struct work *work) cc_warn_unused_result;
 

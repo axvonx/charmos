@@ -700,6 +700,9 @@ static inline void thread_set_joinable(struct thread *t) {
     thread_or_flags(t, THREAD_FLAG_JOINABLE);
 }
 
+/* TODO: the thread creation facilities are getting unpleasantly
+ * overloaded. Make a reusable parameter structure that everything
+ * can consume, perhaps a macro for creation, similar to kmalloc and friends */
 static inline struct thread *
 thread_spawn_joinable(char *name, void (*entry)(void *), void *arg, ...) {
     va_list args;

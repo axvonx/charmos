@@ -16,24 +16,6 @@
 LOCK_CHK_CLASS_DECLARE_LOCAL(workqueue_irq);
 LOCK_CHK_CLASS_DECLARE_LOCAL(workqueue_disp);
 
-enum workqueue_error workqueue_add_oneshot(work_function func,
-                                           struct work_args args) {
-    struct workqueue *queue = workqueue_get_least_loaded();
-    return workqueue_enqueue_oneshot(queue, func, args);
-}
-
-enum workqueue_error workqueue_add_remote_oneshot(work_function func,
-                                                  struct work_args args) {
-    struct workqueue *queue = workqueue_get_least_loaded_remote();
-    return workqueue_enqueue_oneshot(queue, func, args);
-}
-
-enum workqueue_error workqueue_add_local_oneshot(work_function func,
-                                                 struct work_args args) {
-    struct workqueue *queue = global.workqueues[smp_id_raw()];
-    return workqueue_enqueue_oneshot(queue, func, args);
-}
-
 static struct workqueue *find_optimal_domain_wq(void) {
     struct core *pos;
 
@@ -55,12 +37,6 @@ static struct workqueue *find_optimal_domain_wq(void) {
     }
 
     return optimal;
-}
-
-enum workqueue_error workqueue_add_fast_oneshot(work_function func,
-                                                struct work_args args) {
-    struct workqueue *optimal = find_optimal_domain_wq();
-    return workqueue_enqueue_oneshot(optimal, func, args);
 }
 
 enum workqueue_error workqueue_add_fast(struct work *work) {
@@ -123,14 +99,6 @@ struct workqueue *workqueue_create_internal(struct workqueue_attributes *attrs,
                                     : CONDVAR_INIT_NORMAL);
     kassert(THREAD_NICENESS_VALID(attrs->worker_niceness));
 
-    size = sizeof(struct work) * attrs->capacity;
-    if (permanent)
-        size = PAGE_ALIGN_UP(size);
-
-    wq->oneshot_works = kmalloc(size, ALLOC_ZERO);
-    if (!wq->oneshot_works)
-        goto err;
-
     if (attrs->flags & WORKQUEUE_FLAG_STATIC_WORKERS) {
         wq->worker_array =
             kmalloc(sizeof(struct worker) * attrs->max_workers, ALLOC_ZERO);
@@ -158,9 +126,6 @@ struct workqueue *workqueue_create_internal(struct workqueue_attributes *attrs,
     INIT_LIST_HEAD(&wq->workers);
     INIT_LIST_HEAD(&wq->works);
 
-    for (uint64_t i = 0; i < attrs->capacity; i++)
-        atomic_store_relaxed(&wq->oneshot_works[i].seq, i);
-
     refcount_init(&wq->refcount, 1);
     atomic_store_relaxed(&wq->state, WORKQUEUE_STATE_ACTIVE);
 
@@ -171,7 +136,6 @@ err:
         kfree(wq->worker_array);
         kfree(wq->request);
         kfree(wq->name);
-        kfree(wq->oneshot_works);
     }
 
     kfree(wq);
@@ -205,7 +169,6 @@ struct workqueue *workqueue_create_default(const char *fmt, ...) {
 
     cpu_mask_set_all(&cmask);
     struct workqueue_attributes attrs = {
-        .capacity = WORKQUEUE_DEFAULT_CAPACITY,
         .idle_check = WORKQUEUE_DEFAULT_IDLE_CHECK,
         .max_workers = WORKQUEUE_DEFAULT_MAX_WORKERS,
         .min_workers = 1,
@@ -237,7 +200,6 @@ static void mark_worker_exit(struct thread *t) {
 void workqueue_free(struct workqueue *wq) {
     kassert(atomic_load(&wq->refcount) == 0);
     WORKQUEUE_STATE_SET(wq, WORKQUEUE_STATE_DEAD);
-    kfree(wq->oneshot_works);
     kfree(wq->request);
     kfree(wq);
 }
@@ -311,7 +273,6 @@ void workqueues_permanent_init(void) {
         cpu_mask_set(&mask, i);
 
         struct workqueue_attributes attrs = {
-            .capacity = WORKQUEUE_DEFAULT_CAPACITY,
             .max_workers = WORKQUEUE_DEFAULT_MAX_WORKERS,
             .spawn_delay = WORKQUEUE_DEFAULT_SPAWN_DELAY,
             .idle_check = WORKQUEUE_DEFAULT_IDLE_CHECK,
@@ -337,7 +298,6 @@ struct work *work_init(struct work *work, work_function fn,
     work->args = args;
     atomic_init(&work->active, false);
     atomic_init(&work->enqueued, false);
-    atomic_init(&work->seq, 0);
     work->func = fn;
     INIT_LIST_HEAD(&work->list_node);
     return work;

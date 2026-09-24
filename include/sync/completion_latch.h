@@ -36,7 +36,7 @@ completion_latch_is_ready(const struct completion_latch *cl) {
 
 static inline uint64_t
 completion_latch_count(const struct completion_latch *cl) {
-    return once_latch_count(&cl->latch);
+    return once_latch_get_count(&cl->latch);
 }
 
 static inline void completion_latch_wait(struct completion_latch *cl)

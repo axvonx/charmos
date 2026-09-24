@@ -24,7 +24,7 @@ static inline bool once_latch_is_ready(const struct once_latch *latch) {
     return atomic_load_acq(&latch->count) == 0;
 }
 
-static inline uint64_t once_latch_count(const struct once_latch *latch) {
+static inline uint64_t once_latch_get_count(const struct once_latch *latch) {
     return atomic_load_acq(&latch->count);
 }
 

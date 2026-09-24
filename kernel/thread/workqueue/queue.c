@@ -29,74 +29,7 @@ static enum workqueue_error signal_worker(struct workqueue *queue) {
     return ret;
 }
 
-static bool dequeue_oneshot_task(struct workqueue *queue, struct work *out) {
-    uint64_t pos;
-    struct work *t;
-
-    while (true) {
-        pos = atomic_load_relaxed(&queue->tail);
-        t = &queue->oneshot_works[pos % queue->attrs.capacity];
-        uint64_t seq = atomic_load_acq(&t->seq);
-        int64_t diff = (int64_t) seq - (int64_t) (pos + 1);
-
-        if (diff == 0) {
-            if (atomic_cas_weak(&queue->tail, &pos, pos + 1, mo_acq_rel,
-                                mo_relaxed)) {
-
-                *out = *t;
-                atomic_store_release(&t->seq, pos + queue->attrs.capacity);
-
-                atomic_dec(&queue->num_tasks);
-
-                return true;
-            }
-
-            continue;
-        } else if (diff < 0) {
-            return false;
-        }
-    }
-}
-
-enum workqueue_error workqueue_enqueue_oneshot(struct workqueue *queue,
-                                               work_function func,
-                                               struct work_args args) {
-    if (!workqueue_usable(queue))
-        return WORKQUEUE_ERROR_UNUSABLE;
-
-    uint64_t pos;
-    struct work *t;
-
-    while (true) {
-        pos = atomic_load_relaxed(&queue->head);
-        t = &queue->oneshot_works[pos % queue->attrs.capacity];
-        uint64_t seq = atomic_load_acq(&t->seq);
-        int64_t diff = (int64_t) seq - (int64_t) pos;
-
-        if (diff == 0) {
-            if (atomic_cas_weak(&queue->head, &pos, pos + 1, mo_acq_rel,
-                                mo_relaxed)) {
-
-                t->func = func;
-                t->args = args;
-
-                atomic_inc(&queue->num_tasks);
-
-                atomic_store_release(&t->seq, pos + 1);
-
-                return signal_worker(queue);
-            }
-        } else if (diff < 0) {
-            return WORKQUEUE_ERROR_FULL;
-        }
-    }
-}
-
-int32_t workqueue_dequeue_task(struct workqueue *queue, struct work **out,
-                               struct work *oneshot_task) {
-    if (dequeue_oneshot_task(queue, oneshot_task))
-        return DEQUEUE_FROM_ONESHOT_CODE;
-
+bool workqueue_dequeue_task(struct workqueue *queue, struct work **out) {
     enum irql irql = spin_lock_irq_disable(&queue->work_lock);
     struct list_head *lh = list_pop_front(&queue->works);
     spin_unlock(&queue->work_lock, irql);
@@ -106,10 +39,10 @@ int32_t workqueue_dequeue_task(struct workqueue *queue, struct work **out,
         *out = work;
         atomic_store(&work->enqueued, false);
         atomic_dec(&queue->num_tasks);
-        return DEQUEUE_FROM_REGULAR_CODE;
+        return true;
     }
 
-    return 0;
+    return false;
 }
 
 enum workqueue_error workqueue_enqueue(struct workqueue *queue,

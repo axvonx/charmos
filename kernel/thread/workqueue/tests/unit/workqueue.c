@@ -5,60 +5,14 @@ TEST_GROUP_DECLARE(workqueue, .intensity_desc = {
                                   .unit = "items",
                               });
 
-static atomic_bool workqueue_ran = false;
-static atomic_uint32_t workqueue_times = 0;
-static void workqueue_fn(void *arg, void *unused) {
-    cc_var_unused(arg, unused);
-    atomic_store(&workqueue_ran, true);
-    atomic_inc(&workqueue_times);
-}
-
-TEST_DECLARE_UNIT(workqueue, fast_oneshot, TEST_INTENSITY(32, 256, 4096)) {
-    atomic_store(&workqueue_ran, false);
-    atomic_store(&workqueue_times, 0);
-
-    uint64_t tsc = rdtsc();
-    uint64_t times = ctx->intensity_val ? ctx->intensity_val : 256;
-
-    for (uint64_t i = 0; i < times; i++) {
-        enum workqueue_error err =
-            workqueue_add_fast_oneshot(workqueue_fn, WORK_ARGS(NULL, NULL));
-        cc_var_unused(err);
-    }
-
-    uint64_t total = rdtsc() - tsc;
-    sleep_spin_ms(50);
-
-    while (!atomic_load(&workqueue_ran))
-        cpu_pause();
-
-    char *msg = kmalloc(100, ALLOC_ZERO);
-    TEST_ASSERT_NONNULL(msg);
-    snprintf(msg, 100, "Took %lu clock cycles to add to event pool %lu times",
-             total, times);
-    test_info(msg);
-    kfree(msg);
-
-    TEST_ASSERT(atomic_load(&workqueue_ran));
-
-    msg = kmalloc(100, ALLOC_ZERO);
-    TEST_ASSERT_NONNULL(msg);
-    snprintf(msg, 100,
-             "Event pool ran %u times, tests should've had it run %lu times",
-             atomic_load(&workqueue_times), times);
-    test_info(msg);
-    kfree(msg);
-
-    return TEST_SUCCESS;
-}
-
 #define WQ_2_THREADS 2
 
 static atomic_uint32_t times_2 = 0;
-static size_t wq_2_items_per_thread = 2048;
+static size_t wq_2_items_per_thread = 512;
 
 static void wq_test_2(void *a, void *b) {
     cc_var_unused(a, b);
+
     atomic_inc(&times_2);
     for (uint64_t i = 0; i < 500; i++)
         cpu_pause();
@@ -69,13 +23,21 @@ static atomic_uint32_t threads_left = WQ_2_THREADS;
 
 static void enqueue_thread(void *arg) {
     cc_var_unused(arg);
+    struct work works[wq_2_items_per_thread];
+
     for (size_t i = 0; i < wq_2_items_per_thread; i++) {
         for (uint64_t j = 0; j < 500; j++)
             cpu_pause();
 
-        workqueue_enqueue_oneshot(wq, wq_test_2, WORK_ARGS(NULL, wq));
+        work_init(&works[i], wq_test_2, WORK_ARGS(NULL, wq));
+        workqueue_enqueue(wq, &works[i]);
         scheduler_yield();
     }
+
+    for (size_t i = 0; i < wq_2_items_per_thread; i++)
+        while (work_active(&works[i]))
+            cpu_pause();
+
     atomic_dec(&threads_left);
 }
 
@@ -92,7 +54,6 @@ TEST_DECLARE_UNIT(workqueue, concurrent_enqueue_scaling,
     cpu_mask_set_all(&mask);
 
     struct workqueue_attributes attrs = {
-        .capacity = total_items,
         .flags = WORKQUEUE_FLAG_AUTO_SPAWN | WORKQUEUE_FLAG_ON_DEMAND,
         .spawn_delay = 1,
         .idle_check.max = 10000,
@@ -107,8 +68,10 @@ TEST_DECLARE_UNIT(workqueue, concurrent_enqueue_scaling,
     struct thread *enqueuers[WQ_2_THREADS];
     for (size_t i = 0; i < WQ_2_THREADS; i++) {
         test_info("spawning workqueue enqueue threads");
-        enqueuers[i] = thread_spawn_joinable("workqueue_enqueue_thread",
-                                             enqueue_thread, NULL);
+
+        /* Big stack */
+        enqueuers[i] = thread_spawn_joinable_custom_stack(
+            "workqueue_enqueue_thread", enqueue_thread, NULL, PAGE_SIZE * 32);
     }
 
     test_info("waiting for enqueue threads");

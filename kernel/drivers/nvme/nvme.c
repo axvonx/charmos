@@ -148,7 +148,6 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
     cpu_mask_set_all(&mask);
 
     struct workqueue_attributes attrs = {
-        .capacity    = 64, /* small, oneshots are rare */
         .idle_check  = WORKQUEUE_DEFAULT_IDLE_CHECK,
         .max_workers = 1,
         .spawn_delay = WORKQUEUE_DEFAULT_SPAWN_DELAY,
