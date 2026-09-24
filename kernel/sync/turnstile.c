@@ -4,6 +4,7 @@
 #include <mem/alloc_or_die.h>
 #include <mem/slab.h> /* to get SLAB_OBJ_ALIGN */
 #include <sch/sched.h>
+#include <sync/rcu.h>
 #include <sync/turnstile.h>
 #include <thread/thread.h>
 
@@ -163,28 +164,28 @@ static void turnstile_remove(struct turnstile_hash_chain *chain,
     ts->lock_obj = NULL;
 }
 
-/* Turnstile owners are raw pointers.  Upgrade one under RCU before PI
- * propagation follows blocked_ts, since a wake can otherwise let the owner
- * reach the reaper while this code is still walking the chain. */
-static bool turnstile_get_thread_ref(struct thread *thread) {
-    rcu_read_lock();
-    bool got = thread_get_rcu(thread);
-    rcu_read_unlock();
-    return got;
-}
+struct turnstile_wait_snapshot {
+    struct turnstile *ts;
+    void *lock_obj;
+    uint64_t epoch;
+};
 
-static bool turnstile_snapshot_wait(struct thread *thread, void **lock_obj,
-                                    struct thread_wait_header **header) {
+static bool turnstile_snapshot_wait(struct thread *thread,
+                                    struct turnstile_wait_snapshot *wait) {
     enum irql irql = spin_lock_irq_disable(&thread->wait_lock);
     struct thread_wait_block *block = thread->active_wait_blocks;
     bool valid =
         block == thread->wait_blocks &&
         thread->wait_block_count > THREAD_WAIT_BLOCK_SYNC &&
         block[THREAD_WAIT_BLOCK_SYNC].state == THREAD_WAIT_BLOCK_ACTIVE;
+
     if (valid) {
-        *lock_obj = block[THREAD_WAIT_BLOCK_SYNC].object;
-        *header = block[THREAD_WAIT_BLOCK_SYNC].header;
+        wait->ts = atomic_load_relaxed(&thread->blocked_ts);
+        wait->lock_obj = block[THREAD_WAIT_BLOCK_SYNC].object;
+        wait->epoch = block[THREAD_WAIT_BLOCK_SYNC].epoch;
+        valid = wait->ts != NULL;
     }
+
     spin_unlock(&thread->wait_lock, irql);
     return valid;
 }
@@ -239,6 +240,8 @@ struct thread *turnstile_dequeue_first(struct turnstile *ts, size_t queue) {
     rbt_delete(&ts->queues[queue], last);
     struct thread *thread = thread_from_wq_rbt_node(last);
 
+    atomic_store_relaxed(&thread->blocked_ts, NULL);
+
     struct turnstile *got = ts;
     if (ts->waiters == 1) { /* last waiter, take the turnstile with you! */
         /* you're taking the turnstile */
@@ -252,9 +255,6 @@ struct thread *turnstile_dequeue_first(struct turnstile *ts, size_t queue) {
 
     /* you take this turnstile with you as you wake up please */
     thread->turnstile = got;
-
-    /* you are no longer blocked on a lock */
-    atomic_store_relaxed(&thread->blocked_ts, NULL);
 
     /* you are also no longer a waiter */
     ts->waiters--;
@@ -290,108 +290,71 @@ void turnstile_unlock(void *obj, enum irql irql) {
     turnstile_hash_chain_unlock(chain, irql);
 }
 
-void turnstile_propagate_boost(struct turnstile_hash_chain *locked_chain,
-                               struct turnstile *ts) {
+static enum irql
+turnstile_propagate_boost(struct turnstile_hash_chain *locked_chain,
+                          struct turnstile *ts, enum irql irql) {
+    struct turnstile_hash_chain *chain = locked_chain;
     struct turnstile *cur_ts = ts;
-    void *cur_obj = ts->lock_obj;
-    struct thread_wait_header *cur_header = NULL;
-    struct thread *owner = NULL, *boosting_from = thread_get_current();
-    struct thread *boosting_ref = NULL;
+    struct thread *boosting_from = thread_get_current();
 
-    while (cur_ts) {
-        struct turnstile_hash_chain *chain = turnstile_chain_for(cur_obj);
+    /* RCU keeps threads alive when reading owners,
+     * and we re-hash objects upon lookup */
+    rcu_read_lock();
 
-        enum irql irql = IRQL_PASSIVE_LEVEL;
-        bool unlock = false;
-
-        if (chain != locked_chain) {
-            irql = turnstile_hash_chain_lock(chain);
-            unlock = true;
-        }
-
-        if (cur_ts->lock_obj != cur_obj ||
-            (cur_header && &cur_ts->wait != cur_header) ||
-            (boosting_ref &&
-             atomic_load_relaxed(&boosting_ref->blocked_ts) != cur_ts)) {
-            if (unlock)
-                turnstile_hash_chain_unlock(chain, irql);
+    while (true) {
+        struct thread *owner = cur_ts->owner;
+        if (!owner)
             break;
-        }
 
-        owner = cur_ts->owner;
-        if (!owner || !turnstile_get_thread_ref(owner)) {
-            if (unlock)
-                turnstile_hash_chain_unlock(chain, irql);
-            break;
-        }
-
-        /* Apply inheritance */
         enum thread_prio_class old_class;
-        if (!thread_inherit_priority(owner, boosting_from, &old_class)) {
-            thread_put(owner);
-            if (unlock)
-                turnstile_hash_chain_unlock(chain, irql);
+
+        /* If it fails, that means the owner did not inherit our
+         * priority. Thus, we must short circuit the walk */
+        if (!thread_inherit_priority(owner, boosting_from, &old_class))
             break;
-        }
 
         if (!cur_ts->applied_pi_boost) {
             cur_ts->prio_class = old_class;
             cur_ts->applied_pi_boost = true;
         }
 
-        /* Speculative next hop */
-        struct turnstile *next = atomic_load_relaxed(&owner->blocked_ts);
+        struct turnstile_wait_snapshot next_wait, current_wait;
+        if (!turnstile_snapshot_wait(owner, &next_wait))
+            break;
 
-        if (unlock)
+        struct turnstile_hash_chain *next_chain =
+            turnstile_chain_for(next_wait.lock_obj);
+
+        if (next_chain != chain) {
             turnstile_hash_chain_unlock(chain, irql);
-
-        if (!next) {
-            thread_put(owner);
-            break;
+            chain = next_chain;
+            irql = turnstile_hash_chain_lock(chain);
         }
 
-        void *next_obj;
-        struct thread_wait_header *next_header;
-        if (!turnstile_snapshot_wait(owner, &next_obj, &next_header)) {
-            thread_put(owner);
+        /* Lookup again */
+        cur_ts = turnstile_lookup_internal(next_wait.lock_obj);
+
+        bool ts_valid = cur_ts == next_wait.ts;
+        bool snapshot = turnstile_snapshot_wait(owner, &current_wait);
+        bool curr_valid =
+            current_wait.ts == cur_ts && current_wait.epoch == next_wait.epoch;
+
+        if (!ts_valid || !snapshot || !curr_valid)
             break;
-        }
-
-        struct turnstile_hash_chain *next_chain = turnstile_chain_for(next_obj);
-
-        bool next_unlock = next_chain != locked_chain;
-        enum irql nirql = IRQL_PASSIVE_LEVEL;
-        if (next_unlock)
-            nirql = turnstile_hash_chain_lock(next_chain);
-
-        if (atomic_load_relaxed(&owner->blocked_ts) != next ||
-            next->lock_obj != next_obj || &next->wait != next_header ||
-            !next->owner) {
-            if (next_unlock)
-                turnstile_hash_chain_unlock(next_chain, nirql);
-
-            thread_put(owner);
-            break;
-        }
 
         if (owner->perceived_prio_class != old_class)
-            turnstile_requeue_waiter(next, owner);
+            turnstile_requeue_waiter(cur_ts, owner);
 
-        if (boosting_ref)
-            thread_put(boosting_ref);
-
-        boosting_ref = owner;
         boosting_from = owner;
-
-        if (next_unlock)
-            turnstile_hash_chain_unlock(next_chain, nirql);
-        cur_ts = next;
-        cur_obj = next_obj;
-        cur_header = next_header;
     }
 
-    if (boosting_ref)
-        thread_put(boosting_ref);
+    if (chain != locked_chain) {
+        turnstile_hash_chain_unlock(chain, irql);
+        irql = turnstile_hash_chain_lock(locked_chain);
+    }
+
+    rcu_read_unlock();
+    return irql;
 }
 
 static void turnstile_block_on(struct turnstile *ts, size_t queue_num) {
@@ -436,21 +399,20 @@ struct turnstile *turnstile_block(struct turnstile *ts, size_t queue_num,
     current_thread->turnstile = NULL;
     ts->owner = owner;
 
-    turnstile_propagate_boost(chain, ts);
-
     ts->waiters++;
 
     turnstile_block_on(ts, queue_num);
 
+    lock_irql = turnstile_propagate_boost(chain, ts, lock_irql);
+
     turnstile_hash_chain_unlock(chain, lock_irql);
 
-    /* it is the waking thread's job to decrement waiters and
-     * mark me as no longer being blocked on the lock object */
+    /* it is the waking thread's job to decrement waiters */
     thread_wait_complete();
 
     thread_remove_boost();
 
-    return ts;
+    return current_thread->turnstile;
 }
 
 size_t turnstile_get_waiter_count(void *lock_obj) {
