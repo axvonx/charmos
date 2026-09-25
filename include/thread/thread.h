@@ -338,11 +338,11 @@ struct thread {
     uint64_t wait_epoch;
     uint16_t wait_key;
 
-    bool wait_done;
     enum thread_wait_status wait_status;
 
-    bool alert_pending;
-    bool object_wait;
+    bool wait_done : 1;
+    bool alert_pending : 1;
+    bool object_wait : 1;
 
     atomic(enum thread_wait_type) wait_type;
 
