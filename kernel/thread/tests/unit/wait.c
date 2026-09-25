@@ -76,8 +76,8 @@ TEST_DECLARE_UNIT(wait_block, concurrent_wait_any) {
         thread_wait_header_init(&headers[i]);
         objects[i] = (struct thread_wait_object){&headers[i], &headers[i]};
         racers[i] = (struct wait_racer){&headers[i], &go, &wins};
-        wakers[i] =
-            thread_spawn_joinable("wait_racer", race_satisfy, &racers[i]);
+        wakers[i] = thread_spawn("wait_racer", race_satisfy, .arg = &racers[i],
+                                 .joinable = true);
         kassert(wakers[i]);
     }
     thread_wait_prepare(objects, 2, NULL, THREAD_WAIT_UNINTERRUPTIBLE,
@@ -130,7 +130,8 @@ TEST_DECLARE_UNIT(wait_block, apc_preserves_registration) {
     thread_wait_header_init(&c.header);
     struct apc apc;
     apc_init(&apc, satisfy_during_apc, &c, NULL);
-    struct thread *t = thread_spawn_joinable("apc_waiter", apc_waiter, &c);
+    struct thread *t =
+        thread_spawn("apc_waiter", apc_waiter, .arg = &c, .joinable = true);
     TEST_ASSERT_NONNULL(t);
     while (!atomic_load(&c.armed))
         scheduler_yield();

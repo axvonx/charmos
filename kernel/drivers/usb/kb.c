@@ -182,7 +182,7 @@ struct usb_hid_keyboard *usb_keyboard_create(struct usb_device   *dev,
         .dev    = dev,
     };
 
-    thread_spawn("usb_kbd_worker", usb_kbd_worker, kbd);
+    thread_spawn("usb_kbd_worker", usb_kbd_worker, .arg = kbd);
     atomic_store(&kbd->worker_here, true);
     return kbd;
 }

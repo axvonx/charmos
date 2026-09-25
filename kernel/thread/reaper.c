@@ -26,13 +26,9 @@ void reaper_init(void) {
 
         locked_list_init(&reapers[i]->list, LOCKED_LIST_INIT_IRQ_DISABLE);
         semaphore_init(&reapers[i]->sem, 1, SEMAPHORE_INIT_IRQ_DISABLE);
-        reapers[i]->thread = alloc_or_die(
-            thread_create("reaper_thread", reaper_thread_main, NULL));
-
-        domain_set_cpu_mask(&reapers[i]->thread->allowed_cpus,
-                            global.domains[i]);
-        reapers[i]->thread->private = reapers[i];
-        thread_enqueue(reapers[i]->thread);
+        reapers[i]->thread = alloc_or_die(thread_spawn(
+            "reaper_thread", reaper_thread_main, .private = reapers[i],
+            .allowed_cpus = global.domains[i]->cpu_mask));
     }
 }
 

@@ -25,8 +25,8 @@ TEST_DECLARE_INTEGRATION(turnstile, lookup_collision_miss) {
     mutex_init(missing);
 
     mutex_lock(occupied);
-    struct thread *waiter =
-        thread_spawn_joinable("ts_collision", collision_waiter, occupied);
+    struct thread *waiter = thread_spawn("ts_collision", collision_waiter,
+                                         .arg = occupied, .joinable = true);
     if (!waiter) {
         mutex_unlock(occupied);
         return TEST_FAIL("cannot create collision waiter");
@@ -73,7 +73,8 @@ TEST_DECLARE_INTEGRATION(turnstile, lookup_collision_chain) {
     mutex_init(lock1);
 
     mutex_lock_subclass(lock0, 0);
-    waiters[0] = thread_spawn_joinable("ts_chain", collision_waiter, lock0);
+    waiters[0] = thread_spawn("ts_chain", collision_waiter, .arg = lock0,
+                              .joinable = true);
 
     time_ms_t deadline = time_get_ms() + 1000;
     while (!atomic_load(&waiters[0]->blocked_ts) && time_get_ms() < deadline)
@@ -81,7 +82,8 @@ TEST_DECLARE_INTEGRATION(turnstile, lookup_collision_chain) {
     blocked[0] = atomic_load(&waiters[0]->blocked_ts) != NULL;
 
     mutex_lock_subclass(lock1, 1);
-    waiters[1] = thread_spawn_joinable("ts_chain", collision_waiter, lock1);
+    waiters[1] = thread_spawn("ts_chain", collision_waiter, .arg = lock1,
+                              .joinable = true);
 
     deadline = time_get_ms() + 1000;
     while (!atomic_load(&waiters[1]->blocked_ts) && time_get_ms() < deadline)

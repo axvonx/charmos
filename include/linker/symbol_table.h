@@ -13,7 +13,6 @@ struct kernel_syms_hdr {
     uint32_t lines_off;  /* 0 when the build produced no line table */
 };
 
-/* Sorted by addr, so lookups can bisect */
 struct kernel_sym {
     uint64_t addr;
     uint32_t name_off; /* from the start of the string table */
@@ -21,14 +20,6 @@ struct kernel_sym {
 };
 
 #define KERNEL_LINES_MAGIC 0x454e494cu /* "LINE" */
-
-/* Address -> file:line
- *
- * A fixed width entry per row would be really big, so rows are a delta stream
- * instead. For every row, how far the address moved, then change in file and in
- * line. Every field is uleb128, and the two that can go backwards are zigzagged
- * first, so the decoder doesn't need a sign bit, which is about 3 bytes a row
- */
 
 struct kernel_lines_hdr {
     uint32_t magic;

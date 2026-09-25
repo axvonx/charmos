@@ -168,8 +168,8 @@ static void sd_mt_spawn(char *name, void (*fn)(void *), size_t n) {
     /* Raise to spawn a bunch */
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
     for (size_t i = 0; i < n; i++)
-        sd_mt.threads[i] =
-            thread_spawn_joinable(name, fn, (void *) (uintptr_t) i);
+        sd_mt.threads[i] = thread_spawn(
+            ("%s", name), fn, .arg = (void *) (uintptr_t) i, .joinable = true);
     irql_lower(irql);
 }
 

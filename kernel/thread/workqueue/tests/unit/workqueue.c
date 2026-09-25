@@ -70,8 +70,8 @@ TEST_DECLARE_UNIT(workqueue, concurrent_enqueue_scaling,
         test_info("spawning workqueue enqueue threads");
 
         /* Big stack */
-        enqueuers[i] = thread_spawn_joinable_custom_stack(
-            "workqueue_enqueue_thread", enqueue_thread, NULL, PAGE_SIZE * 32);
+        enqueuers[i] = thread_spawn("workqueue_enqueue_thread", enqueue_thread,
+                                    .stack_pages = 32, .joinable = true);
     }
 
     test_info("waiting for enqueue threads");

@@ -60,7 +60,8 @@ TEST_DECLARE_UNIT(test_sync, phase_advance_wakes_waiters) {
 
     struct thread *t[4];
     for (size_t i = 0; i < TEST_ARRAY_LEN(t); i++) {
-        t[i] = thread_spawn_joinable("phase_climber", phase_climber, &f);
+        t[i] = thread_spawn("phase_climber", phase_climber, .arg = &f,
+                            .joinable = true);
         TEST_ASSERT_NONNULL(t[i]);
     }
 
@@ -83,7 +84,8 @@ TEST_DECLARE_UNIT(test_sync, phase_poison_unblocks_all) {
 
     struct thread *t[4];
     for (size_t i = 0; i < TEST_ARRAY_LEN(t); i++) {
-        t[i] = thread_spawn_joinable("phase_waiter", phase_forever_waiter, &f);
+        t[i] = thread_spawn("phase_waiter", phase_forever_waiter, .arg = &f,
+                            .joinable = true);
         TEST_ASSERT_NONNULL(t[i]);
     }
 

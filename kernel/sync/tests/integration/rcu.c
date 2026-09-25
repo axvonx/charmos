@@ -78,11 +78,11 @@ TEST_DECLARE_INTEGRATION(rcu, basic, TEST_INTENSITY(40, 50, 200)) {
 
     struct thread *readers[NUM_RCU_READERS];
     for (uint64_t i = 0; i < NUM_RCU_READERS; i++)
-        readers[i] =
-            thread_spawn_joinable("rcu_reader_test", rcu_reader_thread, NULL);
+        readers[i] = thread_spawn("rcu_reader_test", rcu_reader_thread,
+                                  .joinable = true);
 
     struct thread *writer =
-        thread_spawn_joinable("rcu_writer_test", rcu_writer_thread, NULL);
+        thread_spawn("rcu_writer_test", rcu_writer_thread, .joinable = true);
 
     for (uint64_t i = 0; i < NUM_RCU_READERS; i++) {
         if (readers[i])
@@ -230,17 +230,17 @@ TEST_DECLARE_INTEGRATION(rcu, stress, TEST_INTENSITY(200, 2000, 10000)) {
     struct thread *writers[STRESS_NUM_WRITERS];
 
     for (uint32_t i = 0; i < STRESS_NUM_READERS; ++i) {
-        readers[i] =
-            thread_spawn_joinable("rcu_stread_%u", rcu_stress_reader, NULL, i);
+        readers[i] = thread_spawn(("rcu_stread_%u", i), rcu_stress_reader,
+                                  .joinable = true);
     }
 
     for (uint32_t i = 0; i < STRESS_NUM_WRITERS; ++i) {
-        writers[i] =
-            thread_spawn_joinable("rcu_strite_%u", rcu_stress_writer, NULL, i);
+        writers[i] = thread_spawn(("rcu_strite_%u", i), rcu_stress_writer,
+                                  .joinable = true);
     }
 
     struct thread *reclaimer =
-        thread_spawn_joinable("rcu_streclaim", rcu_stress_reclaimer, NULL);
+        thread_spawn("rcu_streclaim", rcu_stress_reclaimer, .joinable = true);
 
     uint64_t stop_at = time_get_ms() + rcu_stress_duration_ms;
     while (time_get_ms() < stop_at) {

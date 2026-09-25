@@ -5,15 +5,9 @@
 
 static struct thread *vas_worker_on(size_t cpu, void (*entry)(void *),
                                     void *arg) {
-    struct thread *thread = thread_create("vas_worker", entry, arg);
-    if (!thread)
-        return NULL;
-    cpu_mask_clear_all(&thread->allowed_cpus);
-    cpu_mask_set(&thread->allowed_cpus, cpu);
-    thread_or_flags(thread, THREAD_FLAG_PINNED);
-    thread_set_joinable(thread);
-    thread_enqueue_on_core(thread, cpu);
-    return thread;
+    return thread_spawn("vas_worker", entry, .arg = arg, .joinable = true,
+                        .allowed_cpus = cpu_mask_of(cpu),
+                        .flags = THREAD_FLAG_PINNED, .on_cpu = cpu);
 }
 
 struct handoff {

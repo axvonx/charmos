@@ -12,7 +12,7 @@ static void sleepy_entry(void *arg) {
 
 TEST_DECLARE_INTEGRATION(sched, sleep_ms) {
     struct thread *t =
-        thread_spawn_joinable("sched_sleepy_test", sleepy_entry, NULL);
+        thread_spawn("sched_sleepy_test", sleepy_entry, .joinable = true);
     TEST_ASSERT_NONNULL(t);
     thread_join(t);
     return TEST_SUCCESS;
@@ -28,8 +28,8 @@ static void micro_sleep_entry(void *arg) {
 
 TEST_DECLARE_INTEGRATION(sched, sleep_us) {
     atomic_store(&slept_for_us, false);
-    struct thread *t = thread_spawn_joinable("sched_micro_sleep_test",
-                                             micro_sleep_entry, NULL);
+    struct thread *t = thread_spawn("sched_micro_sleep_test", micro_sleep_entry,
+                                    .joinable = true);
     TEST_ASSERT_NONNULL(t);
     thread_join(t);
     TEST_ASSERT(atomic_load(&slept_for_us));
@@ -51,8 +51,8 @@ TEST_DECLARE_INTEGRATION(sched, short_sleep_lost_wake) {
     atomic_store(&short_sleep_stop, false);
     atomic_store(&short_sleep_count, 0);
 
-    struct thread *t = thread_spawn_joinable("sched_short_sleep_lost_wake_test",
-                                             short_sleep_entry, NULL);
+    struct thread *t = thread_spawn("sched_short_sleep_lost_wake_test",
+                                    short_sleep_entry, .joinable = true);
     TEST_ASSERT_NONNULL(t);
 
     bool joined = thread_join_timeout(t, 1000, NULL);
@@ -124,11 +124,12 @@ TEST_DECLARE_INTEGRATION(sched, sleep_interruptible_apc, .min_cores = 4) {
     atomic_store(&si_ok, false);
     atomic_store(&si_started, false);
 
-    si_t = thread_spawn_joinable_on_core("si_thread", sleeping_thread, NULL, 1);
+    si_t = thread_spawn("si_thread", sleeping_thread, .on_cpu = 1,
+                        .joinable = true);
     struct thread *waker =
-        thread_spawn_joinable_on_core("si_wake", waking_thread, NULL, 2);
-    struct thread *enq =
-        thread_spawn_joinable_on_core("si_apc_e", apc_enqueue_thread, NULL, 3);
+        thread_spawn("si_wake", waking_thread, .on_cpu = 2, .joinable = true);
+    struct thread *enq = thread_spawn("si_apc_e", apc_enqueue_thread,
+                                      .on_cpu = 3, .joinable = true);
 
     TEST_ASSERT_NONNULL(si_t);
     TEST_ASSERT_NONNULL(waker);
@@ -188,10 +189,10 @@ TEST_DECLARE_INTEGRATION(sched, wait_interruptible_substrate, .min_cores = 3) {
     atomic_store(&sub_interrupted, false);
     atomic_store(&sub_started, false);
 
-    sub_t =
-        thread_spawn_joinable_on_core("sub_th", sleeping_sub_thread, NULL, 1);
-    struct thread *enq =
-        thread_spawn_joinable_on_core("sub_enq", apc_sub_enq_thread, NULL, 2);
+    sub_t = thread_spawn("sub_th", sleeping_sub_thread, .on_cpu = 1,
+                         .joinable = true);
+    struct thread *enq = thread_spawn("sub_enq", apc_sub_enq_thread,
+                                      .on_cpu = 2, .joinable = true);
 
     TEST_ASSERT_NONNULL(sub_t);
     TEST_ASSERT_NONNULL(enq);
@@ -231,10 +232,10 @@ TEST_DECLARE_INTEGRATION(sched, park_alert, .min_cores = 3) {
     atomic_store(&arb_started, false);
     atomic_store(&arb_matched, false);
 
-    arb_t = thread_spawn_joinable_on_core("arb_th", arbitrary_sleeping_thread,
-                                          NULL, 1);
-    struct thread *waker = thread_spawn_joinable_on_core(
-        "arb_waker", arbitrary_waking_thread, NULL, 2);
+    arb_t = thread_spawn("arb_th", arbitrary_sleeping_thread, .on_cpu = 1,
+                         .joinable = true);
+    struct thread *waker = thread_spawn("arb_waker", arbitrary_waking_thread,
+                                        .on_cpu = 2, .joinable = true);
 
     TEST_ASSERT_NONNULL(arb_t);
     TEST_ASSERT_NONNULL(waker);

@@ -58,19 +58,14 @@ TEST_DECLARE_INTEGRATION(mutex, pi_boost) {
     atomic_store(&pi_done, 0);
 
     cpu_id_t cpu = 1;
-    pi_ts = thread_create("pi_ts", pi_ts_thread, NULL);
-    pi_rt = thread_create("pi_rt", pi_rt_thread, NULL);
-    pi_dum = thread_create("pi_dum", pi_dummy, NULL);
+    pi_ts = thread_create("pi_ts", pi_ts_thread, .joinable = true,
+                          .flags = THREAD_FLAG_PINNED);
+    pi_rt = thread_create("pi_rt", pi_rt_thread, .joinable = true,
+                          .flags = THREAD_FLAG_PINNED);
+    pi_dum = thread_create("pi_dum", pi_dummy, .joinable = true,
+                           .flags = THREAD_FLAG_PINNED);
     pi_rt->perceived_prio_class = THREAD_PRIO_CLASS_RT;
     pi_dum->perceived_prio_class = THREAD_PRIO_CLASS_RT;
-
-    thread_pin(pi_dum);
-    thread_pin(pi_ts);
-    thread_pin(pi_rt);
-
-    thread_set_joinable(pi_ts);
-    thread_set_joinable(pi_rt);
-    thread_set_joinable(pi_dum);
 
     thread_enqueue_on_core(pi_ts, cpu);
 
@@ -146,19 +141,14 @@ TEST_DECLARE_INTEGRATION(mutex, pi_chain, .min_cores = 2) {
 
     cpu_id_t cpu = 1;
 
-    pi_ts2 = thread_create("pi_ts2", pi_chain_ts2, NULL);
-    pi_ts1 = thread_create("pi_ts1", pi_chain_ts1, NULL);
-    pi_rt2 = thread_create("pi_rt2", pi_chain_rt, NULL);
+    pi_ts2 = thread_create("pi_ts2", pi_chain_ts2, .joinable = true,
+                           .flags = THREAD_FLAG_PINNED);
+    pi_ts1 = thread_create("pi_ts1", pi_chain_ts1, .joinable = true,
+                           .flags = THREAD_FLAG_PINNED);
+    pi_rt2 = thread_create("pi_rt2", pi_chain_rt, .joinable = true,
+                           .flags = THREAD_FLAG_PINNED);
 
     pi_rt2->perceived_prio_class = THREAD_PRIO_CLASS_RT;
-
-    thread_pin(pi_ts1);
-    thread_pin(pi_ts2);
-    thread_pin(pi_rt2);
-
-    thread_set_joinable(pi_ts2);
-    thread_set_joinable(pi_ts1);
-    thread_set_joinable(pi_rt2);
 
     thread_enqueue_on_core(pi_ts2, cpu);
     while (!atomic_load(&ts2_grabbed_b))
@@ -220,17 +210,14 @@ TEST_DECLARE_INTEGRATION(mutex, pi_multi_waiters,
 
     cpu_id_t cpu = 1;
 
-    struct thread *ts = thread_create("pi_ts", pi_multi_ts, NULL);
+    struct thread *ts = thread_create("pi_ts", pi_multi_ts, .joinable = true,
+                                      .flags = THREAD_FLAG_PINNED);
     struct thread *rt[8];
     for (size_t i = 0; i < num_rt; i++) {
-        rt[i] = thread_create("pi_rt", pi_multi_rt, NULL);
+        rt[i] = thread_create("pi_rt", pi_multi_rt, .joinable = true,
+                              .flags = THREAD_FLAG_PINNED);
         rt[i]->perceived_prio_class = THREAD_PRIO_CLASS_RT;
-        thread_pin(rt[i]);
-        thread_set_joinable(rt[i]);
     }
-
-    thread_pin(ts);
-    thread_set_joinable(ts);
 
     thread_enqueue_on_core(ts, cpu);
     while (!atomic_load(&ts_got))
@@ -285,17 +272,13 @@ TEST_DECLARE_INTEGRATION(mutex, pi_revert, .min_cores = 2) {
 
     cpu_id_t cpu = 1;
 
-    struct thread *ts = thread_create("pi_ts", pi_revert_ts, NULL);
-    struct thread *rt = thread_create("pi_rt", pi_revert_rt, NULL);
+    struct thread *ts = thread_create("pi_ts", pi_revert_ts, .joinable = true,
+                                      .flags = THREAD_FLAG_PINNED);
+    struct thread *rt = thread_create("pi_rt", pi_revert_rt, .joinable = true,
+                                      .flags = THREAD_FLAG_PINNED);
 
     rt->perceived_prio_class = THREAD_PRIO_CLASS_RT;
-
-    thread_pin(ts);
-    thread_pin(rt);
-
-    thread_set_joinable(ts);
     kassert(thread_get(ts));
-    thread_set_joinable(rt);
 
     thread_enqueue_on_core(ts, cpu);
     while (!atomic_load(&pi_revert_got))

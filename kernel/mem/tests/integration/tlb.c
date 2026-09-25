@@ -37,9 +37,8 @@ TEST_DECLARE_INTEGRATION(mem, tlb_shootdown_sync,
 
     struct thread *threads[TLB_MAX_TEST_THREADS];
     for (size_t i = 0; i < nthreads; i++) {
-        threads[i] =
-            thread_spawn_joinable("tlb_reader", tlb_reader, (void *) i);
-        threads[i]->private = va;
+        threads[i] = thread_spawn("tlb_reader", tlb_reader, .arg = (void *) i,
+                                  .private = va, .joinable = true);
     }
 
     /* Wait a tick so they spin on tlb_go */
@@ -141,7 +140,7 @@ TEST_DECLARE_INTEGRATION(mem, tlb_shootdown_contention,
 
     struct thread *t[TLB_CONTENTION_MAX_THREADS];
     for (size_t i = 0; i < nthreads; i++) {
-        t[i] = thread_spawn_joinable("tlb_spammer", tlb_spammer, NULL);
+        t[i] = thread_spawn("tlb_spammer", tlb_spammer, .joinable = true);
         TEST_ASSERT_NONNULL(t[i]);
     }
 

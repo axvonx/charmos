@@ -28,7 +28,7 @@ static struct thread *ted = NULL;
 TEST_DECLARE_INTEGRATION(apc, delivery) {
     atomic_store(&apc_ran, false);
     atomic_store(&apc_destroyed, 0);
-    ted = thread_spawn_joinable("apc_test_thread", apc_thread, NULL);
+    ted = thread_spawn("apc_test_thread", apc_thread, .joinable = true);
     struct apc *a = kmalloc(sizeof(struct apc), ALLOC_ZERO);
     if (!a || !ted) {
         if (a)
@@ -111,7 +111,7 @@ TEST_DECLARE_INTEGRATION(apc, cancel_releases_queue_ref) {
     atomic_store(&apc_cancel_destroyed, 0);
 
     struct thread *target =
-        thread_spawn_joinable("apc_cancel_target", apc_cancel_target, NULL);
+        thread_spawn("apc_cancel_target", apc_cancel_target, .joinable = true);
     TEST_ASSERT_NONNULL(target);
     while (!atomic_load(&apc_cancel_ready))
         scheduler_yield();
@@ -164,8 +164,8 @@ TEST_DECLARE_INTEGRATION(apc, thread_rundown_releases_queue_ref) {
     atomic_store(&apc_rundown_ran, false);
     atomic_store(&apc_rundown_destroyed, 0);
 
-    struct thread *target =
-        thread_spawn_joinable("apc_rundown_target", apc_rundown_target, NULL);
+    struct thread *target = thread_spawn("apc_rundown_target",
+                                         apc_rundown_target, .joinable = true);
     TEST_ASSERT_NONNULL(target);
     while (!atomic_load(&apc_rundown_ready))
         scheduler_yield();
@@ -211,7 +211,7 @@ TEST_DECLARE_INTEGRATION(apc, caller_ref_allows_reuse) {
     atomic_store(&apc_reuse_destroyed, 0);
 
     struct thread *target =
-        thread_spawn_joinable("apc_reuse_target", apc_reuse_target, NULL);
+        thread_spawn("apc_reuse_target", apc_reuse_target, .joinable = true);
     TEST_ASSERT_NONNULL(target);
 
     struct apc apc;
@@ -269,7 +269,7 @@ TEST_DECLARE_INTEGRATION(apc, cancel_races_delivery) {
     atomic_store(&apc_race_destroyed, 0);
 
     struct thread *target =
-        thread_spawn_joinable("apc_race_target", apc_race_target, NULL);
+        thread_spawn("apc_race_target", apc_race_target, .joinable = true);
     TEST_ASSERT_NONNULL(target);
     while (!atomic_load(&apc_race_ready))
         scheduler_yield();
@@ -334,8 +334,8 @@ TEST_DECLARE_INTEGRATION(apc, event_masking_and_signal) {
     atomic_store(&the_event_apc_ran_times, 0);
     atomic_store(&event_apc_test_ok, false);
 
-    ated = thread_spawn_joinable("apc_event_test_thread", apc_event_test_thread,
-                                 NULL);
+    ated = thread_spawn("apc_event_test_thread", apc_event_test_thread,
+                        .joinable = true);
     TEST_ASSERT_NONNULL(ated);
 
     /* joining rather than spinning on the ok flag means a failed

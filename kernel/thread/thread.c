@@ -192,16 +192,20 @@ static void thread_init_activity_data(struct thread *thread) {
 }
 
 static struct thread *thread_init(struct thread *thread,
-                                  void (*entry_point)(void *), void *arg,
-                                  void *stack, size_t stack_size) {
+                                  thread_entry_fn_t entry,
+                                  struct thread_create_params *params) {
     thread_init_activity_data(thread);
     thread_lock_chk_init(thread);
     memset(thread->activity_stats, 0, sizeof(struct thread_activity_stats));
 
-    uint64_t stack_top = (uint64_t) stack + stack_size;
-    thread->entry = entry_point;
+    uint64_t stack_top =
+        (uint64_t) params->stack_internal + params->stack_pages * PAGE_SIZE;
+    thread->allowed_cpus = params->allowed_cpus;
+    thread->private = params->private;
+
+    thread->entry = entry;
     thread->creation_time_ms = time_get_ms();
-    thread->stack_size = stack_size;
+    thread->stack_size = params->stack_pages * PAGE_SIZE;
     thread->regs.rsp = stack_top;
     atomic_init(&thread->migrate_to, -1);
     thread->base_prio_class = THREAD_PRIO_CLASS_TIMESHARE;
@@ -209,11 +213,11 @@ static struct thread *thread_init(struct thread *thread,
     thread->perceived_prio_class = THREAD_PRIO_CLASS_TIMESHARE;
     thread->queued_prio_class = THREAD_PRIO_CLASS_TIMESHARE;
     atomic_init(&thread->state, THREAD_STATE_READY);
-    thread->regs.r12 = (uint64_t) entry_point;
-    thread->regs.r13 = (uint64_t) arg;
+    thread->regs.r12 = (uint64_t) entry;
+    thread->regs.r13 = (uint64_t) params->arg;
     thread->regs.rip = (uint64_t) thread_entry_wrapper;
-    thread->stack = (void *) stack;
-    atomic_init(&thread->flags, 0);
+    thread->stack = (void *) params->stack_internal;
+    atomic_init(&thread->flags, params->flags);
     thread->curr_core = -1;
     thread->rcu_nesting = 0;
     thread->rcu_read_seq = 0;
@@ -261,18 +265,19 @@ static struct thread *thread_init(struct thread *thread,
     return thread;
 }
 
-struct thread *thread_create_internal(char *name, void (*entry_point)(void *),
-                                      void *arg, size_t stack_size,
-                                      va_list args) {
+struct thread *thread_create_full(char *name, thread_entry_fn_t entry,
+                                  struct thread_create_params *params,
+                                  va_list args) {
     kassert(name);
     struct thread *new_thread = kmalloc(sizeof(struct thread), ALLOC_ZERO);
     if (cc_unlikely(!new_thread))
         goto err;
 
-    void *stack = thread_allocate_stack(stack_size / PAGE_SIZE);
+    void *stack = thread_allocate_stack(params->stack_pages);
     if (cc_unlikely(!stack))
         goto err;
 
+    params->stack_internal = stack;
     new_thread->activity_data =
         kmalloc(sizeof(struct thread_activity_data), ALLOC_ZERO);
     if (cc_unlikely(!new_thread->activity_data))
@@ -319,7 +324,7 @@ struct thread *thread_create_internal(char *name, void (*entry_point)(void *),
     vsnprintf(new_thread->name, needed, name, args_copy);
     va_end(args_copy);
 
-    return thread_init(new_thread, entry_point, arg, stack, stack_size);
+    return thread_init(new_thread, entry, params);
 
 err:
     if (!new_thread)
@@ -336,25 +341,44 @@ err:
     return NULL;
 }
 
-struct thread *thread_create(char *name, void (*entry_point)(void *), void *arg,
-                             ...) {
+/* TODO: This funny business is not needed with RCU */
+void thread_set_joinable(struct thread *t) {
+    kassert(!(thread_get_flags(t) & THREAD_FLAG_JOINABLE));
+    kassert(refcount_inc(&t->refcount));
+    thread_set_flag(t, THREAD_FLAG_JOINABLE);
+}
+
+struct thread *thread_create_internal(thread_entry_fn_t entry,
+                                      struct thread_create_params params,
+                                      char *fmt, ...) {
     va_list args;
-    va_start(args, arg);
-    struct thread *ret =
-        thread_create_internal(name, entry_point, arg, THREAD_STACK_SIZE, args);
+    va_start(args, fmt);
+    struct thread *ret = thread_create_full(fmt, entry, &params, args);
     va_end(args);
+    if (ret && params.joinable)
+        thread_set_joinable(ret);
+
     return ret;
 }
 
-struct thread *thread_create_custom_stack(char *name,
-                                          void (*entry_point)(void *),
-                                          void *arg, size_t stack_size, ...) {
+struct thread *thread_spawn_internal(thread_entry_fn_t entry,
+                                     struct thread_create_params params,
+                                     char *fmt, ...) {
     va_list args;
-    va_start(args, stack_size);
-    struct thread *ret =
-        thread_create_internal(name, entry_point, arg, stack_size, args);
+    va_start(args, fmt);
+    struct thread *t = thread_create_full(fmt, entry, &params, args);
     va_end(args);
-    return ret;
+
+    if (t && params.joinable)
+        thread_set_joinable(t);
+
+    if (t && params.on_cpu == CPU_ID_MAX) {
+        thread_enqueue(t);
+    } else if (t) {
+        thread_enqueue_on_core(t, params.on_cpu);
+    }
+
+    return t;
 }
 
 void thread_free(struct thread *t) {

@@ -23,6 +23,19 @@ struct cpu_mask {
         .bits = {0}                                                            \
     }
 
+#define CPU_MASK_LAST_WORD_BITS ((CPU_MASK_BITS) % CPU_MASK_WORD_BITS)
+
+#define CPU_MASK_INIT_ALL                                                      \
+    (struct cpu_mask) {                                                        \
+        .bits = {                                                              \
+            [0 ...(CPU_MASK_WORDS - 1)] = ~(bitmap_word_t) 0,                  \
+            [CPU_MASK_WORDS - 1] =                                             \
+                (CPU_MASK_LAST_WORD_BITS == 0)                                 \
+                    ? ~(bitmap_word_t) 0                                       \
+                    : (((bitmap_word_t) 1 << CPU_MASK_LAST_WORD_BITS) - 1)     \
+        }                                                                      \
+    }
+
 /* Used to overload cpu_mask to carry an error at times */
 #define CPU_MASK_ERR(e)                                                        \
     (struct cpu_mask) {                                                        \
@@ -51,6 +64,13 @@ static inline void cpu_mask_set(struct cpu_mask *m, size_t cpu) {
     if (cpu < CPU_MASK_BITS) {
         bitmap_set(m->bits, cpu);
     }
+}
+
+/* Mask with only `cpu` set, usable as a runtime initializer */
+static inline struct cpu_mask cpu_mask_of(size_t cpu) {
+    struct cpu_mask m = CPU_MASK_INIT;
+    cpu_mask_set(&m, cpu);
+    return m;
 }
 
 static inline void cpu_mask_clear(struct cpu_mask *m, size_t cpu) {

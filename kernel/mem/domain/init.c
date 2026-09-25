@@ -210,13 +210,12 @@ static size_t compute_freequeue_max(size_t system_total_pages) {
 
 static void domain_spawn(struct domain_buddy *domain) {
     domain->worker.thread =
-        thread_create("domain_flush_thread%zu", domain_flush_thread, NULL,
-                      domain->domain->id);
+        thread_create(("domain_flush_thread%zu", domain->domain->id),
+                      domain_flush_thread, .flags = THREAD_FLAG_PINNED);
     struct thread *worker = domain->worker.thread;
     uint64_t id = domain->domain->id;
 
     worker->curr_core = id;
-    atomic_fetch_or_relaxed(&worker->flags, THREAD_FLAG_PINNED);
     thread_set_background(worker);
     thread_enqueue_on_core(worker, id);
 }

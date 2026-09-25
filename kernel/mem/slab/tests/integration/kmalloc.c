@@ -40,8 +40,8 @@ TEST_DECLARE_INTEGRATION(slab, multithreaded_alloc_free,
     atomic_store(&kmalloc_done, 0);
 
     for (size_t i = 0; i < nthreads; i++) {
-        threads[i] = thread_spawn_joinable_custom_stack(
-            "mt_kmalloc_thread", mt_kmalloc_worker, NULL, PAGE_SIZE * 16);
+        threads[i] = thread_spawn("mt_kmalloc_thread", mt_kmalloc_worker,
+                                  .stack_pages = 16, .joinable = true);
         TEST_ASSERT_NONNULL(threads[i]);
     }
 
@@ -152,10 +152,8 @@ TEST_DECLARE_INTEGRATION(slab, concurrency_stress,
         args[i].id = i;
         args[i].done_flag = &done[i];
         args[i].iters = iters;
-        workers[i] = thread_spawn_joinable("kmalloc_new_stress_worker",
-                                           stress_worker, NULL);
-
-        workers[i]->private = &args[i];
+        workers[i] = thread_spawn("kmalloc_new_stress_worker", stress_worker,
+                                  .private = &args[i], .joinable = true);
     }
     irql_lower(irql);
 

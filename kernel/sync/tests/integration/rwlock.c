@@ -15,8 +15,8 @@ TEST_DECLARE_INTEGRATION(rwlock, two_writers) {
     atomic_store(&rw_two_done, false);
     rw_lock(&rw_two_writers, RWLOCK_WRITE);
 
-    struct thread *w = thread_spawn_joinable_on_core(
-        "rw_two_writer", rw_two_writer_thread, NULL, 0);
+    struct thread *w = thread_spawn("rw_two_writer", rw_two_writer_thread,
+                                    .on_cpu = 0, .joinable = true);
 
     scheduler_yield(); // let second writer block
 
@@ -64,7 +64,8 @@ TEST_DECLARE_INTEGRATION(rwlock, many_readers, TEST_INTENSITY(4, 20, 64)) {
 
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
     for (size_t i = 0; i < num_readers; i++)
-        readers[i] = thread_spawn_joinable("rr_%zu", rw_reader_worker, NULL, i);
+        readers[i] =
+            thread_spawn(("rr_%zu", i), rw_reader_worker, .joinable = true);
     irql_lower(irql);
 
     for (size_t i = 0; i < num_readers; i++) {
@@ -115,7 +116,8 @@ TEST_DECLARE_INTEGRATION(rwlock, mixed_stress, TEST_INTENSITY(4, 24, 64)) {
     atomic_store(&rw_mixed_left, (uint32_t) num_threads);
 
     for (size_t i = 0; i < num_threads; i++)
-        mixed_threads[i] = thread_spawn_joinable("rm", rw_mixed_worker, NULL);
+        mixed_threads[i] =
+            thread_spawn("rm", rw_mixed_worker, .joinable = true);
 
     for (size_t i = 0; i < num_threads; i++) {
         if (mixed_threads[i])
@@ -163,7 +165,7 @@ TEST_DECLARE_INTEGRATION(rwlock, chaos, TEST_INTENSITY(4, 24, 64)) {
 
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
     for (size_t i = 0; i < num_threads; i++)
-        workers[i] = thread_spawn_joinable("rch", rw_chaos_worker, NULL);
+        workers[i] = thread_spawn("rch", rw_chaos_worker, .joinable = true);
     irql_lower(irql);
 
     for (size_t i = 0; i < num_threads; i++) {
@@ -240,7 +242,7 @@ TEST_DECLARE_INTEGRATION(rwlock, mutual_exclusion, TEST_INTENSITY(4, 16, 64)) {
 
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
     for (size_t i = 0; i < num_threads; i++)
-        workers[i] = thread_spawn_joinable("rcorr", rw_correct_worker, NULL);
+        workers[i] = thread_spawn("rcorr", rw_correct_worker, .joinable = true);
     irql_lower(irql);
 
     for (size_t i = 0; i < num_threads; i++) {

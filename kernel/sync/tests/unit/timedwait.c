@@ -63,8 +63,9 @@ TEST_DECLARE_UNIT(condvar, timeout_no_lost_wake) {
     condvar_init(&race.cv, CONDVAR_INIT_NORMAL);
     spinlock_init(&race.lock);
 
-    struct thread *t = thread_spawn_joinable(
-        "condvar_timeout_race", condvar_timeout_race_worker, &race);
+    struct thread *t =
+        thread_spawn("condvar_timeout_race", condvar_timeout_race_worker,
+                     .arg = &race, .joinable = true);
     TEST_ASSERT_NONNULL(t);
 
     bool joined = false;
@@ -118,7 +119,7 @@ TEST_DECLARE_UNIT(semaphore, timedwait) {
         .delay_ms = 20,
     };
     struct thread *t =
-        alloc_or_die(thread_create("sem_poster", timed_sem_poster, &a));
+        alloc_or_die(thread_create("sem_poster", timed_sem_poster, .arg = &a));
     thread_enqueue(t);
 
     TEST_ASSERT(semaphore_timedwait(&s, 200));
@@ -140,15 +141,15 @@ TEST_DECLARE_UNIT(completion, timedwait) {
         .comp = &c,
         .delay_ms = 20,
     };
-    struct thread *t =
-        alloc_or_die(thread_create("comp_signaler", timed_comp_signaler, &a));
+    struct thread *t = alloc_or_die(
+        thread_create("comp_signaler", timed_comp_signaler, .arg = &a));
     thread_enqueue(t);
 
     TEST_ASSERT(completion_wait_timeout(&c, 200));
     TEST_ASSERT(!completion_done(&c));
 
-    struct thread *t2 =
-        alloc_or_die(thread_create("comp_all", timed_comp_all_signaler, &a));
+    struct thread *t2 = alloc_or_die(
+        thread_create("comp_all", timed_comp_all_signaler, .arg = &a));
     thread_enqueue(t2);
 
     TEST_ASSERT(completion_wait_timeout(&c, 200));

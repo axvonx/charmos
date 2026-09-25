@@ -21,8 +21,10 @@ static void simple_contender(void *arg) {
 TEST_DECLARE_UNIT(mutex_simple, object_wait_handoff) {
     struct simple_contention c = {0};
     mutex_simple_init(&c.mutex);
-    struct thread *a = thread_spawn_joinable("simple_a", simple_contender, &c);
-    struct thread *b = thread_spawn_joinable("simple_b", simple_contender, &c);
+    struct thread *a =
+        thread_spawn("simple_a", simple_contender, .arg = &c, .joinable = true);
+    struct thread *b =
+        thread_spawn("simple_b", simple_contender, .arg = &c, .joinable = true);
     TEST_ASSERT_NONNULL(a);
     TEST_ASSERT_NONNULL(b);
     thread_join(a);

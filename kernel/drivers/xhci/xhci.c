@@ -774,7 +774,7 @@ void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
 
     semaphore_init(&dev->sem, 0, SEMAPHORE_INIT_IRQ_DISABLE);
     spinlock_init(&dev->lock);
-    thread_spawn("xhci_worker", xhci_worker, dev);
+    thread_spawn("xhci_worker", xhci_worker, .arg = dev);
 
     /* Wait till we know our worker is on the sem */
     while (!atomic_load(&dev->worker_waiting))
@@ -839,8 +839,9 @@ void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
         spin_unlock(&dev->lock, irql);
     }
 
-    thread_spawn("xhci_disconnect_worker", xhci_work_port_disconnect, dev);
-    thread_spawn("xhci_connect_worker", xhci_work_port_connect, dev);
+    thread_spawn("xhci_disconnect_worker", xhci_work_port_disconnect,
+                 .arg = dev);
+    thread_spawn("xhci_connect_worker", xhci_work_port_connect, .arg = dev);
 
 #ifdef DEBUG_USB_XHCI
 

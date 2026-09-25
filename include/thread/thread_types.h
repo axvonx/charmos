@@ -5,8 +5,10 @@
 #include <stdint.h>
 
 struct thread;
+struct thread_create_params;
 struct cpu_context;
 
+typedef void (*thread_entry_fn_t)(void *arg);
 typedef uint8_t thread_act_reason_t; /* Polymorphic type:
                                       * all the THREAD_*_REASONs
                                       * are uint8_t, and often, we
@@ -116,8 +118,6 @@ enum wake_reason {
     WAKE_REASON_TIMEOUT = 2, /* Timeout */
 };
 
-/* headers that #include this header should be allowed to execute this function
- */
-struct thread *thread_create_internal(char *name, void (*entry_point)(void *),
-                                      void *arg, size_t stack_size,
-                                      va_list args);
+struct thread *thread_create_full(char *name, thread_entry_fn_t entry,
+                                  struct thread_create_params *params,
+                                  va_list args);

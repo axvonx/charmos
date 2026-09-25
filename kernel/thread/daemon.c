@@ -165,15 +165,16 @@ struct daemon_thread *daemon_thread_create(struct daemon *daemon) {
     thread->daemon = daemon;
     INIT_LIST_HEAD(&thread->list_node);
 
-    struct thread *t = thread_create("daemon_%s_thread", daemon_main, NULL,
-                                     daemon->name ? daemon->name : "unnamed");
+    struct thread *t = thread_create(
+        ("daemon_%s_thread", daemon->name ? daemon->name : "unnamed"),
+        daemon_main, .private = thread,
+        .allowed_cpus = daemon->attrs.thread_cpu_mask);
     if (!t) {
         kfree(thread);
         return NULL;
     }
 
     thread->thread = t;
-    t->private = thread;
 
     return thread;
 }
@@ -201,7 +202,6 @@ daemon_thread_spawn(struct daemon *daemon,
     if (!t->background)
         atomic_inc(&daemon->attrs.timesharing_threads);
 
-    t->thread->allowed_cpus = daemon->attrs.thread_cpu_mask;
     thread_enqueue(t->thread);
 
     return t;

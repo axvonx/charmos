@@ -636,6 +636,6 @@ void rcu_init(void) {
         atomic_store_relaxed(&rcu.cpus[cpu].reported_seq, 0);
     }
 
-    rcu.worker = thread_spawn("rcu_gp_worker", rcu_gp_worker, NULL);
+    rcu.worker = thread_spawn("rcu_gp_worker", rcu_gp_worker);
     rcu.ready = true;
 }

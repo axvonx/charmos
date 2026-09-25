@@ -137,19 +137,9 @@ struct test_conc_worker *test_fleet_spawn(struct test_fleet *f,
     if (!w)
         return NULL;
 
-    struct thread *t;
-    if (f->opts.pin) {
-        t = thread_create("test_%s_%zu", test_fleet_worker_main, w, role,
-                          w->index);
-        if (t) {
-            thread_pin(t);
-            thread_set_joinable(t);
-            thread_enqueue(t);
-        }
-    } else {
-        t = thread_spawn_joinable("test_%s_%zu", test_fleet_worker_main, w,
-                                  role, w->index);
-    }
+    struct thread *t = thread_spawn(
+        ("test_%s_%zu", role, w->index), test_fleet_worker_main, .arg = w,
+        .joinable = true, .flags = f->opts.pin ? THREAD_FLAG_PINNED : 0);
 
     return test_fleet_attach(f, w, t) ? w : NULL;
 }
@@ -162,19 +152,16 @@ struct test_conc_worker *test_fleet_spawn_on_core(struct test_fleet *f,
     if (!w)
         return NULL;
 
-    struct thread *t =
-        thread_create("test_%s_%zu", test_fleet_worker_main, w, role, w->index);
+    struct thread *t = thread_create(
+        ("test_%s_%zu", role, w->index), test_fleet_worker_main, .arg = w,
+        .joinable = true, .allowed_cpus = cpu_mask_of(core_id),
+        .flags = THREAD_FLAG_PINNED);
     if (!t) {
         f->spawn_failed = true;
         f->count--;
         f->conc.worker_count = f->count;
         return NULL;
     }
-
-    cpu_mask_clear_all(&t->allowed_cpus);
-    cpu_mask_set(&t->allowed_cpus, core_id);
-    thread_or_flags(t, THREAD_FLAG_PINNED);
-    thread_set_joinable(t);
 
     kassert(thread_get(t));
     atomic_store_release(&w->th, t);
@@ -379,16 +366,12 @@ static void test_run_on_core_main(void *arg) {
 bool test_run_on_core(cpu_id_t core_id, void (*fn)(void *), void *arg) {
     struct test_run_on_core_ctx c = {.fn = fn, .arg = arg};
 
-    struct thread *t =
-        thread_create("test_on_core_%zu", test_run_on_core_main, &c, core_id);
+    struct thread *t = thread_spawn(
+        ("test_on_core_%zu", core_id), test_run_on_core_main, .arg = &c,
+        .joinable = true, .allowed_cpus = cpu_mask_of(core_id),
+        .flags = THREAD_FLAG_PINNED, .on_cpu = core_id);
     if (!t)
         return false;
-
-    cpu_mask_clear_all(&t->allowed_cpus);
-    cpu_mask_set(&t->allowed_cpus, core_id);
-    thread_or_flags(t, THREAD_FLAG_PINNED);
-    thread_set_joinable(t);
-    thread_enqueue_on_core(t, core_id);
 
     thread_join(t);
     return true;

@@ -146,6 +146,24 @@ enum thread_activity_class {
     THREAD_ACTIVITY_CLASS_UNKNOWN
 };
 
+struct thread_create_params {
+    enum thread_flags flags;
+
+    size_t stack_pages;
+
+    void *arg;
+    void *stack_internal;
+
+    struct cpu_mask allowed_cpus; /* Default: All CPUs (functionally
+                                   * identical, so technically a mask) */
+
+    cpu_id_t on_cpu; /* Default: CPU_ID_MAX */
+
+    bool joinable;
+
+    void *private;
+};
+
 struct thread_activity_metrics {
     uint8_t run_ratio;
     uint8_t block_ratio;
@@ -158,7 +176,7 @@ struct thread {
     /* Unique ID allocated from global thread ID tree */
     thread_id_t id;
     char *name;
-    void (*entry)(void *); /* For debug */
+    thread_entry_fn_t entry;
 
     /* ========== Processor context data ========== */
 
@@ -403,16 +421,16 @@ struct thread {
 #define thread_debug(fmt, ...) thread_log(LOG_DEBUG, fmt, ##__VA_ARGS__)
 #define thread_trace(fmt, ...) thread_log(LOG_TRACE, fmt, ##__VA_ARGS__)
 
-struct thread *thread_create_internal(char *name, void (*entry_point)(void *),
-                                      void *arg, size_t stack_size,
-                                      va_list args);
+struct thread *thread_create_internal(thread_entry_fn_t entry,
+                                      struct thread_create_params params,
+                                      char *fmt, ...) cc_printf_like(3, 4);
 
-struct thread *thread_create(char *name, void (*entry_point)(void *), void *arg,
-                             ...);
+struct thread *thread_spawn_internal(thread_entry_fn_t entry,
+                                     struct thread_create_params params,
+                                     char *fmt, ...) cc_printf_like(3, 4);
 
-struct thread *thread_create_custom_stack(char *name,
-                                          void (*entry_point)(void *),
-                                          void *arg, size_t stack_size, ...);
+void thread_set_joinable(struct thread *t);
+
 void thread_free(struct thread *t);
 
 void thread_init_thread_ids(void);
@@ -653,102 +671,25 @@ static inline enum thread_wait_type thread_get_wait_type(struct thread *t) {
     return atomic_load_acq(&t->wait_type);
 }
 
-static inline struct thread *thread_spawn(char *name, void (*entry)(void *),
-                                          void *arg, ...) {
-    va_list args;
-    va_start(args, arg);
-    struct thread *t =
-        thread_create_internal(name, entry, arg, THREAD_STACK_SIZE, args);
-    va_end(args);
-    thread_enqueue(t);
-    return t;
-}
+#define THREAD_CREATE_PARAMS_DEFAULTS                                          \
+    .stack_pages = (THREAD_STACK_SIZE / PAGE_SIZE), .on_cpu = CPU_ID_MAX,      \
+    .joinable = false, .allowed_cpus = CPU_MASK_INIT_ALL, .arg = NULL,         \
+    .private = NULL, .stack_internal = NULL, .flags = 0
 
-static inline struct thread *thread_spawn_custom_stack(char *name,
-                                                       void (*entry)(void *),
-                                                       void *arg,
-                                                       size_t stack_size, ...) {
-    va_list args;
-    va_start(args, stack_size);
-    struct thread *t =
-        thread_create_internal(name, entry, arg, stack_size, args);
-    va_end(args);
+#define thread_params_with_defaults(...)                                       \
+    cc_wno_override_init_expr(                                                 \
+        struct thread_create_params,                                           \
+        ((struct thread_create_params) {THREAD_CREATE_PARAMS_DEFAULTS,         \
+                                        ##__VA_ARGS__}))
 
-    thread_enqueue(t);
-    return t;
-}
+#define thread_create(name, entry, ...)                                        \
+    thread_create_internal((entry),                                            \
+                           (struct thread_create_params)                       \
+                               thread_params_with_defaults(__VA_ARGS__),       \
+                           PP_UNPAREN(name))
 
-static inline struct thread *thread_spawn_on_core(char *name,
-                                                  void (*entry)(void *),
-                                                  void *arg, uint64_t core_id,
-                                                  ...) {
-    va_list args;
-    va_start(args, core_id);
-    struct thread *t =
-        thread_create_internal(name, entry, arg, THREAD_STACK_SIZE, args);
-    va_end(args);
-
-    thread_enqueue_on_core(t, core_id);
-    return t;
-}
-
-/* Must be called before the thread can run: taking the join reference
- * relies on THREAD_FLAG_DYING not being observable yet. */
-static inline void thread_set_joinable(struct thread *t) {
-    kassert(!(thread_get_flags(t) & THREAD_FLAG_JOINABLE));
-    kassert(refcount_inc(&t->refcount));
-    thread_or_flags(t, THREAD_FLAG_JOINABLE);
-}
-
-/* TODO: the thread creation facilities are getting unpleasantly
- * overloaded. Make a reusable parameter structure that everything
- * can consume, perhaps a macro for creation, similar to kmalloc and friends */
-static inline struct thread *
-thread_spawn_joinable(char *name, void (*entry)(void *), void *arg, ...) {
-    va_list args;
-    va_start(args, arg);
-    struct thread *t =
-        thread_create_internal(name, entry, arg, THREAD_STACK_SIZE, args);
-    va_end(args);
-
-    if (cc_unlikely(!t))
-        return NULL;
-
-    thread_set_joinable(t);
-    thread_enqueue(t);
-    return t;
-}
-
-static inline struct thread *
-thread_spawn_joinable_custom_stack(char *name, void (*entry)(void *), void *arg,
-                                   size_t stack_size, ...) {
-    va_list args;
-    va_start(args, stack_size);
-    struct thread *t =
-        thread_create_internal(name, entry, arg, stack_size, args);
-    va_end(args);
-
-    if (cc_unlikely(!t))
-        return NULL;
-
-    thread_set_joinable(t);
-    thread_enqueue(t);
-    return t;
-}
-
-static inline struct thread *
-thread_spawn_joinable_on_core(char *name, void (*entry)(void *), void *arg,
-                              uint64_t core_id, ...) {
-    va_list args;
-    va_start(args, core_id);
-    struct thread *t =
-        thread_create_internal(name, entry, arg, THREAD_STACK_SIZE, args);
-    va_end(args);
-
-    if (cc_unlikely(!t))
-        return NULL;
-
-    thread_set_joinable(t);
-    thread_enqueue_on_core(t, core_id);
-    return t;
-}
+#define thread_spawn(name, entry, ...)                                         \
+    thread_spawn_internal((entry),                                             \
+                          (struct thread_create_params)                        \
+                              thread_params_with_defaults(__VA_ARGS__),        \
+                          PP_UNPAREN(name))

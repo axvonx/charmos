@@ -47,12 +47,12 @@ TEST_DECLARE_INTEGRATION(sched, yield_defers_kernel_apcs, .min_cores = 3) {
     atomic_store(&yd_gave_up, false);
     atomic_store(&yd_nesting_at_delivery, YIELD_APC_NO_READING);
 
-    struct thread *subject =
-        thread_spawn_joinable_on_core("yd_subject", yd_subject_main, NULL, 1);
+    struct thread *subject = thread_spawn("yd_subject", yd_subject_main,
+                                          .on_cpu = 1, .joinable = true);
     TEST_ASSERT_NONNULL(subject);
 
-    struct thread *enq =
-        thread_spawn_joinable_on_core("yd_enq", yd_enqueue_main, subject, 2);
+    struct thread *enq = thread_spawn("yd_enq", yd_enqueue_main, .arg = subject,
+                                      .on_cpu = 2, .joinable = true);
     TEST_ASSERT_NONNULL(enq);
 
     thread_join(subject);

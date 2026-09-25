@@ -154,13 +154,12 @@ bool workqueue_try_spawn_worker(struct workqueue *queue) {
 }
 
 struct thread *worker_create(struct cpu_mask mask, nice_t niceness) {
-    struct thread *ret = thread_create_custom_stack(
-        "workqueue_worker", worker_main, NULL, THREAD_STACK_SIZE);
+    struct thread *ret =
+        thread_create("workqueue_worker", worker_main, .allowed_cpus = mask);
     if (!ret)
         return NULL;
 
     ret->niceness = niceness;
-    ret->allowed_cpus = mask;
 
     return ret;
 }

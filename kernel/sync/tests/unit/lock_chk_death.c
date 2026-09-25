@@ -56,7 +56,7 @@ TEST_DECLARE_UNIT(lock_chk, death_abba_mutex, .enabled = TEST_STATE_DISABLED) {
                    LOCK_CHKD_FULL);
     mutex_init_chk(&death_abba_m2, LOCK_CHK_CLASS(death_abba_class2),
                    LOCK_CHKD_FULL);
-    thread_spawn("death_abba_worker", death_abba_worker, NULL);
+    thread_spawn("death_abba_worker", death_abba_worker);
     mutex_lock(&death_abba_m1);
     while (!atomic_load_acq(&death_abba_ready))
         sleep_spin_ms(1);
@@ -95,7 +95,7 @@ TEST_DECLARE_UNIT(lock_chk, death_foreign_unlock,
                    LOCK_CHKD_FULL);
     mutex_lock(&death_foreign_m);
     struct thread *th =
-        thread_spawn_joinable("death_foreign", death_foreign_worker, NULL);
+        thread_spawn("death_foreign", death_foreign_worker, .joinable = true);
     thread_join(th);
     mutex_unlock(&death_foreign_m);
     return TEST_SUCCESS;
@@ -184,7 +184,7 @@ static void death_exit_worker(void *arg) TSA_NO_ANALYSIS {
 TEST_DECLARE_UNIT(lock_chk, death_exit_holding_lock,
                   .enabled = TEST_STATE_DISABLED) {
     struct thread *th =
-        thread_spawn_joinable("death_exit_worker", death_exit_worker, NULL);
+        thread_spawn("death_exit_worker", death_exit_worker, .joinable = true);
     thread_join(th);
     return TEST_SUCCESS;
 }
@@ -203,7 +203,7 @@ TEST_DECLARE_UNIT(lock_chk, death_rw_cross_thread_release,
                     LOCK_CHK_CLASS(death_cross_rw_class), LOCK_CHKD_FULL);
     rw_read_lock(&death_cross_rw);
     struct thread *th =
-        thread_spawn_joinable("death_cross_rw", death_cross_rw_worker, NULL);
+        thread_spawn("death_cross_rw", death_cross_rw_worker, .joinable = true);
     thread_join(th);
     rw_unlock(&death_cross_rw);
     return TEST_SUCCESS;
@@ -292,8 +292,7 @@ TEST_DECLARE_UNIT(lock_chk, death_assert_held_qspin_foreign_owner,
     qspinlock_init_chk(&death_foreign_qspin,
                        LOCK_CHK_CLASS(death_assert_held_foreign_qspin_class),
                        LOCK_CHKD_FULL);
-    thread_spawn("death_foreign_qspin_worker", death_foreign_qspin_worker,
-                 NULL);
+    thread_spawn("death_foreign_qspin_worker", death_foreign_qspin_worker);
     while (!atomic_load_acq(&death_foreign_qspin_held))
         sleep_spin_ms(1);
     QSPINLOCK_ASSERT_HELD(&death_foreign_qspin);

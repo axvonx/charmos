@@ -537,7 +537,7 @@ struct core *topology_find_idle_core(struct core *local_core,
 struct cpu_mask topology_level_mask(cpu_id_t id, enum topology_level level) {
     if (level == TOPOLOGY_LEVEL_DOMAIN) {
         domain_id_t domain = global.cores[id]->domain->id;
-        struct cpu_mask ret;
+        struct cpu_mask ret = CPU_MASK_INIT;
         domain_set_cpu_mask(&ret, global.domains[domain]);
         return ret;
     }

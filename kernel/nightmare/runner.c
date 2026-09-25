@@ -330,8 +330,9 @@ static bool nightmare_spawn_threads(void) {
         }
         worker->rng.state =
             nightmare_worker_seed(&nightmare_runtime.ctx, worker->index);
-        struct thread *thread = thread_spawn_joinable(
-            "nightmare_%s_%zu", nightmare_thread_main, worker, worker->role, i);
+        struct thread *thread = thread_spawn(
+            ("nightmare_%s_%zu", worker->role, i), nightmare_thread_main,
+            .arg = worker, .joinable = true);
         if (!thread)
             goto fail;
         kassert(thread_get(thread));
@@ -340,8 +341,8 @@ static bool nightmare_spawn_threads(void) {
     }
 
     /* Not actually a worker, but store in conc.aux */
-    struct thread *heartbeat = thread_spawn_joinable(
-        "nightmare_heartbeat", nightmare_heartbeat_main, NULL);
+    struct thread *heartbeat = thread_spawn(
+        "nightmare_heartbeat", nightmare_heartbeat_main, .joinable = true);
     if (!heartbeat)
         goto fail;
     kassert(thread_get(heartbeat));

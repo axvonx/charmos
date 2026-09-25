@@ -378,19 +378,19 @@ TEST_DECLARE_INTEGRATION(mutex, interruptible_apc_fuzz,
 
     struct thread *threads[CHAOS_THREADS_MAX];
     for (size_t i = 0; i < chaos_threads; i++) {
-        threads[i] = thread_create("cs", chaos_sleeper, (void *) i);
+        threads[i] = thread_create("cs", chaos_sleeper, .arg = (void *) i,
+                                   .joinable = true);
         TEST_ASSERT_NONNULL(threads[i]);
-        thread_set_joinable(threads[i]);
         kassert(thread_get(threads[i]));
         chaos_diag_attach(threads[i], i);
         thread_enqueue(threads[i]);
     }
 
     struct thread *spammer =
-        thread_spawn_joinable("chaos_apc_spammer", chaos_apc_spammer, NULL);
+        thread_spawn("chaos_apc_spammer", chaos_apc_spammer, .joinable = true);
     TEST_ASSERT_NONNULL(spammer);
     struct thread *waker =
-        thread_spawn_joinable("chaos_waker", chaos_waker, NULL);
+        thread_spawn("chaos_waker", chaos_waker, .joinable = true);
     TEST_ASSERT_NONNULL(waker);
 
     chaos_diag_attach(spammer, CHAOS_DIAG_SPAMMER);

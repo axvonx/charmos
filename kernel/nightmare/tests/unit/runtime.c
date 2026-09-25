@@ -66,10 +66,10 @@ TEST_DECLARE_UNIT(nightmare_harness, first_stop_wakes_sleepers) {
     atomic_store_relaxed(&stop_sleepers_waiting, 0);
     atomic_store_relaxed(&nightmare_runtime.conc.stop, TEST_RUN);
 
-    struct thread *worker_thread =
-        thread_spawn_joinable("nightmare_stop_worker", heartbeat_waiter, NULL);
-    struct thread *heartbeat = thread_spawn_joinable("nightmare_stop_heartbeat",
-                                                     heartbeat_waiter, NULL);
+    struct thread *worker_thread = thread_spawn(
+        "nightmare_stop_worker", heartbeat_waiter, .joinable = true);
+    struct thread *heartbeat = thread_spawn("nightmare_stop_heartbeat",
+                                            heartbeat_waiter, .joinable = true);
     TEST_ASSERT_NONNULL(worker_thread);
     TEST_ASSERT_NONNULL(heartbeat);
 

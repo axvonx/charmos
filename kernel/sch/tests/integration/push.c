@@ -32,8 +32,8 @@ TEST_DECLARE_INTEGRATION(sched, push_target, TEST_INTENSITY(32, 256, 1024),
 
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
     for (size_t i = 0; i < count; i++) {
-        pushed[i] = thread_spawn_joinable_on_core("push_test_%zu",
-                                                  sched_push_try, NULL, 0, i);
+        pushed[i] = thread_spawn(("push_test_%zu", i), sched_push_try,
+                                 .on_cpu = 0, .joinable = true);
     }
     irql_lower(irql);
 
