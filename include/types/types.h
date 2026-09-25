@@ -31,6 +31,9 @@ ct_strong_int(sz_mb, SZ_MB, size_t, SIZE_MAX);
 ct_strong_int(sz_gb, SZ_GB, size_t, SIZE_MAX);
 ct_strong_int(sz_tb, SZ_TB, size_t, SIZE_MAX);
 
+/* Bytes */
+ct_strong_int(sz_b, SZ_B, size_t, SIZE_MAX);
+
 /* Aliases over UNIX identifiers */
 ct_strong_int(inode, INODE, uint32_t, UINT32_MAX);
 typedef uint16_t mode_t;
