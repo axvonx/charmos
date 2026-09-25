@@ -32,9 +32,9 @@ struct cmdline_value cmdline_parse_list(const char *value, uint64_t accepted) {
     if (!parse_is_list(value, &plist))
         panic("cmdline: invalid list format in '%s'", value);
 
-    struct cmdline_list *list = kmalloc_or_die(sizeof(*list));
+    struct cmdline_list *list = must_kmalloc(sizeof(*list));
     list->count = plist.count;
-    list->items = kmalloc_or_die(plist.count * sizeof(*list->items));
+    list->items = must_kmalloc(plist.count * sizeof(*list->items));
 
     for (size_t i = 0; i < plist.count; i++) {
         list->items[i] = cmdline_parse_value_for(plist.items[i], item_mask);
@@ -66,12 +66,12 @@ static void *allocate_parsed_value_data(const struct cmdline_type_parser *p,
         if (p->parse(&str_copy, value) == ERR_OK)
             return str_copy;
     } else if (p->type == CMDLINE_TYPE_CPU_MASK) {
-        struct cpu_mask *mask = kmalloc_or_die(sizeof(*mask));
+        struct cpu_mask *mask = must_kmalloc(sizeof(*mask));
         if (p->parse(mask, value) == ERR_OK)
             return mask;
         kfree(mask);
     } else if (p->type == CMDLINE_TYPE_RANGE) {
-        struct cmdline_range *range = kmalloc_or_die(sizeof(*range));
+        struct cmdline_range *range = must_kmalloc(sizeof(*range));
         if (p->parse(range, value) == ERR_OK)
             return range;
         kfree(range);

@@ -38,7 +38,7 @@ void cmdline_check_for_duplicates(void) {
         return;
 
     char (*names)[CMDLINE_ENTRY_NAME_LEN_MAX] =
-        kmalloc_or_die(count * sizeof(*names));
+        must_kmalloc(count * sizeof(*names));
 
     for (size_t i = 0; i < count; i++) {
         cmdline_functional_name(&__skernel_cmdline_entries[i], names[i]);

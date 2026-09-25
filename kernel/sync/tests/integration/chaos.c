@@ -1,5 +1,5 @@
 #include "sync/tests/test_internal.h"
-#include <mem/alloc_or_die.h>
+#include <mem/must.h>
 
 struct chaos_state {
     struct thread_wait_header wait;
@@ -59,7 +59,7 @@ static void chaos_diag_attach(struct thread *t, size_t slot) {
         return;
 
     struct thread_diag *d =
-        kmalloc_or_die(sizeof(struct thread_diag), ALLOC_ZERO);
+        must_kmalloc(sizeof(struct thread_diag), ALLOC_ZERO);
 
     if (!thread_diag_attach(t, d)) {
         kfree(d);

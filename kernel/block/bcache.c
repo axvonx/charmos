@@ -4,7 +4,7 @@
 #include <console/panic.h>
 #include <math/align.h>
 #include <mem/alloc.h>
-#include <mem/alloc_or_die.h>
+#include <mem/must.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -421,5 +421,5 @@ void bcache_init(struct bcache *cache, uint64_t capacity) {
     cache->capacity = capacity;
     cache->count = 0;
     cache->entries =
-        kmalloc_or_die(sizeof(struct bcache_wrapper *) * capacity, ALLOC_ZERO);
+        must_kmalloc(sizeof(struct bcache_wrapper *) * capacity, ALLOC_ZERO);
 }

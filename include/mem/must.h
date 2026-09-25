@@ -4,10 +4,10 @@
 #include <global.h>
 #include <log.h>
 
-#define alloc_or_die(expr)                                                     \
+#define must(expr)                                                             \
     ({                                                                         \
         if (global.current_bootstage >= BOOTSTAGE_COMPLETE)                    \
-            log_warn_once("alloc_or_die invoked after boot");                  \
+            log_warn_once("must() invoked after boot");                        \
         __typeof__(expr) _p_ = (expr);                                         \
         if (cc_unlikely(!_p_))                                                 \
             panic("OOM: %s == NULL, bootstage: %s", #expr,                     \
@@ -15,5 +15,5 @@
         _p_;                                                                   \
     })
 
-#define kmalloc_or_die(...) alloc_or_die(kmalloc(__VA_ARGS__))
-#define krealloc_or_die(...) alloc_or_die(krealloc(__VA_ARGS__))
+#define must_kmalloc(...) must(kmalloc(__VA_ARGS__))
+#define must_krealloc(...) must(krealloc(__VA_ARGS__))

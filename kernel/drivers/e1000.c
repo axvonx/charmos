@@ -5,7 +5,7 @@
 #include <drivers/pci.h>
 #include <math/bit.h>
 #include <mem/alloc.h>
-#include <mem/alloc_or_die.h>
+#include <mem/must.h>
 #include <mem/page.h>
 #include <mem/pmm.h>
 #include <mem/vmm.h>
@@ -32,7 +32,7 @@ static void e1000_setup_tx_ring(struct e1000_device *dev) {
     memset(dev->tx_descs, 0, space);
 
     for (int i = 0; i < E1000_NUM_TX_DESC; i++) {
-        dev->tx_buffers[i] = kmalloc_or_die(2048);
+        dev->tx_buffers[i] = must_kmalloc(2048);
 
         dev->tx_descs[i].addr =
             vmm_get_phys((uintptr_t) dev->tx_buffers[i], VMM_FLAG_NONE);
@@ -62,7 +62,7 @@ static void e1000_setup_rx_ring(struct e1000_device *dev) {
     memset(dev->rx_descs, 0, space);
 
     for (int i = 0; i < E1000_NUM_RX_DESC; i++) {
-        dev->rx_buffers[i] = kmalloc_or_die(E1000_RX_BUF_SIZE);
+        dev->rx_buffers[i] = must_kmalloc(E1000_RX_BUF_SIZE);
 
         dev->rx_descs[i].addr =
             vmm_get_phys((uintptr_t) dev->rx_buffers[i], VMM_FLAG_NONE);
@@ -215,9 +215,8 @@ static enum err e1000_pci_init(struct device *dev) {
     uint16_t           did = db->device_id;
     if (did == 0x1000 || did == 0x100E || did == 0x1010 || did == 0x1026 ||
         did == 0x10D3 || did == 0x10F5) {
-        struct pci_device    dev = {.bus = bus, .dev = d, .function = func};
-        struct e1000_device *device =
-            kmalloc_or_die(sizeof(struct e1000_device));
+        struct pci_device    dev    = {.bus = bus, .dev = d, .function = func};
+        struct e1000_device *device = must_kmalloc(sizeof(struct e1000_device));
 
         e1000_init(&dev, device);
     }

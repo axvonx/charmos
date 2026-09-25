@@ -8,7 +8,7 @@
 #include <math/min_max.h>
 #include <math/range.h>
 #include <mem/alloc.h>
-#include <mem/alloc_or_die.h>
+#include <mem/must.h>
 #include <mem/vmm.h>
 #include <ndjson.h>
 #include <sch/sched.h>
@@ -560,8 +560,8 @@ void log_sites_init(void) {
         refcount_init(&s->refcount, 1);
         struct log_ringbuf *lrb = &s->rb;
         kassert(s->capacity);
-        lrb->slots = kmalloc_or_die(sizeof(struct log_ring_slot) * s->capacity,
-                                    ALLOC_ZERO);
+        lrb->slots = must_kmalloc(sizeof(struct log_ring_slot) * s->capacity,
+                                  ALLOC_ZERO);
 
         for (size_t i = 0; i < s->capacity; i++) {
             atomic_store_release(&lrb->slots[i].seq, i);

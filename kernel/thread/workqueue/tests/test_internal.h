@@ -3,7 +3,7 @@
 
 #include "thread/workqueue/internal.h"
 #include <mem/alloc.h>
-#include <mem/alloc_or_die.h>
+#include <mem/must.h>
 #include <sch/sched.h>
 #include <stdbool.h>
 #include <stddef.h>

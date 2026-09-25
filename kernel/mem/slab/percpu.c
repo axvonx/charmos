@@ -1,5 +1,5 @@
 #include <math/min_max.h>
-#include <mem/alloc_or_die.h>
+#include <mem/must.h>
 #include <mem/slab.h>
 #include <sch/sched.h>
 #include <smp/domain.h>
@@ -217,13 +217,13 @@ void slab_percpu_refill(struct slab_domain *dom,
 void slab_domain_percpu_init(struct slab_domain *domain) {
     size_t cpus = domain->domain->num_cores;
     domain->percpu_caches =
-        kmalloc_or_die(sizeof(struct slab_percpu_cache *) * cpus, ALLOC_ZERO);
+        must_kmalloc(sizeof(struct slab_percpu_cache *) * cpus, ALLOC_ZERO);
 
     for (size_t i = 0; i < cpus; i++) {
         domain->percpu_caches[i] =
-            kmalloc_or_die(sizeof(struct slab_percpu_cache), ALLOC_ZERO);
+            must_kmalloc(sizeof(struct slab_percpu_cache), ALLOC_ZERO);
         for (int j = 0; j < SLAB_MAGAZINE_TYPE_COUNT; j++) {
-            domain->percpu_caches[i]->mags[j] = kmalloc_or_die(
+            domain->percpu_caches[i]->mags[j] = must_kmalloc(
                 sizeof(struct slab_magazine) * slab_global.num_sizes,
                 ALLOC_ZERO);
             for (size_t k = 0; k < slab_global.num_sizes; k++) {

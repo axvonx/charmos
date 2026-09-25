@@ -1,5 +1,5 @@
 #include "sync/tests/test_internal.h"
-#include <mem/alloc_or_die.h>
+#include <mem/must.h>
 #include <sync/completion.h>
 #include <sync/condvar.h>
 #include <sync/semaphore.h>
@@ -119,7 +119,7 @@ TEST_DECLARE_UNIT(semaphore, timedwait) {
         .delay_ms = 20,
     };
     struct thread *t =
-        alloc_or_die(thread_create("sem_poster", timed_sem_poster, .arg = &a));
+        must(thread_create("sem_poster", timed_sem_poster, .arg = &a));
     thread_enqueue(t);
 
     TEST_ASSERT(semaphore_timedwait(&s, 200));
@@ -141,15 +141,15 @@ TEST_DECLARE_UNIT(completion, timedwait) {
         .comp = &c,
         .delay_ms = 20,
     };
-    struct thread *t = alloc_or_die(
-        thread_create("comp_signaler", timed_comp_signaler, .arg = &a));
+    struct thread *t =
+        must(thread_create("comp_signaler", timed_comp_signaler, .arg = &a));
     thread_enqueue(t);
 
     TEST_ASSERT(completion_wait_timeout(&c, 200));
     TEST_ASSERT(!completion_done(&c));
 
-    struct thread *t2 = alloc_or_die(
-        thread_create("comp_all", timed_comp_all_signaler, .arg = &a));
+    struct thread *t2 =
+        must(thread_create("comp_all", timed_comp_all_signaler, .arg = &a));
     thread_enqueue(t2);
 
     TEST_ASSERT(completion_wait_timeout(&c, 200));

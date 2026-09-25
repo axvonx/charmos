@@ -9,8 +9,8 @@
 #include <math/sort.h>
 #include <math/units.h>
 #include <mem/alloc.h>
-#include <mem/alloc_or_die.h>
 #include <mem/elcm.h>
+#include <mem/must.h>
 #include <mem/page.h>
 
 /*
@@ -264,7 +264,7 @@ enum err elcm(struct elcm_params *params) {
 
     size_t size = max_pages * sizeof(struct elcm_candidate);
     struct elcm_candidate *candidates =
-        params->alloc_fn ? params->alloc_fn(size) : kmalloc_or_die(size);
+        params->alloc_fn ? params->alloc_fn(size) : must_kmalloc(size);
 
     if (!candidates)
         return ERR_NO_MEM;

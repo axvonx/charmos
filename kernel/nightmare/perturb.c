@@ -4,7 +4,7 @@
 #include <global.h>
 #include <inject.h>
 #include <mem/alloc.h>
-#include <mem/alloc_or_die.h>
+#include <mem/must.h>
 #include <nightmare/perturb.h>
 #include <nightmare/record.h>
 #include <sch/sched.h>

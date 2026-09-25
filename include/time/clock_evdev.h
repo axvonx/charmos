@@ -1,7 +1,7 @@
 /* @title: Clock Event Device */
 #pragma once
 #include <err.h>
-#include <mem/alloc_or_die.h>
+#include <mem/must.h>
 #include <smp/domain.h>
 #include <structures/list.h>
 #include <time/clock.h>

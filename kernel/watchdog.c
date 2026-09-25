@@ -2,7 +2,7 @@
 #include <cmdline.h>
 #include <irq/irq.h>
 #include <math/min_max.h>
-#include <mem/alloc_or_die.h>
+#include <mem/must.h>
 #include <pit.h>
 #include <smp/percpu.h>
 #include <string.h>
@@ -730,15 +730,13 @@ void watchdog_init(void) {
     kassert(PERCPU_READY(watchdog_percpu));
 
     for (int i = 0; i < WATCHDOG_STATE_MAX; i++) {
-        alloc_or_die(
-            cpu_mask_init(&watchdog_master.cpu_masks[i], global.core_count));
+        must(cpu_mask_init(&watchdog_master.cpu_masks[i], global.core_count));
     }
 
-    alloc_or_die(
-        cpu_mask_init(&watchdog_master.scratch_mask, global.core_count));
+    must(cpu_mask_init(&watchdog_master.scratch_mask, global.core_count));
 
     cpu_mask_set_all(&watchdog_master.cpu_masks[WATCHDOG_STATE_NORMAL]);
-    watchdog_master.cpus = kmalloc_or_die(
+    watchdog_master.cpus = must_kmalloc(
         sizeof(struct watchdog_master_cpu) * global.core_count, ALLOC_ZERO);
 
     watchdog_global.critical_test_irq = irq_alloc_entry();

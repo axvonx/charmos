@@ -3,7 +3,7 @@
 #include <atomic.h>
 #include <log.h>
 #include <math/bit.h>
-#include <mem/alloc_or_die.h>
+#include <mem/must.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <time/clock.h>
@@ -140,7 +140,7 @@ void tsc_sync_check_ap(cpu_id_t self) {
 
 void tsc_mailboxes_init(void) {
     mailboxes =
-        kmalloc_or_die(sizeof(struct tsc_sync_mailbox) * global.core_count);
+        must_kmalloc(sizeof(struct tsc_sync_mailbox) * global.core_count);
 }
 
 void tsc_sync_check_all_aps(void) {
@@ -160,7 +160,7 @@ struct clock *tsc_clock_init(freq_hz_t freq_hz) {
     if (freq_hz == 0)
         freq_hz = tsc_calibrate_hpet();
 
-    struct clock *clk = alloc_or_die(clock_create(CLOCK_NAME_TSC));
+    struct clock *clk = must(clock_create(CLOCK_NAME_TSC));
 
     clk->read = tsc_clock_read;
     clk->frequency_khz = HZ_TO_KHZ(freq_hz);

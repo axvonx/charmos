@@ -10,7 +10,7 @@
 #include <irq/irq.h>
 #include <math/align.h>
 #include <math/sort.h>
-#include <mem/alloc_or_die.h>
+#include <mem/must.h>
 #include <mem/vas.h>
 #include <ndjson.h>
 #include <smp/core.h>
@@ -447,7 +447,7 @@ static void tests_setup_groups() {
         for (int i = 0; i < TEST_TIER_MAX; i++) {
             if (num_tests[i]) {
                 tg->tests[i] =
-                    kmalloc_or_die(sizeof(struct test *) * num_tests[i]);
+                    must_kmalloc(sizeof(struct test *) * num_tests[i]);
             }
             tg->num_tests[i] = num_tests[i];
         }
@@ -637,7 +637,7 @@ static void test_group_run(struct test_group *tg) {
                 .dump_opts = dopts,
                 .flags = flags,
             };
-            tctx.site = alloc_or_die(log_site_create(opts));
+            tctx.site = must(log_site_create(opts));
             test_global.current_test = &tctx;
             tctx.handle.print = test_handle_print;
             tctx.intensity = t->intensity;

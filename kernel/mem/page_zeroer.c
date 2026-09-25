@@ -1,4 +1,4 @@
-#include <mem/alloc_or_die.h>
+#include <mem/must.h>
 #include <mem/page_zeroer.h>
 #include <smp/domain.h>
 #include <smp/perdomain.h>
@@ -22,7 +22,7 @@ static struct daemon_work pz_bg_work =
 static void page_zeroer_perdomain_init(struct page_zeroer *pz,
                                        domain_id_t domain) {
     struct cpu_mask cmask;
-    alloc_or_die(cpu_mask_init(&cmask, global.core_count));
+    must(cpu_mask_init(&cmask, global.core_count));
     size_t threads = global.domains[domain]->num_cores / 4;
     if (!threads)
         threads = 1;
@@ -46,9 +46,8 @@ static void page_zeroer_perdomain_init(struct page_zeroer *pz,
                  WORKQUEUE_FLAG_NAMED | WORKQUEUE_FLAG_NO_WORKER_GC,
     };
 
-    alloc_or_die(pz->daemon =
-                     daemon_create(("page_zeroer_daemon_%zu", domain), &attrs,
-                                   &pz_ts_work, &pz_bg_work, &wqattrs));
+    must(pz->daemon = daemon_create(("page_zeroer_daemon_%zu", domain), &attrs,
+                                    &pz_ts_work, &pz_bg_work, &wqattrs));
 }
 
 PERDOMAIN_DECLARE(struct page_zeroer, page_zeroers, page_zeroer_perdomain_init);

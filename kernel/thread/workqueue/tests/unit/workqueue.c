@@ -49,7 +49,7 @@ TEST_DECLARE_UNIT(workqueue, concurrent_enqueue_scaling,
     atomic_store(&threads_left, WQ_2_THREADS);
 
     struct cpu_mask mask;
-    alloc_or_die(cpu_mask_init(&mask, global.core_count));
+    must(cpu_mask_init(&mask, global.core_count));
 
     cpu_mask_set_all(&mask);
 

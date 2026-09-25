@@ -2,7 +2,7 @@
 #include <global.h>
 #include <log.h>
 #include <mem/alloc.h>
-#include <mem/alloc_or_die.h>
+#include <mem/must.h>
 #include <mem/numa.h>
 #include <mem/page.h>
 #include <sch/sched.h>
@@ -25,13 +25,13 @@ LOG_HANDLE_DECLARE_PRINT(domain);
 static void init_global_domain(uint64_t domain_count) {
     global.domain_count = domain_count;
     global.domains =
-        kmalloc_or_die(sizeof(struct domain *) * domain_count, ALLOC_ZERO);
+        must_kmalloc(sizeof(struct domain *) * domain_count, ALLOC_ZERO);
 
     for (size_t i = 0; i < domain_count; i++) {
 
         /* We align this up to the page so that they can all be
          * migrated later on to pages on each domain... */
-        global.domains[i] = alloc_or_die(kmalloc_pages(
+        global.domains[i] = must(kmalloc_pages(
             PAGES_NEEDED_FOR(sizeof(struct domain)), ALLOC_FLAGS_ZERO));
 
         global.domains[i]->id = i;
@@ -45,11 +45,11 @@ static void construct_domains_from_numa_nodes(void) {
         struct numa_node *nn = &global.numa_nodes[i];
         struct domain *cd = global.domains[i];
         cd->num_cores = cpu_mask_popcount(&nn->cpus);
-        alloc_or_die(cpu_mask_init(&cd->cpu_mask, global.core_count));
+        must(cpu_mask_init(&cd->cpu_mask, global.core_count));
         cpu_mask_copy(&cd->cpu_mask, &nn->cpus);
         cd->associated_node = nn;
         cd->cores =
-            kmalloc_or_die(sizeof(struct core *) * cd->num_cores, ALLOC_ZERO);
+            must_kmalloc(sizeof(struct core *) * cd->num_cores, ALLOC_ZERO);
     }
 }
 
@@ -73,7 +73,7 @@ static void construct_domains_from_cores(void) {
             cores_this_domain = remainder; /* last one gets leftovers */
 
         cd->num_cores = cores_this_domain;
-        alloc_or_die(cpu_mask_init(&cd->cpu_mask, global.core_count));
+        must(cpu_mask_init(&cd->cpu_mask, global.core_count));
 
         for (size_t j = 0; j < cores_this_domain; j++) {
             size_t core_index = i * CORES_PER_DOMAIN + j;
@@ -82,8 +82,8 @@ static void construct_domains_from_cores(void) {
 
             cpu_mask_set(&cd->cpu_mask, core_index);
         }
-        cd->cores = kmalloc_or_die(sizeof(struct core *) * cores_this_domain,
-                                   ALLOC_ZERO);
+        cd->cores =
+            must_kmalloc(sizeof(struct core *) * cores_this_domain, ALLOC_ZERO);
     }
 }
 

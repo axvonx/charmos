@@ -7,7 +7,7 @@
 #include <irq/exception_sync_cb.h>
 #include <irq/idt.h>
 #include <mem/alloc.h>
-#include <mem/alloc_or_die.h>
+#include <mem/must.h>
 #include <mem/page_fault.h>
 #include <mem/tlb.h>
 #include <mem/vmm.h>
@@ -164,7 +164,7 @@ void irq_register(char *name, uint8_t vector, irq_handler_t handler, void *ctx,
         panic("need to be shared to have many, registered by %s", me->name);
 
     struct irq_action *act =
-        kmalloc_or_die(sizeof(struct irq_action), ALLOC_ZERO);
+        must_kmalloc(sizeof(struct irq_action), ALLOC_ZERO);
 
     act->handler = handler;
     INIT_LIST_HEAD(&act->list);
@@ -288,8 +288,8 @@ static void exception_sync_cbs_init() {
 void irq_init() {
     for (size_t i = 0; i < IDT_ENTRIES; i++) {
         struct irq_desc *desc = &irq_table[i];
-        alloc_or_die(cpu_mask_init(&desc->masked_cpus, global.core_count));
-        alloc_or_die(cpu_mask_init(&desc->affinity, global.core_count));
+        must(cpu_mask_init(&desc->masked_cpus, global.core_count));
+        must(cpu_mask_init(&desc->affinity, global.core_count));
 
         desc->vector = i;
         irq_desc_clear(desc);
