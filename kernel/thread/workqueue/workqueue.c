@@ -65,8 +65,8 @@ void work_execute(struct work *task) {
     atomic_exchange(&task->active, false);
 }
 
-struct workqueue *workqueue_create_internal(struct workqueue_attributes *attrs,
-                                            const char *fmt, va_list args) {
+struct workqueue *workqueue_create_full(struct workqueue_attributes *attrs,
+                                        const char *fmt, va_list args) {
     bool permanent = attrs->flags & WORKQUEUE_FLAG_PERMANENT;
 
     /* Permanent workqueues are moved after initialization so
@@ -143,15 +143,15 @@ err:
     return NULL;
 }
 
-struct workqueue *workqueue_create(const char *fmt,
-                                   struct workqueue_attributes *attrs, ...) {
+struct workqueue *workqueue_create_internal(struct workqueue_attributes *attrs,
+                                            const char *fmt, ...) {
     if (attrs->min_workers == 0)
         attrs->min_workers = 1;
 
     va_list args;
-    va_start(args, attrs);
+    va_start(args, fmt);
 
-    struct workqueue *ret = workqueue_create_internal(attrs, fmt, args);
+    struct workqueue *ret = workqueue_create_full(attrs, fmt, args);
 
     va_end(args);
 
@@ -181,7 +181,7 @@ struct workqueue *workqueue_create_default(const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
 
-    struct workqueue *ret = workqueue_create_internal(&attrs, fmt, args);
+    struct workqueue *ret = workqueue_create_full(&attrs, fmt, args);
 
     va_end(args);
     if (ret)
@@ -281,8 +281,8 @@ void workqueues_permanent_init(void) {
             .worker_cpu_mask = mask,
         };
 
-        global.workqueues[i] = workqueue_create_internal(
-            &attrs, /* fmt = */ NULL, /* args = */ NULL);
+        global.workqueues[i] =
+            workqueue_create_full(&attrs, /* fmt = */ NULL, /* args = */ NULL);
         if (!global.workqueues[i])
             panic("Failed to spawn permanent workqueue");
 

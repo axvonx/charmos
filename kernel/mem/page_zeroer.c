@@ -47,8 +47,8 @@ static void page_zeroer_perdomain_init(struct page_zeroer *pz,
     };
 
     alloc_or_die(pz->daemon =
-                     daemon_create("page_zeroer_daemon_%zu", &attrs,
-                                   &pz_ts_work, &pz_bg_work, &wqattrs, domain));
+                     daemon_create(("page_zeroer_daemon_%zu", domain), &attrs,
+                                   &pz_ts_work, &pz_bg_work, &wqattrs));
 }
 
 PERDOMAIN_DECLARE(struct page_zeroer, page_zeroers, page_zeroer_perdomain_init);

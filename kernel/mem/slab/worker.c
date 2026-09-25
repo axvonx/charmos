@@ -62,12 +62,11 @@ void slab_domain_init_daemon(struct slab_domain *domain) {
     };
 
     domain->daemon = daemon_create(
-        /* fmt = */ "slab_domain_%u",
+        /* name = */ ("slab_domain_%zu", domain->domain->id),
         /* attrs = */ &attrs,
         /* timesharing_work = */ NULL,
         /* background_work = */ &bg,
-        /* wq_attrs = */ NULL,
-        /* ... = */ domain->domain->id);
+        /* wq_attrs = */ NULL);
 }
 
 void slab_domain_init_workqueue(struct slab_domain *domain) {
@@ -91,7 +90,7 @@ void slab_domain_init_workqueue(struct slab_domain *domain) {
     };
 
     domain->workqueue =
-        workqueue_create("slab_domain_%u_wq", &attrs, domain->domain->id);
+        workqueue_create(("slab_domain_%zu_wq", domain->domain->id), &attrs);
     for (size_t i = 0; i < domain->domain->num_cores; i++) {
         struct dpc *defer_dpc = &domain->percpu_caches[i]->defer_dpc;
         dpc_init(defer_dpc, slab_defer_free_dpc, NULL, NULL);

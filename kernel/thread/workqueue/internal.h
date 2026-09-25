@@ -88,8 +88,8 @@ struct workqueue *workqueue_least_loaded_queue_except(int64_t except_core_num);
 struct workqueue *workqueue_get_least_loaded(void);
 struct workqueue *workqueue_get_least_loaded_remote(void);
 struct worker *workqueue_spawn_permanent_worker(struct workqueue *queue);
-struct workqueue *workqueue_create_internal(struct workqueue_attributes *attrs,
-                                            const char *fmt, va_list args);
+struct workqueue *workqueue_create_full(struct workqueue_attributes *attrs,
+                                        const char *fmt, va_list args);
 enum thread_request_decision workqueue_request_callback(struct thread *t,
                                                         void *data);
 struct thread *worker_create(struct cpu_mask mask, nice_t niceness);

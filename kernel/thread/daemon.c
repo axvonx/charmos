@@ -212,12 +212,13 @@ void daemon_thread_destroy_unsafe(struct daemon_thread *dt) {
     kfree(dt);
 }
 
-struct daemon *daemon_create(const char *fmt, struct daemon_attributes *attrs,
-                             struct daemon_work *timesharing_work,
-                             struct daemon_work *background_work,
-                             struct workqueue_attributes *wq_attrs, ...) {
+struct daemon *daemon_create_internal(struct daemon_attributes *attrs,
+                                      struct daemon_work *timesharing_work,
+                                      struct daemon_work *background_work,
+                                      struct workqueue_attributes *wq_attrs,
+                                      const char *fmt, ...) {
     va_list args;
-    va_start(args, wq_attrs);
+    va_start(args, fmt);
 
     struct daemon *daemon = kmalloc(sizeof(struct daemon), ALLOC_ZERO);
     struct daemon_thread *dt = NULL, *bg = NULL;
@@ -267,7 +268,8 @@ struct daemon *daemon_create(const char *fmt, struct daemon_attributes *attrs,
     if (DAEMON_FLAG_TEST(daemon, DAEMON_FLAG_HAS_WORKQUEUE)) {
         wq_attrs->flags |= WORKQUEUE_FLAG_NAMED;
         struct workqueue *wq = workqueue_create(
-            "workqueue_daemon_%s", wq_attrs, daemon->name ? daemon->name : "");
+            ("workqueue_daemon_%s", daemon->name ? daemon->name : ""),
+            wq_attrs);
 
         if (!wq)
             goto err;

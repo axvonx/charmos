@@ -226,8 +226,12 @@ bool delayed_work_cancel_sync(struct delayed_work *dwork);
 
 void workqueues_permanent_init(void);
 
-struct workqueue *workqueue_create(const char *fmt,
-                                   struct workqueue_attributes *attrs, ...);
+struct workqueue *workqueue_create_internal(struct workqueue_attributes *attrs,
+                                            const char *fmt, ...)
+    cc_printf_like(2, 3);
+
+#define workqueue_create(name, attrs)                                          \
+    workqueue_create_internal((attrs), PP_UNPAREN(name))
 struct workqueue *workqueue_create_default(const char *fmt, ...);
 struct work *work_create(work_function func, struct work_args args);
 struct work *work_init(struct work *work, work_function fn,
