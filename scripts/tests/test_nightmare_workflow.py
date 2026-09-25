@@ -55,6 +55,12 @@ def test_workflow_dispatch_is_batch_scoped_and_validates_before_queueing() -> No
     assert text.count("needs.plan.outputs.deferred != 'true'") == 2
 
 
+def test_materialize_finds_receipts_in_any_artifact_layout() -> None:
+    text = (WORKFLOWS / "nightmare-orchestrator.yml").read_text()
+    assert "builds/*/receipt.json" not in text
+    assert "find builds -name receipt.json" in text
+
+
 def test_future_inline_command_becomes_durable_queue_metadata() -> None:
     command, _ = workflow.inline_command(
         toml_text=f"""[batch]

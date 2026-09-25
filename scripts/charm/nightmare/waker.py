@@ -49,6 +49,21 @@ def claimed_queue_run_ids(runs: list[dict[str, Any]]) -> set[int]:
     return claimed
 
 
+class _DropAuthOnCrossHostRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        new = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if (
+            new is not None
+            and urllib.parse.urlsplit(newurl).netloc
+            != urllib.parse.urlsplit(req.full_url).netloc
+        ):
+            new.remove_header("Authorization")
+        return new
+
+
+_opener = urllib.request.build_opener(_DropAuthOnCrossHostRedirect)
+
+
 class GitHubQueueClient:
     def __init__(self, token: str, api_url: str = "https://api.github.com") -> None:
         if not token:
@@ -80,7 +95,7 @@ class GitHubQueueClient:
                 "User-Agent": "charmos-nightmare-waker",
             },
         )
-        with urllib.request.urlopen(request, timeout=30) as response:
+        with _opener.open(request, timeout=30) as response:
             return response.read()
 
     def _json(self, path: str) -> dict[str, Any]:

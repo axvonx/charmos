@@ -235,7 +235,11 @@ jobs:
 
       - name: Materialize from accepted receipts
         run: |
-          receipts=(builds/*/receipt.json)
+          mapfile -t receipts < <(find builds -name receipt.json | sort)
+          if [ "${#receipts[@]}" -eq 0 ]; then
+            echo "error: no build receipts under builds/" >&2
+            exit 2
+          fi
           python3 -m charm nightmare materialize \
             plan-download/plan.json "${receipts[@]}" \
             --out-dir materialized
