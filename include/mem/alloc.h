@@ -16,18 +16,18 @@ void kfree_new(void *ptr, enum alloc_behavior behavior);
 void *kmalloc_from_domain(domain_id_t domain, size_t size) cw_alloc(2)
     cc_warn_unused_result;
 
-void *kmalloc_internal(size_t size, struct alloc_params params) cw_alloc(1)
+void *kmalloc_full(size_t size, struct alloc_params params) cw_alloc(1)
     cc_warn_unused_result;
 
-void *krealloc_internal(void *ptr, size_t size, struct alloc_params params)
+void *krealloc_full(void *ptr, size_t size, struct alloc_params params)
     cc_alloc_size(2) cc_warn_unused_result;
-void kfree_internal(void *ptr, enum alloc_behavior behavior);
+void kfree_full(void *ptr, enum alloc_behavior behavior);
 size_t ksize(void *ptr);
 
-void *kmalloc_aligned_internal(size_t size, size_t align,
-                               struct alloc_params params) cw_alloc(1, 2)
+void *kmalloc_aligned_full(size_t size, size_t align,
+                           struct alloc_params params) cw_alloc(1, 2)
     cc_warn_unused_result;
-void kfree_aligned_internal(void *ptr, enum alloc_behavior behavior);
+void kfree_aligned_full(void *ptr, enum alloc_behavior behavior);
 void kfree_defer_irq(void *ptr);
 
 void *kmalloc_pages(size_t n_pages, enum alloc_flags flags) cw_alloc()

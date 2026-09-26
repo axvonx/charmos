@@ -85,7 +85,7 @@ void mutex_simple_reinit_chk(struct mutex_simple *m,
     kassert(list_empty(&m->waiters.waiters));
     kassert(!spinlock_locked(&m->waiters.lock));
     kassert(!spinlock_locked(&m->lock));
-    mutex_simple_init_chk_internal(m, class, flags);
+    mutex_simple_init_chk_full(m, class, flags);
 }
 
 #else /* !defined(DEBUG_LOCK_CHK) */
@@ -136,7 +136,7 @@ void mutex_simple_set_chk_flags(struct mutex_simple *m,
 void mutex_simple_reinit_chk(struct mutex_simple *m,
                              const struct lock_chk_class *class,
                              enum lock_chk_flags flags) {
-    mutex_simple_init_chk_internal(m, class, flags);
+    mutex_simple_init_chk_full(m, class, flags);
 }
 
 #endif /* DEBUG_LOCK_CHK */
@@ -189,9 +189,9 @@ static void block_on_simple_mutex(struct mutex_simple *m) {
     thread_wait_complete();
 }
 
-void mutex_simple_init_chk_internal(struct mutex_simple *m,
-                                    const struct lock_chk_class *class,
-                                    enum lock_chk_flags flags) {
+void mutex_simple_init_chk_full(struct mutex_simple *m,
+                                const struct lock_chk_class *class,
+                                enum lock_chk_flags flags) {
     m->owner = NULL;
     INIT_LIST_HEAD(&m->waiters.waiters);
     spinlock_init(&m->waiters.lock, LOCK_UNCHKD);
@@ -199,9 +199,9 @@ void mutex_simple_init_chk_internal(struct mutex_simple *m,
     mutex_simple_chk_state_init(m, class, flags);
 }
 
-void mutex_simple_lock_subclass_internal(
-    struct mutex_simple *m, uint8_t subclass,
-    const struct lock_chk_site *site) TSA_NO_ANALYSIS {
+void mutex_simple_lock_subclass_full(struct mutex_simple *m, uint8_t subclass,
+                                     const struct lock_chk_site *site)
+    TSA_NO_ANALYSIS {
     mutex_simple_sanity_check();
 
     struct mutex_simple_chk_acquire_state chk_state;
@@ -224,12 +224,12 @@ void mutex_simple_lock_subclass_internal(
     mutex_simple_chk_locked(&chk_state);
 }
 
-void mutex_simple_lock_internal(
-    struct mutex_simple *m, const struct lock_chk_site *site) TSA_NO_ANALYSIS {
-    mutex_simple_lock_subclass_internal(m, 0, site);
+void mutex_simple_lock_full(struct mutex_simple *m,
+                            const struct lock_chk_site *site) TSA_NO_ANALYSIS {
+    mutex_simple_lock_subclass_full(m, 0, site);
 }
 
-void mutex_simple_unlock_internal(
+void mutex_simple_unlock_full(
     struct mutex_simple *m, const struct lock_chk_site *site) TSA_NO_ANALYSIS {
     mutex_simple_sanity_check();
 
@@ -267,8 +267,8 @@ struct thread *mutex_simple_get_owner(struct mutex_simple *m) {
     return owner;
 }
 
-void mutex_simple_assert_held_internal(struct mutex_simple *m,
-                                       const struct lock_chk_site *site) {
+void mutex_simple_assert_held_full(struct mutex_simple *m,
+                                   const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
     mutex_simple_chk_stamp(m);
     if (m->chk.flags != LOCK_UNCHKD && lock_chk_tracking_active() &&
@@ -282,8 +282,8 @@ void mutex_simple_assert_held_internal(struct mutex_simple *m,
             "mutex_simple not held by current thread");
 }
 
-void mutex_simple_assert_not_held_internal(struct mutex_simple *m,
-                                           const struct lock_chk_site *site) {
+void mutex_simple_assert_not_held_full(struct mutex_simple *m,
+                                       const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
     mutex_simple_chk_stamp(m);
     if (m->chk.flags != LOCK_UNCHKD && lock_chk_tracking_active() &&

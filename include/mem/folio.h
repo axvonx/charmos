@@ -65,7 +65,7 @@ bool page_is_folio_head(struct page *p);
 struct folio *folio_alloc_folio_struct() cw_alloc();
 void folio_free_folio_struct(struct folio *f);
 
-struct folio *folio_alloc_internal(uint8_t order, struct alloc_params params)
+struct folio *folio_alloc_full(uint8_t order, struct alloc_params params)
     cw_alloc();
 void folio_free(struct folio *folio);
 
@@ -260,6 +260,6 @@ folio_mapcount_dec(struct folio *f) { /* true if dropped to 0 */
          __i++)
 
 #define folio_alloc(order, ...)                                                \
-    folio_alloc_internal((order), alloc_params_with_defaults(                  \
-                                      ALLOC_FLAGS_DEFAULT,                     \
-                                      ALLOC_BEHAVIOR_DEFAULT, ##__VA_ARGS__))
+    folio_alloc_full((order), alloc_params_with_defaults(                      \
+                                  ALLOC_FLAGS_DEFAULT, ALLOC_BEHAVIOR_DEFAULT, \
+                                  ##__VA_ARGS__))

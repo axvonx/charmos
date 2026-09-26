@@ -33,7 +33,7 @@ void folio_free(struct folio *folio) {
     folio_free_folio_struct(folio);
 } */
 
-struct folio *folio_alloc_internal(uint8_t order, struct alloc_params params) {
+struct folio *folio_alloc_full(uint8_t order, struct alloc_params params) {
     size_t pages = pow2(order);
     struct folio *folio = folio_alloc_folio_struct();
     if (!folio)

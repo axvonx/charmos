@@ -440,10 +440,9 @@ void log_dump_site(struct log_site *site) {
     log_dump_site_with_opts(site, site->dump_opts);
 }
 
-void log_emit_internal(struct log_site *site, struct log_handle *handle,
-                       enum log_level ll, const char *func, const char *file,
-                       int32_t line, uintptr_t ip, uint8_t narg, char *fmt,
-                       ...) {
+void log_emit_full(struct log_site *site, struct log_handle *handle,
+                   enum log_level ll, const char *func, const char *file,
+                   int32_t line, uintptr_t ip, uint8_t narg, char *fmt, ...) {
     if (!site || !log_site_get(site))
         return;
 

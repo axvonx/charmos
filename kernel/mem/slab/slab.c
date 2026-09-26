@@ -810,9 +810,9 @@ void *kmalloc_pages_raw(struct slab_domain *parent, stack_handle_t handle,
 
     void *vptr;
     if (flags & ALLOC_FLAG_PAGEABLE) {
-        vptr = page_alloc_demand_internal(pages, params);
+        vptr = page_alloc_demand_full(pages, params);
     } else {
-        vptr = page_alloc_internal(pages, params);
+        vptr = page_alloc_full(pages, params);
         if (vptr && (flags & ALLOC_FLAG_ZERO_ON_ALLOC))
             memset(vptr, 0, total_size);
     }
@@ -1545,7 +1545,7 @@ void slab_switch_to_domain_allocations(void) {
     static_call_update(free, kfree_new);
 }
 
-void *kmalloc_internal(size_t size, struct alloc_params params) {
+void *kmalloc_full(size_t size, struct alloc_params params) {
     void *p = static_call(alloc)(size, params);
 
 #ifdef DEBUG_ASAN
@@ -1570,7 +1570,7 @@ void *kmalloc_internal(size_t size, struct alloc_params params) {
     return p;
 }
 
-void kfree_internal(void *p, enum alloc_behavior behavior) {
+void kfree_full(void *p, enum alloc_behavior behavior) {
     if (cc_unlikely(!p))
         return;
 
@@ -1594,12 +1594,12 @@ void kfree_internal(void *p, enum alloc_behavior behavior) {
     static_call(free)(p, behavior);
 }
 
-void *krealloc_internal(void *ptr, size_t size, struct alloc_params params) {
+void *krealloc_full(void *ptr, size_t size, struct alloc_params params) {
     if (!ptr)
-        return kmalloc_internal(size, params);
+        return kmalloc_full(size, params);
 
     if (size == 0) {
-        kfree_internal(ptr, params.behavior);
+        kfree_full(ptr, params.behavior);
         return NULL;
     }
 
@@ -1615,7 +1615,7 @@ void *krealloc_internal(void *ptr, size_t size, struct alloc_params params) {
         return ptr;
     }
 
-    void *new_ptr = kmalloc_internal(size, params);
+    void *new_ptr = kmalloc_full(size, params);
 
     if (!new_ptr)
         return NULL;

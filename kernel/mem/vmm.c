@@ -885,10 +885,10 @@ enum err vmm_map_page_internal(vaddr_t virt, paddr_t phys, page_flags_t flags,
     return vmm_map_page_full(&rq);
 }
 
-enum err vmm_map_page_user_internal(struct page_table *pml4, vaddr_t virt,
-                                    paddr_t phys, page_flags_t flags,
-                                    enum vmm_flags vflags,
-                                    enum vmm_map_page_size size) {
+enum err vmm_map_page_user_full(struct page_table *pml4, vaddr_t virt,
+                                paddr_t phys, page_flags_t flags,
+                                enum vmm_flags vflags,
+                                enum vmm_map_page_size size) {
     struct vmm_map_request rq = {
         .pml4 = pml4,
         .virt = virt,
@@ -900,9 +900,8 @@ enum err vmm_map_page_user_internal(struct page_table *pml4, vaddr_t virt,
     return vmm_map_page_full(&rq);
 }
 
-enum err vmm_mark_demand_page_internal(vaddr_t virt,
-                                       enum demand_page_flags flags,
-                                       enum vmm_map_page_size size) {
+enum err vmm_mark_demand_page_full(vaddr_t virt, enum demand_page_flags flags,
+                                   enum vmm_map_page_size size) {
     struct pte_tagged ptag = {
         .type = PTE_TAG_TYPE_DEMAND_PAGED,
         .payload = flags,
@@ -922,9 +921,9 @@ enum err vmm_mark_demand_page_internal(vaddr_t virt,
     return vmm_map_page_full(&rq);
 }
 
-enum err vmm_map_demand_page_internal(vaddr_t virt, paddr_t phys,
-                                      enum demand_page_flags flags,
-                                      enum vmm_map_page_size size) {
+enum err vmm_map_demand_page_full(vaddr_t virt, paddr_t phys,
+                                  enum demand_page_flags flags,
+                                  enum vmm_map_page_size size) {
     uint64_t pflags = PAGE_PRESENT;
     if (flags & DEMAND_PAGE_FLAG_WRITABLE)
         pflags |= PAGE_WRITE;
@@ -945,10 +944,9 @@ enum err vmm_map_demand_page_internal(vaddr_t virt, paddr_t phys,
     return vmm_map_page_full(&rq);
 }
 
-enum err vmm_mark_demand_page_user_internal(struct page_table *pml4,
-                                            vaddr_t virt,
-                                            enum demand_page_flags flags,
-                                            enum vmm_map_page_size size) {
+enum err vmm_mark_demand_page_user_full(struct page_table *pml4, vaddr_t virt,
+                                        enum demand_page_flags flags,
+                                        enum vmm_map_page_size size) {
     struct pte_tagged ptag = {
         .type = PTE_TAG_TYPE_DEMAND_PAGED,
         .payload = flags,
@@ -1032,7 +1030,7 @@ out:
     return snap;
 }
 
-paddr_t vmm_get_phys_internal(vaddr_t virt, enum vmm_flags vflags) {
+paddr_t vmm_get_phys_full(vaddr_t virt, enum vmm_flags vflags) {
     cc_unused(vflags);
 
     int level;
@@ -1050,7 +1048,7 @@ paddr_t vmm_get_phys_internal(vaddr_t virt, enum vmm_flags vflags) {
     return (snap & PAGE_PHYS_MASK) + (virt & 0xFFF);
 }
 
-pte_t vmm_get_leaf_pte_internal(vaddr_t virt, enum vmm_flags vflags) {
+pte_t vmm_get_leaf_pte_full(vaddr_t virt, enum vmm_flags vflags) {
     cc_unused(vflags);
     return vmm_walk_leaf(kernel_pml4, virt, NULL);
 }
@@ -1099,8 +1097,8 @@ void vmm_unmap(void *addr, uint64_t len, enum vmm_flags vflags) {
     }
 }
 
-void *vmm_map_bump_internal(uintptr_t addr, uint64_t len, uint64_t flags,
-                            enum vmm_flags vflags) {
+void *vmm_map_bump_full(uintptr_t addr, uint64_t len, uint64_t flags,
+                        enum vmm_flags vflags) {
     if (global.current_bootstage >= BOOTSTAGE_LATE)
         log_warn_once("vmm_map_bump called after BOOTSTAGE_LATE...");
 

@@ -33,10 +33,9 @@ struct TSA_CAPABILITY("spinlock") spinlock {
     spinlock_init_auto_internal((lock_), (flags_))
 #define spinlock_init(...) PP_CALL(spinlock_init, __VA_ARGS__)
 
-static inline void
-spinlock_init_chk_internal(struct spinlock *lock,
-                           const struct lock_chk_class *class,
-                           enum lock_chk_flags flags);
+static inline void spinlock_init_chk_full(struct spinlock *lock,
+                                          const struct lock_chk_class *class,
+                                          enum lock_chk_flags flags);
 
 #ifdef DEBUG_LOCK_CHK
 
@@ -50,7 +49,7 @@ spinlock_init_chk_internal(struct spinlock *lock,
             (class_), (flags_)) __SPINLOCK_SHALLOW_VALUE_INIT})
 
 #define spinlock_init_chk(lock_, class_, flags_)                               \
-    spinlock_init_chk_internal((lock_), (class_), (flags_))
+    spinlock_init_chk_full((lock_), (class_), (flags_))
 #define spinlock_init_auto_internal(lock_, flags_)                             \
     do {                                                                       \
         static const struct lock_chk_class __auto_class = {                    \
@@ -58,7 +57,7 @@ spinlock_init_chk_internal(struct spinlock *lock,
             .file = __RELFILE__,                                               \
             .line = __LINE__,                                                  \
         };                                                                     \
-        spinlock_init_chk_internal((lock_), &__auto_class, (flags_));          \
+        spinlock_init_chk_full((lock_), &__auto_class, (flags_));              \
     } while (0)
 
 static inline void spinlock_policy_init_internal(struct spinlock *lock,
@@ -217,9 +216,9 @@ static inline void spinlock_policy_set_internal(struct spinlock *lock,
     ((struct spinlock) {.raw = RAW_SPINLOCK_INIT})
 
 #define spinlock_init_chk(lock_, class_, flags_)                               \
-    spinlock_init_chk_internal((lock_), NULL, LOCK_UNCHKD)
+    spinlock_init_chk_full((lock_), NULL, LOCK_UNCHKD)
 #define spinlock_init_auto_internal(lock_, flags_)                             \
-    spinlock_init_chk_internal((lock_), NULL, LOCK_UNCHKD)
+    spinlock_init_chk_full((lock_), NULL, LOCK_UNCHKD)
 
 static inline void spinlock_policy_init_internal(struct spinlock *lock,
                                                  enum lock_chk_flags flags) {
@@ -338,10 +337,9 @@ static inline void spin_unlock_physical(struct spinlock *lock) TSA_NO_ANALYSIS {
     raw_spin_unlock(&lock->raw);
 }
 
-static inline void
-spinlock_init_chk_internal(struct spinlock *lock,
-                           const struct lock_chk_class *class,
-                           enum lock_chk_flags flags) {
+static inline void spinlock_init_chk_full(struct spinlock *lock,
+                                          const struct lock_chk_class *class,
+                                          enum lock_chk_flags flags) {
     raw_spinlock_init(&lock->raw);
     spinlock_policy_init_internal(lock, flags);
     spinlock_shallow_init_internal(lock);
@@ -354,8 +352,7 @@ static inline void spinlock_restore_interrupts(bool enabled) {
 }
 
 static inline cc_warn_unused_result bool
-spin_trylock_raw_internal(struct spinlock *lock,
-                          const struct lock_chk_site *site)
+spin_trylock_raw_full(struct spinlock *lock, const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
     enum lock_op_flags flags =
         LOCK_OP_RAW | LOCK_OP_KIND_TRY | LOCK_OP_IRQ_NONE;
@@ -373,8 +370,8 @@ spin_trylock_raw_internal(struct spinlock *lock,
     return false;
 }
 
-static inline void spin_lock_raw_internal(struct spinlock *lock,
-                                          const struct lock_chk_site *site)
+static inline void spin_lock_raw_full(struct spinlock *lock,
+                                      const struct lock_chk_site *site)
     TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
     enum lock_op_flags flags =
         LOCK_OP_RAW | LOCK_OP_KIND_BLOCKING | LOCK_OP_IRQ_NONE;
@@ -387,8 +384,8 @@ static inline void spin_lock_raw_internal(struct spinlock *lock,
     spinlock_acq_commit(&chk);
 }
 
-static inline void spin_unlock_raw_internal(struct spinlock *lock,
-                                            const struct lock_chk_site *site)
+static inline void spin_unlock_raw_full(struct spinlock *lock,
+                                        const struct lock_chk_site *site)
     TSA_RELEASES(lock) TSA_NO_ANALYSIS {
 
     struct spinlock_rel_scope chk;
@@ -398,8 +395,8 @@ static inline void spin_unlock_raw_internal(struct spinlock *lock,
     spinlock_rel_commit(&chk);
 }
 
-static inline void spin_unlock_internal(struct spinlock *lock, enum irql old,
-                                        const struct lock_chk_site *site)
+static inline void spin_unlock_full(struct spinlock *lock, enum irql old,
+                                    const struct lock_chk_site *site)
     TSA_RELEASES(lock) TSA_NO_ANALYSIS {
 
     bool checked_shallow = spinlock_order_checked(lock);
@@ -423,8 +420,8 @@ static inline void spin_unlock_internal(struct spinlock *lock, enum irql old,
 }
 
 static inline cc_warn_unused_result enum irql
-spin_lock_subclass_internal(struct spinlock *lock, uint8_t subclass,
-                            const struct lock_chk_site *site)
+spin_lock_subclass_full(struct spinlock *lock, uint8_t subclass,
+                        const struct lock_chk_site *site)
     TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
     kassert(subclass < LOCK_CHK_MAX_SUBCLASSES);
     if (bootstage_get() >= BOOTSTAGE_MID_MP &&
@@ -456,13 +453,13 @@ spin_lock_subclass_internal(struct spinlock *lock, uint8_t subclass,
 }
 
 static inline cc_warn_unused_result enum irql
-spin_lock_internal(struct spinlock *lock, const struct lock_chk_site *site)
+spin_lock_full(struct spinlock *lock, const struct lock_chk_site *site)
     TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
-    return spin_lock_subclass_internal(lock, 0, site);
+    return spin_lock_subclass_full(lock, 0, site);
 }
 
 static inline cc_warn_unused_result enum irql
-spin_lock_high_internal(struct spinlock *lock, const struct lock_chk_site *site)
+spin_lock_high_full(struct spinlock *lock, const struct lock_chk_site *site)
     TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())
         panic("Attempted to take non-raw spinlock from an NMI");
@@ -488,8 +485,8 @@ spin_lock_high_internal(struct spinlock *lock, const struct lock_chk_site *site)
 }
 
 static inline cc_warn_unused_result bool
-spin_trylock_internal(struct spinlock *lock, enum irql *out,
-                      const struct lock_chk_site *site)
+spin_trylock_full(struct spinlock *lock, enum irql *out,
+                  const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP &&
         (irq_in_interrupt() || irq_in_nmi()))
@@ -524,8 +521,8 @@ spin_trylock_internal(struct spinlock *lock, enum irql *out,
 }
 
 static inline cc_warn_unused_result bool
-spin_trylock_high_internal(struct spinlock *lock, enum irql *out,
-                           const struct lock_chk_site *site)
+spin_trylock_high_full(struct spinlock *lock, enum irql *out,
+                       const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())
         panic("Attempted to take non-raw spinlock from an NMI");
@@ -554,23 +551,21 @@ spin_trylock_high_internal(struct spinlock *lock, enum irql *out,
     return false;
 }
 
-#define spin_lock(lock_) spin_lock_internal((lock_), LOCK_CHK_SITE_HERE())
+#define spin_lock(lock_) spin_lock_full((lock_), LOCK_CHK_SITE_HERE())
 #define spin_lock_subclass(lock_, subclass_)                                   \
-    spin_lock_subclass_internal((lock_), (subclass_), LOCK_CHK_SITE_HERE())
-#define spin_lock_high(lock_)                                                  \
-    spin_lock_high_internal((lock_), LOCK_CHK_SITE_HERE())
+    spin_lock_subclass_full((lock_), (subclass_), LOCK_CHK_SITE_HERE())
+#define spin_lock_high(lock_) spin_lock_high_full((lock_), LOCK_CHK_SITE_HERE())
 #define spin_trylock(lock_, out_)                                              \
-    spin_trylock_internal((lock_), (out_), LOCK_CHK_SITE_HERE())
+    spin_trylock_full((lock_), (out_), LOCK_CHK_SITE_HERE())
 #define spin_trylock_high(lock_, out_)                                         \
-    spin_trylock_high_internal((lock_), (out_), LOCK_CHK_SITE_HERE())
+    spin_trylock_high_full((lock_), (out_), LOCK_CHK_SITE_HERE())
 #define spin_unlock(lock_, old_)                                               \
-    spin_unlock_internal((lock_), (old_), LOCK_CHK_SITE_HERE())
-#define spin_lock_raw(lock_)                                                   \
-    spin_lock_raw_internal((lock_), LOCK_CHK_SITE_HERE())
+    spin_unlock_full((lock_), (old_), LOCK_CHK_SITE_HERE())
+#define spin_lock_raw(lock_) spin_lock_raw_full((lock_), LOCK_CHK_SITE_HERE())
 #define spin_trylock_raw(lock_)                                                \
-    spin_trylock_raw_internal((lock_), LOCK_CHK_SITE_HERE())
+    spin_trylock_raw_full((lock_), LOCK_CHK_SITE_HERE())
 #define spin_unlock_raw(lock_)                                                 \
-    spin_unlock_raw_internal((lock_), LOCK_CHK_SITE_HERE())
+    spin_unlock_raw_full((lock_), LOCK_CHK_SITE_HERE())
 
 static inline bool spinlock_locked(struct spinlock *lock) {
     return atomic_load_relaxed(&lock->raw.state);
@@ -591,12 +586,11 @@ static inline void spinlock_reinit_chk(struct spinlock *lock,
                                        enum lock_chk_flags flags) {
     kassert(!spinlock_locked(lock));
     spinlock_assert_initialized(lock);
-    spinlock_init_chk_internal(lock, class, flags);
+    spinlock_init_chk_full(lock, class, flags);
 }
 
-static inline void
-spinlock_assert_held_internal(struct spinlock *lock,
-                              const struct lock_chk_site *site)
+static inline void spinlock_assert_held_full(struct spinlock *lock,
+                                             const struct lock_chk_site *site)
     TSA_ASSERT_CAPABILITY(lock) {
     if (spinlock_assert_held_deep(lock, /*want_held=*/true, site))
         return;
@@ -605,8 +599,8 @@ spinlock_assert_held_internal(struct spinlock *lock,
 }
 
 static inline void
-spinlock_assert_not_held_internal(struct spinlock *lock,
-                                  const struct lock_chk_site *site) {
+spinlock_assert_not_held_full(struct spinlock *lock,
+                              const struct lock_chk_site *site) {
     if (spinlock_assert_held_deep(lock, /*want_held=*/false, site))
         return;
 
@@ -616,6 +610,6 @@ spinlock_assert_not_held_internal(struct spinlock *lock,
 }
 
 #define SPINLOCK_ASSERT_HELD(l)                                                \
-    spinlock_assert_held_internal((l), LOCK_CHK_SITE_HERE())
+    spinlock_assert_held_full((l), LOCK_CHK_SITE_HERE())
 #define SPINLOCK_ASSERT_NOT_HELD(l)                                            \
-    spinlock_assert_not_held_internal((l), LOCK_CHK_SITE_HERE())
+    spinlock_assert_not_held_full((l), LOCK_CHK_SITE_HERE())

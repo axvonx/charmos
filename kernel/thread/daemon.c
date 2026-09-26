@@ -212,11 +212,11 @@ void daemon_thread_destroy_unsafe(struct daemon_thread *dt) {
     kfree(dt);
 }
 
-struct daemon *daemon_create_internal(struct daemon_attributes *attrs,
-                                      struct daemon_work *timesharing_work,
-                                      struct daemon_work *background_work,
-                                      struct workqueue_attributes *wq_attrs,
-                                      const char *fmt, ...) {
+struct daemon *daemon_create_full(struct daemon_attributes *attrs,
+                                  struct daemon_work *timesharing_work,
+                                  struct daemon_work *background_work,
+                                  struct workqueue_attributes *wq_attrs,
+                                  const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
 

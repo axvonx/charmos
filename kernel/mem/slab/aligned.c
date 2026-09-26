@@ -3,10 +3,10 @@
 #include <mem/alloc.h>
 #include <stddef.h>
 
-void *kmalloc_aligned_internal(size_t size, size_t align,
-                               struct alloc_params params) {
+void *kmalloc_aligned_full(size_t size, size_t align,
+                           struct alloc_params params) {
     uintptr_t raw =
-        (uintptr_t) kmalloc_internal(size + align + sizeof(uintptr_t), params);
+        (uintptr_t) kmalloc_full(size + align + sizeof(uintptr_t), params);
     if (!raw)
         return NULL;
 
@@ -17,7 +17,7 @@ void *kmalloc_aligned_internal(size_t size, size_t align,
     return (void *) aligned;
 }
 
-void kfree_aligned_internal(void *ptr, enum alloc_behavior b) {
+void kfree_aligned_full(void *ptr, enum alloc_behavior b) {
     if (!ptr)
         return;
     uintptr_t raw = ((uintptr_t *) ptr)[-1];

@@ -16,36 +16,33 @@ struct TSA_CAPABILITY("mutex") mutex_simple {
 #endif /* DEBUG_LOCK_CHK */
 };
 
-void mutex_simple_init_chk_internal(struct mutex_simple *m,
-                                    const struct lock_chk_class *class,
-                                    enum lock_chk_flags flags);
+void mutex_simple_init_chk_full(struct mutex_simple *m,
+                                const struct lock_chk_class *class,
+                                enum lock_chk_flags flags);
 void mutex_simple_set_chk_flags(struct mutex_simple *m,
                                 enum lock_chk_flags flags);
 void mutex_simple_reinit_chk(struct mutex_simple *m,
                              const struct lock_chk_class *class,
                              enum lock_chk_flags flags);
-void mutex_simple_lock_internal(struct mutex_simple *m,
-                                const struct lock_chk_site *site)
-    TSA_ACQUIRES(m);
+void mutex_simple_lock_full(struct mutex_simple *m,
+                            const struct lock_chk_site *site) TSA_ACQUIRES(m);
 
-void mutex_simple_unlock_internal(struct mutex_simple *m,
-                                  const struct lock_chk_site *site)
-    TSA_RELEASES(m);
+void mutex_simple_unlock_full(struct mutex_simple *m,
+                              const struct lock_chk_site *site) TSA_RELEASES(m);
 
-void mutex_simple_lock_subclass_internal(struct mutex_simple *m,
-                                         uint8_t subclass,
-                                         const struct lock_chk_site *site)
+void mutex_simple_lock_subclass_full(struct mutex_simple *m, uint8_t subclass,
+                                     const struct lock_chk_site *site)
     TSA_ACQUIRES(m);
 
 bool mutex_simple_locked(struct mutex_simple *m);
 struct thread *mutex_simple_get_owner(struct mutex_simple *m);
 
-void mutex_simple_assert_held_internal(struct mutex_simple *m,
-                                       const struct lock_chk_site *site)
+void mutex_simple_assert_held_full(struct mutex_simple *m,
+                                   const struct lock_chk_site *site)
     TSA_ASSERT_CAPABILITY(m);
 
-void mutex_simple_assert_not_held_internal(struct mutex_simple *m,
-                                           const struct lock_chk_site *site);
+void mutex_simple_assert_not_held_full(struct mutex_simple *m,
+                                       const struct lock_chk_site *site);
 
 #ifdef DEBUG_LOCK_CHK
 
@@ -62,7 +59,7 @@ void mutex_simple_assert_not_held_internal(struct mutex_simple *m,
     })
 
 #define mutex_simple_init_chk(mtx_, class_, flags_)                            \
-    mutex_simple_init_chk_internal((mtx_), (class_), (flags_))
+    mutex_simple_init_chk_full((mtx_), (class_), (flags_))
 #define mutex_simple_init_auto_internal(mtx_, flags_)                          \
     do {                                                                       \
         static const struct lock_chk_class __auto_class = {                    \
@@ -70,7 +67,7 @@ void mutex_simple_assert_not_held_internal(struct mutex_simple *m,
             .file = __RELFILE__,                                               \
             .line = __LINE__,                                                  \
         };                                                                     \
-        mutex_simple_init_chk_internal((mtx_), &__auto_class, (flags_));       \
+        mutex_simple_init_chk_full((mtx_), &__auto_class, (flags_));           \
     } while (0)
 
 #else /* !defined(DEBUG_LOCK_CHK) */
@@ -87,9 +84,9 @@ void mutex_simple_assert_not_held_internal(struct mutex_simple *m,
     })
 
 #define mutex_simple_init_chk(mtx_, class_, flags_)                            \
-    mutex_simple_init_chk_internal((mtx_), NULL, LOCK_UNCHKD)
+    mutex_simple_init_chk_full((mtx_), NULL, LOCK_UNCHKD)
 #define mutex_simple_init_auto_internal(mtx_, flags_)                          \
-    mutex_simple_init_chk_internal((mtx_), NULL, LOCK_UNCHKD)
+    mutex_simple_init_chk_full((mtx_), NULL, LOCK_UNCHKD)
 
 #endif /* DEBUG_LOCK_CHK */
 
@@ -105,14 +102,13 @@ void mutex_simple_assert_not_held_internal(struct mutex_simple *m,
     mutex_simple_init_auto_internal((mtx_), (flags_))
 #define mutex_simple_init(...) PP_CALL(mutex_simple_init, __VA_ARGS__)
 
-#define mutex_simple_lock(m_)                                                  \
-    mutex_simple_lock_internal((m_), LOCK_CHK_SITE_HERE())
+#define mutex_simple_lock(m_) mutex_simple_lock_full((m_), LOCK_CHK_SITE_HERE())
 #define mutex_simple_unlock(m_)                                                \
-    mutex_simple_unlock_internal((m_), LOCK_CHK_SITE_HERE())
+    mutex_simple_unlock_full((m_), LOCK_CHK_SITE_HERE())
 #define mutex_simple_lock_subclass(m_, subclass_)                              \
-    mutex_simple_lock_subclass_internal((m_), (subclass_), LOCK_CHK_SITE_HERE())
+    mutex_simple_lock_subclass_full((m_), (subclass_), LOCK_CHK_SITE_HERE())
 
 #define MUTEX_SIMPLE_ASSERT_HELD(m)                                            \
-    mutex_simple_assert_held_internal((m), LOCK_CHK_SITE_HERE())
+    mutex_simple_assert_held_full((m), LOCK_CHK_SITE_HERE())
 #define MUTEX_SIMPLE_ASSERT_NOT_HELD(m)                                        \
-    mutex_simple_assert_not_held_internal((m), LOCK_CHK_SITE_HERE())
+    mutex_simple_assert_not_held_full((m), LOCK_CHK_SITE_HERE())

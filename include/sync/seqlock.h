@@ -107,9 +107,9 @@ struct seqlock {
 };
 typedef struct seqlock seqlock_t;
 
-static inline void seqlock_init_chk_internal(struct seqlock *sl,
-                                             const struct lock_chk_class *class,
-                                             enum lock_chk_flags flags) {
+static inline void seqlock_init_chk_full(struct seqlock *sl,
+                                         const struct lock_chk_class *class,
+                                         enum lock_chk_flags flags) {
     cc_unused(class, flags);
     seqcount_init(&sl->seqcount);
     spinlock_init_chk(&sl->lock, class, flags);
@@ -129,7 +129,7 @@ static inline void seqlock_init_chk_internal(struct seqlock *sl,
 #ifdef DEBUG_LOCK_CHK
 
 #define seqlock_init_chk(sl_, class_, flags_)                                  \
-    seqlock_init_chk_internal((sl_), (class_), (flags_))
+    seqlock_init_chk_full((sl_), (class_), (flags_))
 #define seqlock_init_auto_internal(sl_, flags_)                                \
     do {                                                                       \
         static const struct lock_chk_class __auto_class = {                    \
@@ -137,15 +137,15 @@ static inline void seqlock_init_chk_internal(struct seqlock *sl,
             .file = __RELFILE__,                                               \
             .line = __LINE__,                                                  \
         };                                                                     \
-        seqlock_init_chk_internal((sl_), &__auto_class, (flags_));             \
+        seqlock_init_chk_full((sl_), &__auto_class, (flags_));                 \
     } while (0)
 
 #else /* !defined(DEBUG_LOCK_CHK) */
 
 #define seqlock_init_chk(sl_, class_, flags_)                                  \
-    seqlock_init_chk_internal((sl_), NULL, LOCK_UNCHKD)
+    seqlock_init_chk_full((sl_), NULL, LOCK_UNCHKD)
 #define seqlock_init_auto_internal(sl_, flags_)                                \
-    seqlock_init_chk_internal((sl_), NULL, LOCK_UNCHKD)
+    seqlock_init_chk_full((sl_), NULL, LOCK_UNCHKD)
 
 #endif /* DEBUG_LOCK_CHK */
 

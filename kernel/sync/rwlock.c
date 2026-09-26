@@ -136,7 +136,7 @@ void rwlock_reinit_chk(struct rwlock *lock, enum thread_prio_class ceiling,
                        enum lock_chk_flags flags) {
     kassert(lock->chk.initialized);
     kassert(rwlock_idle_for_reconfiguration(lock));
-    rwlock_init_chk_internal(lock, ceiling, class, flags);
+    rwlock_init_chk_full(lock, ceiling, class, flags);
 }
 
 #else /* !defined(DEBUG_LOCK_CHK) */
@@ -154,24 +154,23 @@ void rwlock_set_chk_flags(struct rwlock *lock, enum lock_chk_flags flags) {
 void rwlock_reinit_chk(struct rwlock *lock, enum thread_prio_class ceiling,
                        const struct lock_chk_class *class,
                        enum lock_chk_flags flags) {
-    rwlock_init_chk_internal(lock, ceiling, class, flags);
+    rwlock_init_chk_full(lock, ceiling, class, flags);
 }
 
 #endif /* DEBUG_LOCK_CHK */
 
-void rwlock_init_chk_internal(struct rwlock *lock,
-                              enum thread_prio_class ceiling,
-                              const struct lock_chk_class *class,
-                              enum lock_chk_flags flags) {
+void rwlock_init_chk_full(struct rwlock *lock, enum thread_prio_class ceiling,
+                          const struct lock_chk_class *class,
+                          enum lock_chk_flags flags) {
     atomic_store_relaxed(&lock->lock_word,
                          ((uintptr_t) ceiling << RWLOCK_PRIO_CEIL_SHIFT) &
                              RWLOCK_PRIO_CEIL_MASK);
     rwlock_chk_state_init(lock, class, flags);
 }
 
-void rw_lock_internal(struct rwlock *lock, enum rwlock_acquire_type acq_type,
-                      uint8_t subclass,
-                      const struct lock_chk_site *site) TSA_NO_ANALYSIS {
+void rw_lock_full(struct rwlock *lock, enum rwlock_acquire_type acq_type,
+                  uint8_t subclass,
+                  const struct lock_chk_site *site) TSA_NO_ANALYSIS {
     cc_unused(site);
     kassert(subclass < LOCK_CHK_MAX_SUBCLASSES);
     kassert(acq_type == RWLOCK_READ || acq_type == RWLOCK_WRITE);
@@ -364,8 +363,8 @@ static uintptr_t rwlock_unlock_get_val_to_sub(struct rwlock *lock) {
     }
 }
 
-void rw_unlock_internal(struct rwlock *lock,
-                        const struct lock_chk_site *site) TSA_NO_ANALYSIS {
+void rw_unlock_full(struct rwlock *lock,
+                    const struct lock_chk_site *site) TSA_NO_ANALYSIS {
     cc_unused(site);
     kassert(irq_not_in_interrupt());
     kassert(irql_get() <= IRQL_APC_LEVEL);
@@ -474,9 +473,8 @@ bool rwlock_locked(struct rwlock *lock, enum rwlock_acquire_type type) {
     return rwlock_locked_with_type(lock, type);
 }
 
-void rwlock_assert_held_internal(struct rwlock *lock,
-                                 enum rwlock_acquire_type type,
-                                 const struct lock_chk_site *site) {
+void rwlock_assert_held_full(struct rwlock *lock, enum rwlock_acquire_type type,
+                             const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
     rwlock_chk_stamp(lock);
     enum lock_chk_mode chk_mode =
@@ -491,8 +489,8 @@ void rwlock_assert_held_internal(struct rwlock *lock,
     kassert(rwlock_locked(lock, type), "rwlock not held");
 }
 
-void rwlock_assert_not_held_internal(struct rwlock *lock,
-                                     const struct lock_chk_site *site) {
+void rwlock_assert_not_held_full(struct rwlock *lock,
+                                 const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
     rwlock_chk_stamp(lock);
     if (lock->chk.flags != LOCK_UNCHKD &&

@@ -42,33 +42,31 @@ enum rwlock_acquire_type {
     RWLOCK_WRITE = 1,
 };
 
-void rw_lock_internal(struct rwlock *lock, enum rwlock_acquire_type type,
-                      uint8_t subclass, const struct lock_chk_site *site)
+void rw_lock_full(struct rwlock *lock, enum rwlock_acquire_type type,
+                  uint8_t subclass, const struct lock_chk_site *site)
     TSA_ACQUIRES(lock);
-void rw_unlock_internal(struct rwlock *lock, const struct lock_chk_site *site)
+void rw_unlock_full(struct rwlock *lock, const struct lock_chk_site *site)
     TSA_RELEASES(lock);
-void rwlock_init_chk_internal(struct rwlock *lock,
-                              enum thread_prio_class ceiling,
-                              const struct lock_chk_class *class,
-                              enum lock_chk_flags flags);
+void rwlock_init_chk_full(struct rwlock *lock, enum thread_prio_class ceiling,
+                          const struct lock_chk_class *class,
+                          enum lock_chk_flags flags);
 void rwlock_set_chk_flags(struct rwlock *lock, enum lock_chk_flags flags);
 void rwlock_reinit_chk(struct rwlock *lock, enum thread_prio_class ceiling,
                        const struct lock_chk_class *class,
                        enum lock_chk_flags flags);
 bool rwlock_locked(struct rwlock *lock, enum rwlock_acquire_type type);
-void rwlock_assert_held_internal(struct rwlock *lock,
-                                 enum rwlock_acquire_type type,
-                                 const struct lock_chk_site *site)
+void rwlock_assert_held_full(struct rwlock *lock, enum rwlock_acquire_type type,
+                             const struct lock_chk_site *site)
     TSA_ASSERT_CAPABILITY(lock);
-void rwlock_assert_not_held_internal(struct rwlock *lock,
-                                     const struct lock_chk_site *site);
+void rwlock_assert_not_held_full(struct rwlock *lock,
+                                 const struct lock_chk_site *site);
 
 #define RWLOCK_ASSERT_HELD(lock, type)                                         \
-    rwlock_assert_held_internal((lock), (type), LOCK_CHK_SITE_HERE())
+    rwlock_assert_held_full((lock), (type), LOCK_CHK_SITE_HERE())
 #define RWLOCK_ASSERT_READ(lock) RWLOCK_ASSERT_HELD((lock), RWLOCK_READ)
 #define RWLOCK_ASSERT_WRITE(lock) RWLOCK_ASSERT_HELD((lock), RWLOCK_WRITE)
 #define RWLOCK_ASSERT_NOT_HELD(lock)                                           \
-    rwlock_assert_not_held_internal((lock), LOCK_CHK_SITE_HERE())
+    rwlock_assert_not_held_full((lock), LOCK_CHK_SITE_HERE())
 
 #define RWLOCK_PRIO_CEIL_SHIFT (1)
 
@@ -81,7 +79,7 @@ void rwlock_assert_not_held_internal(struct rwlock *lock,
     })
 
 #define rwlock_init_chk(lock_, ceil_, class_, flags_)                          \
-    rwlock_init_chk_internal((lock_), (ceil_), (class_), (flags_))
+    rwlock_init_chk_full((lock_), (ceil_), (class_), (flags_))
 #define rwlock_init_auto_internal(lock_, ceil_, flags_)                        \
     do {                                                                       \
         static const struct lock_chk_class __auto_class = {                    \
@@ -89,7 +87,7 @@ void rwlock_assert_not_held_internal(struct rwlock *lock,
             .file = __RELFILE__,                                               \
             .line = __LINE__,                                                  \
         };                                                                     \
-        rwlock_init_chk_internal((lock_), (ceil_), &__auto_class, (flags_));   \
+        rwlock_init_chk_full((lock_), (ceil_), &__auto_class, (flags_));       \
     } while (0)
 
 #else /* !defined(DEBUG_LOCK_CHK) */
@@ -100,9 +98,9 @@ void rwlock_assert_not_held_internal(struct rwlock *lock,
     })
 
 #define rwlock_init_chk(lock_, ceil_, class_, flags_)                          \
-    rwlock_init_chk_internal((lock_), (ceil_), NULL, LOCK_UNCHKD)
+    rwlock_init_chk_full((lock_), (ceil_), NULL, LOCK_UNCHKD)
 #define rwlock_init_auto_internal(lock_, ceil_, flags_)                        \
-    rwlock_init_chk_internal((lock_), (ceil_), NULL, LOCK_UNCHKD)
+    rwlock_init_chk_full((lock_), (ceil_), NULL, LOCK_UNCHKD)
 
 #endif /* DEBUG_LOCK_CHK */
 
@@ -118,13 +116,13 @@ void rwlock_assert_not_held_internal(struct rwlock *lock,
 #define rwlock_init(...) PP_CALL(rwlock_init, __VA_ARGS__)
 
 #define rw_lock(lock_, type_)                                                  \
-    rw_lock_internal((lock_), (type_), 0, LOCK_CHK_SITE_HERE())
+    rw_lock_full((lock_), (type_), 0, LOCK_CHK_SITE_HERE())
 #define rw_read_lock(lock_)                                                    \
-    rw_lock_internal((lock_), RWLOCK_READ, 0, LOCK_CHK_SITE_HERE())
+    rw_lock_full((lock_), RWLOCK_READ, 0, LOCK_CHK_SITE_HERE())
 #define rw_write_lock(lock_)                                                   \
-    rw_lock_internal((lock_), RWLOCK_WRITE, 0, LOCK_CHK_SITE_HERE())
+    rw_lock_full((lock_), RWLOCK_WRITE, 0, LOCK_CHK_SITE_HERE())
 #define rw_read_lock_subclass(lock_, subclass_)                                \
-    rw_lock_internal((lock_), RWLOCK_READ, (subclass_), LOCK_CHK_SITE_HERE())
+    rw_lock_full((lock_), RWLOCK_READ, (subclass_), LOCK_CHK_SITE_HERE())
 #define rw_write_lock_subclass(lock_, subclass_)                               \
-    rw_lock_internal((lock_), RWLOCK_WRITE, (subclass_), LOCK_CHK_SITE_HERE())
-#define rw_unlock(lock_) rw_unlock_internal((lock_), LOCK_CHK_SITE_HERE())
+    rw_lock_full((lock_), RWLOCK_WRITE, (subclass_), LOCK_CHK_SITE_HERE())
+#define rw_unlock(lock_) rw_unlock_full((lock_), LOCK_CHK_SITE_HERE())

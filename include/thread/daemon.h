@@ -104,17 +104,16 @@ struct daemon {
 #define daemon_thread_from_list_node(ln)                                       \
     container_of(ln, struct daemon_thread, list_node)
 
-struct daemon *daemon_create_internal(struct daemon_attributes *attrs,
-                                      struct daemon_work *timesharing_work,
-                                      struct daemon_work *background_work,
-                                      struct workqueue_attributes *wq_attrs,
-                                      const char *fmt, ...)
-    cc_printf_like(5, 6);
+struct daemon *daemon_create_full(struct daemon_attributes *attrs,
+                                  struct daemon_work *timesharing_work,
+                                  struct daemon_work *background_work,
+                                  struct workqueue_attributes *wq_attrs,
+                                  const char *fmt, ...) cc_printf_like(5, 6);
 
 #define daemon_create(name, attrs, timesharing_work, background_work,          \
                       wq_attrs)                                                \
-    daemon_create_internal((attrs), (timesharing_work), (background_work),     \
-                           (wq_attrs), PP_UNPAREN(name))
+    daemon_create_full((attrs), (timesharing_work), (background_work),         \
+                       (wq_attrs), PP_UNPAREN(name))
 
 void daemon_destroy(struct daemon *daemon);
 

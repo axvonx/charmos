@@ -175,9 +175,9 @@ static inline bool log_site_enabled(const struct log_site *ss, uint8_t level) {
     return ss->enabled_mask & (1u << level);
 }
 
-void log_emit_internal(struct log_site *, struct log_handle *, enum log_level,
-                       const char *func, const char *fname, int32_t line,
-                       uintptr_t ip, uint8_t nargs, char *fmt, ...);
+void log_emit_full(struct log_site *, struct log_handle *, enum log_level,
+                   const char *func, const char *fname, int32_t line,
+                   uintptr_t ip, uint8_t nargs, char *fmt, ...);
 void log_dump_site_with_opts(struct log_site *, struct log_dump_options opts);
 void log_dump_site(struct log_site *site);
 void log_dump_site_default(struct log_site *);
@@ -225,9 +225,9 @@ static inline size_t log_site_message_count(struct log_site *site) {
     }
 
 #define log_msg(lvl, fmt, ...)                                                 \
-    log_emit_internal(LOG_SITE(global), LOG_HANDLE(global), lvl, __func__,     \
-                      __FILE__, __LINE__, (uintptr_t) ci_return_address(0),    \
-                      PP_NARG(__VA_ARGS__), fmt, ##__VA_ARGS__)
+    log_emit_full(LOG_SITE(global), LOG_HANDLE(global), lvl, __func__,         \
+                  __FILE__, __LINE__, (uintptr_t) ci_return_address(0),        \
+                  PP_NARG(__VA_ARGS__), fmt, ##__VA_ARGS__)
 
 #define log_warn_once(fmt, ...)                                                \
     do {                                                                       \
@@ -239,14 +239,14 @@ static inline size_t log_site_message_count(struct log_site *site) {
     } while (0)
 
 #define log_global(handle, lvl, fmt, ...)                                      \
-    log_emit_internal(LOG_SITE(global), handle, lvl, __func__, __FILE__,       \
-                      __LINE__, (uintptr_t) ci_return_address(0),              \
-                      PP_NARG(__VA_ARGS__), fmt, ##__VA_ARGS__)
+    log_emit_full(LOG_SITE(global), handle, lvl, __func__, __FILE__, __LINE__, \
+                  (uintptr_t) ci_return_address(0), PP_NARG(__VA_ARGS__), fmt, \
+                  ##__VA_ARGS__)
 
 #define log(site, handle, lvl, fmt, ...)                                       \
-    log_emit_internal(site, handle, lvl, __func__, __FILE__, __LINE__,         \
-                      (uintptr_t) ci_return_address(0), PP_NARG(__VA_ARGS__),  \
-                      fmt, ##__VA_ARGS__)
+    log_emit_full(site, handle, lvl, __func__, __FILE__, __LINE__,             \
+                  (uintptr_t) ci_return_address(0), PP_NARG(__VA_ARGS__), fmt, \
+                  ##__VA_ARGS__)
 
 #define log_err(site, handle, fmt, ...)                                        \
     log(site, handle, LOG_ERROR, fmt, ##__VA_ARGS__)

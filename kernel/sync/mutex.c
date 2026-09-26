@@ -82,7 +82,7 @@ void mutex_reinit_chk(struct mutex *mtx, const struct lock_chk_class *class,
                       enum lock_chk_flags flags) {
     kassert(mtx->chk.initialized);
     kassert(!mutex_locked(mtx));
-    mutex_init_chk_internal(mtx, class, flags);
+    mutex_init_chk_full(mtx, class, flags);
 }
 
 #else /* !defined(DEBUG_LOCK_CHK) */
@@ -127,14 +127,13 @@ void mutex_set_chk_flags(struct mutex *mtx, enum lock_chk_flags flags) {
 
 void mutex_reinit_chk(struct mutex *mtx, const struct lock_chk_class *class,
                       enum lock_chk_flags flags) {
-    mutex_init_chk_internal(mtx, class, flags);
+    mutex_init_chk_full(mtx, class, flags);
 }
 
 #endif /* DEBUG_LOCK_CHK */
 
-void mutex_init_chk_internal(struct mutex *mtx,
-                             const struct lock_chk_class *class,
-                             enum lock_chk_flags flags) {
+void mutex_init_chk_full(struct mutex *mtx, const struct lock_chk_class *class,
+                         enum lock_chk_flags flags) {
     atomic_store_relaxed(&mtx->lock_word, 0);
     mutex_chk_state_init(mtx, class, flags);
 }
@@ -182,8 +181,8 @@ static void mutex_sanity_check(void) {
     kassert(irql_get() <= IRQL_APC_LEVEL);
 }
 
-void mutex_lock_subclass_internal(struct mutex *mutex, uint8_t subclass,
-                                  const struct lock_chk_site *site)
+void mutex_lock_subclass_full(struct mutex *mutex, uint8_t subclass,
+                              const struct lock_chk_site *site)
     TSA_NO_ANALYSIS {
     kassert(subclass < LOCK_CHK_MAX_SUBCLASSES);
     mutex_sanity_check();
@@ -286,13 +285,13 @@ void mutex_lock_subclass_internal(struct mutex *mutex, uint8_t subclass,
     crash_unwind_enter_mutex(mutex);
 }
 
-void mutex_lock_internal(struct mutex *mutex,
-                         const struct lock_chk_site *site) TSA_NO_ANALYSIS {
-    mutex_lock_subclass_internal(mutex, 0, site);
+void mutex_lock_full(struct mutex *mutex,
+                     const struct lock_chk_site *site) TSA_NO_ANALYSIS {
+    mutex_lock_subclass_full(mutex, 0, site);
 }
 
-void mutex_unlock_internal(struct mutex *mutex,
-                           const struct lock_chk_site *site) TSA_NO_ANALYSIS {
+void mutex_unlock_full(struct mutex *mutex,
+                       const struct lock_chk_site *site) TSA_NO_ANALYSIS {
     mutex_sanity_check();
 
     struct thread *current_thread = thread_get_current();
@@ -323,8 +322,8 @@ bool mutex_locked(struct mutex *mtx) {
     return MUTEX_READ_LOCK_WORD(mtx) & MUTEX_HELD_BIT;
 }
 
-void mutex_assert_held_internal(struct mutex *mtx,
-                                const struct lock_chk_site *site) {
+void mutex_assert_held_full(struct mutex *mtx,
+                            const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
     mutex_chk_stamp(mtx);
     if (mtx->chk.flags != LOCK_UNCHKD && lock_chk_tracking_active() &&
@@ -338,8 +337,8 @@ void mutex_assert_held_internal(struct mutex *mtx,
             "mutex not held by current thread");
 }
 
-void mutex_assert_not_held_internal(struct mutex *mtx,
-                                    const struct lock_chk_site *site) {
+void mutex_assert_not_held_full(struct mutex *mtx,
+                                const struct lock_chk_site *site) {
 #ifdef DEBUG_LOCK_CHK
     mutex_chk_stamp(mtx);
     if (mtx->chk.flags != LOCK_UNCHKD && lock_chk_tracking_active() &&

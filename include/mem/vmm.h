@@ -74,30 +74,28 @@ enum err vmm_unshare_path(vaddr_t virt, enum vmm_map_page_size leaf_size,
 enum err vmm_map_page_internal(vaddr_t virt, paddr_t phys, page_flags_t flags,
                                enum vmm_flags vflags,
                                enum vmm_map_page_size size);
-enum err vmm_map_page_user_internal(struct page_table *pml4, vaddr_t virt,
-                                    paddr_t phys, page_flags_t flags,
-                                    enum vmm_flags vflags,
-                                    enum vmm_map_page_size size);
+enum err vmm_map_page_user_full(struct page_table *pml4, vaddr_t virt,
+                                paddr_t phys, page_flags_t flags,
+                                enum vmm_flags vflags,
+                                enum vmm_map_page_size size);
 void vmm_unmap_page_internal(vaddr_t virt, enum vmm_flags vflags,
                              enum vmm_map_page_size size);
-enum err vmm_mark_demand_page_internal(vaddr_t virt,
-                                       enum demand_page_flags flags,
-                                       enum vmm_map_page_size size);
-enum err vmm_mark_demand_page_user_internal(struct page_table *pml4,
-                                            vaddr_t virt,
-                                            enum demand_page_flags flags,
-                                            enum vmm_map_page_size size);
-enum err vmm_map_demand_page_internal(vaddr_t virt, paddr_t phys,
-                                      enum demand_page_flags flags,
-                                      enum vmm_map_page_size size);
+enum err vmm_mark_demand_page_full(vaddr_t virt, enum demand_page_flags flags,
+                                   enum vmm_map_page_size size);
+enum err vmm_mark_demand_page_user_full(struct page_table *pml4, vaddr_t virt,
+                                        enum demand_page_flags flags,
+                                        enum vmm_map_page_size size);
+enum err vmm_map_demand_page_full(vaddr_t virt, paddr_t phys,
+                                  enum demand_page_flags flags,
+                                  enum vmm_map_page_size size);
 
-paddr_t vmm_get_phys_internal(vaddr_t virt, enum vmm_flags flags);
-pte_t vmm_get_leaf_pte_internal(vaddr_t virt, enum vmm_flags flags);
+paddr_t vmm_get_phys_full(vaddr_t virt, enum vmm_flags flags);
+pte_t vmm_get_leaf_pte_full(vaddr_t virt, enum vmm_flags flags);
 void vmm_unmap(void *addr, uint64_t len, enum vmm_flags vflags);
 void *vmm_map(paddr_t paddr, vaddr_t vaddr, uint64_t len, uint64_t flags,
               enum vmm_flags vflags);
-void *vmm_map_bump_internal(uint64_t addr, uint64_t len, uint64_t flags,
-                            enum vmm_flags vflags);
+void *vmm_map_bump_full(uint64_t addr, uint64_t len, uint64_t flags,
+                        enum vmm_flags vflags);
 void vmm_unmap_virt(void *addr, uint64_t len, enum vmm_flags vflags);
 uintptr_t vmm_make_user_pml4(void);
 void vmm_unmap_all_user_pages(struct page_table *pml4, enum vmm_flags vflags);

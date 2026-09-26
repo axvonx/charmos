@@ -8,8 +8,8 @@
 struct limine_memmap_request;
 
 extern struct limine_memmap_response *memmap;
-paddr_t pmm_alloc_page_internal(enum alloc_flags flags);
-paddr_t pmm_alloc_pages_internal(size_t count, enum alloc_flags flags);
+paddr_t pmm_alloc_page_full(enum alloc_flags flags);
+paddr_t pmm_alloc_pages_full(size_t count, enum alloc_flags flags);
 
 void pmm_free_pages(paddr_t addr, uint64_t count);
 void pmm_free_page(paddr_t addr);
@@ -29,14 +29,14 @@ uint64_t pmm_get_usable_ram(void);
             log_warn_once("Input to alloc_pages matches ALLOC_FLAGS_DEFAULT, " \
                           "possible mistake");                                 \
                                                                                \
-        pmm_alloc_pages_internal(count, ALLOC_FLAGS_DEFAULT);                  \
+        pmm_alloc_pages_full(count, ALLOC_FLAGS_DEFAULT);                      \
     })
 
-#define pmm_alloc_pages_2(count, f) pmm_alloc_pages_internal((count), (f))
+#define pmm_alloc_pages_2(count, f) pmm_alloc_pages_full((count), (f))
 
 #define pmm_alloc_pages(...) PP_CALL(pmm_alloc_pages, __VA_ARGS__)
 
-#define pmm_alloc_page_0() pmm_alloc_page_internal((ALLOC_FLAGS_DEFAULT))
-#define pmm_alloc_page_1(f) pmm_alloc_page_internal((f))
+#define pmm_alloc_page_0() pmm_alloc_page_full((ALLOC_FLAGS_DEFAULT))
+#define pmm_alloc_page_1(f) pmm_alloc_page_full((f))
 
 #define pmm_alloc_page(...) PP_CALL(pmm_alloc_page, __VA_ARGS__)
