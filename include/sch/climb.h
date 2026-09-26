@@ -21,7 +21,6 @@ struct climb_handle;
 #define CLIMB_PRESSURE_THREAD_BASE FX(0.05)
 #define CLIMB_PRESSURE_IO_BASE FX(0.20)
 #define CLIMB_PRESSURE_LOCK_BASE FX(0.10)
-#define CLIMB_PRESSURE_MAX FX(1.0)
 #define CLIMB_PRESSURE(x) FX(x)
 
 /* Pressure space */

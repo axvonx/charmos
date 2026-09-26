@@ -12,11 +12,13 @@ typedef _Atomic uint8_t atomic_uint8_t;
 typedef _Atomic uint16_t atomic_uint16_t;
 typedef _Atomic uint32_t atomic_uint32_t;
 typedef _Atomic uint64_t atomic_uint64_t;
+typedef _Atomic __uint128_t atomic_uint128_t;
 
 typedef _Atomic int8_t atomic_int8_t;
 typedef _Atomic int16_t atomic_int16_t;
 typedef _Atomic int32_t atomic_int32_t;
 typedef _Atomic int64_t atomic_int64_t;
+typedef _Atomic __int128_t atomic_iint128_t;
 
 typedef _Atomic bool atomic_bool;
 typedef _Atomic size_t atomic_size_t;
@@ -515,15 +517,19 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
     atomic_set_bit((ptr), (bit), mo_relaxed)
 #define atomic_set_bit_release(ptr, bit)                                       \
     atomic_set_bit((ptr), (bit), mo_release)
+
 #define atomic_clear_bit_relaxed(ptr, bit)                                     \
     atomic_clear_bit((ptr), (bit), mo_relaxed)
 #define atomic_clear_bit_release(ptr, bit)                                     \
     atomic_clear_bit((ptr), (bit), mo_release)
+
 #define atomic_toggle_bit_relaxed(ptr, bit)                                    \
     atomic_toggle_bit((ptr), (bit), mo_relaxed)
 #define atomic_test_bit_relaxed(ptr, bit)                                      \
     atomic_test_bit((ptr), (bit), mo_relaxed)
+
 #define atomic_test_bit_acq(ptr, bit) atomic_test_bit((ptr), (bit), mo_acquire)
+
 #define atomic_test_and_set_bit_acq(ptr, bit)                                  \
     atomic_test_and_set_bit((ptr), (bit), mo_acquire)
 #define atomic_test_and_set_bit_acq_rel(ptr, bit)                              \

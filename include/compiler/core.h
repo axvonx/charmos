@@ -238,6 +238,15 @@
 #define ct_assert_struct_size_eq(__struct, __want)                             \
     ct_assert_size(struct __struct, __want)
 
+#define ct_assert_struct_align_eq(__struct, __want)                            \
+    ct_assert_align(struct __struct, __want)
+
+#define ct_assert_union_size_eq(__union, __want)                               \
+    ct_assert_size(union __union, __want)
+
+#define ct_assert_union_align_eq(__union, __want)                              \
+    ct_assert_align(union __union, __want)
+
 #define ct_assert_power_of_two(n)                                              \
     static_assert(((n) > 0 && (((n) & ((n) - 1)) == 0)),                       \
                   #n " is not a power of two")
