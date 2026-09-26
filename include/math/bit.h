@@ -28,20 +28,19 @@
 #define BIT_SET(val, n)                                                        \
     ({                                                                         \
         _BIT_CAPTURE(val, n);                                                  \
-        (__typeof__(__bit_v)) ((uint64_t) __bit_v | (UINT64_C(1) << __bit_n)); \
+        (typeof(__bit_v)) ((uint64_t) __bit_v | (UINT64_C(1) << __bit_n));     \
     })
 
 #define BIT_CLEAR(val, n)                                                      \
     ({                                                                         \
         _BIT_CAPTURE(val, n);                                                  \
-        (__typeof__(__bit_v)) ((uint64_t) __bit_v &                            \
-                               ~(UINT64_C(1) << __bit_n));                     \
+        (typeof(__bit_v)) ((uint64_t) __bit_v & ~(UINT64_C(1) << __bit_n));    \
     })
 
 #define BIT_TOGGLE(val, n)                                                     \
     ({                                                                         \
         _BIT_CAPTURE(val, n);                                                  \
-        (__typeof__(__bit_v)) ((uint64_t) __bit_v ^ (UINT64_C(1) << __bit_n)); \
+        (typeof(__bit_v)) ((uint64_t) __bit_v ^ (UINT64_C(1) << __bit_n));     \
     })
 
 #define BIT_TEST(val, n)                                                       \
@@ -74,8 +73,8 @@
         ct_typecheck_integer_as(__fld_v, val);                                 \
         (void) kassert(__fld_l <= __fld_h &&                                   \
                        __fld_h < (sizeof(__fld_v) * __CHAR_BIT__));            \
-        (__typeof__(__fld_v)) (((uint64_t) __fld_v >> __fld_l) &               \
-                               (~UINT64_C(0) >> (63u - (__fld_h - __fld_l)))); \
+        (typeof(__fld_v)) (((uint64_t) __fld_v >> __fld_l) &                   \
+                           (~UINT64_C(0) >> (63u - (__fld_h - __fld_l))));     \
     })
 
 #define BIT_SET_FIELD(val, field_val, lo, hi)                                  \
@@ -89,8 +88,8 @@
                        __fld_h < (sizeof(__fld_v) * __CHAR_BIT__));            \
         uint64_t __fld_mask = (~UINT64_C(0) >> (63u - (__fld_h - __fld_l)))    \
                               << __fld_l;                                      \
-        (__typeof__(__fld_v)) (((uint64_t) __fld_v & ~__fld_mask) |            \
-                               ((__fld_fv << __fld_l) & __fld_mask));          \
+        (typeof(__fld_v)) (((uint64_t) __fld_v & ~__fld_mask) |                \
+                           ((__fld_fv << __fld_l) & __fld_mask));              \
     })
 
 #define SET_FIELD(val, field_val, lo, hi) BIT_SET_FIELD(val, field_val, lo, hi)

@@ -9,10 +9,10 @@
     ({                                                                         \
         __auto_type __n = (N);                                                 \
         ct_typecheck_signed_as(__n, N);                                        \
-        __typeof__(__n) __result = __n;                                        \
+        typeof(__n) __result = __n;                                            \
         if (__n < 0) {                                                         \
             bool __overflow =                                                  \
-                ci_sub_overflow((__typeof__(__n)) 0, __n, &__result);          \
+                ci_sub_overflow((typeof(__n)) 0, __n, &__result);              \
             (void) kassert(!__overflow);                                       \
         }                                                                      \
         __result;                                                              \
@@ -36,8 +36,8 @@
             __cl_v = __cl_h;                                                   \
         if (__cl_v < __cl_l)                                                   \
             __cl_v = __cl_l;                                                   \
-        (void) kassert((__cl_t) (__typeof__(*__cl_p)) __cl_v == __cl_v);       \
-        *__cl_p = (__typeof__(*__cl_p)) __cl_v;                                \
+        (void) kassert((__cl_t) (typeof(*__cl_p)) __cl_v == __cl_v);           \
+        *__cl_p = (typeof(*__cl_p)) __cl_v;                                    \
     } while (0)
 
 #define _MIN_1(a) (a)

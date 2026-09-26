@@ -4,11 +4,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define ca_read_once(x) (*(const volatile __typeof__(x) *) &(x))
+#define ca_read_once(x) (*(const volatile typeof(x) *) &(x))
 
 #define ca_write_once(x, val)                                                  \
     do {                                                                       \
-        *(volatile __typeof__(x) *) &(x) = (val);                              \
+        *(volatile typeof(x) *) &(x) = (val);                                  \
     } while (0)
 
 /* Compiler optimization barrier */

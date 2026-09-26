@@ -87,8 +87,8 @@
 /* ====================  Unsigned Equality & Comparison ==================== */
 #define TEST_ASSERT_EQ(a, b)                                                   \
     do {                                                                       \
-        __typeof__(a) _a = (a);                                                \
-        __typeof__(b) _b = (b);                                                \
+        typeof(a) _a = (a);                                                    \
+        typeof(b) _b = (b);                                                    \
         if ((uint64_t) (_a) != (uint64_t) (_b)) {                              \
             test_err("assert \"%s == %s\" failed (%llu != %llu / 0x%llx != "   \
                      "0x%llx)",                                                \
@@ -102,8 +102,8 @@
 
 #define TEST_ASSERT_NE(a, b)                                                   \
     do {                                                                       \
-        __typeof__(a) _a = (a);                                                \
-        __typeof__(b) _b = (b);                                                \
+        typeof(a) _a = (a);                                                    \
+        typeof(b) _b = (b);                                                    \
         if ((uint64_t) (_a) == (uint64_t) (_b)) {                              \
             test_err("assert \"%s != %s\" failed (both equal %llu / 0x%llx)",  \
                      #a, #b, (unsigned long long) (uint64_t) (_a),             \
@@ -114,8 +114,8 @@
 
 #define TEST_ASSERT_LT(a, b)                                                   \
     do {                                                                       \
-        __typeof__(a) _a = (a);                                                \
-        __typeof__(b) _b = (b);                                                \
+        typeof(a) _a = (a);                                                    \
+        typeof(b) _b = (b);                                                    \
         if (!((uint64_t) (_a) < (uint64_t) (_b))) {                            \
             test_err("assert \"%s < %s\" failed (%llu >= %llu)", #a, #b,       \
                      (unsigned long long) (uint64_t) (_a),                     \
@@ -126,8 +126,8 @@
 
 #define TEST_ASSERT_LE(a, b)                                                   \
     do {                                                                       \
-        __typeof__(a) _a = (a);                                                \
-        __typeof__(b) _b = (b);                                                \
+        typeof(a) _a = (a);                                                    \
+        typeof(b) _b = (b);                                                    \
         if (!((uint64_t) (_a) <= (uint64_t) (_b))) {                           \
             test_err("assert \"%s <= %s\" failed (%llu > %llu)", #a, #b,       \
                      (unsigned long long) (uint64_t) (_a),                     \
@@ -138,8 +138,8 @@
 
 #define TEST_ASSERT_GT(a, b)                                                   \
     do {                                                                       \
-        __typeof__(a) _a = (a);                                                \
-        __typeof__(b) _b = (b);                                                \
+        typeof(a) _a = (a);                                                    \
+        typeof(b) _b = (b);                                                    \
         if (!((uint64_t) (_a) > (uint64_t) (_b))) {                            \
             test_err("assert \"%s > %s\" failed (%llu <= %llu)", #a, #b,       \
                      (unsigned long long) (uint64_t) (_a),                     \
@@ -150,8 +150,8 @@
 
 #define TEST_ASSERT_GE(a, b)                                                   \
     do {                                                                       \
-        __typeof__(a) _a = (a);                                                \
-        __typeof__(b) _b = (b);                                                \
+        typeof(a) _a = (a);                                                    \
+        typeof(b) _b = (b);                                                    \
         if (!((uint64_t) (_a) >= (uint64_t) (_b))) {                           \
             test_err("assert \"%s >= %s\" failed (%llu < %llu)", #a, #b,       \
                      (unsigned long long) (uint64_t) (_a),                     \
@@ -163,8 +163,8 @@
 /* ==================== Signed Integer Comparisons ==================== */
 #define TEST_ASSERT_EQ_S(a, b)                                                 \
     do {                                                                       \
-        __typeof__(a) _a = (a);                                                \
-        __typeof__(b) _b = (b);                                                \
+        typeof(a) _a = (a);                                                    \
+        typeof(b) _b = (b);                                                    \
         if ((int64_t) (_a) != (int64_t) (_b)) {                                \
             test_err("assert \"%s == %s\" failed (%lld != %lld)", #a, #b,      \
                      (long long) (int64_t) (_a), (long long) (int64_t) (_b));  \
@@ -174,8 +174,8 @@
 
 #define TEST_ASSERT_LT_S(a, b)                                                 \
     do {                                                                       \
-        __typeof__(a) _a = (a);                                                \
-        __typeof__(b) _b = (b);                                                \
+        typeof(a) _a = (a);                                                    \
+        typeof(b) _b = (b);                                                    \
         if (!((int64_t) (_a) < (int64_t) (_b))) {                              \
             test_err("assert \"%s < %s\" failed (%lld >= %lld)", #a, #b,       \
                      (long long) (int64_t) (_a), (long long) (int64_t) (_b));  \
@@ -185,8 +185,8 @@
 
 #define TEST_ASSERT_LE_S(a, b)                                                 \
     do {                                                                       \
-        __typeof__(a) _a = (a);                                                \
-        __typeof__(b) _b = (b);                                                \
+        typeof(a) _a = (a);                                                    \
+        typeof(b) _b = (b);                                                    \
         if (!((int64_t) (_a) <= (int64_t) (_b))) {                             \
             test_err("assert \"%s <= %s\" failed (%lld > %lld)", #a, #b,       \
                      (long long) (int64_t) (_a), (long long) (int64_t) (_b));  \
@@ -196,8 +196,8 @@
 
 #define TEST_ASSERT_GT_S(a, b)                                                 \
     do {                                                                       \
-        __typeof__(a) _a = (a);                                                \
-        __typeof__(b) _b = (b);                                                \
+        typeof(a) _a = (a);                                                    \
+        typeof(b) _b = (b);                                                    \
         if (!((int64_t) (_a) > (int64_t) (_b))) {                              \
             test_err("assert \"%s > %s\" failed (%lld <= %lld)", #a, #b,       \
                      (long long) (int64_t) (_a), (long long) (int64_t) (_b));  \
@@ -207,8 +207,8 @@
 
 #define TEST_ASSERT_GE_S(a, b)                                                 \
     do {                                                                       \
-        __typeof__(a) _a = (a);                                                \
-        __typeof__(b) _b = (b);                                                \
+        typeof(a) _a = (a);                                                    \
+        typeof(b) _b = (b);                                                    \
         if (!((int64_t) (_a) >= (int64_t) (_b))) {                             \
             test_err("assert \"%s >= %s\" failed (%lld < %lld)", #a, #b,       \
                      (long long) (int64_t) (_a), (long long) (int64_t) (_b));  \
@@ -276,7 +276,7 @@
 /* ====================  Errors and statuses ==================== */
 #define TEST_ASSERT_OK(err)                                                    \
     do {                                                                       \
-        __typeof__(err) _err = (err);                                          \
+        typeof(err) _err = (err);                                              \
         if (_err != 0) {                                                       \
             test_err("assert ok \"%s == 0\" failed (error code %lld / "        \
                      "0x%llx)",                                                \
@@ -289,9 +289,9 @@
 /* ====================  Range and Bit Manipulation ==================== */
 #define TEST_ASSERT_IN_RANGE(val, min, max)                                    \
     do {                                                                       \
-        __typeof__(val) _v = (val);                                            \
-        __typeof__(min) _min = (min);                                          \
-        __typeof__(max) _max = (max);                                          \
+        typeof(val) _v = (val);                                                \
+        typeof(min) _min = (min);                                              \
+        typeof(max) _max = (max);                                              \
         if (!((_v) >= (_min) && (_v) <= (_max))) {                             \
             test_err("assert in range \"%s <= %s <= %s\" failed (val=%llu, "   \
                      "range=[%llu, %llu])",                                    \
@@ -356,8 +356,8 @@
 
 #define TEST_ASSERT_VOID_EQ(a, b)                                              \
     do {                                                                       \
-        __typeof__(a) _a = (a);                                                \
-        __typeof__(b) _b = (b);                                                \
+        typeof(a) _a = (a);                                                    \
+        typeof(b) _b = (b);                                                    \
         if ((uint64_t) (_a) != (uint64_t) (_b)) {                              \
             test_err("assert void \"%s == %s\" failed (%llu != %llu / 0x%llx " \
                      "!= 0x%llx)",                                             \
@@ -390,8 +390,8 @@
 
 #define TEST_EXPECT_EQ(a, b)                                                   \
     do {                                                                       \
-        __typeof__(a) _a = (a);                                                \
-        __typeof__(b) _b = (b);                                                \
+        typeof(a) _a = (a);                                                    \
+        typeof(b) _b = (b);                                                    \
         if ((uint64_t) (_a) != (uint64_t) (_b)) {                              \
             test_err("expect \"%s == %s\" failed (%llu != %llu / 0x%llx != "   \
                      "0x%llx)",                                                \
@@ -449,8 +449,8 @@
 
 #define TEST_WORKER_CHECK_EQ(fleet, a, b)                                      \
     do {                                                                       \
-        __typeof__(a) _wa = (a);                                               \
-        __typeof__(b) _wb = (b);                                               \
+        typeof(a) _wa = (a);                                                   \
+        typeof(b) _wb = (b);                                                   \
         if (cc_unlikely((uint64_t) (_wa) != (uint64_t) (_wb))) {               \
             test_fleet_report((fleet), __RELFILE__, __LINE__,                  \
                               "%s == %s (%llu != %llu)", #a, #b,               \
@@ -489,8 +489,8 @@
 
 #define TEST_WORKER_CHECK_EQ_GOTO(fleet, a, b, label)                          \
     do {                                                                       \
-        __typeof__(a) _wa = (a);                                               \
-        __typeof__(b) _wb = (b);                                               \
+        typeof(a) _wa = (a);                                                   \
+        typeof(b) _wb = (b);                                                   \
         if (cc_unlikely((uint64_t) (_wa) != (uint64_t) (_wb))) {               \
             test_fleet_report((fleet), __RELFILE__, __LINE__,                  \
                               "%s == %s (%llu != %llu)", #a, #b,               \

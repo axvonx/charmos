@@ -30,14 +30,14 @@ static inline cc_constfn size_t ipow(size_t base, int32_t exp) {
 
 #define isqrt(__n)                                                             \
     ({                                                                         \
-        __typeof__(__n) __val = (__n);                                         \
-        __typeof__(__n) __res = 0;                                             \
+        typeof(__n) __val = (__n);                                             \
+        typeof(__n) __res = 0;                                                 \
         if (__val > 0) {                                                       \
-            __typeof__(__n) __x0 = __val / 2;                                  \
+            typeof(__n) __x0 = __val / 2;                                      \
             if (__x0 == 0) {                                                   \
                 __res = 1;                                                     \
             } else {                                                           \
-                __typeof__(__n) __x1 = (__x0 + __val / __x0) / 2;              \
+                typeof(__n) __x1 = (__x0 + __val / __x0) / 2;                  \
                 while (__x1 < __x0) {                                          \
                     __x0 = __x1;                                               \
                     __x1 = (__x0 + __val / __x0) / 2;                          \

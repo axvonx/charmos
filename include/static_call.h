@@ -5,7 +5,7 @@
 #include <text_patch.h>
 
 #define STATIC_CALL_DECLARE(name, default_fn)                                  \
-    extern __typeof__(default_fn) name##_trampoline;                           \
+    extern typeof(default_fn) name##_trampoline;                               \
     asm(".pushsection .text, \"ax\"\n\t"                                       \
         ".globl " #name "_trampoline\n\t" #name "_trampoline:\n\t"             \
         ".byte 0xe9\n\t" /* jmp rel32 */                                       \
@@ -25,6 +25,6 @@ static inline void __static_call_update(void *trampoline, void *fn) {
 
 #define static_call_update(name, fn)                                           \
     do {                                                                       \
-        __typeof__(&name##_trampoline) _scu_fn = (fn);                         \
+        typeof(&name##_trampoline) _scu_fn = (fn);                             \
         __static_call_update((void *) name##_trampoline, (void *) _scu_fn);    \
     } while (0)

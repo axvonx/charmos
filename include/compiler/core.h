@@ -277,14 +277,13 @@
 #define ct_is_ice(x)                                                           \
     (sizeof(int) == sizeof(*(8 ? ((void *) ((long) (x) * 0l)) : (int *) 8)))
 
-#define ct_raw(x) ((__typeof__((x) + 0)) (x))
+#define ct_raw(x) ((typeof((x) + 0)) (x))
 
-#define ct_same_type(a, b)                                                     \
-    __builtin_types_compatible_p(__typeof__(a), __typeof__(b))
-#define ct_is_type(T, x) __builtin_types_compatible_p(T, __typeof__(x))
+#define ct_same_type(a, b) __builtin_types_compatible_p(typeof(a), typeof(b))
+#define ct_is_type(T, x) __builtin_types_compatible_p(T, typeof(x))
 
 #define ct_is_array(a)                                                         \
-    (!__builtin_types_compatible_p(__typeof__(a), __typeof__(&(a)[0])))
+    (!__builtin_types_compatible_p(typeof(a), typeof(&(a)[0])))
 
 #define ct_array_size(a)                                                       \
     (ct_expr_assert_zero(ct_is_array(a), "`" #a "` is a pointer, not an "      \
@@ -296,7 +295,7 @@
 #define ct_const_max(a, b) __builtin_choose_expr((a) > (b), (a), (b))
 #define ct_const_clamp(val, min, max) ct_const_min(ct_const_max(val, min), max)
 
-#define ct_decay(x) __typeof__(0 ? (x) : ((void) ++(int) {0}, (x)))
+#define ct_decay(x) typeof(0 ? (x) : ((void) ++(int) {0}, (x)))
 #define ct_is_str(x)                                                           \
     (__builtin_types_compatible_p(ct_decay(x), char *) ||                      \
      __builtin_types_compatible_p(ct_decay(x), const char *))
@@ -313,14 +312,14 @@
 #define ct_is_pointer(x) (__builtin_classify_type(x) == 5)
 #define ct_is_integral(x)                                                      \
     (__builtin_classify_type(x) == 1 &&                                        \
-     !__builtin_types_compatible_p(__typeof__(x), bool))
-#define ct_is_bool(x) __builtin_types_compatible_p(__typeof__(x), _Bool)
+     !__builtin_types_compatible_p(typeof(x), bool))
+#define ct_is_bool(x) __builtin_types_compatible_p(typeof(x), _Bool)
 #define ct_is_struct(x) (__builtin_classify_type(x) == 12)
 #define ct_is_union(x) (__builtin_classify_type(x) == 13)
 
 #define ct_is_power_of_two(n) ((n) > 0 && (((n) & ((n) - 1)) == 0))
 
-#define ct_type_is_signed(x) ((__typeof__(x)) -1 < (__typeof__(x)) 1)
+#define ct_type_is_signed(x) ((typeof(x)) -1 < (typeof(x)) 1)
 
 #define ct_min_val(T)                                                          \
     ((T) (ct_type_is_signed(T)                                                 \
@@ -334,11 +333,11 @@
 
 /* Require expr to have the requested type, does not evaluate x */
 #define ct_typecheck(type, x)                                                  \
-    ct_expr_assert(__builtin_types_compatible_p(type, __typeof__(x)),          \
+    ct_expr_assert(__builtin_types_compatible_p(type, typeof(x)),              \
                    "`" #x "` must have type `" #type "`")
 
 #define ct_typecheck_same(x, y)                                                \
-    ct_expr_assert(__builtin_types_compatible_p(__typeof__(x), __typeof__(y)), \
+    ct_expr_assert(__builtin_types_compatible_p(typeof(x), typeof(y)),         \
                    "`" #x "` and `" #y "` must have the same type")
 
 #define ct_typecheck_integer_as(x, name)                                       \
@@ -370,21 +369,20 @@
 
 #define ct_typecheck_converted_nonnegative(to, from)                           \
     (!(!ct_type_is_signed(from) && ct_type_is_signed(to)) ||                   \
-     ct_typecheck_intmax_nonnegative((__typeof__(to)) (from)))
+     ct_typecheck_intmax_nonnegative((typeof(to)) (from)))
 
 #define ct_typecheck_value_fits(to, from)                                      \
     (ct_typecheck_source_nonnegative(to, from) &&                              \
      ct_typecheck_converted_nonnegative(to, from) &&                           \
-     (__typeof__(from)) ((__typeof__(to)) (from)) ==                           \
-         (__typeof__(from)) (from))
+     (typeof(from)) ((typeof(to)) (from)) == (typeof(from)) (from))
 
 /* Whole type widening from signedness and width,
  * always an integer constant expr */
 #define ct_typecheck_structurally_widenable(to, from)                          \
     (((ct_type_is_signed(to) == ct_type_is_signed(from)) &&                    \
-      sizeof(__typeof__(from)) <= sizeof(__typeof__(to))) ||                   \
+      sizeof(typeof(from)) <= sizeof(typeof(to))) ||                           \
      (ct_type_is_signed(to) && !ct_type_is_signed(from) &&                     \
-      sizeof(__typeof__(from)) < sizeof(__typeof__(to))))
+      sizeof(typeof(from)) < sizeof(typeof(to))))
 
 #define ct_widenable_ok(to, from)                                              \
     __builtin_choose_expr(ct_is_ice(from),                                     \
@@ -404,5 +402,5 @@
 
 /* Common/larger type to cast up to */
 #define ct_common_type_2(a, b)                                                 \
-    __typeof__(__builtin_choose_expr(                                          \
-        sizeof(__typeof__(a)) >= sizeof(__typeof__(b)), (a), (b)))
+    typeof(__builtin_choose_expr(sizeof(typeof(a)) >= sizeof(typeof(b)), (a),  \
+                                 (b)))

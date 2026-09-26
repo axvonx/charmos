@@ -112,10 +112,6 @@ static inline struct mpmc_slist_node *mpmc_slist_pop(struct mpmc_slist *q) {
     return NULL;
 }
 
-static inline struct mpmc_slist_node *mpmc_slist_pop_one(struct mpmc_slist *q) {
-    return mpmc_slist_pop(q);
-}
-
 /* Return entire chain and mark empty */
 static inline struct mpmc_slist_node *mpmc_slist_drain(struct mpmc_slist *q) {
     union mpmc_slist_head old = mpmc_slist_load(q);

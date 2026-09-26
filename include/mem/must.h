@@ -8,7 +8,7 @@
     ({                                                                         \
         if (global.current_bootstage >= BOOTSTAGE_COMPLETE)                    \
             log_warn_once("must() invoked after boot");                        \
-        __typeof__(expr) _p_ = (expr);                                         \
+        typeof(expr) _p_ = (expr);                                             \
         if (cc_unlikely(!_p_))                                                 \
             panic("OOM: %s == NULL, bootstage: %s", #expr,                     \
                   bootstage_str[global.current_bootstage]);                    \

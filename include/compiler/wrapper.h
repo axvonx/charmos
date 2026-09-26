@@ -154,10 +154,9 @@
         unsigned int __cw_rol_shift = (unsigned int) __cw_rol_n;               \
         unsigned int __cw_rol_w = (unsigned int) ct_bitsizeof(__cw_rol_x);     \
         __cw_rol_shift &= (__cw_rol_w - 1u);                                   \
-        (__typeof__(__cw_rol_x)) ((__cw_rol_x << __cw_rol_shift) |             \
-                                  (__cw_rol_x >>                               \
-                                   ((__cw_rol_w - __cw_rol_shift) &            \
-                                    (__cw_rol_w - 1u))));                      \
+        (typeof(__cw_rol_x)) ((__cw_rol_x << __cw_rol_shift) |                 \
+                              (__cw_rol_x >> ((__cw_rol_w - __cw_rol_shift) &  \
+                                              (__cw_rol_w - 1u))));            \
     })
 
 #define cw_ror(x, n)                                                           \
@@ -169,23 +168,22 @@
         unsigned int __cw_ror_shift = (unsigned int) __cw_ror_n;               \
         unsigned int __cw_ror_w = (unsigned int) ct_bitsizeof(__cw_ror_x);     \
         __cw_ror_shift &= (__cw_ror_w - 1u);                                   \
-        (__typeof__(__cw_ror_x)) ((__cw_ror_x >> __cw_ror_shift) |             \
-                                  (__cw_ror_x                                  \
-                                   << ((__cw_ror_w - __cw_ror_shift) &         \
-                                       (__cw_ror_w - 1u))));                   \
+        (typeof(__cw_ror_x)) ((__cw_ror_x >> __cw_ror_shift) |                 \
+                              (__cw_ror_x << ((__cw_ror_w - __cw_ror_shift) &  \
+                                              (__cw_ror_w - 1u))));            \
     })
 
 #define cw_sat_add(a, b)                                                       \
     ({                                                                         \
         __auto_type __cw_sa_a = (a);                                           \
         __auto_type __cw_sa_b = (b);                                           \
-        __typeof__(__cw_sa_a) __cw_sa_res;                                     \
+        typeof(__cw_sa_a) __cw_sa_res;                                         \
         if (ci_add_overflow(__cw_sa_a, __cw_sa_b, &__cw_sa_res)) {             \
             __cw_sa_res =                                                      \
                 ct_type_is_signed(__cw_sa_a)                                   \
-                    ? ((__cw_sa_b > 0) ? ct_max_val(__typeof__(__cw_sa_a))     \
-                                       : ct_min_val(__typeof__(__cw_sa_a)))    \
-                    : ct_max_val(__typeof__(__cw_sa_a));                       \
+                    ? ((__cw_sa_b > 0) ? ct_max_val(typeof(__cw_sa_a))         \
+                                       : ct_min_val(typeof(__cw_sa_a)))        \
+                    : ct_max_val(typeof(__cw_sa_a));                           \
         }                                                                      \
         __cw_sa_res;                                                           \
     })
@@ -194,13 +192,13 @@
     ({                                                                         \
         __auto_type __cw_ss_a = (a);                                           \
         __auto_type __cw_ss_b = (b);                                           \
-        __typeof__(__cw_ss_a) __cw_ss_res;                                     \
+        typeof(__cw_ss_a) __cw_ss_res;                                         \
         if (ci_sub_overflow(__cw_ss_a, __cw_ss_b, &__cw_ss_res)) {             \
             __cw_ss_res =                                                      \
                 ct_type_is_signed(__cw_ss_a)                                   \
-                    ? ((__cw_ss_b > 0) ? ct_min_val(__typeof__(__cw_ss_a))     \
-                                       : ct_max_val(__typeof__(__cw_ss_a)))    \
-                    : ct_min_val(__typeof__(__cw_ss_a));                       \
+                    ? ((__cw_ss_b > 0) ? ct_min_val(typeof(__cw_ss_a))         \
+                                       : ct_max_val(typeof(__cw_ss_a)))        \
+                    : ct_min_val(typeof(__cw_ss_a));                           \
         }                                                                      \
         __cw_ss_res;                                                           \
     })

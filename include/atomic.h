@@ -154,7 +154,7 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
 #define atomic_cmpxchg_checked_internal(ptr, old_val, new_val, succ, fail)     \
     ({                                                                         \
         __auto_type cpx_ptr_internal = (ptr);                                  \
-        __typeof__((void) 0, *cpx_ptr_internal) cpx_exp_internal = (old_val);  \
+        typeof((void) 0, *cpx_ptr_internal) cpx_exp_internal = (old_val);      \
         (void) atomic_compare_exchange_strong_explicit(                        \
             cpx_ptr_internal, &cpx_exp_internal, (new_val), (succ), (fail));   \
         cpx_exp_internal;                                                      \
@@ -382,8 +382,8 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
 #define atomic_fetch_max_explicit(ptr, val, succ_mo, fail_mo)                  \
     ({                                                                         \
         __auto_type fm_ptr_internal = (ptr);                                   \
-        __typeof__((void) 0, *fm_ptr_internal) fm_val_internal = (val);        \
-        __typeof__((void) 0, *fm_ptr_internal) fm_old_internal =               \
+        typeof((void) 0, *fm_ptr_internal) fm_val_internal = (val);            \
+        typeof((void) 0, *fm_ptr_internal) fm_old_internal =                   \
             atomic_load_checked_internal(fm_ptr_internal, (fail_mo));          \
         while (fm_val_internal > fm_old_internal &&                            \
                !atomic_cas_weak_checked_internal(                              \
@@ -408,8 +408,8 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
 #define atomic_fetch_min_explicit(ptr, val, succ_mo, fail_mo)                  \
     ({                                                                         \
         __auto_type fn_ptr_internal = (ptr);                                   \
-        __typeof__((void) 0, *fn_ptr_internal) fn_val_internal = (val);        \
-        __typeof__((void) 0, *fn_ptr_internal) fn_old_internal =               \
+        typeof((void) 0, *fn_ptr_internal) fn_val_internal = (val);            \
+        typeof((void) 0, *fn_ptr_internal) fn_old_internal =                   \
             atomic_load_checked_internal(fn_ptr_internal, (fail_mo));          \
         while (fn_val_internal < fn_old_internal &&                            \
                !atomic_cas_weak_checked_internal(                              \
@@ -435,7 +435,7 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
 #define atomic_update_explicit(ptr, old_var, new_expr, succ_mo, fail_mo)       \
     ({                                                                         \
         __auto_type u_ptr_internal = (ptr);                                    \
-        __typeof__((void) 0, *u_ptr_internal) old_var =                        \
+        typeof((void) 0, *u_ptr_internal) old_var =                            \
             atomic_load_checked_internal(u_ptr_internal, (fail_mo));           \
         while (!atomic_cas_weak_checked_internal(                              \
             u_ptr_internal, &(old_var), (new_expr), (succ_mo), (fail_mo)))     \
@@ -449,29 +449,29 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
 /* ==== Bitwise Operations ==== */
 #define atomic_set_bit_explicit(ptr, bit, mo)                                  \
     atomic_fetch_or_checked_internal(                                          \
-        (ptr), ((__typeof__((void) 0, *(ptr))) 1) << (bit), (mo))
+        (ptr), ((typeof((void) 0, *(ptr))) 1) << (bit), (mo))
 
 #define atomic_clear_bit_explicit(ptr, bit, mo)                                \
     atomic_fetch_and_checked_internal(                                         \
-        (ptr), ~(((__typeof__((void) 0, *(ptr))) 1) << (bit)), (mo))
+        (ptr), ~(((typeof((void) 0, *(ptr))) 1) << (bit)), (mo))
 
 #define atomic_toggle_bit_explicit(ptr, bit, mo)                               \
     atomic_fetch_xor_checked_internal(                                         \
-        (ptr), ((__typeof__((void) 0, *(ptr))) 1) << (bit), (mo))
+        (ptr), ((typeof((void) 0, *(ptr))) 1) << (bit), (mo))
 
 #define atomic_test_bit_explicit(ptr, bit, mo)                                 \
     ((atomic_load_checked_internal((ptr), (mo)) &                              \
-      (((__typeof__((void) 0, *(ptr))) 1) << (bit))) != 0)
+      (((typeof((void) 0, *(ptr))) 1) << (bit))) != 0)
 
 #define atomic_test_and_set_bit_explicit(ptr, bit, mo)                         \
     ((atomic_fetch_or_checked_internal(                                        \
-          (ptr), ((__typeof__((void) 0, *(ptr))) 1) << (bit), (mo)) &          \
-      (((__typeof__((void) 0, *(ptr))) 1) << (bit))) != 0)
+          (ptr), ((typeof((void) 0, *(ptr))) 1) << (bit), (mo)) &              \
+      (((typeof((void) 0, *(ptr))) 1) << (bit))) != 0)
 
 #define atomic_test_and_clear_bit_explicit(ptr, bit, mo)                       \
     ((atomic_fetch_and_checked_internal(                                       \
-          (ptr), ~(((__typeof__((void) 0, *(ptr))) 1) << (bit)), (mo)) &       \
-      (((__typeof__((void) 0, *(ptr))) 1) << (bit))) != 0)
+          (ptr), ~(((typeof((void) 0, *(ptr))) 1) << (bit)), (mo)) &           \
+      (((typeof((void) 0, *(ptr))) 1) << (bit))) != 0)
 
 #define atomic_set_bit_2(ptr, bit)                                             \
     atomic_set_bit_explicit((ptr), (bit), mo_seq_cst)
@@ -551,7 +551,7 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
 #define atomic_poll_until_eq_3(ptr, val, mo)                                   \
     do {                                                                       \
         __auto_type p_ptr_internal = (ptr);                                    \
-        __typeof__((void) 0, *p_ptr_internal) p_val_internal = (val);          \
+        typeof((void) 0, *p_ptr_internal) p_val_internal = (val);              \
         while (atomic_load_checked_internal(p_ptr_internal, (mo)) !=           \
                p_val_internal) {                                               \
             ca_pause();                                                        \

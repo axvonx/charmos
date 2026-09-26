@@ -55,7 +55,7 @@ mpsc_slist_reverse(struct mpsc_slist_node *chain) {
 }
 
 /* Single consumer pop */
-static inline struct mpsc_slist_node *mpsc_slist_pop_one(struct mpsc_slist *q) {
+static inline struct mpsc_slist_node *mpsc_slist_pop(struct mpsc_slist *q) {
     struct mpsc_slist_node *old = atomic_load_acq(&q->head);
     while (old) {
         if (atomic_cas_weak(&q->head, &old, old->next, mo_acquire, mo_acquire))

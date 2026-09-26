@@ -14,7 +14,7 @@
     __auto_type __source_align = (align);                                      \
     ct_typecheck_integer_as(__x, x);                                           \
     ct_typecheck_widenable_to(__x, align);                                     \
-    __typeof__(__x) __align = (__typeof__(__x)) __source_align
+    typeof(__x) __align = (typeof(__x)) __source_align
 
 #define _ALIGN_CAPTURE(x, align)                                               \
     _ALIGN_CAPTURE_UNCHECKED(x, align);                                        \
@@ -35,8 +35,8 @@
 
 #define _ALIGN_UP_CAPTURE(x, align)                                            \
     _ALIGN_CAPTURE_UNCHECKED(x, align);                                        \
-    __typeof__((__x) + 0) __mask = __align - 1;                                \
-    __typeof__((__x) + 0) __sum;                                               \
+    typeof((__x) + 0) __mask = __align - 1;                                    \
+    typeof((__x) + 0) __sum;                                                   \
     bool __overflow = ci_add_overflow(__x, __mask, &__sum)
 
 /* Rounds up without validating the alignment, wraps on overflow */
@@ -44,7 +44,7 @@
     ({                                                                         \
         _ALIGN_UP_CAPTURE(x, align);                                           \
         (void) __overflow;                                                     \
-        (__typeof__(__x)) (__sum & ~__mask);                                   \
+        (typeof(__x)) (__sum & ~__mask);                                       \
     })
 
 #define ALIGN_UP(x, align)                                                     \
@@ -52,7 +52,7 @@
         _ALIGN_UP_CAPTURE(x, align);                                           \
         (void) kassert(__align > 0 && (__align & (__align - 1)) == 0 &&        \
                        !__overflow);                                           \
-        (__typeof__(__x)) (__sum & ~__mask);                                   \
+        (typeof(__x)) (__sum & ~__mask);                                       \
     })
 
 #define IS_ALIGNED(x, align)                                                   \
@@ -76,7 +76,7 @@
         __auto_type __source_d = (d);                                          \
         ct_typecheck_unsigned_as(__n, n);                                      \
         ct_typecheck_widenable_to(__n, d);                                     \
-        __typeof__(__n) __d = (__typeof__(__n)) __source_d;                    \
+        typeof(__n) __d = (typeof(__n)) __source_d;                            \
         (void) kassert(__d > 0);                                               \
-        (__typeof__(__n)) (__n / __d + (__n % __d != 0));                      \
+        (typeof(__n)) (__n / __d + (__n % __d != 0));                          \
     })

@@ -38,7 +38,7 @@
     ({                                                                         \
         __auto_type __ot_tok = (tok);                                          \
         once_token_typecheck_internal(__ot_tok);                               \
-        __typeof__(atomic_load_relaxed(&__ot_tok->state)) __ot_val = (val);    \
+        typeof(atomic_load_relaxed(&__ot_tok->state)) __ot_val = (val);        \
         atomic_init(&__ot_tok->state, __ot_val);                               \
     })
 
@@ -52,17 +52,17 @@
         __auto_type __ot_tok = (tok);                                          \
         once_token_typecheck_internal(__ot_tok);                               \
         ct_typecheck_same(from, to);                                           \
-        __typeof__(atomic_load_relaxed(&__ot_tok->state)) __ot_exp = (from);   \
-        __typeof__(__ot_exp) __ot_to = (to);                                   \
+        typeof(atomic_load_relaxed(&__ot_tok->state)) __ot_exp = (from);       \
+        typeof(__ot_exp) __ot_to = (to);                                       \
         __auto_type __ot_out = (out);                                          \
-        static_assert(ct_is_type(__typeof__(__ot_exp) *, out) ||               \
+        static_assert(ct_is_type(typeof(__ot_exp) *, out) ||                   \
                           (ct_is_const(out) && (out) == NULL),                 \
                       "once_token_claim out must point to the token state "    \
                       "type or be NULL");                                      \
         bool ret = atomic_cas_strong(&__ot_tok->state, &__ot_exp, __ot_to,     \
                                      mo_acq_rel, mo_acquire);                  \
         if (__ot_out)                                                          \
-            *((__typeof__(__ot_exp) *) __ot_out) = __ot_exp;                   \
+            *((typeof(__ot_exp) *) __ot_out) = __ot_exp;                       \
         ret;                                                                   \
     })
 
@@ -97,7 +97,7 @@
     ({                                                                         \
         __auto_type __ot_tok = (tok);                                          \
         once_token_typecheck_internal(__ot_tok);                               \
-        __typeof__(atomic_load_relaxed(&__ot_tok->state)) __ot_val = (val);    \
+        typeof(atomic_load_relaxed(&__ot_tok->state)) __ot_val = (val);        \
                                                                                \
         atomic_load_acq(&__ot_tok->state) == __ot_val;                         \
     })
@@ -118,7 +118,7 @@
     ({                                                                         \
         __auto_type __ot_tok = (tok);                                          \
         once_token_typecheck_internal(__ot_tok);                               \
-        __typeof__(atomic_load_relaxed(&__ot_tok->state)) __ot_val = (val);    \
+        typeof(atomic_load_relaxed(&__ot_tok->state)) __ot_val = (val);        \
         atomic_store_release(&__ot_tok->state, __ot_val);                      \
     })
 

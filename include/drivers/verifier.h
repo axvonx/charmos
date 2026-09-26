@@ -24,11 +24,10 @@
                   PP_STRINGIZE(type) " is not " #bytes "-byte aligned")
 
 #define dv_field_full(type, member_type, member, offset, ...)                  \
-    static_assert(ci_offsetof(type, member) == (offset) &&                     \
-                      ci_types_compatible_p(__typeof__(((type *) 0)->member),  \
-                                            member_type),                      \
-                  PP_STRINGIZE(type) "." #member " is not " #member_type       \
-                                     " at " #offset)
+    static_assert(                                                             \
+        ci_offsetof(type, member) == (offset) &&                               \
+            ci_types_compatible_p(typeof(((type *) 0)->member), member_type),  \
+        PP_STRINGIZE(type) "." #member " is not " #member_type " at " #offset)
 
 #define dv_field_at_full(type, member, offset, ...)                            \
     static_assert(ci_offsetof(type, member) == (offset),                       \
