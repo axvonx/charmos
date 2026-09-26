@@ -142,9 +142,8 @@
 #define cc_mem(n)
 #endif
 
-/* TODO: In the long run, we will need to add more and likely introduce
- * a cc_mem enum identifier. today we have just one */
 #define cc_mem_io cc_mem(1)
+#define cc_mem_rcu cc_mem(2)
 
 /* ==== Preprocessor Metaprogramming ==== */
 
