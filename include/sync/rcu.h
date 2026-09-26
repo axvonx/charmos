@@ -39,6 +39,7 @@ void rcu_defer(struct rcu_cb *cb, rcu_fn fn, void *arg);
 void rcu_note_context_switch(struct thread *outgoing, struct thread *incoming);
 void rcu_note_irq_exit(void);
 
-#define rcu_dereference(p) atomic_load_acq(&(p))
+#define rcu_dereference(p) atomic_load_acq((_Atomic typeof(p) *) &(p))
 
-#define rcu_assign_pointer(p, v) atomic_store_release(&(p), (v))
+#define rcu_assign_pointer(p, v)                                               \
+    atomic_store_release((_Atomic typeof(p) *) &(p), (v))

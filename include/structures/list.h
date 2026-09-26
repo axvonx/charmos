@@ -181,8 +181,13 @@ static inline void list_splice_tail_init(struct list_head *list,
     }
 }
 
-#define list_entry(ptr, type, member)                                          \
-    ((type *) ((char *) (ptr) - (offsetof(type, member))))
+#define list_entry(ptr, type, member) container_of(ptr, type, member)
+
+#define list_entry_safe(ptr, type, member)                                     \
+    ({                                                                         \
+        __auto_type __list_ptr = (ptr);                                        \
+        __list_ptr ? list_entry(__list_ptr, type, member) : NULL;              \
+    })
 
 #define list_for_each(pos, head)                                               \
     for (pos = (head)->next; pos != (head); pos = pos->next)

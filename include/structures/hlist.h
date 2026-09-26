@@ -78,3 +78,9 @@ static inline struct hlist_node *hlist_pop_head(struct hlist_head *h) {
 #define hlist_for_each_entry(pos, head, member)                                \
     for (pos = hlist_entry((head)->first, typeof(*pos), member); pos;          \
          pos = hlist_entry(pos->member.next, typeof(*pos), member))
+
+#define hlist_entry_safe(ptr, type, member)                                    \
+    ({                                                                         \
+        __auto_type __hlist_ptr = (ptr);                                       \
+        __hlist_ptr ? hlist_entry(__hlist_ptr, type, member) : NULL;           \
+    })
