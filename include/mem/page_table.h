@@ -128,7 +128,7 @@ static inline void pte_unlock_internal(pte_atomic_t *pte) {
 
 /* TODO: use bit_spinlock.h */
 static inline void pte_lock_internal(pte_atomic_t *pte) {
-    for (;;) {
+    while (true) {
         uint64_t old = atomic_load_relaxed(pte);
 
         if (old & PTE_LOCK_BIT) {

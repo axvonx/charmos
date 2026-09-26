@@ -465,7 +465,7 @@ size_t atohex(const char *str) {
     if (str[0] == '0' && (str[1] == 'x' || str[1] == 'X'))
         str += 2;
     size_t result = 0;
-    while (1) {
+    while (true) {
         char c = *str++;
         if (c >= '0' && c <= '9')
             result = result * 16 + (c - '0');
@@ -635,7 +635,7 @@ long strtol(const char *nptr, char **endptr, int base) {
     unsigned long limit =
         neg ? (unsigned long) LONG_MAX + 1UL : (unsigned long) LONG_MAX;
 
-    for (;;) {
+    while (true) {
         int digit;
 
         char c = *s;
@@ -652,7 +652,7 @@ long strtol(const char *nptr, char **endptr, int base) {
             break;
 
         if (acc > (limit - (unsigned long) digit) / (unsigned long) base) {
-            while (1) {
+            while (true) {
                 s++;
                 char dch = *s;
                 if (dch >= '0' && dch <= '9')
@@ -723,7 +723,7 @@ unsigned long long strtoull(const char *nptr, char **endptr, int base) {
     unsigned long long acc = 0;
     int overflow = 0;
 
-    for (;;) {
+    while (true) {
         int digit;
         char c = *s;
         if (c >= '0' && c <= '9')

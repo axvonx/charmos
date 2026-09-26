@@ -25,7 +25,7 @@ void vtd_write_gcmd(struct vtd_unit *u, uint32_t cmd) {
 }
 
 void vtd_wait_gsts(struct vtd_unit *u, uint32_t bit, bool set) {
-    while (1) {
+    while (true) {
         uint32_t s = mmio_read_32(&u->regs->global_status);
         if (set && (s & bit))
             break;

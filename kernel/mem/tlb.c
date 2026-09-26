@@ -21,7 +21,7 @@ static void tlb_shootdown_internal(void) {
         if (done >= req)
             break;
 
-        for (;;) {
+        while (true) {
             uint32_t tail = atomic_load_relaxed(&c->tail);
             uint32_t head = atomic_load_acq(&c->head);
 

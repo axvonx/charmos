@@ -84,7 +84,7 @@ void crash_nmi_handoff(void *p, struct irq_registers *irqc) {
     this_regs_buf->cr2 = cr2_read();
     this_regs_buf->cr3 = cr3_read();
     atomic_store(PERCPU_PTR(TOPC_NONE, crash_quiesced), 1);
-    while (1)
+    while (true)
         cpu_freeze();
 }
 

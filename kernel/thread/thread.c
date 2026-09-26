@@ -488,7 +488,7 @@ enum irql thread_lock_scheduler(struct thread *t, struct scheduler **out_sched)
         }
 
         spin_unlock(&sched->lock, sirql);
-    } while (1);
+    } while (true);
 
     panic("unreachable");
 }

@@ -49,7 +49,7 @@ enum vtd_pt_lock_result {
 
 static inline enum vtd_pt_lock_result
 vtd_pt_lock_internal(sl_pte_atomic_t *pte) {
-    for (;;) {
+    while (true) {
         uint64_t old = atomic_load_relaxed(pte);
 
         if (!(old & SL_PTE_PRESENT))
@@ -71,7 +71,7 @@ vtd_pt_lock_internal(sl_pte_atomic_t *pte) {
 
 static inline enum irql vtd_pt_lock(sl_pte_atomic_t *pte) TSA_NO_ANALYSIS {
     enum irql old = irql_raise(IRQL_DISPATCH_LEVEL);
-    for (;;) {
+    while (true) {
         uint64_t val = atomic_load_relaxed(pte);
         if (val & SL_PTE_LOCK_BIT) {
             cpu_pause();

@@ -139,7 +139,7 @@ void list_sort(struct list_head *head,
 
     int insize = 1;
 
-    while (1) {
+    while (true) {
         struct list_head *p = list;
         list = NULL;
         struct list_head *tail = NULL;

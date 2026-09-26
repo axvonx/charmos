@@ -217,6 +217,6 @@ cc_noreturn void cmdline_dump_help(void) {
     printf("(kernel halted after `help`)\n");
 
     irq_disable();
-    for (;;)
+    while (true)
         cpu_freeze();
 }
