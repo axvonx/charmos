@@ -51,6 +51,59 @@ static inline uint64_t hash_fnv1a_64(const void *key, size_t len) {
     return hash_fnv1a_64_update(HASH_FNV1A_64_OFFSET_BASIS, key, len);
 }
 
+#define jhash_mix(a, b, c)                                                     \
+    {                                                                          \
+        a -= c;                                                                \
+        a ^= ((c) << 4) | ((c) >> 28);                                         \
+        c += b;                                                                \
+        b -= a;                                                                \
+        b ^= ((a) << 6) | ((a) >> 26);                                         \
+        a += c;                                                                \
+        c -= b;                                                                \
+        c ^= ((b) << 8) | ((b) >> 24);                                         \
+        b += a;                                                                \
+        a -= c;                                                                \
+        a ^= ((c) << 16) | ((c) >> 16);                                        \
+        c += b;                                                                \
+        b -= a;                                                                \
+        b ^= ((a) << 19) | ((a) >> 13);                                        \
+        a += c;                                                                \
+        c -= b;                                                                \
+        c ^= ((b) << 4) | ((b) >> 28);                                         \
+        b += a;                                                                \
+    }
+
+#define jhash_final(a, b, c)                                                   \
+    {                                                                          \
+        c ^= b;                                                                \
+        c -= ((b) << 14) | ((b) >> 18);                                        \
+        a ^= c;                                                                \
+        a -= ((c) << 11) | ((c) >> 21);                                        \
+        b ^= a;                                                                \
+        b -= ((a) << 25) | ((a) >> 7);                                         \
+        c ^= b;                                                                \
+        c -= ((b) << 16) | ((b) >> 16);                                        \
+        a ^= c;                                                                \
+        a -= ((c) << 4) | ((c) >> 28);                                         \
+        b ^= a;                                                                \
+        b -= ((a) << 14) | ((a) >> 18);                                        \
+        c ^= b;                                                                \
+        c -= ((b) << 24) | ((b) >> 8);                                         \
+    }
+
+static inline uint32_t hash_jenkins_qword(uint64_t key, uint32_t seed) {
+    uint32_t a, b, c;
+
+    a = b = c = 0xdeadbeef + 8 + seed;
+
+    a += (uint32_t) (key & 0xFFFFFFFFU);
+    b += (uint32_t) (key >> 32);
+
+    jhash_final(a, b, c);
+
+    return c;
+}
+
 static inline uint32_t hash_jenkins_one_at_a_time(const void *key, size_t len) {
     const uint8_t *data = (const uint8_t *) key;
     uint32_t hash = 0;
