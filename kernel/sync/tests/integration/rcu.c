@@ -10,6 +10,7 @@ static size_t rcu_test_duration_ms = 50;
 
 struct rcu_test_data {
     int value;
+    struct rcu_cb rcu;
 };
 
 static atomic(struct rcu_test_data *) shared_ptr = NULL;
@@ -43,10 +44,9 @@ static void rcu_reader_thread(void *arg) {
 
 static atomic_bool volatile rcu_deferred_freed = false;
 
-static void rcu_free_fn(struct rcu_cb *cb, void *ptr) {
-    kfree(ptr);
+static void rcu_free_fn(struct rcu_cb *cb) {
+    kfree(container_of(cb, struct rcu_test_data, rcu));
     atomic_store(&rcu_deferred_freed, true);
-    kfree(cb);
 }
 
 static void rcu_writer_thread(void *arg) {
@@ -60,7 +60,7 @@ static void rcu_writer_thread(void *arg) {
     rcu_assign_pointer(shared_ptr, new);
 
     rcu_synchronize();
-    rcu_defer(kmalloc(sizeof(struct rcu_cb), ALLOC_ZERO), rcu_free_fn, old);
+    rcu_defer(&old->rcu, rcu_free_fn);
 }
 
 TEST_DECLARE_INTEGRATION(rcu, basic, TEST_INTENSITY(40, 50, 200)) {
@@ -111,6 +111,7 @@ struct rcu_stress_node {
     uint64_t seq; /* monotonic sequence number (for debugging) */
     int value;
     size_t freed_gen, enqueued_on;
+    struct rcu_cb rcu;
 };
 
 static atomic(struct rcu_stress_node *) stress_shared = NULL;
@@ -123,9 +124,9 @@ static atomic_uint32_t stress_deferred_freed = 0;
 static atomic_uint32_t stress_replacements = 0;
 static atomic_size_t gen_freed = 0;
 
-static void stress_free_cb(struct rcu_cb *cb, void *ptr) {
+static void stress_free_cb(struct rcu_cb *cb) {
     atomic_store(&gen_freed, cb->gen_when_called);
-    struct rcu_stress_node *n = ptr;
+    struct rcu_stress_node *n = container_of(cb, struct rcu_stress_node, rcu);
     n->value = 34;
     n->freed_gen = cb->gen_when_called;
     n->enqueued_on = cb->enqueued_waiting_on_gen;
@@ -190,8 +191,7 @@ static void rcu_stress_writer(void *arg) {
         struct rcu_stress_node *old = atomic_xchg_acq_rel(&stress_shared, new);
 
         if (old)
-            rcu_defer(kmalloc(sizeof(struct rcu_cb), ALLOC_ZERO),
-                      stress_free_cb, old);
+            rcu_defer(&old->rcu, stress_free_cb);
 
         if ((local_iter & 0x1f) == 0) {
             rcu_synchronize();

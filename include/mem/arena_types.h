@@ -6,5 +6,6 @@
 
 struct arena_result;
 struct arena_params;
+typedef uint64_t arena_identity_t;
 typedef uint32_t arena_tag_t;
 typedef struct arena_result (*arena_ext_fn_t)(struct arena_params *p);

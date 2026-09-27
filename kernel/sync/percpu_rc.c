@@ -5,9 +5,9 @@
 #include <sync/percpu_rc.h>
 #include <sync/rcu.h>
 
-static void percpu_rc_switch_to_atomic_rcu(struct rcu_cb *cb, void *arg) {
+static void percpu_rc_switch_to_atomic_rcu(struct rcu_cb *cb) {
     cc_unused(cb);
-    struct percpu_rc *rc = arg;
+    struct percpu_rc *rc = container_of(cb, struct percpu_rc, rcu);
     uintptr_t pcpu = atomic_load_relaxed(&rc->percpu_count_ptr);
 
     int64_t *counters = PERCPU_RC_PTR(pcpu);
@@ -80,7 +80,7 @@ void percpu_rc_kill(struct percpu_rc *ref) {
     atomic_fetch_or_release(&ref->percpu_count_ptr,
                             PERCPU_RC_DEAD | PERCPU_RC_ATOMIC);
 
-    rcu_defer(&ref->rcu, percpu_rc_switch_to_atomic_rcu, ref);
+    rcu_defer(&ref->rcu, percpu_rc_switch_to_atomic_rcu);
 }
 
 void percpu_rc_reinit(struct percpu_rc *rc) {

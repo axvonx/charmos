@@ -13,16 +13,18 @@ struct thread;
 struct rcu_node;
 
 struct rcu_cb;
-typedef void (*rcu_fn)(struct rcu_cb *, void *);
+typedef void (*rcu_fn)(struct rcu_cb *);
 
 struct rcu_cb {
     struct list_head list;
     rcu_fn fn;
-    void *arg;
 
+    /* TODO: as debug flags get better, move away from raw TEST_ENABLED */
+#ifdef TEST_ENABLED
     size_t gen_when_called; /* Diagnostics */
     size_t enqueued_waiting_on_gen;
     size_t target_gen;
+#endif
 };
 #define rcu_cb_from_list_node(ln) (container_of(ln, struct rcu_cb, list))
 
@@ -32,14 +34,23 @@ void rcu_read_lock(void);
 void rcu_read_unlock(void);
 
 void rcu_synchronize(void);
-void rcu_defer(struct rcu_cb *cb, rcu_fn fn, void *arg);
+void rcu_defer(struct rcu_cb *cb, rcu_fn func);
 
-/* TODO: next_is_idle is a little funny... perhaps it's better to explicitly
- * state *prev, *next here and just check the idle state inside */
 void rcu_note_context_switch(struct thread *outgoing, struct thread *incoming);
 void rcu_note_irq_exit(void);
 
-#define rcu_dereference(p) atomic_load_acq((_Atomic typeof(p) *) &(p))
+#define rcu_plain_t(p) __typeof_unqual__(*(p)) *
+
+#define rcu_dereference(p)                                                     \
+    ((rcu_plain_t(p)) atomic_load_acq((_Atomic __typeof_unqual__(p) *) &(p)))
 
 #define rcu_assign_pointer(p, v)                                               \
-    atomic_store_release((_Atomic typeof(p) *) &(p), (v))
+    ({                                                                         \
+        rcu_plain_t(p) _v = (v);                                               \
+        atomic_store_release((_Atomic __typeof_unqual__(p) *) &(p),            \
+                             (__typeof_unqual__(p)) _v);                       \
+        _v;                                                                    \
+    })
+
+#define rcu_access_pointer(p) ((rcu_plain_t(p)) ca_read_once(p))
+#define RCU_INIT_POINTER(p, v) ((p) = (typeof(p)) (rcu_plain_t(p))(v))

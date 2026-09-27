@@ -143,7 +143,7 @@
 #endif
 
 #define cc_mem_io cc_mem(1)
-#define cc_mem_rcu cc_mem(2)
+#define cc_mem_rcu __attribute__((address_space(2), noderef))
 
 /* ==== Preprocessor Metaprogramming ==== */
 
@@ -337,6 +337,11 @@
 
 #define ct_typecheck_same(x, y)                                                \
     ct_expr_assert(__builtin_types_compatible_p(typeof(x), typeof(y)),         \
+                   "`" #x "` and `" #y "` must have the same type")
+
+#define ct_typecheck_same_unqual(x, y)                                         \
+    ct_expr_assert(__builtin_types_compatible_p(__typeof_unqual__(x),          \
+                                                __typeof_unqual__(y)),         \
                    "`" #x "` and `" #y "` must have the same type")
 
 #define ct_typecheck_integer_as(x, name)                                       \

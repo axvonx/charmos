@@ -15,26 +15,15 @@
  * room for extensibility, which allows for very different arenas that
  * all funnel through this API, which exists to enforce safety
  * and provide a unified substrate.
- *
- * The STRATEGY is the underlying allocation strategy, such as freelists,
- * bumps, etc. Strategies cannot arbitrarily change, and an explicit
- * strategy change function must be used (TODO: reconsider)
- *
- * Then, there are arena PARAMS and ATTRIBUTES. Parameters are arbitrary
- * opaque data that can be passed into arena allocators (meaning whatever),
- * whereas attributes are generic, named fields that can be interpreted
- * in a variety of ways (embedding parameters) to give arenas data like
- * size (in bytes), capacity, etc.
- *
  */
 
-/* This is the opaque structure for arenas:
- *
- * Various arena allocator implementations use many different
- * mechanisms and components, with much of the structure being
- * merely for tracking metadata rather than any outward API-facing properties.
- */
 struct arena;
+
+/* Errors 128+ can be used by any provider */
+enum arena_err {
+    ARENA_ERR_BUDGET = ERR_DELTA_START,
+    ARENA_ERR_ALLOC_INVALID,
+};
 
 /* arena_flags: 64 bit bitflags
  *
@@ -64,6 +53,12 @@ enum arena_flags : uint64_t {
 
     /* Use locks */
     ARENA_FLAG_LOCKED = 1 << 3,
+
+    /* A reference counter is used */
+    ARENA_FLAG_REFCOUNTED = 1 << 4,
+
+    /* Protected by RCU and a defer callback */
+    ARENA_FLAG_RCU = 1 << 5,
 };
 
 /* There are 31 default arena policies (1-31, 0 is omitted
@@ -71,8 +66,11 @@ enum arena_flags : uint64_t {
  * marks the point where anything at or greater than this
  * is a strategy registered by other code, not by default */
 enum arena_strategy {
+    /* simple, carve out from kmalloc */
+    ARENA_STRATEGY_SIMPLE = 1,
+
     /* Bump allocator */
-    ARENA_STRATEGY_BUMP = 1,
+    ARENA_STRATEGY_BUMP,
 
     /* All allocations are the same size,
      * managed at initialization time */
@@ -109,19 +107,14 @@ enum arena_strategy {
  * parameter, which is relevant to some allocators */
 struct arena_params {
     void *ptr;
-    union {
-        struct {
-            uint64_t param1;
-            uint64_t param2;
-            uint64_t param3;
-            uint64_t param4;
-        };
+    struct alloc_params alloc_params;
 
-        uint64_t params[4];
-    };
+    uint64_t params[4];
 };
 
 struct arena_attributes {
+    enum arena_flags flags;
+
     /* For the underlying arena, to describe whatever */
     struct arena_params params;
 };
@@ -133,12 +126,13 @@ struct arena_result {
 };
 
 extern struct err_facility arena_err_facility;
-void *arena_alloc_internal(struct arena *arena, size_t size, arena_tag_t tag,
-                           struct alloc_params params) cw_alloc(2);
+void *arena_alloc_full(struct arena *arena, size_t size,
+                       struct alloc_params params) cw_alloc(2);
 
-enum err arena_free_internal(struct arena *arena, void *ptr,
-                             enum alloc_behavior bh) cc_warn_unused_result;
+enum err arena_free_full(struct arena *arena, void *ptr, enum alloc_behavior bh)
+    cc_warn_unused_result;
 
-void *arena_alloc_special_internal(struct arena *arena,
-                                   struct arena_params *params, arena_tag_t tag,
-                                   struct alloc_params alloc_params) cw_alloc();
+void *arena_alloc_special_full(struct arena *arena, struct arena_params *params,
+                               struct alloc_params alloc_params) cw_alloc();
+
+void arena_global_init(void);

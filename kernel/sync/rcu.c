@@ -187,9 +187,6 @@ void rcu_read_unlock(void) {
     crash_unwind_exit_rcu();
 }
 
-/* We might want to change next_is_idle to a thread pointer...
- *
- * Lock ordering here is scheduler -> leaf -> parents */
 void rcu_note_context_switch(struct thread *outgoing,
                              struct thread *incoming) TSA_NO_ANALYSIS {
     if (!cc_unlikely(rcu.ready))
@@ -270,25 +267,30 @@ void rcu_note_irq_exit(void) TSA_NO_ANALYSIS {
     irql_lower(outer);
 }
 
-void rcu_defer(struct rcu_cb *cb, rcu_fn func, void *arg) {
+void rcu_defer(struct rcu_cb *cb, rcu_fn func) {
     kassert(cb && func);
 
     cb->fn = func;
-    cb->arg = arg;
+
+#ifdef TEST_ENABLED
     cb->target_gen = 0;
     cb->gen_when_called = 0;
+#endif
+
     INIT_LIST_HEAD(&cb->list);
 
     /* Pin + disable interrupts for queue selection */
     enum irql outer = irql_raise(IRQL_HIGH_LEVEL);
 
+#ifdef TEST_ENABLED
     cb->enqueued_waiting_on_gen = atomic_load_relaxed(&rcu.gp_seq);
+#endif
 
     if (cc_unlikely(!rcu.ready)) {
         /* Before rcu_init(), we have nothing, and the boot CPU
          * is the only thing running RCU operations, so we can just do this */
         irql_lower(outer);
-        cb->fn(cb, cb->arg);
+        cb->fn(cb);
         return;
     }
 
@@ -338,8 +340,12 @@ static void rcu_run_batch(struct list_head *batch, uint64_t seq) {
     struct rcu_cb *cb, *tmp;
     list_for_each_entry_safe(cb, tmp, batch, list) {
         list_del_init(&cb->list);
+
+#ifdef TEST_ENABLED
         cb->gen_when_called = (size_t) seq;
-        cb->fn(cb, cb->arg);
+#endif
+
+        cb->fn(cb);
     }
 }
 
@@ -423,9 +429,11 @@ static uint64_t rcu_gp_start(struct list_head *batch) TSA_NO_ANALYSIS {
     kassert(prev != UINT64_MAX, "RCU GP seq wrap");
     uint64_t seq = prev + 1;
 
+#ifdef TEST_ENABLED
     struct rcu_cb *cb;
     list_for_each_entry(cb, batch, list)
         cb->target_gen = (size_t) seq;
+#endif
 
     /* Root down, rcu.nodes is root then leaves */
     for (size_t i = 0; i < rcu.node_count; i++) {

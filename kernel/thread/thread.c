@@ -393,9 +393,8 @@ void thread_free(struct thread *t) {
     kfree(t);
 }
 
-static void thread_reap_rcu(struct rcu_cb *cb, void *arg) {
-    cc_unused(cb);
-    reaper_enqueue(arg);
+static void thread_reap_rcu(struct rcu_cb *cb) {
+    reaper_enqueue(container_of(cb, struct thread, free_rcu));
 }
 
 void thread_put(struct thread *t) {
@@ -405,7 +404,7 @@ void thread_put(struct thread *t) {
     if (thread_get_state(t) != THREAD_STATE_ZOMBIE)
         panic("final ref dropped while thread not zombie");
 
-    rcu_defer(&t->free_rcu, thread_reap_rcu, t);
+    rcu_defer(&t->free_rcu, thread_reap_rcu);
 }
 
 void thread_queue_init(struct thread_queue *q) {
