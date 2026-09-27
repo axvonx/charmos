@@ -65,6 +65,17 @@ jobs:
           fi
           clang --version | head -1
 
+      - name: Verify gcc toolchain
+        if: matrix.compiler == 'gcc' && runner.arch == 'X64'
+        run: |
+          set -euo pipefail
+          major="$(gcc -dumpversion | cut -d. -f1)"
+          if [ "$major" -lt 14 ]; then
+            echo "::error::gcc $major is too old: charmOS needs gcc >= 14"
+            exit 1
+          fi
+          gcc --version | head -1
+
       - name: Compile
         run: ./scripts/build.sh -t RelWithDebInfo --compiler ${{ matrix.compiler }} -C
 

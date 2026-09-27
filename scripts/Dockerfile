@@ -1,6 +1,7 @@
 FROM ubuntu:24.04
 
 ARG LLVM_VERSION=21 # Kernel requires it
+ARG GCC_VERSION=14
 
 RUN apt update -y && apt upgrade -y && \
     apt install -y --no-install-recommends ca-certificates curl gnupg && \
@@ -9,7 +10,7 @@ RUN apt update -y && apt upgrade -y && \
     echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${LLVM_VERSION} main" \
          > /etc/apt/sources.list.d/llvm.list && \
     apt update -y && \
-    apt install -y xorriso nasm qemu-system gdb make gcc git cmake binutils \
+    apt install -y xorriso nasm qemu-system gdb make gcc gcc-${GCC_VERSION} git cmake binutils \
                    python3 python3-jsonschema nodejs \
                    clang-${LLVM_VERSION} lld-${LLVM_VERSION} llvm-${LLVM_VERSION} && \
     update-alternatives \
@@ -24,6 +25,9 @@ RUN apt update -y && apt upgrade -y && \
         --slave /usr/bin/llvm-nm llvm-nm /usr/bin/llvm-nm-${LLVM_VERSION} \
         --slave /usr/bin/llvm-objdump llvm-objdump \
                 /usr/bin/llvm-objdump-${LLVM_VERSION} && \
+    for t in gcc cpp gcc-ar gcc-nm gcc-ranlib gcov; do \
+        ln -sf "${t}-${GCC_VERSION}" "/usr/bin/${t}"; \
+    done && \
     rm -rf /var/lib/apt/lists/*
 
 RUN git config --system --add safe.directory '*'
