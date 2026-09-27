@@ -23,6 +23,7 @@
 #include <logo.h>
 #include <mem/address_range.h>
 #include <mem/alloc.h>
+#include <mem/arena.h>
 #include <mem/asan.h>
 #include <mem/buddy.h>
 #include <mem/domain.h>
@@ -188,6 +189,7 @@ void k_sch_main(void *nop) {
     slab_domain_init_late();
     domain_buddies_init_late();
     reaper_init();
+    arena_global_init();
 
     registry_setup();
     nightmare_run();

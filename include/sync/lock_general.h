@@ -1,5 +1,6 @@
 /* @title: General Locking */
 #pragma once
+#include <compiler/name.h>
 #include <stdint.h>
 
 /* The reason we have this is because code around the kernel uses a function
@@ -36,7 +37,7 @@ enum lock_acquire_policy {
     LOCK_ACQUIRE_NONBLOCKING = 1,
 };
 
-#if defined(__clang__)
+#if defined(cn_id_clang)
 
 #define TSA_CAPABILITY(kind) __attribute__((capability(kind)))
 #define TSA_GUARDED_BY(lock) __attribute__((guarded_by(lock)))

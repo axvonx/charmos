@@ -137,7 +137,7 @@ void smp_caller_verify(enum topology_caller caller);
 
 #define smp_member_size(member) sizeof(typeof(((struct core *) 0)->member))
 
-#if defined(__clang__)
+#if defined(cn_id_clang)
 #define _smp_read_type(member) (typeof(ct_decay(((struct core *) 0)->member)))
 #else
 #define _smp_read_type(member) (typeof(((struct core *) 0)->member))

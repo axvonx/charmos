@@ -1,5 +1,6 @@
 /* @title: Compiler Core & Compile-Time Metaprogramming */
 #pragma once
+#include <compiler/name.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -20,8 +21,7 @@
 #define cc_aligned(x) __attribute__((aligned(x)))
 #define cc_cache_aligned __attribute__((aligned(64)))
 #define cc_used __attribute__((used))
-#if (defined(__GNUC__) && __GNUC__ >= 11) ||                                   \
-    (defined(__clang__) && __clang_major__ >= 13)
+#if cn_has_attribute(retain)
 #define cc_retain __attribute__((retain))
 #else
 #define cc_retain
@@ -33,7 +33,7 @@
 #define cc_likely(x) __builtin_expect(!!(x), 1)
 #define cc_unlikely(x) __builtin_expect(!!(x), 0)
 #define cc_unreachable() __builtin_unreachable()
-#if defined(__clang__)
+#if defined(cn_id_clang)
 #define cc_assume(expr) __builtin_assume(expr)
 #else
 #define cc_assume(expr)                                                        \
@@ -76,7 +76,7 @@
 #define cc_alloc_size(...) __attribute__((alloc_size(__VA_ARGS__)))
 #define cc_alloc_align(param_idx) __attribute__((alloc_align(param_idx)))
 
-#if defined(__clang__)
+#if defined(cn_id_clang)
 #define cc_nullable _Nullable
 #define cc_nonnull_ptr _Nonnull
 #else
@@ -84,7 +84,7 @@
 #define cc_nonnull_ptr
 #endif
 
-#if defined(__GNUC__) && !defined(__clang__) && (__GNUC__ >= 11)
+#if cn_id_gcc_at_least(11, 0)
 #define cc_dealloc(fn, arg_idx) __attribute__((malloc(fn, arg_idx)))
 #else
 #define cc_dealloc(fn, arg_idx)
@@ -94,15 +94,13 @@
 #define cc_warning(msg) __attribute__((warning(msg)))
 #define cc_nonnull(...) __attribute__((nonnull(__VA_ARGS__)))
 
-#if defined(__clang__)
-#define cc_counted_by(member) __attribute__((counted_by(member)))
-#elif defined(__GNUC__) && (__GNUC__ >= 14)
+#if cn_has_attribute(counted_by)
 #define cc_counted_by(member) __attribute__((counted_by(member)))
 #else
 #define cc_counted_by(member)
 #endif
 
-#if defined(__GNUC__) && !defined(__clang__)
+#if defined(cn_id_gcc)
 #define cc_access(mode, ...) __attribute__((access(mode, __VA_ARGS__)))
 #else
 #define cc_access(mode, ...)
@@ -118,32 +116,37 @@
 #define cc_optimize(...) __attribute__((optimize(__VA_ARGS__)))
 #define cc_designated_init __attribute__((designated_init))
 
-#if defined(__clang__) || (defined(__GNUC__) && __GNUC__ >= 12)
+#if cn_has_attribute(uninitialized)
 #define cc_uninitialized __attribute__((uninitialized))
 #else
 #define cc_uninitialized
 #endif
 
-#if defined(__GNUC__) && !defined(__clang__) && (__GNUC__ >= 8)
+#if cn_has_attribute(nonstring)
 #define cc_nonstring __attribute__((nonstring))
 #else
 #define cc_nonstring
 #endif
 
-#if defined(__GNUC__)
+#if defined(cn_id_gcc) || defined(cn_id_clang)
 #define cc_restrict __restrict__
 #else
 #define cc_restrict
 #endif
 
-#if defined(__clang__)
+#if defined(cn_id_clang)
 #define cc_mem(n) __attribute__((address_space(n)))
 #else
 #define cc_mem(n)
 #endif
 
 #define cc_mem_io cc_mem(1)
+
+#if defined(cn_id_clang)
 #define cc_mem_rcu __attribute__((address_space(2), noderef))
+#else
+#define cc_mem_rcu
+#endif
 
 /* ==== Preprocessor Metaprogramming ==== */
 
