@@ -132,7 +132,6 @@ static void stress_free_cb(struct rcu_cb *cb) {
     n->freed_gen = cb->gen_when_called;
     n->enqueued_on = cb->enqueued_waiting_on_gen;
     atomic_inc(&stress_deferred_freed);
-    kfree(cb);
     kfree(n);
 }
 
