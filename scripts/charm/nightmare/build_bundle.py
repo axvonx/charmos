@@ -157,10 +157,6 @@ _EXPECTED_ARTIFACTS = {
 EXECUTABLE_ARTIFACTS = ("limine",)
 
 
-def _instant(now: datetime) -> str:
-    return now.astimezone(UTC).isoformat().replace("+00:00", "Z")
-
-
 def _configuration_args(configuration: dict[str, Any]) -> list[str]:
     smp = configuration["smp"]
     return [
@@ -387,7 +383,7 @@ def create_bundle(
             "mode": "compiled_clean" if compile_kernel else "prebuilt_development"
         },
         "artifacts": sorted(artifacts, key=lambda item: item["name"]),
-        "created_at": _instant(now or datetime.now(UTC)),
+        "created_at": contracts.instant(now or datetime.now(UTC)),
     }
     document["sha256"] = _bundle_digest(document)
     (out_dir / METADATA_NAME).write_text(

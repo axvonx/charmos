@@ -24,13 +24,6 @@ class RunnerExecution:
     exit_code: int
 
 
-def _instant(now: Callable[[], datetime]) -> str:
-    value = now()
-    if value.tzinfo is None:
-        value = value.replace(tzinfo=UTC)
-    return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
-
-
 def _write_json(path: Path, document: Any) -> None:
     path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
 
@@ -149,7 +142,7 @@ def execute_manifest(
     out_dir = out_dir.resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    started_at = _instant(now)
+    started_at = contract_model.instant(now())
     try:
         manifest_sha256 = contract_model.sha256_file(manifest_path)
     except OSError:
@@ -176,7 +169,7 @@ def execute_manifest(
         document = _result_document(
             manifest_sha256=manifest_sha256,
             started_at=started_at,
-            ended_at=_instant(now),
+            ended_at=contract_model.instant(now()),
             lifecycle=contract_model.ExecutionLifecycle.FAILED,
             discovery=contract_model.DiscoveryKind.NONE,
             finding_count=0,
@@ -245,7 +238,7 @@ def execute_manifest(
             document = _result_document(
                 manifest_sha256=manifest_sha256,
                 started_at=started_at,
-                ended_at=_instant(now),
+                ended_at=contract_model.instant(now()),
                 lifecycle=contract_model.ExecutionLifecycle.FAILED,
                 discovery=contract_model.DiscoveryKind.NONE,
                 finding_count=0,
@@ -262,7 +255,7 @@ def execute_manifest(
         document = _result_document(
             manifest_sha256=manifest_sha256,
             started_at=started_at,
-            ended_at=_instant(now),
+            ended_at=contract_model.instant(now()),
             lifecycle=contract_model.ExecutionLifecycle.FAILED,
             discovery=contract_model.DiscoveryKind.NONE,
             finding_count=0,
@@ -286,7 +279,7 @@ def execute_manifest(
         document = _result_document(
             manifest_sha256=manifest_sha256,
             started_at=started_at,
-            ended_at=_instant(now),
+            ended_at=contract_model.instant(now()),
             lifecycle=(
                 contract_model.ExecutionLifecycle.COMPLETED
                 if healthy
@@ -305,7 +298,7 @@ def execute_manifest(
         document = _result_document(
             manifest_sha256=manifest_sha256,
             started_at=started_at,
-            ended_at=_instant(now),
+            ended_at=contract_model.instant(now()),
             lifecycle=contract_model.ExecutionLifecycle.CANCELLED,
             discovery=contract_model.DiscoveryKind.NONE,
             finding_count=0,
@@ -319,7 +312,7 @@ def execute_manifest(
         document = _result_document(
             manifest_sha256=manifest_sha256,
             started_at=started_at,
-            ended_at=_instant(now),
+            ended_at=contract_model.instant(now()),
             lifecycle=contract_model.ExecutionLifecycle.FAILED,
             discovery=contract_model.DiscoveryKind.NONE,
             finding_count=0,

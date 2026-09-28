@@ -710,6 +710,41 @@ def _prune_uninteresting_boot(result: BootResult) -> None:
     shutil.rmtree(result.console_log.parent, ignore_errors=True)
 
 
+def _run_logged(
+    command: list[str],
+    *,
+    cwd: Path,
+    timeout_ms: int,
+    console_log: Path,
+    exit_map: dict[int, int] | None = None,
+) -> tuple[int, bool, int]:
+    started = time.monotonic()
+    timed_out = False
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            timeout=max(5.0, timeout_ms / 1000.0),
+        )
+        exit_code = (exit_map or {}).get(completed.returncode, completed.returncode)
+        console_log.write_text(completed.stdout + completed.stderr, encoding="utf-8")
+    except subprocess.TimeoutExpired as error:
+        timed_out = True
+        exit_code = R.EXIT_TIMEOUT
+        # TimeoutExpired carries bytes even under text=True
+        out = [
+            s if isinstance(s, str) else (s or b"").decode("utf-8", "replace")
+            for s in (error.stdout, error.stderr)
+        ]
+        console_log.write_text("".join(out), encoding="utf-8")
+    except OSError as error:
+        exit_code = 127
+        console_log.write_text(f"Execution failed: {error}\n", encoding="utf-8")
+    return exit_code, timed_out, int((time.monotonic() - started) * 1000)
+
+
 class QemuBootRunner:
     """Executes QEMU boots"""
 
@@ -751,40 +786,12 @@ class QemuBootRunner:
             *codec.build_args(manifest.suite),
         ]
 
-        timeout_s = max(5.0, timeout_ms / 1000.0)
-        start_time = time.monotonic()
-        exit_code = 0
-        timed_out = False
-
-        try:
-            proc = subprocess.run(
-                cmd,
-                cwd=manifest.build_dir.parent,
-                capture_output=True,
-                text=True,
-                timeout=timeout_s,
-            )
-            exit_code = proc.returncode
-            console_log_path.write_text(proc.stdout + proc.stderr, encoding="utf-8")
-        except subprocess.TimeoutExpired as e:
-            timed_out = True
-            exit_code = R.EXIT_TIMEOUT
-            out = (
-                (e.stdout or "")
-                if isinstance(e.stdout, str)
-                else (e.stdout or b"").decode("utf-8", "replace")
-            )
-            err = (
-                (e.stderr or "")
-                if isinstance(e.stderr, str)
-                else (e.stderr or b"").decode("utf-8", "replace")
-            )
-            console_log_path.write_text(out + err, encoding="utf-8")
-        except OSError as e:
-            console_log_path.write_text(f"Execution failed: {e}\n", encoding="utf-8")
-            exit_code = 127
-
-        duration_ms = int((time.monotonic() - start_time) * 1000)
+        exit_code, timed_out, duration_ms = _run_logged(
+            cmd,
+            cwd=manifest.build_dir.parent,
+            timeout_ms=timeout_ms,
+            console_log=console_log_path,
+        )
 
         build_ndjson = manifest.build_dir / "ndjson.log"
         if build_ndjson.is_file():
@@ -867,42 +874,13 @@ class BundleBootRunner:
                 machine_log_path.unlink(missing_ok=True)
                 qmp_socket.unlink(missing_ok=True)
 
-                started = time.monotonic()
-                timed_out = False
-                try:
-                    completed = subprocess.run(
-                        command,
-                        cwd=boot_dir,
-                        capture_output=True,
-                        text=True,
-                        timeout=max(5.0, timeout_ms / 1000.0),
-                    )
-                    exit_code = self._DEBUG_EXIT.get(
-                        completed.returncode, completed.returncode
-                    )
-                    console_log_path.write_text(
-                        completed.stdout + completed.stderr, encoding="utf-8"
-                    )
-                except subprocess.TimeoutExpired as error:
-                    timed_out = True
-                    exit_code = R.EXIT_TIMEOUT
-                    stdout = (
-                        error.stdout
-                        if isinstance(error.stdout, str)
-                        else (error.stdout or b"").decode("utf-8", "replace")
-                    )
-                    stderr = (
-                        error.stderr
-                        if isinstance(error.stderr, str)
-                        else (error.stderr or b"").decode("utf-8", "replace")
-                    )
-                    console_log_path.write_text(stdout + stderr, encoding="utf-8")
-                except OSError as error:
-                    exit_code = 127
-                    console_log_path.write_text(
-                        f"Execution failed: {error}\n", encoding="utf-8"
-                    )
-                duration_ms = int((time.monotonic() - started) * 1000)
+                exit_code, timed_out, duration_ms = _run_logged(
+                    command,
+                    cwd=boot_dir,
+                    timeout_ms=timeout_ms,
+                    console_log=console_log_path,
+                    exit_map=self._DEBUG_EXIT,
+                )
                 if not machine_log_path.exists():
                     machine_log_path.write_text("", encoding="utf-8")
 

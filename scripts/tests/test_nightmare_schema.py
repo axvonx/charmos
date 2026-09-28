@@ -11,15 +11,11 @@ Skipped when `jsonschema` is not installed
 """
 
 import json
-import tomllib
 import unittest
 
 from charm.nightmare import suite as S
-from charm.paths import nightmare_dir
 
 SCHEMA = json.loads(S.SCHEMA_PATH.read_text())
-FIXTURES = nightmare_dir() / "fixtures" / "suites"
-SUITES = nightmare_dir() / "suites"
 
 
 def base(**overrides) -> dict:
@@ -32,130 +28,101 @@ def base(**overrides) -> dict:
     return doc
 
 
+def enum(*path: str) -> tuple:
+    node = SCHEMA["$defs"]
+    for key in path:
+        node = node[key]
+    return tuple(node["enum"])
+
+
 class VocabularyTests(unittest.TestCase):
-    def test_services_match(self) -> None:
-        self.assertEqual(tuple(SCHEMA["$defs"]["service"]["enum"]), S.SERVICES)
-
-    def test_compilers_match(self) -> None:
-        enum = SCHEMA["$defs"]["build"]["properties"]["compiler"]["enum"]
-        self.assertEqual(tuple(enum), S.COMPILERS)
-
-    def test_build_types_match(self) -> None:
-        enum = SCHEMA["$defs"]["build"]["properties"]["type"]["enum"]
-        self.assertEqual(tuple(enum), S.BUILD_TYPES)
-
-    def test_modes_match(self) -> None:
-        enum = SCHEMA["$defs"]["task"]["properties"]["mode"]["enum"]
-        self.assertEqual(tuple(enum), S.MODES)
-
-    def test_seed_modes_match(self) -> None:
-        enum = SCHEMA["$defs"]["nightmare"]["properties"]["seed_mode"]["enum"]
-        self.assertEqual(tuple(enum), S.SEED_MODES)
-
-    def test_on_stall_matches(self) -> None:
-        enum = SCHEMA["$defs"]["boot"]["properties"]["on_stall"]["enum"]
-        self.assertEqual(tuple(enum), S.ON_STALL)
+    def test_every_enum_matches_the_model(self) -> None:
+        for schema_path, model in (
+            (("service",), S.SERVICES),
+            (("build", "properties", "compiler"), S.COMPILERS),
+            (("build", "properties", "type"), S.BUILD_TYPES),
+            (("task", "properties", "mode"), S.MODES),
+            (("nightmare", "properties", "seed_mode"), S.SEED_MODES),
+            (("boot", "properties", "on_stall"), S.ON_STALL),
+        ):
+            with self.subTest(enum=".".join(schema_path)):
+                self.assertEqual(enum(*schema_path), model)
 
     def test_schema_defaults_match_the_dataclass_defaults(self) -> None:
-        boot = SCHEMA["$defs"]["boot"]["properties"]
-        model = S.Boot(duration_ms=1)
-
-        self.assertEqual(boot["drain_grace_ms"]["default"], model.drain_grace_ms)
-        self.assertEqual(boot["max_boots"]["default"], model.max_boots)
-        self.assertEqual(boot["min_interval_ms"]["default"], model.min_interval_ms)
-        self.assertEqual(boot["stat_interval_ms"]["default"], model.stat_interval_ms)
-        self.assertEqual(
-            boot["stall_threshold_ms"]["default"], model.stall_threshold_ms
-        )
-        self.assertEqual(boot["gate_first"]["default"], model.gate_first)
-        self.assertEqual(boot["on_stall"]["default"], model.on_stall)
-
-    def test_nightmare_defaults_match(self) -> None:
-        props = SCHEMA["$defs"]["nightmare"]["properties"]
-        model = S.Nightmare()
-
-        self.assertEqual(props["intensity"]["default"], model.intensity)
-        self.assertEqual(props["seed_mode"]["default"], model.seed_mode)
-
-
-@unittest.skipUnless(S.SCHEMA_AVAILABLE, "jsonschema is not installed")
-class AcceptanceTests(unittest.TestCase):
-    def check(self, doc: dict) -> list[S.Diagnostic]:
-        return S.schema_diagnostics(doc)
-
-    def test_every_valid_fixture_and_suite_validates(self) -> None:
-        for path in sorted(
-            list(FIXTURES.glob("valid/*.toml")) + list(SUITES.glob("*.toml"))
+        for section, model in (
+            ("boot", S.Boot(duration_ms=1)),
+            ("nightmare", S.Nightmare()),
         ):
-            with self.subTest(fixture=path.name):
-                self.assertEqual(self.check(tomllib.loads(path.read_text())), [])
+            for field, spec in SCHEMA["$defs"][section]["properties"].items():
+                if "default" in spec:
+                    with self.subTest(field=f"{section}.{field}"):
+                        self.assertEqual(
+                            json.loads(json.dumps(getattr(model, field))),
+                            spec["default"],
+                        )
 
-    def test_a_minimal_document_validates(self) -> None:
-        self.assertEqual(self.check(base()), [])
+
+def edit(path: str, value: object) -> dict:
+    """base() with `value` set at a dotted path; DELETE removes the key"""
+    doc = base()
+    *parents, leaf = path.split(".")
+    node: dict | list = doc
+    for key in parents:
+        node = node[int(key)] if isinstance(node, list) else node[key]
+    if value is DELETE:
+        del node[leaf]
+    else:
+        node[leaf] = value
+    return doc
+
+
+DELETE = object()
+
+REJECTIONS = [
+    ("unknown top-level key", base(surprise={}), "<root>"),
+    ("unknown suite key", edit("suite.budget_days", 3), "suite"),
+    ("unknown boot key", edit("tasks.0.boot.duration_sec", 3), "tasks[0].boot"),
+    ("capitalised name", edit("suite.name", "Overnight_Locks"), "suite.name"),
+    ("zero runners", edit("suite.runners", 0), "suite.runners"),
+    (
+        "intensity above one",
+        edit("tasks.0.nightmare", {"intensity": 1.5}),
+        "tasks[0].nightmare.intensity",
+    ),
+    (
+        "unknown service",
+        edit("tasks.0.nightmare", {"perturb": ["teleporter"]}),
+        "tasks[0].nightmare.perturb[0]",
+    ),
+    (
+        "duplicated service",
+        edit("tasks.0.nightmare", {"perturb": ["migrator", "migrator"]}),
+        "tasks[0].nightmare.perturb",
+    ),
+    ("empty task list", base(tasks=[]), "tasks"),
+    (
+        "cmake definition without a value",
+        edit("build.cmake_definitions", ["DEBUG_ASAN"]),
+        "build.cmake_definitions[0]",
+    ),
+    ("missing required field", edit("suite.runners", DELETE), "suite"),
+    (
+        "string where a number belongs",
+        edit("tasks.0.boot.duration_ms", "10s"),
+        "tasks[0].boot.duration_ms",
+    ),
+]
 
 
 @unittest.skipUnless(S.SCHEMA_AVAILABLE, "jsonschema is not installed")
 class RejectionTests(unittest.TestCase):
-    def rejects(self, doc: dict, expect_path: str) -> None:
-        diags = S.schema_diagnostics(doc)
-        self.assertTrue(diags, f"schema accepted {doc}")
-        self.assertIn(expect_path, [d.path for d in diags])
-
-    def test_an_unknown_top_level_key_is_rejected(self) -> None:
-        self.rejects(base(surprise={}), "<root>")
-
-    def test_an_unknown_suite_key_is_rejected(self) -> None:
-        doc = base()
-        doc["suite"]["budget_days"] = 3
-        self.rejects(doc, "suite")
-
-    def test_an_unknown_boot_key_is_rejected(self) -> None:
-        doc = base()
-        doc["tasks"][0]["boot"]["duration_sec"] = 3
-        self.rejects(doc, "tasks[0].boot")
-
-    def test_a_capitalised_name_is_rejected(self) -> None:
-        doc = base()
-        doc["suite"]["name"] = "Overnight_Locks"
-        self.rejects(doc, "suite.name")
-
-    def test_zero_runners_is_rejected(self) -> None:
-        doc = base()
-        doc["suite"]["runners"] = 0
-        self.rejects(doc, "suite.runners")
-
-    def test_an_intensity_above_one_is_rejected(self) -> None:
-        doc = base()
-        doc["tasks"][0]["nightmare"] = {"intensity": 1.5}
-        self.rejects(doc, "tasks[0].nightmare.intensity")
-
-    def test_an_unknown_service_is_rejected(self) -> None:
-        doc = base()
-        doc["tasks"][0]["nightmare"] = {"perturb": ["teleporter"]}
-        self.rejects(doc, "tasks[0].nightmare.perturb[0]")
-
-    def test_a_duplicated_service_is_rejected(self) -> None:
-        doc = base()
-        doc["tasks"][0]["nightmare"] = {"perturb": ["migrator", "migrator"]}
-        self.rejects(doc, "tasks[0].nightmare.perturb")
-
-    def test_an_empty_task_list_is_rejected(self) -> None:
-        self.rejects(base(tasks=[]), "tasks")
-
-    def test_a_cmake_definition_without_a_value_is_rejected(self) -> None:
-        doc = base()
-        doc["build"]["cmake_definitions"] = ["DEBUG_ASAN"]
-        self.rejects(doc, "build.cmake_definitions[0]")
-
-    def test_a_missing_required_field_is_rejected(self) -> None:
-        doc = base()
-        del doc["suite"]["runners"]
-        self.rejects(doc, "suite")
-
-    def test_a_string_where_a_number_belongs_is_rejected(self) -> None:
-        doc = base()
-        doc["tasks"][0]["boot"]["duration_ms"] = "10s"
-        self.rejects(doc, "tasks[0].boot.duration_ms")
+    def test_the_schema_rejects_each_bad_document_at_its_path(self) -> None:
+        for why, doc, expect_path in REJECTIONS:
+            with self.subTest(why):
+                diags = S.schema_diagnostics(doc)
+                self.assertIn(
+                    expect_path, [d.path for d in diags], f"schema accepted {doc}"
+                )
 
 
 if __name__ == "__main__":

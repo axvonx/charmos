@@ -5,6 +5,7 @@ import json
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
 from typing import Any, NewType, TypeAlias
@@ -124,6 +125,13 @@ class RunnerManifest:
     campaign: CampaignContract
     result: ResultTarget
     document: dict[str, Any]
+
+
+def instant(value: datetime) -> str:
+    """A UTC ISO-8601 instant with a `Z` suffix; naive values are taken as UTC."""
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
 def canonical_json(value: Any) -> bytes:

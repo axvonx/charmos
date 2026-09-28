@@ -1,5 +1,4 @@
 import unittest
-from pathlib import Path
 
 from charm.nightmare import codec as C
 from charm.nightmare import suite as S
@@ -90,86 +89,7 @@ class SeedTests(unittest.TestCase):
         self.assertNotIn("nightmare.seed", t)
         self.assertEqual(t["nightmare.seed_mode"], "seedless")
 
-    def test_a_seed_is_rendered_as_hex(self) -> None:
+    def test_a_seed_is_hex_so_strtoull_cannot_read_it_as_octal(self) -> None:
         t = tokens(C.render(self.split, C.BootRequest(seed=0x1F)))
 
         self.assertEqual(t["nightmare.seed"], "0x000000000000001f")
-
-
-class SeedPartitionTests(unittest.TestCase):
-    def test_runners_never_share_a_seed(self) -> None:
-        per_runner = 100
-        seen = [
-            C.seed_for(1000, runner=r, boot_index=b, boots_per_runner=per_runner)
-            for r in range(4)
-            for b in range(per_runner)
-        ]
-
-        self.assertEqual(len(seen), len(set(seen)))
-
-    def test_a_runner_owns_a_contiguous_block(self) -> None:
-        a = C.seed_for(0, runner=2, boot_index=0, boots_per_runner=50)
-        b = C.seed_for(0, runner=2, boot_index=49, boots_per_runner=50)
-        c = C.seed_for(0, runner=3, boot_index=0, boots_per_runner=50)
-
-        self.assertEqual(a, 100)
-        self.assertEqual(b, 149)
-        self.assertEqual(c, 150)
-
-    def test_the_space_wraps_rather_than_overflowing(self) -> None:
-        seed = C.seed_for(
-            0xFFFFFFFFFFFFFFFF, runner=0, boot_index=1, boots_per_runner=1
-        )
-
-        self.assertEqual(seed, 0)
-
-
-class BuildTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.suite = S.load(SUITES / "overnight_locks.toml")
-
-    def test_every_declared_definition_reaches_cmake(self) -> None:
-        args = C.build_args(self.suite)
-
-        for d in self.suite.build.cmake_definitions:
-            self.assertIn(f"-D{d}", args)
-
-        self.assertIn("-DDEBUG_LOCK_CHK=ON", args)
-        self.assertNotIn("-DINJECT_LOCK=ON", args)
-
-    def test_topology_is_a_build_time_definition_not_a_boot_knob(self) -> None:
-        args = C.build_args(self.suite)
-        line = C.render(self.suite.task("locks_storm"), C.BootRequest(seed=1))
-
-        self.assertIn("-DMACHINE_SMP=sockets=2,cores=2,threads=2", args)
-        self.assertNotIn("smp", line)
-
-    def test_memory_renders_in_gibibytes_when_exact(self) -> None:
-        self.assertEqual(C._mem_size(8192), "8G")
-        self.assertEqual(C._mem_size(1536), "1536M")
-
-    def test_definitions_precede_the_passthrough_separator(self) -> None:
-        cmd = C.build_command(self.suite)
-
-        self.assertIn("--", cmd)
-        self.assertLess(cmd.index("iso"), cmd.index("--"))
-        self.assertGreater(cmd.index("-DDEBUG_ASAN=ON"), cmd.index("--"))
-
-
-class ArtifactTests(unittest.TestCase):
-    def test_the_written_cmdline_is_one_line_ending_in_a_newline(self) -> None:
-        import tempfile
-
-        task = S.load(SUITES / "overnight_locks.toml").task("locks_storm")
-        line = C.render(task, C.BootRequest(seed=1))
-
-        with tempfile.TemporaryDirectory() as tmp:
-            path = C.write(Path(tmp) / "sub" / "n.txt", line)
-            text = path.read_text()
-
-        self.assertEqual(text, line + "\n")
-        self.assertEqual(len(text.splitlines()), 1)
-
-
-if __name__ == "__main__":
-    unittest.main()

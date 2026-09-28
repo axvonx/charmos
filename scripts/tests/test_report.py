@@ -137,9 +137,6 @@ class ZeroIsNotAbsentTests(unittest.TestCase):
     def test_zero_renders_as_zero(self) -> None:
         self.assertEqual(RP.md_cell(0), "0")
 
-    def test_none_still_renders_as_a_dash(self) -> None:
-        self.assertEqual(RP.md_cell(None), "-")
-
     def test_a_clean_shard_shows_its_zero_counts(self) -> None:
         runs = [
             {

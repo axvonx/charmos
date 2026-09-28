@@ -9,10 +9,6 @@ from . import contracts
 from . import suite as suite_model
 
 
-def _instant(value: datetime) -> str:
-    return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
-
-
 def wait_until(target_time: datetime, max_wait_seconds: int = 21600) -> float:
     """If target_time is in the future, sleep until target_time (up to max_wait_seconds)."""
     import time
@@ -59,7 +55,7 @@ def queue_metadata(
         "schema_version": 1,
         "batch_id": batch_id,
         "source_sha": source_sha,
-        "start_utc": _instant(start),
+        "start_utc": contracts.instant(start),
         "deferred": deferred,
     }
 
@@ -85,7 +81,7 @@ def repository_command(
     snapshot_end = start + timedelta(hours=window_hours + 1)
     definition = {
         "name": f"Repository {suite_id}",
-        "start_utc": _instant(start),
+        "start_utc": contracts.instant(start),
         "window_hours": window_hours,
         "runners": runners,
         "color": "#a7c080",
@@ -94,7 +90,7 @@ def repository_command(
     definition_toml = (
         "[batch]\n"
         f'name = "Repository {suite_id}"\n'
-        f'start_utc = "{_instant(start)}"\n'
+        f'start_utc = "{contracts.instant(start)}"\n'
         f"window_hours = {window_hours}\n"
         f"runners = {runners}\n"
         'color = "#a7c080"\n'
@@ -102,7 +98,7 @@ def repository_command(
     )
     snapshot_identity = {
         "repository": repository,
-        "evaluated_at": _instant(evaluated_at),
+        "evaluated_at": contracts.instant(evaluated_at),
         "suite": suite_id,
         "capacity": runner_capacity,
     }
@@ -127,10 +123,10 @@ def repository_command(
     snapshot = {
         "schemaVersion": 1,
         "version": snapshot_version,
-        "evaluatedAt": _instant(evaluated_at),
+        "evaluatedAt": contracts.instant(evaluated_at),
         "window": {
-            "startsAt": _instant(evaluated_at),
-            "endsAt": _instant(snapshot_end),
+            "startsAt": contracts.instant(evaluated_at),
+            "endsAt": contracts.instant(snapshot_end),
         },
         "repository": {
             "id": name,
@@ -210,7 +206,7 @@ def inline_command(
     snapshot_end = start + timedelta(hours=window_hours + 1)
     definition = {
         "name": name,
-        "start_utc": _instant(start),
+        "start_utc": contracts.instant(start),
         "window_hours": window_hours,
         "runners": runners,
         "color": color,
@@ -220,7 +216,7 @@ def inline_command(
     definition_toml = (
         "[batch]\n"
         f'name = "{name}"\n'
-        f'start_utc = "{_instant(start)}"\n'
+        f'start_utc = "{contracts.instant(start)}"\n'
         f"window_hours = {window_hours}\n"
         f"runners = {runners}\n"
         f'color = "{color}"\n'
@@ -229,7 +225,7 @@ def inline_command(
 
     snapshot_identity = {
         "repository": repository,
-        "evaluated_at": _instant(evaluated_at),
+        "evaluated_at": contracts.instant(evaluated_at),
         "ad_hoc": True,
         "name": name,
         "capacity": runner_capacity,
@@ -257,10 +253,10 @@ def inline_command(
     snapshot = {
         "schemaVersion": 1,
         "version": snapshot_version,
-        "evaluatedAt": _instant(evaluated_at),
+        "evaluatedAt": contracts.instant(evaluated_at),
         "window": {
-            "startsAt": _instant(evaluated_at),
-            "endsAt": _instant(snapshot_end),
+            "startsAt": contracts.instant(evaluated_at),
+            "endsAt": contracts.instant(snapshot_end),
         },
         "repository": {
             "id": repo_name,

@@ -177,10 +177,6 @@ _REPOSITORY = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 _COLOR = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
 
-def _instant(value: datetime) -> str:
-    return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
-
-
 def _parse_instant(value: Any, field: str) -> datetime:
     if not isinstance(value, str):
         raise ValueError(f"{field} must be an ISO-8601 string")
@@ -246,7 +242,7 @@ def _toml_definition(source: str) -> dict[str, Any]:
 def _definition_wire(definition: BatchDefinition) -> dict[str, Any]:
     return {
         "name": definition.name,
-        "startUtc": _instant(definition.start),
+        "startUtc": contracts.instant(definition.start),
         "windowHours": definition.window_ms / 3_600_000,
         "runners": definition.runners,
         "color": definition.color,
@@ -257,7 +253,7 @@ def _definition_wire(definition: BatchDefinition) -> dict[str, Any]:
 def _definition_toml_shape(definition: BatchDefinition) -> dict[str, Any]:
     return {
         "name": definition.name,
-        "start_utc": _instant(definition.start),
+        "start_utc": contracts.instant(definition.start),
         "window_hours": definition.window_ms / 3_600_000,
         "runners": definition.runners,
         "color": definition.color,
@@ -538,7 +534,7 @@ class Planner:
                 ),
                 (
                     {
-                        "startsAt": _instant(latest_end),
+                        "startsAt": contracts.instant(latest_end),
                         "runners": max(1, definition.runners - 1),
                         "message": "retry after the active lease or request fewer runners",
                     },
@@ -584,7 +580,7 @@ class Planner:
             "snapshot_version": snapshot.version,
             "source": {"repository": source.repository, "commit": source.commit},
             "runner_image": runner_image,
-            "evaluated_at": _instant(now),
+            "evaluated_at": contracts.instant(now),
             "ownership": ownership,
         }
         root_digest = contracts.sha256_json(identity_input)
@@ -812,15 +808,15 @@ class Planner:
                         "id": task.slice_id,
                         "taskId": task.id,
                         "runnerId": task.runner_id,
-                        "startsAt": _instant(task.starts_at),
-                        "endsAt": _instant(task.ends_at),
-                        "nominalEndsAt": _instant(task.nominal_ends_at),
+                        "startsAt": contracts.instant(task.starts_at),
+                        "endsAt": contracts.instant(task.ends_at),
+                        "nominalEndsAt": contracts.instant(task.nominal_ends_at),
                         "immutable": False,
                         "trace": [],
                     },
                     "elasticBuffer": {
-                        "startsAt": _instant(task.nominal_ends_at),
-                        "endsAt": _instant(task.ends_at),
+                        "startsAt": contracts.instant(task.nominal_ends_at),
+                        "endsAt": contracts.instant(task.ends_at),
                         "ratio": ratio,
                         "immutable": True,
                     },
@@ -853,8 +849,8 @@ class Planner:
             "id": plan_id,
             "version": plan_version,
             "baseSnapshotVersion": base_snapshot_version,
-            "evaluatedAt": _instant(now),
-            "expiresAt": _instant(now + PLAN_TTL),
+            "evaluatedAt": contracts.instant(now),
+            "expiresAt": contracts.instant(now + PLAN_TTL),
             "source": {"repository": source.repository, "commit": source.commit},
             "runnerImage": runner_image,
             "definition": {
@@ -891,22 +887,22 @@ class Planner:
                 "definitionToml": definition_toml,
                 "lease": {
                     "runnerIds": [runner.id for runner in leased],
-                    "startsAt": _instant(start),
-                    "endsAt": _instant(end),
+                    "startsAt": contracts.instant(start),
+                    "endsAt": contracts.instant(end),
                     "policyReserveMinutes": 0,
                 },
                 "tasks": batch_tasks,
                 "startedPrefixTaskIds": [],
                 "residualTail": (
                     {
-                        "startsAt": _instant(start),
-                        "endsAt": _instant(end),
+                        "startsAt": contracts.instant(start),
+                        "endsAt": contracts.instant(end),
                         "mutableTaskIds": [task.id for task in tasks],
                     }
                     if ownership == "ad-hoc"
                     else None
                 ),
-                "updatedAt": _instant(now),
+                "updatedAt": contracts.instant(now),
             },
         }
 
