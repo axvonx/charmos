@@ -13,11 +13,11 @@ TEST_DECLARE_UNIT(arena, create_lookup_basic) {
 
     struct arena *a = arena_create_full(descs, 8);
 
-    struct arena_seg *seg = arena_seg_lookup(a, 3);
-    seg->storage[3] = 67;
+    struct arena_seg seg = arena_seg_lookup(a, 3);
+    seg.storage[3] = 67;
 
     seg = arena_seg_lookup(a, 3);
-    TEST_ASSERT_EQ(seg->storage[3], 67);
+    TEST_ASSERT_EQ(seg.storage[3], 67);
 
 #ifdef DEBUG_ARENA
 
@@ -27,7 +27,7 @@ TEST_DECLARE_UNIT(arena, create_lookup_basic) {
 
     for (uint16_t i = 0; i < a->n_segs; i++) {
         if (imds[i].id == 3)
-            TEST_ASSERT_EQ(imds[i].seg, seg);
+            TEST_ASSERT_EQ(imds[i].seg, seg.storage);
     }
 
 #endif

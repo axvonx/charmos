@@ -77,7 +77,7 @@ out:
     return err;
 }
 
-struct arena_desc *arena_desc_for(enum arena_strategy strat) {
+struct arena_desc *arena_desc_lookup(enum arena_strategy strat) {
     rcu_read_lock();
 
     struct arena_desc_table *tbl = rcu_dereference(arena_global.desc_table);
@@ -201,7 +201,7 @@ struct arena *arena_create_full(struct arena_seg_desc *seg_descs,
 
 /* We very much expect that seg_id is valid. If it isn't, UB is possible
  * as this lookup could read out of bounds. */
-struct arena_seg *arena_seg_lookup(struct arena *a, uint16_t seg_id) {
+struct arena_seg arena_seg_lookup(struct arena *a, uint16_t seg_id) {
     struct arena_seg_inmem_desc *inmem_descs = arena_get_inmem_descs(a);
 #ifdef DEBUG_ARENA
     bool found = false;
@@ -216,8 +216,10 @@ struct arena_seg *arena_seg_lookup(struct arena *a, uint16_t seg_id) {
     size_t cursor = 0;
     for (int i = 0; i < ARENA_MAX_SEG; i++) {
         cursor += inmem_descs[i].offset_bump;
-        if (inmem_descs[i].id == seg_id)
-            return (struct arena_seg *) &a->payload[cursor];
+        if (inmem_descs[i].id == seg_id) {
+            uint8_t *storage = &a->payload[cursor];
+            return (struct arena_seg){.storage = storage};
+        }
     }
 
     panic("segment %u not found, likely UB during traversal", seg_id);

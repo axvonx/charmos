@@ -9,6 +9,7 @@
     } while (0)
 
 bool arena_check(struct arena *a) {
+    cc_unused(a);
 
     /* When not in DEBUG_ARENA, we have basically no checking to do
      * because we have no way to know when the iteration through

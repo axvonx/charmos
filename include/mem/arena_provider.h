@@ -287,7 +287,7 @@ struct arena_seg_props {
 };
 
 struct arena_seg {
-    cc_align_as(max_align_t) uint8_t storage[];
+    uint8_t *storage;
 };
 
 struct arena_seg_desc {
@@ -388,7 +388,15 @@ struct arena {
      *
      * Thus, because we are using this form of cursor bumping,
      * the largest a single segment can be is limited by its own size,
-     * and never the collective sizes of all segments
+     * and never the collective sizes of all segments.
+     *
+     * We use this idea of "cursor bumping" instead of a raw size because of
+     * the leading inmem_descs. If we only tracked sizes, we'd need to use more
+     * data to track the number of segments (unneeded information) in order
+     * to compute the offset of the first segment.
+     *
+     * Tracking raw sizes also makes the last inmem_desc's
+     * size redundant (it trails, nothing needs to know its size).
      *
      * It is permitted to have one very large segment, however,
      * that must be explicitly flagged as trailing.
@@ -425,6 +433,6 @@ enum err arena_budget_prio_scale(sz_b_t used, int scale,
 /* Arena strategies call into this with their fully formed descriptors */
 struct arena *arena_create_full(struct arena_seg_desc *seg_descs,
                                 size_t n_segs);
-struct arena_seg *arena_seg_lookup(struct arena *a, uint16_t seg_id);
+struct arena_seg arena_seg_lookup(struct arena *a, uint16_t seg_id);
 enum err arena_desc_register(struct arena_desc *d);
-struct arena_desc *arena_desc_for(enum arena_strategy strat);
+struct arena_desc *arena_desc_lookup(enum arena_strategy strat);
