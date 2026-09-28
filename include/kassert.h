@@ -17,7 +17,7 @@
 
 #define _kassert_debug_off_dispatch(first, ...)                                \
     ({                                                                         \
-        ct_decay(x) _kassert_res = (x);                                        \
+        ct_decay(first) _kassert_res = (first);                                \
         if (cc_unlikely(!(_kassert_res)))                                      \
             ci_unreachable();                                                  \
                                                                                \
