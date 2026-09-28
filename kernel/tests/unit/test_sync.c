@@ -5,7 +5,7 @@
 #include <test/sync.h>
 #include <time/spin_sleep.h>
 
-TEST_GROUP_DECLARE(test_sync);
+TEST_GROUP_DECLARE(harness_sync);
 
 struct latch_fix {
     struct test_latch latch;
@@ -13,7 +13,7 @@ struct latch_fix {
     atomic_bool worker_saw_set;
 };
 
-TEST_DECLARE_UNIT(test_sync, latch_spin_at_raised_irql) {
+TEST_DECLARE_UNIT(harness_sync, latch_spin_at_raised_irql) {
     struct test_latch l;
     test_latch_init(&l);
 
@@ -54,7 +54,7 @@ static void phase_forever_waiter(void *arg) {
         atomic_inc(&f->reached);
 }
 
-TEST_DECLARE_UNIT(test_sync, phase_advance_wakes_waiters) {
+TEST_DECLARE_UNIT(harness_sync, phase_advance_wakes_waiters) {
     struct phase_fix f = {0};
     test_phase_init(&f.phase);
 
@@ -78,7 +78,7 @@ TEST_DECLARE_UNIT(test_sync, phase_advance_wakes_waiters) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(test_sync, phase_poison_unblocks_all) {
+TEST_DECLARE_UNIT(harness_sync, phase_poison_unblocks_all) {
     struct phase_fix f = {0};
     test_phase_init(&f.phase);
 
@@ -106,7 +106,7 @@ TEST_DECLARE_UNIT(test_sync, phase_poison_unblocks_all) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(test_sync, phase_timeout_expires) {
+TEST_DECLARE_UNIT(harness_sync, phase_timeout_expires) {
     struct test_phase p;
     test_phase_init(&p);
 
@@ -119,7 +119,7 @@ TEST_DECLARE_UNIT(test_sync, phase_timeout_expires) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(test_sync, phase_already_at_target) {
+TEST_DECLARE_UNIT(harness_sync, phase_already_at_target) {
     struct test_phase p;
     test_phase_init(&p);
     test_phase_set(&p, 5);
@@ -137,7 +137,7 @@ enum test_sync_token_state {
     TOKEN_DONE = 2,
 };
 
-TEST_DECLARE_UNIT(test_sync, once_token_typechecked_ops) {
+TEST_DECLARE_UNIT(harness_sync, once_token_typechecked_ops) {
     ONCE_TOKEN_DEFINE(bool, btok);
     once_token_init(&btok);
     once_token_typecheck_internal(&btok);

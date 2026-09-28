@@ -65,7 +65,7 @@ static void race_satisfy(void *arg) {
         atomic_inc(r->wins);
 }
 
-TEST_DECLARE_UNIT(wait_block, concurrent_wait_any) {
+TEST_DECLARE_UNIT(wait_block, mt_wait_any) {
     struct thread_wait_header headers[2];
     struct thread_wait_object objects[2];
     struct wait_racer racers[2];

@@ -9,7 +9,7 @@ static void log_event(const char *msg) {
     cc_unused(msg);
 }
 
-TEST_DECLARE_SMOKE(log, smoke) {
+TEST_DECLARE_SMOKE(log, emit_event) {
     log_event("smoke test message");
     return TEST_SUCCESS;
 }

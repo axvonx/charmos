@@ -63,7 +63,8 @@ static void rcu_writer_thread(void *arg) {
     rcu_defer(&old->rcu, rcu_free_fn);
 }
 
-TEST_DECLARE_INTEGRATION(rcu, basic, TEST_INTENSITY(40, 50, 200)) {
+TEST_DECLARE_INTEGRATION(rcu, mt_readers_during_replace,
+                         TEST_INTENSITY(40, 50, 200)) {
     rcu_test_duration_ms = ctx->intensity_val ? ctx->intensity_val : 50;
     if (rcu_test_duration_ms < 40)
         rcu_test_duration_ms = 40;
@@ -211,7 +212,7 @@ static void rcu_stress_reclaimer(void *arg) {
     }
 }
 
-TEST_DECLARE_INTEGRATION(rcu, stress, TEST_INTENSITY(200, 2000, 10000)) {
+TEST_DECLARE_INTEGRATION(rcu, mt_stress, TEST_INTENSITY(200, 2000, 10000)) {
     rcu_stress_duration_ms = ctx->intensity_val ? ctx->intensity_val : 2000;
     atomic_store(&stress_stop, false);
     atomic_store(&stress_failed, false);

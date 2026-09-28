@@ -2,7 +2,7 @@
 
 TEST_GROUP_DECLARE(mpmc_queue);
 
-TEST_DECLARE_UNIT(mpmc_queue, basic_enqueue_dequeue) {
+TEST_DECLARE_UNIT(mpmc_queue, fifo_capacity_and_wrap) {
     struct mpmc_queue q;
     bool ok = mpmc_queue_init(&q, 8);
     TEST_ASSERT(ok);

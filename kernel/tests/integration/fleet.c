@@ -4,7 +4,7 @@
 #include <thread/thread.h>
 #include <time/spin_sleep.h>
 
-TEST_GROUP_DECLARE(test_fleet);
+TEST_GROUP_DECLARE(fleet);
 
 struct counting_fix {
     atomic_uint32_t ran;
@@ -19,7 +19,7 @@ static bool counting_worker(struct test_fleet *f, struct test_conc_worker *w) {
     return true;
 }
 
-TEST_DECLARE_INTEGRATION(test_fleet, spawn_join_clean,
+TEST_DECLARE_INTEGRATION(fleet, spawn_join_clean,
                          TEST_INTENSITY_LINEAR(2, 8, 64, "workers")) {
     struct test_fleet *fleet = test_fleet_init(ctx, NULL);
     TEST_ASSERT_NONNULL(fleet);
@@ -59,7 +59,7 @@ static bool gate_worker(struct test_fleet *f, struct test_conc_worker *w) {
     return true;
 }
 
-TEST_DECLARE_INTEGRATION(test_fleet, start_gate_holds,
+TEST_DECLARE_INTEGRATION(fleet, start_gate_holds,
                          TEST_INTENSITY_LINEAR(2, 16, 64, "workers")) {
     struct test_fleet *fleet = test_fleet_init(ctx, NULL);
     TEST_ASSERT_NONNULL(fleet);
@@ -92,7 +92,7 @@ static bool failing_worker(struct test_fleet *f, struct test_conc_worker *w) {
     return true;
 }
 
-TEST_DECLARE_INTEGRATION(test_fleet, worker_failure_folds) {
+TEST_DECLARE_INTEGRATION(fleet, worker_failure_folds) {
     struct test_fleet *fleet = test_fleet_init(ctx, NULL);
     TEST_ASSERT_NONNULL(fleet);
 
@@ -127,7 +127,7 @@ out:
     return false;
 }
 
-TEST_DECLARE_INTEGRATION(test_fleet, worker_check_releases_lock) {
+TEST_DECLARE_INTEGRATION(fleet, worker_check_releases_lock) {
     struct test_fleet *fleet = test_fleet_init(ctx, NULL);
     TEST_ASSERT_NONNULL(fleet);
 
@@ -155,7 +155,7 @@ static bool racing_failer(struct test_fleet *f, struct test_conc_worker *w) {
     return true;
 }
 
-TEST_DECLARE_INTEGRATION(test_fleet, first_failure_wins,
+TEST_DECLARE_INTEGRATION(fleet, first_failure_wins,
                          TEST_INTENSITY_LINEAR(2, 16, 64, "workers")) {
     struct test_fleet *fleet = test_fleet_init(ctx, NULL);
     TEST_ASSERT_NONNULL(fleet);
@@ -192,7 +192,7 @@ static bool canary_worker(struct test_fleet *f, struct test_conc_worker *w) {
     return true;
 }
 
-TEST_DECLARE_INTEGRATION(test_fleet, alloc_outlives_body,
+TEST_DECLARE_INTEGRATION(fleet, alloc_outlives_body,
                          TEST_INTENSITY_LINEAR(2, 8, 32, "workers")) {
     struct test_fleet *fleet = test_fleet_init(ctx, NULL);
     TEST_ASSERT_NONNULL(fleet);
@@ -228,7 +228,7 @@ static void affinity_probe(void *arg) {
     atomic_inc(&fix->checked);
 }
 
-TEST_DECLARE_INTEGRATION(test_fleet, run_on_core, .min_cores = 2) {
+TEST_DECLARE_INTEGRATION(fleet, run_on_core, .min_cores = 2) {
     struct affinity_fix fix = {0};
 
     for (size_t cpu = 0; cpu < global.core_count && cpu < 4; cpu++)
@@ -249,7 +249,7 @@ static bool pinned_worker(struct test_fleet *f, struct test_conc_worker *w) {
     return true;
 }
 
-TEST_DECLARE_INTEGRATION(test_fleet, spawn_on_core_pins, .min_cores = 2) {
+TEST_DECLARE_INTEGRATION(fleet, spawn_on_core_pins, .min_cores = 2) {
     struct test_fleet *fleet = test_fleet_init(ctx, NULL);
     TEST_ASSERT_NONNULL(fleet);
 

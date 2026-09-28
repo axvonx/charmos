@@ -69,7 +69,7 @@ static void dp_join(struct thread **t, size_t nthreads) {
 }
 
 /* 1 buffer, N threads, N CPUs = many CPUs racing for same PTEs */
-TEST_DECLARE_INTEGRATION(mem, demand_single_buf_smp,
+TEST_DECLARE_INTEGRATION(mem, mt_demand_single_buf,
                          TEST_INTENSITY_CORES(1, 1, 4, "threads/core"),
                          .min_cores = 2, .min_ram_mib = 8) {
     const size_t pages = DP_PAGES, nbuf = 1;
@@ -95,7 +95,7 @@ TEST_DECLARE_INTEGRATION(mem, demand_single_buf_smp,
 
 /* N buffers, M threads (M > N), N CPUs = contention spread over multiple
  * regions */
-TEST_DECLARE_INTEGRATION(mem, demand_multi_buf_smp,
+TEST_DECLARE_INTEGRATION(mem, mt_demand_multi_buf,
                          TEST_INTENSITY_CORES(1, 2, 4, "threads/core"),
                          .min_cores = 2, .min_ram_mib = 8) {
     const size_t pages = DP_PAGES;

@@ -17,7 +17,7 @@ static bool fx_near(fx32_32_t a, fx32_32_t b, fx32_32_t tol) {
     return abs(d) <= tol;
 }
 
-TEST_DECLARE_UNIT(fixed, mul_identities) {
+TEST_DECLARE_UNIT(fixed, mul_identity) {
     static const fx32_32_t vals[] = {
         0,        FX_ONE,    -FX_ONE,  FX_HALF,   -FX_HALF,
         FX(3.25), FX(-3.25), FX(1000), FX(-1000), FX(0.001),
@@ -60,7 +60,7 @@ TEST_DECLARE_UNIT(fixed, mul_signs) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(fixed, div_identities) {
+TEST_DECLARE_UNIT(fixed, div_identity) {
     static const fx32_32_t vals[] = {
         FX_ONE, -FX_ONE, FX_HALF, -FX_HALF, FX(3.25), FX(-3.25), FX(1000),
     };
@@ -112,7 +112,7 @@ TEST_DECLARE_UNIT(fixed, floor_ceil_standard) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(fixed, floor_ceil_negatives) {
+TEST_DECLARE_UNIT(fixed, floor_ceil_signs) {
     TEST_ASSERT_EQ_S(fx_floor(-FX_HALF), -FX_ONE);
     TEST_ASSERT_EQ(fx_ceil(-FX_HALF), 0);
 
@@ -125,7 +125,7 @@ TEST_DECLARE_UNIT(fixed, floor_ceil_negatives) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(fixed, floor_ceil_invariants, TEST_INTENSITY(4, 16, 256)) {
+TEST_DECLARE_UNIT(fixed, floor_ceil_invariant, TEST_INTENSITY(4, 16, 256)) {
     int64_t bound = ctx->intensity_val ? (int64_t) (ctx->intensity_val / 2) : 8;
     if (bound == 0)
         bound = 1;
@@ -191,7 +191,7 @@ TEST_DECLARE_UNIT(fixed, sqrt_standard) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(fixed, sqrt_edges) {
+TEST_DECLARE_UNIT(fixed, sqrt_edge) {
     TEST_ASSERT_EQ(fx_sqrt(0), 0);
     TEST_ASSERT_EQ(fx_sqrt(-FX_ONE), 0);
     TEST_ASSERT_EQ(fx_sqrt(FX_ONE), FX_ONE);

@@ -41,7 +41,7 @@ static void enqueue_thread(void *arg) {
     atomic_dec(&threads_left);
 }
 
-TEST_DECLARE_UNIT(workqueue, concurrent_enqueue_scaling,
+TEST_DECLARE_UNIT(workqueue, mt_enqueue_scaling,
                   TEST_INTENSITY(512, 4096, 32768)) {
     size_t total_items = ctx->intensity_val ? ctx->intensity_val : 4096;
     wq_2_items_per_thread = total_items / WQ_2_THREADS;

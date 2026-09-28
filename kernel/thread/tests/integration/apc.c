@@ -25,7 +25,7 @@ static void apc_thread(void *arg) {
 }
 
 static struct thread *ted = NULL;
-TEST_DECLARE_INTEGRATION(apc, delivery) {
+TEST_DECLARE_INTEGRATION(apc, kernel_apc_runs_then_destroys) {
     atomic_store(&apc_ran, false);
     atomic_store(&apc_destroyed, 0);
     ted = thread_spawn("apc_test_thread", apc_thread, .joinable = true);

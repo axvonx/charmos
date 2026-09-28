@@ -23,7 +23,6 @@
 TEST_GROUP_DEFINE(mutex);
 TEST_GROUP_DEFINE(rcu);
 TEST_GROUP_DEFINE(rwlock);
-TEST_GROUP_DEFINE(sync_nightmare);
 TEST_GROUP_DEFINE(qspinlock);
 TEST_GROUP_DEFINE(turnstile);
 TEST_GROUP_DEFINE(lock_chk);

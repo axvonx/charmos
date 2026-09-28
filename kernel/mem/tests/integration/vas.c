@@ -91,8 +91,7 @@ static void concurrent_churn(void *arg) {
     }
 }
 
-TEST_DECLARE_INTEGRATION(vas, concurrent_import_query_and_reclaim,
-                         .min_cores = 2) {
+TEST_DECLARE_INTEGRATION(vas, mt_import_query_and_reclaim, .min_cores = 2) {
     struct vas *vas =
         vas_create(SMP_VAS_BASE, SMP_VAS_BASE + 8 * VAS_CHUNK_SIZE);
 

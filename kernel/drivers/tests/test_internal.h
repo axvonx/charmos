@@ -3,4 +3,4 @@
 #include <mem/page.h>
 #include <test/test.h>
 
-TEST_GROUP_DEFINE(vtd_unit);
+TEST_GROUP_DEFINE(vtd);

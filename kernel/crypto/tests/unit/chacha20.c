@@ -49,7 +49,7 @@ TEST_DECLARE_UNIT(chacha20, rfc7539_kat) {
 }
 
 /* chunking and stream boundaries */
-TEST_DECLARE_UNIT(chacha20, block_seams, TEST_INTENSITY(128, 512, 65536)) {
+TEST_DECLARE_UNIT(chacha20, block_edge, TEST_INTENSITY(128, 512, 65536)) {
     size_t total = ctx->intensity_val ? ctx->intensity_val : 512;
     uint8_t key[32] = {0x42};
     uint8_t nonce[12] = {0x24};

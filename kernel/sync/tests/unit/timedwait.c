@@ -101,7 +101,7 @@ TEST_DECLARE_UNIT(condvar, timeout_no_lost_wake) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(semaphore, timedwait) {
+TEST_DECLARE_UNIT(semaphore, timedwait_standard) {
     struct semaphore s;
     semaphore_init(&s, 1, false);
 
@@ -128,7 +128,7 @@ TEST_DECLARE_UNIT(semaphore, timedwait) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(completion, timedwait) {
+TEST_DECLARE_UNIT(completion, wait_timeout_standard) {
     struct completion c;
     completion_init(&c, false);
 

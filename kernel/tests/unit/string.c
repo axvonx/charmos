@@ -2,7 +2,7 @@
 
 TEST_GROUP_DECLARE(string);
 
-TEST_DECLARE_UNIT(string, strncmp_boundaries) {
+TEST_DECLARE_UNIT(string, strncmp_edge) {
     TEST_ASSERT_EQ(strncmp("a", "a", 2), 0);
     TEST_ASSERT_EQ(strncmp("", "", 1), 0);
     TEST_ASSERT_EQ(strncmp("a", "b", 0), 0);

@@ -60,7 +60,7 @@ static bool verify_splay_bst_invariants(struct splay_node *n, int *min,
     return true;
 }
 
-TEST_DECLARE_UNIT(splay, basic_operations) {
+TEST_DECLARE_UNIT(splay, insert_find_splays_to_root) {
     struct splay_tree tree;
     splay_tree_init(&tree, &test_splay_ops);
 

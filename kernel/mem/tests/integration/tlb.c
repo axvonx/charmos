@@ -133,7 +133,7 @@ static void tlb_spammer(void *arg) {
     }
 }
 
-TEST_DECLARE_INTEGRATION(mem, tlb_shootdown_contention,
+TEST_DECLARE_INTEGRATION(mem, mt_tlb_shootdown_contention,
                          TEST_INTENSITY_CORES(1, 1, 2, "threads/core")) {
     size_t nthreads = MIN(ctx->intensity_val ? ctx->intensity_val : 4,
                           TLB_CONTENTION_MAX_THREADS);

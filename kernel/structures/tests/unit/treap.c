@@ -60,7 +60,7 @@ static bool verify_treap_invariants(struct treap_node *n, int *min, int *max) {
     return true;
 }
 
-TEST_DECLARE_UNIT(treap, basic_operations) {
+TEST_DECLARE_UNIT(treap, insert_find_remove) {
     struct treap_tree tree;
     treap_tree_init(&tree, &test_treap_ops);
 

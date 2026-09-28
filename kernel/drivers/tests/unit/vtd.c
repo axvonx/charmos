@@ -1,11 +1,11 @@
 #include "drivers/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(vtd_unit, .intensity_desc = {
-                                 .curve = SCALE_PIECEWISE_LOG,
-                                 .unit  = "iov_addrs",
-                             });
+TEST_GROUP_DECLARE(vtd, .intensity_desc = {
+                            .curve = SCALE_PIECEWISE_LOG,
+                            .unit  = "iov_addrs",
+                        });
 
-TEST_DECLARE_UNIT(vtd_unit, sl_iova_tiling, TEST_INTENSITY(1, 16, 4096)) {
+TEST_DECLARE_UNIT(vtd, sl_iova_tiling, TEST_INTENSITY(1, 16, 4096)) {
     size_t count = ctx->intensity_val ? ctx->intensity_val : 16;
     for (size_t i = 0; i < count; i++) {
         uint64_t iova =

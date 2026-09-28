@@ -27,7 +27,7 @@ TEST_DECLARE_UNIT(bit_ops, next_pow2_standard) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bit_ops, next_pow2_edges) {
+TEST_DECLARE_UNIT(bit_ops, next_pow2_edge) {
     TEST_ASSERT_EQ(next_pow2(0), 1);
 
     /* Must avoid infinite loop */
@@ -58,7 +58,7 @@ TEST_DECLARE_UNIT(bit_ops, prev_pow2_standard) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bit_ops, prev_pow2_edges) {
+TEST_DECLARE_UNIT(bit_ops, prev_pow2_edge) {
     TEST_ASSERT_EQ(prev_pow2(0), 1);
 
     size_t top = (size_t) 1 << 63;
@@ -107,7 +107,7 @@ TEST_DECLARE_UNIT(bit_ops, ilog2_standard) {
 }
 
 /* ilog2(0) == 0, which is also ilog2(1) */
-TEST_DECLARE_UNIT(bit_ops, ilog2_edges) {
+TEST_DECLARE_UNIT(bit_ops, ilog2_edge) {
     TEST_ASSERT_EQ(ilog2(0), 0);
     TEST_ASSERT_EQ(ilog2(UINT64_MAX), 63);
 
@@ -128,7 +128,7 @@ TEST_DECLARE_UNIT(bit_ops, popcount_standard) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bit_ops, bit_macros_basic) {
+TEST_DECLARE_UNIT(bit_ops, bit_macros_standard) {
     uint8_t u8 = 0;
     u8 = BIT_SET(u8, 2);
     TEST_ASSERT_EQ(u8, 4);

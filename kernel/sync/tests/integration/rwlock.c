@@ -54,7 +54,7 @@ static void rw_reader_worker(void *arg) {
     atomic_dec(&rw_readers_left);
 }
 
-TEST_DECLARE_INTEGRATION(rwlock, many_readers, TEST_INTENSITY(4, 20, 64)) {
+TEST_DECLARE_INTEGRATION(rwlock, mt_many_readers, TEST_INTENSITY(4, 20, 64)) {
     size_t num_readers = ctx->intensity_val ? ctx->intensity_val : 20;
     if (num_readers > RWLOCK_READER_MAX)
         num_readers = RWLOCK_READER_MAX;
@@ -108,7 +108,7 @@ static void rw_mixed_worker(void *arg) {
     atomic_dec(&rw_mixed_left);
 }
 
-TEST_DECLARE_INTEGRATION(rwlock, mixed_stress, TEST_INTENSITY(4, 24, 64)) {
+TEST_DECLARE_INTEGRATION(rwlock, mt_mixed_stress, TEST_INTENSITY(4, 24, 64)) {
     size_t num_threads = ctx->intensity_val ? ctx->intensity_val : 24;
     if (num_threads > RWLOCK_MIXED_THREADS_MAX)
         num_threads = RWLOCK_MIXED_THREADS_MAX;
@@ -155,7 +155,7 @@ static void rw_chaos_worker(void *arg) {
     test_info("%u threads left", atomic_fetch_sub(&rw_chaos_left, 1) - 1);
 }
 
-TEST_DECLARE_INTEGRATION(rwlock, chaos, TEST_INTENSITY(4, 24, 64)) {
+TEST_DECLARE_INTEGRATION(rwlock, mt_chaos, TEST_INTENSITY(4, 24, 64)) {
     size_t num_threads = ctx->intensity_val ? ctx->intensity_val : 24;
     if (num_threads > RWLOCK_CHAOS_THREADS_MAX)
         num_threads = RWLOCK_CHAOS_THREADS_MAX;

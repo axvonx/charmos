@@ -6,7 +6,7 @@ TEST_GROUP_DECLARE(slab, .intensity_desc = {
                          });
 
 static char hooray[128] = {0};
-TEST_DECLARE_SMOKE(slab, alloc_free_smoke) {
+TEST_DECLARE_SMOKE(slab, alloc_free) {
 
     void *p = kmalloc_new(
         67, (struct alloc_params){.flags = ALLOC_FLAGS_DEFAULT,

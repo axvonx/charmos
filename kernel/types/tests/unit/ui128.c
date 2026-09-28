@@ -14,7 +14,7 @@ static uint128_t ref_shl(uint128_t a, int b) {
     return b == 0 ? a : a << b;
 }
 
-TEST_DECLARE_UNIT(ui128, shift_left) {
+TEST_DECLARE_UNIT(ui128, shift_left_standard) {
     static const uint128_t vals[] = {
         0,
         1,
@@ -31,7 +31,7 @@ TEST_DECLARE_UNIT(ui128, shift_left) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(ui128, shift_left_seam) {
+TEST_DECLARE_UNIT(ui128, shift_left_edge) {
     uint128_t one = 1;
 
     TEST_ASSERT(__ashlti3(one, 0) == one);
@@ -46,7 +46,7 @@ TEST_DECLARE_UNIT(ui128, shift_left_seam) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(ui128, shift_right_logical) {
+TEST_DECLARE_UNIT(ui128, shift_right_logical_standard) {
     static const uint128_t vals[] = {
         0,
         1,
@@ -65,7 +65,7 @@ TEST_DECLARE_UNIT(ui128, shift_right_logical) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(ui128, shift_right_logical_seam) {
+TEST_DECLARE_UNIT(ui128, shift_right_logical_edge) {
     uint128_t top = U128(1ULL << 63, 0);
 
     TEST_ASSERT(__lshrti3(top, 0) == top);
@@ -81,7 +81,7 @@ TEST_DECLARE_UNIT(ui128, shift_right_logical_seam) {
 
 /* The arithmetic shift is the one with a sign to preserve; a logical shift
  * substituted here would pass every non-negative case in the sweep above. */
-TEST_DECLARE_UNIT(ui128, shift_right_arithmetic) {
+TEST_DECLARE_UNIT(ui128, shift_right_arithmetic_standard) {
     static const int128_t vals[] = {
         0, 1, -1, 12345, -12345, INT128_MAX, INT128_MIN,
     };
@@ -111,7 +111,7 @@ TEST_DECLARE_UNIT(ui128, shift_right_arithmetic_signs) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(ui128, negate, TEST_INTENSITY(16, 64, 1024)) {
+TEST_DECLARE_UNIT(ui128, negate_standard, TEST_INTENSITY(16, 64, 1024)) {
     size_t iters = ctx->intensity_val ? ctx->intensity_val : 64;
     TEST_ASSERT(__negti2(0) == 0);
     TEST_ASSERT(__negti2(1) == (int128_t) -1);
@@ -130,7 +130,7 @@ TEST_DECLARE_UNIT(ui128, negate, TEST_INTENSITY(16, 64, 1024)) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(ui128, multiply, TEST_INTENSITY(8, 32, 256)) {
+TEST_DECLARE_UNIT(ui128, mul_standard, TEST_INTENSITY(8, 32, 256)) {
     size_t bound = ctx->intensity_val ? ctx->intensity_val : 32;
     TEST_ASSERT(__multi3(0, 12345) == 0);
     TEST_ASSERT(__multi3(1, 12345) == 12345);
@@ -181,7 +181,7 @@ TEST_DECLARE_UNIT(ui128, divmod_identity) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(ui128, divmod_edges) {
+TEST_DECLARE_UNIT(ui128, divmod_edge) {
     uint128_t rem = 0;
 
     /* A numerator smaller than the divisor is all remainder. */
@@ -198,7 +198,7 @@ TEST_DECLARE_UNIT(ui128, divmod_edges) {
 /* C rounds signed division toward zero, which makes the remainder take the
  * sign of the dividend -- not the divisor. Both directions are easy to invert.
  */
-TEST_DECLARE_UNIT(ui128, signed_divmod, TEST_INTENSITY(10, 40, 512)) {
+TEST_DECLARE_UNIT(ui128, divmod_signs, TEST_INTENSITY(10, 40, 512)) {
     size_t bound = ctx->intensity_val ? ctx->intensity_val : 40;
     int128_t rem;
 
@@ -267,7 +267,7 @@ TEST_DECLARE_UNIT(ui128, count_zeros) {
 }
 
 /* Test the overflow checks in __negvti2 and similar functions */
-TEST_DECLARE_UNIT(ui128, limits) {
+TEST_DECLARE_UNIT(ui128, min_max_constants) {
     TEST_ASSERT(INT128_MAX > 0);
     TEST_ASSERT(INT128_MIN < 0);
     TEST_ASSERT(INT128_MAX == (int128_t) (UINT128_MAX >> 1));

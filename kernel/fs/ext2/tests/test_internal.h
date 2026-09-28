@@ -12,4 +12,3 @@
 #include "import.h"
 
 TEST_GROUP_DEFINE(ext2);
-TEST_GROUP_DEFINE(ext2_mode);

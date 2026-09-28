@@ -51,7 +51,7 @@ TEST_DECLARE_UNIT(date_time, days_in_year_sums) {
 
 /* Day of year 0 is Jan 1, the boundaries here are the first day of
  * each following month*/
-TEST_DECLARE_UNIT(date_time, expand_month_boundaries) {
+TEST_DECLARE_UNIT(date_time, expand_month_edge) {
     struct date_time dt = {.year = 2001, .day = 0, .sec = 0};
 
     struct date_time_expanded e = date_time_expand(&dt);
@@ -81,7 +81,7 @@ TEST_DECLARE_UNIT(date_time, expand_month_boundaries) {
 }
 
 /* Test months after Feb */
-TEST_DECLARE_UNIT(date_time, expand_leap_year_boundaries) {
+TEST_DECLARE_UNIT(date_time, expand_leap_year_edge) {
     struct date_time dt = {.year = 2000, .day = 59, .sec = 0};
 
     struct date_time_expanded e = date_time_expand(&dt);

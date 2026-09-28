@@ -130,7 +130,7 @@ TEST_DECLARE_UNIT(bitmap, weight_counts, TEST_INTENSITY(64, 256, 4096)) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bitmap, ranges) {
+TEST_DECLARE_UNIT(bitmap, set_clear_range) {
     bitmap_word_t map[BM_WORDS];
     bm_reset(map);
 

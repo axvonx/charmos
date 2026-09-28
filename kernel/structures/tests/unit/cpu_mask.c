@@ -2,7 +2,7 @@
 
 TEST_GROUP_DECLARE(cpu_mask);
 
-TEST_DECLARE_UNIT(cpu_mask, basic_and_range_operations) {
+TEST_DECLARE_UNIT(cpu_mask, bits_ranges_and_scan) {
     struct cpu_mask m;
     cpu_mask_zero(&m);
     TEST_ASSERT(cpu_mask_empty(&m));
