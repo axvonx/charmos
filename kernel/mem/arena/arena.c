@@ -97,3 +97,128 @@ void arena_global_init(void) {
 
     rcu_assign_pointer(arena_global.desc_table, tbl);
 }
+
+static uint16_t size_for_id(struct arena_seg_desc *seg_descs, size_t n_segs,
+                            uint16_t id) {
+    for (size_t i = 0; i < n_segs; i++) {
+        if (seg_descs[i].id == id)
+            return seg_descs[i].size;
+    }
+
+    unreachable("invalid id");
+}
+
+/* Errors panic because the provider calls this */
+struct arena *arena_create_full(struct arena_seg_desc *seg_descs,
+                                size_t n_segs) {
+    size_t seg_data_size_total = 0;
+    struct arena_seg_desc *large_desc = NULL;
+    BITMAP_DECLARE(seen_id_bitmap, ARENA_MAX_SEG) = {0};
+    for (size_t i = 0; i < n_segs; i++) {
+        kassert(seg_descs[i].size);
+
+        /* It's fine if a large segment is smaller than ARENA_SEG_MAX_SIZE */
+        if (seg_descs[i].large) {
+            kassert(!large_desc, "more than one large segment exists");
+            large_desc = &seg_descs[i];
+        }
+
+        if (seg_descs[i].size >= ARENA_SEG_MAX_SIZE)
+            kassert(seg_descs[i].large, "large segment id %u must set .large",
+                    seg_descs[i].id);
+
+        kassert(!bitmap_test_and_set(seen_id_bitmap, seg_descs[i].id),
+                "duplicate id %hu", seg_descs[i].id);
+
+        seg_data_size_total += ALIGN_UP(seg_descs[i].size, ARENA_SEG_ALIGN);
+    }
+
+    size_t inmem_size_raw = n_segs * sizeof(struct arena_seg_inmem_desc);
+    size_t inmem_size = ALIGN_UP(inmem_size_raw, ARENA_SEG_ALIGN);
+    size_t seg_size_total = inmem_size + seg_data_size_total;
+    size_t size_total = sizeof(struct arena) + seg_size_total;
+
+    struct arena *arena = kmalloc(size_total, ALLOC_ZERO);
+    if (!arena)
+        return NULL;
+
+#ifdef DEBUG_ARENA
+    arena->n_segs = n_segs;
+    arena->total_size = size_total;
+#endif
+
+    struct arena_seg_inmem_desc *inmem_descs = arena_get_inmem_descs(arena);
+
+    if (large_desc) {
+        inmem_descs[n_segs - 1].id = large_desc->id;
+
+#ifdef DEBUG_ARENA
+        inmem_descs[n_segs - 1].present = true;
+        inmem_descs[n_segs - 1].type = large_desc->type;
+        inmem_descs[n_segs - 1].size = large_desc->size;
+#endif
+    }
+
+    size_t cursor = 0;
+    for (size_t i = 0; i < n_segs; i++) {
+        if (!seg_descs[i].large) {
+
+#ifdef DEBUG_ARENA
+            inmem_descs[cursor].present = true;
+            inmem_descs[cursor].size = seg_descs[i].size;
+            inmem_descs[cursor].type = seg_descs[i].type;
+#endif
+
+            inmem_descs[cursor].id = seg_descs[i].id;
+            cursor++;
+        }
+    }
+
+    size_t cursor_offset = 0;
+    for (uint16_t i = 0; i < n_segs; i++) {
+        uint16_t size;
+
+        if (i == 0) {
+            size = inmem_size;
+        } else {
+            uint16_t id = inmem_descs[i - 1].id;
+            size =
+                ALIGN_UP(size_for_id(seg_descs, n_segs, id), ARENA_SEG_ALIGN);
+        }
+
+        cursor_offset += size;
+#ifdef DEBUG_ARENA
+        inmem_descs[i].seg =
+            (struct arena_seg *) &arena->payload[cursor_offset];
+#endif
+
+        inmem_descs[i].offset_bump = size;
+    }
+
+    arena_check_assert(arena);
+    return arena;
+}
+
+/* We very much expect that seg_id is valid. If it isn't, UB is possible
+ * as this lookup could read out of bounds. */
+struct arena_seg *arena_seg_lookup(struct arena *a, uint16_t seg_id) {
+    struct arena_seg_inmem_desc *inmem_descs = arena_get_inmem_descs(a);
+#ifdef DEBUG_ARENA
+    bool found = false;
+    for (uint16_t i = 0; i < a->n_segs; i++) {
+        if (inmem_descs[i].id == seg_id)
+            found = true;
+    }
+
+    kassert(found, "segment %u not found", seg_id);
+#endif
+
+    size_t cursor = 0;
+    for (int i = 0; i < ARENA_MAX_SEG; i++) {
+        cursor += inmem_descs[i].offset_bump;
+        if (inmem_descs[i].id == seg_id)
+            return (struct arena_seg *) &a->payload[cursor];
+    }
+
+    panic("segment %u not found, likely UB during traversal", seg_id);
+}

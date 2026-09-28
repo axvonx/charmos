@@ -1,4 +1,5 @@
 /* @title: Memory Arena Provider API */
+#pragma once
 #include <math/bit.h>
 #include <mem/arena.h>
 #include <structures/bitmap.h>
@@ -21,10 +22,11 @@ struct arena_dumpster;
  * checking if the provided *p is stack allocated */
 #define ARENA_MAX_FN 32
 
-#define ARENA_SEG_MAX_SIZE 4096
 #define ARENA_MAX_SEG 16 /* 4 bits are used to store segment IDs */
 #define ARENA_MAX_EXT_FN 64
 #define ARENA_SEG_CUSTOM(s) ((s) + ARENA_SEG_MAX)
+#define ARENA_SEG_ALIGN 8u
+#define ARENA_SEG_MAX_SIZE 4096
 
 #define ARENA_BIN_NOT_HEAD_MAGIC 0xB0D1ED100B0D1ED1 /* "BODIED!  BODIED!" */
 
@@ -288,13 +290,12 @@ struct arena_seg {
     cc_align_as(max_align_t) uint8_t storage[];
 };
 
-/* Describes segments. Used in places like arena creation hooks.
- *
- * Since some operations expect 64 of these, let's try to cram
- * the data into a single dword to reduce memory usage */
 struct arena_seg_desc {
-    uint16_t present : 1; /* Is it here at all? */
+    uint16_t large : 1; /* Only one large segment per arena is allowed */
     uint16_t id : BITS_NEEDED(ARENA_MAX_SEG - 1);
+
+    /* This is used for generic accessors that wrap around our provided
+     * arena_seg types, and when in DEBUG_ARENA, stored in the inmem_desc */
     uint16_t type : BITS_NEEDED(ARENA_SEG_MAX - 1);
     uint16_t size;
 };
@@ -313,13 +314,17 @@ struct arena_seg_inmem_desc {
     uint16_t id : 4;
 
     /* Where is this segment, in the payload[]? */
-    uint16_t offset : BITS_NEEDED(ARENA_SEG_MAX_SIZE - 1);
+    uint16_t offset_bump : BITS_NEEDED(ARENA_SEG_MAX_SIZE - 1);
 
 #ifdef DEBUG_ARENA
     uint16_t type : BITS_NEEDED(ARENA_SEG_MAX - 1);
     uint16_t present : 1;
+    uint16_t size;
+    struct arena_seg *seg;
 #endif
 };
+
+static_assert(BITS_NEEDED(ARENA_MAX_SEG - 1) == 4);
 
 #ifndef DEBUG_ARENA
 ct_assert_struct_size_eq(arena_seg_inmem_desc, 2);
@@ -360,12 +365,35 @@ struct arena {
         struct mpmc_slist_node list_node;
     };
 
-    /* For segment presence, bitmap */
 #ifdef DEBUG_ARENA
-    BITMAP_DECLARE(seg_map, ARENA_MAX_SEG);
+    uint16_t n_segs;
+    size_t total_size;
 #endif
 
-    /* ┌────────────────────────────────────────────────────────────┐
+    /*
+     * Every segment gets an inmem_desc for itself. Since inmem_descs are 16
+     * bits, having the offset_bump be absolute significantly limits the amount
+     * of storage for segments various arenas use.
+     * e.g.
+     *
+     * with
+     *
+     * [ inmem_desc id 1 offset_bump 8 ]
+     * [ inmem_desc id 2 offset_bump 24 ]
+     * [ inmem_desc id 3 offset_bump 4 ]
+     * [ inmem_desc id 4 offset_bump 2 ]
+     *
+     * traversing to id 1 is payload + 8, id 2 is payload + 8 + 24
+     * id 3 is payload + 8 + 24 + 4, and id 4 is payload + 8 + 24 + 4 + 2
+     *
+     * Thus, because we are using this form of cursor bumping,
+     * the largest a single segment can be is limited by its own size,
+     * and never the collective sizes of all segments
+     *
+     * It is permitted to have one very large segment, however,
+     * that must be explicitly flagged as trailing.
+     *
+     * ┌────────────────────────────────────────────────────────────┐
      * │                  struct arena's payload[]                  │
      * └────────────────────────────────────────────────────────────┘
      *
@@ -383,11 +411,11 @@ struct arena {
      *        │                 │                 │
      *        ▼                 ▼                 ▼
      * ┌──────────────┐ ┌──────────────┐ ┌─────────────────┐
-     * │  segment ID  │ │ data offset  │ │ other tracking  │
-     * │    4 bits    │ │ in payload[] │ │    metadata     │
+     * │  segment ID  │ │  payload[]   │ │ other tracking  │
+     * │    4 bits    │ │ cursor bump  │ │    metadata     │
      * └──────────────┘ └──────────────┘ └─────────────────┘
      */
-    cc_align_as(max_align_t) uint8_t payload;
+    cc_align_as(max_align_t) uint8_t payload[];
 };
 
 /* A wrapper around e^(x - n) where n is scale, and x is used */
@@ -395,7 +423,8 @@ enum err arena_budget_prio_scale(sz_b_t used, int scale,
                                  ALLOC_PRIORITY_BITMAP_DECLARE(prio_map_out));
 
 /* Arena strategies call into this with their fully formed descriptors */
-struct arena *arena_create_full(struct arena_seg_desc seg_descs[ARENA_MAX_SEG]);
-struct arena_seg *arena_seg_for(struct arena *a, uint16_t seg_id);
+struct arena *arena_create_full(struct arena_seg_desc *seg_descs,
+                                size_t n_segs);
+struct arena_seg *arena_seg_lookup(struct arena *a, uint16_t seg_id);
 enum err arena_desc_register(struct arena_desc *d);
 struct arena_desc *arena_desc_for(enum arena_strategy strat);

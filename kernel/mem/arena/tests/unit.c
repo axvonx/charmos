@@ -1,0 +1,37 @@
+#include "mem/arena/tests/import.h"
+#include "mem/arena/tests/test_internal.h"
+
+TEST_GROUP_DECLARE(arena);
+
+TEST_DECLARE_UNIT(arena, create_lookup_basic) {
+    struct arena_seg_desc descs[ARENA_MAX_SEG] = {
+        {.id = 1, .size = 512}, {.id = 2, .size = 4},
+        {.id = 3, .size = 8},   {.id = 4, .size = 12},
+        {.id = 5, .size = 256}, {.id = 6, .large = true, .size = 4096},
+        {.id = 7, .size = 19},  {.id = 8, .size = 48},
+    };
+
+    struct arena *a = arena_create_full(descs, 8);
+
+    struct arena_seg *seg = arena_seg_lookup(a, 3);
+    seg->storage[3] = 67;
+
+    seg = arena_seg_lookup(a, 3);
+    TEST_ASSERT_EQ(seg->storage[3], 67);
+
+#ifdef DEBUG_ARENA
+
+    struct arena_seg_inmem_desc *imds = arena_get_inmem_descs(a);
+    for (uint16_t i = 0; i < a->n_segs; i++)
+        test_info("desc %u id %u sz %zu", i, imds[i].id, imds[i].size);
+
+    for (uint16_t i = 0; i < a->n_segs; i++) {
+        if (imds[i].id == 3)
+            TEST_ASSERT_EQ(imds[i].seg, seg);
+    }
+
+#endif
+
+    cc_unused(a);
+    return TEST_SUCCESS;
+}

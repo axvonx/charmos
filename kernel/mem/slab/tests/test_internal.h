@@ -19,4 +19,3 @@
 #include <thread/thread.h>
 
 TEST_GROUP_DEFINE(slab);
-extern struct test_group __test_group_slab;
