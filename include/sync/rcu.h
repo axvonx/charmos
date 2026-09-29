@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <structures/list.h>
+#include <sync/lock_general.h>
 
 struct thread;
 
@@ -28,10 +29,12 @@ struct rcu_cb {
 };
 #define rcu_cb_from_list_node(ln) (container_of(ln, struct rcu_cb, list))
 
+TSA_CAPABILITY_DEFINE("rcu", RCU_READ_LOCKED);
+
 void rcu_init(void);
 
-void rcu_read_lock(void);
-void rcu_read_unlock(void);
+void rcu_read_lock(void) TSA_ACQUIRES(RCU_READ_LOCKED);
+void rcu_read_unlock(void) TSA_RELEASES(RCU_READ_LOCKED);
 
 void rcu_synchronize(void);
 void rcu_defer(struct rcu_cb *cb, rcu_fn func);

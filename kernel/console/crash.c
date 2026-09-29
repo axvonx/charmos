@@ -1020,7 +1020,7 @@ out:
     kassert(found, "Likely double remove");
 }
 
-static void unwind_rcu(struct crash_unwind_node_data *d) {
+static void unwind_rcu(struct crash_unwind_node_data *d) TSA_NO_ANALYSIS {
     for (uintptr_t i = 0; i < d->rcu_lock_times; i++)
         rcu_read_unlock();
 }

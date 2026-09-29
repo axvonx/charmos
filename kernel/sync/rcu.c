@@ -116,7 +116,7 @@ static void rcu_report_cpu_locked(struct rcu_node *leaf, cpu_id_t cpu,
     rcu_propagate_done(leaf, gp_seq_seen, irql);
 }
 
-void rcu_read_lock(void) {
+void rcu_read_lock(void) TSA_NO_ANALYSIS {
     struct thread *t = thread_get_current();
     if (cc_unlikely(!t))
         return;
@@ -165,7 +165,7 @@ static void rcu_unregister_reader(struct thread *t) TSA_NO_ANALYSIS {
     irql_lower(outer);
 }
 
-void rcu_read_unlock(void) {
+void rcu_read_unlock(void) TSA_NO_ANALYSIS {
     struct thread *t = thread_get_current();
     if (cc_unlikely(!t))
         return;

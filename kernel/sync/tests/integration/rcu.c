@@ -135,7 +135,7 @@ static void stress_free_cb(struct rcu_cb *cb) {
     kfree(n);
 }
 
-static void rcu_stress_reader(void *arg) {
+static void rcu_stress_reader(void *arg) TSA_NO_ANALYSIS {
     cc_unused(arg);
 
     time_ms_t last_print = time_get_ms();

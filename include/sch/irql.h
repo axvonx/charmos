@@ -136,11 +136,7 @@
 #pragma once
 #include <sync/lock_general.h>
 
-/* Raised-IRQL context modelled as a TSA capability: irql_raise() acquires it
- * and irql_lower() releases it, so clang checks raise/lower balance and
- * rejects calls to TSA_EXCLUDED(IRQL_RAISED) functions inside the region. */
-struct TSA_CAPABILITY("irql") irql_raised_ctx {};
-extern struct irql_raised_ctx IRQL_RAISED;
+TSA_CAPABILITY_DEFINE("irql", IRQL_RAISED);
 
 enum irql {
     IRQL_PASSIVE_LEVEL = 0,  /* Normal execution */

@@ -49,6 +49,9 @@ enum lock_acquire_policy {
 #define TSA_ASSERT_CAPABILITY(lock) __attribute__((assert_capability(lock)))
 #define TSA_EXCLUDED(lock) __attribute__((locks_excluded(lock)))
 #define TSA_NO_ANALYSIS __attribute__((no_thread_safety_analysis))
+#define TSA_CAPABILITY_DEFINE(name, symbol)                                    \
+    struct TSA_CAPABILITY(name) __##symbol##_ctx {};                           \
+    extern struct __##symbol##_ctx symbol
 
 #else
 
@@ -61,5 +64,6 @@ enum lock_acquire_policy {
 #define TSA_ASSERT_CAPABILITY(lock)
 #define TSA_EXCLUDED(lock)
 #define TSA_NO_ANALYSIS
+#define TSA_CAPABILITY_DEFINE(name, symbol)
 
 #endif
