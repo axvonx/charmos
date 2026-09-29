@@ -134,6 +134,7 @@
  */
 
 #pragma once
+#include <compiler/core.h>
 #include <sync/lock_general.h>
 
 TSA_CAPABILITY_DEFINE("irql", IRQL_RAISED);
@@ -166,3 +167,12 @@ void irql_lower(enum irql old_level) TSA_RELEASES(IRQL_RAISED);
  * preventing recursing into the scheduler in scheduler_yield() */
 void irql_lower_no_resched(enum irql old_level) TSA_RELEASES(IRQL_RAISED);
 enum irql irql_get();
+
+static inline cc_always_inline cc_maybe_unused void
+irql_guard_exit(enum irql *saved) TSA_NO_ANALYSIS {
+    irql_lower(*saved);
+}
+
+#define irql_raise_guard(new_level)                                            \
+    cc_cleanup(irql_guard_exit) enum irql PP_CONCAT(                           \
+        irql_guard_, __COUNTER__) = irql_raise(new_level)

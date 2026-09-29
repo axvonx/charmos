@@ -126,3 +126,29 @@ void rwlock_assert_not_held_full(struct rwlock *lock,
 #define rw_write_lock_subclass(lock_, subclass_)                               \
     rw_lock_full((lock_), RWLOCK_WRITE, (subclass_), LOCK_CHK_SITE_HERE())
 #define rw_unlock(lock_) rw_unlock_full((lock_), LOCK_CHK_SITE_HERE())
+
+static inline cc_always_inline
+cc_maybe_unused void rwlock_guard_exit(struct rwlock **lock) TSA_NO_ANALYSIS {
+    if (*lock)
+        rw_unlock(*lock);
+}
+
+static inline cc_always_inline cc_maybe_unused struct rwlock *
+rw_read_guard_enter(struct rwlock *lock) TSA_NO_ANALYSIS {
+    rw_read_lock(lock);
+    return lock;
+}
+
+static inline cc_always_inline cc_maybe_unused struct rwlock *
+rw_write_guard_enter(struct rwlock *lock) TSA_NO_ANALYSIS {
+    rw_write_lock(lock);
+    return lock;
+}
+
+#define rw_read_guard(lock_)                                                   \
+    cc_cleanup(rwlock_guard_exit) struct rwlock *PP_CONCAT(                    \
+        rw_read_guard_, __COUNTER__) = rw_read_guard_enter(lock_)
+
+#define rw_write_guard(lock_)                                                  \
+    cc_cleanup(rwlock_guard_exit) struct rwlock *PP_CONCAT(                    \
+        rw_write_guard_, __COUNTER__) = rw_write_guard_enter(lock_)

@@ -1,5 +1,6 @@
 /* @title: Mutex */
 #pragma once
+#include <compiler/core.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <sync/lock_chk_types.h>
@@ -100,3 +101,30 @@ void mutex_assert_not_held_full(struct mutex *mtx,
 #define MUTEX_ASSERT_HELD(m) mutex_assert_held_full((m), LOCK_CHK_SITE_HERE())
 #define MUTEX_ASSERT_NOT_HELD(m)                                               \
     mutex_assert_not_held_full((m), LOCK_CHK_SITE_HERE())
+
+static inline cc_always_inline
+cc_maybe_unused void mutex_guard_exit(struct mutex **m) TSA_NO_ANALYSIS {
+    if (*m)
+        mutex_unlock(*m);
+}
+
+static inline cc_always_inline cc_maybe_unused struct mutex *
+mutex_guard_enter(struct mutex *m) TSA_NO_ANALYSIS {
+    mutex_lock(m);
+    return m;
+}
+
+static inline cc_always_inline cc_maybe_unused struct mutex *
+mutex_guard_subclass_enter(struct mutex *m, uint8_t subclass) TSA_NO_ANALYSIS {
+    mutex_lock_subclass(m, subclass);
+    return m;
+}
+
+#define mutex_guard(m_)                                                        \
+    cc_cleanup(mutex_guard_exit) struct mutex *PP_CONCAT(                      \
+        mtx_guard_, __COUNTER__) = mutex_guard_enter(m_)
+
+#define mutex_guard_subclass(m_, subclass_)                                    \
+    cc_cleanup(mutex_guard_exit) struct mutex *PP_CONCAT(mtx_guard_,           \
+                                                         __COUNTER__) =        \
+        mutex_guard_subclass_enter((m_), (subclass_))

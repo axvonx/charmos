@@ -613,3 +613,52 @@ spinlock_assert_not_held_full(struct spinlock *lock,
     spinlock_assert_held_full((l), LOCK_CHK_SITE_HERE())
 #define SPINLOCK_ASSERT_NOT_HELD(l)                                            \
     spinlock_assert_not_held_full((l), LOCK_CHK_SITE_HERE())
+
+struct spinlock_guard {
+    struct spinlock *lock;
+    enum irql irql;
+};
+
+static inline cc_always_inline cc_maybe_unused void
+spinlock_guard_exit(struct spinlock_guard *g) TSA_NO_ANALYSIS {
+    if (g->lock)
+        spin_unlock(g->lock, g->irql);
+}
+
+static inline cc_always_inline cc_maybe_unused struct spinlock_guard
+spin_guard_enter(struct spinlock *lock) TSA_NO_ANALYSIS {
+    return (struct spinlock_guard) {
+        .lock = lock,
+        .irql = spin_lock(lock),
+    };
+}
+
+static inline cc_always_inline cc_maybe_unused struct spinlock_guard
+spin_guard_high_enter(struct spinlock *lock) TSA_NO_ANALYSIS {
+    return (struct spinlock_guard) {
+        .lock = lock,
+        .irql = spin_lock_high(lock),
+    };
+}
+
+static inline cc_always_inline cc_maybe_unused struct spinlock_guard
+spin_guard_subclass_enter(struct spinlock *lock,
+                          uint8_t subclass) TSA_NO_ANALYSIS {
+    return (struct spinlock_guard) {
+        .lock = lock,
+        .irql = spin_lock_subclass(lock, subclass),
+    };
+}
+
+#define spin_guard(lock_)                                                      \
+    cc_cleanup(spinlock_guard_exit) struct spinlock_guard PP_CONCAT(           \
+        spin_guard_, __COUNTER__) = spin_guard_enter(lock_)
+
+#define spin_guard_high(lock_)                                                 \
+    cc_cleanup(spinlock_guard_exit) struct spinlock_guard PP_CONCAT(           \
+        spin_guard_high_, __COUNTER__) = spin_guard_high_enter(lock_)
+
+#define spin_guard_subclass(lock_, subclass_)                                  \
+    cc_cleanup(spinlock_guard_exit) struct spinlock_guard PP_CONCAT(           \
+        spin_guard_, __COUNTER__) =                                            \
+        spin_guard_subclass_enter((lock_), (subclass_))

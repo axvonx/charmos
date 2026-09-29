@@ -678,3 +678,52 @@ qspin_assert_not_held_full(struct qspinlock *lock,
     qspin_assert_held_full((l), LOCK_CHK_SITE_HERE())
 #define QSPINLOCK_ASSERT_NOT_HELD(l)                                           \
     qspin_assert_not_held_full((l), LOCK_CHK_SITE_HERE())
+
+struct qspinlock_guard {
+    struct qspinlock *lock;
+    enum irql irql;
+};
+
+static inline cc_always_inline cc_maybe_unused void
+qspinlock_guard_exit(struct qspinlock_guard *g) TSA_NO_ANALYSIS {
+    if (g->lock)
+        qspin_unlock(g->lock, g->irql);
+}
+
+static inline cc_always_inline cc_maybe_unused struct qspinlock_guard
+qspin_guard_enter(struct qspinlock *lock) TSA_NO_ANALYSIS {
+    return (struct qspinlock_guard) {
+        .lock = lock,
+        .irql = qspin_lock(lock),
+    };
+}
+
+static inline cc_always_inline cc_maybe_unused struct qspinlock_guard
+qspin_guard_high_enter(struct qspinlock *lock) TSA_NO_ANALYSIS {
+    return (struct qspinlock_guard) {
+        .lock = lock,
+        .irql = qspin_lock_high(lock),
+    };
+}
+
+static inline cc_always_inline cc_maybe_unused struct qspinlock_guard
+qspin_guard_subclass_enter(struct qspinlock *lock,
+                           uint8_t subclass) TSA_NO_ANALYSIS {
+    return (struct qspinlock_guard) {
+        .lock = lock,
+        .irql = qspin_lock_subclass(lock, subclass),
+    };
+}
+
+#define qspin_guard(lock_)                                                     \
+    cc_cleanup(qspinlock_guard_exit) struct qspinlock_guard PP_CONCAT(         \
+        qspin_guard_, __COUNTER__) = qspin_guard_enter(lock_)
+
+#define qspin_guard_high(lock_)                                                \
+    cc_cleanup(qspinlock_guard_exit) struct qspinlock_guard PP_CONCAT(         \
+        qspin_guard_high_, __COUNTER__) = qspin_guard_high_enter(lock_)
+
+#define qspin_guard_subclass(lock_, subclass_)                                 \
+    cc_cleanup(qspinlock_guard_exit) struct qspinlock_guard PP_CONCAT(         \
+        qspin_guard_, __COUNTER__) =                                           \
+        qspin_guard_subclass_enter((lock_), (subclass_))

@@ -112,3 +112,31 @@ void mutex_simple_assert_not_held_full(struct mutex_simple *m,
     mutex_simple_assert_held_full((m), LOCK_CHK_SITE_HERE())
 #define MUTEX_SIMPLE_ASSERT_NOT_HELD(m)                                        \
     mutex_simple_assert_not_held_full((m), LOCK_CHK_SITE_HERE())
+
+static inline cc_always_inline cc_maybe_unused void
+mutex_simple_guard_exit(struct mutex_simple **m) TSA_NO_ANALYSIS {
+    if (*m)
+        mutex_simple_unlock(*m);
+}
+
+static inline cc_always_inline cc_maybe_unused struct mutex_simple *
+mutex_simple_guard_enter(struct mutex_simple *m) TSA_NO_ANALYSIS {
+    mutex_simple_lock(m);
+    return m;
+}
+
+static inline cc_always_inline cc_maybe_unused struct mutex_simple *
+mutex_simple_guard_subclass_enter(struct mutex_simple *m,
+                                  uint8_t subclass) TSA_NO_ANALYSIS {
+    mutex_simple_lock_subclass(m, subclass);
+    return m;
+}
+
+#define mutex_simple_guard(m_)                                                 \
+    cc_cleanup(mutex_simple_guard_exit) struct mutex_simple *PP_CONCAT(        \
+        mtx_simple_guard_, __COUNTER__) = mutex_simple_guard_enter(m_)
+
+#define mutex_simple_guard_subclass(m_, subclass_)                             \
+    cc_cleanup(mutex_simple_guard_exit) struct mutex_simple *PP_CONCAT(        \
+        mtx_simple_guard_, __COUNTER__) =                                      \
+        mutex_simple_guard_subclass_enter((m_), (subclass_))
