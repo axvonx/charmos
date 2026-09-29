@@ -1,5 +1,6 @@
 /* @title: Assembly Routines */
 #pragma once
+#include <compiler/core.h>
 #include <compiler/intrinsic.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -180,6 +181,18 @@ static inline bool irq_disable_save(void) {
     irq_disable();
     return enabled;
 }
+
+static inline cc_always_inline cc_maybe_unused void
+irq_save_guard_exit(bool *was_enabled) {
+    if (*was_enabled)
+        irq_enable();
+}
+
+#define irq_save_guard()                                                       \
+    cc_cleanup(irq_save_guard_exit) bool PP_CONCAT(                            \
+        irq_save_guard_, __COUNTER__) = irq_disable_save()
+
+#define irq_disable_guard() irq_save_guard()
 
 static inline void tlb_invlpg(uint64_t virt) {
     asm volatile("invlpg (%0)" : : "r"(virt) : "memory");

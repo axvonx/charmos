@@ -243,3 +243,76 @@ static inline bool seqlock_held(const struct seqlock *sl) {
 }
 
 #define SEQLOCK_ASSERT_HELD(sl) kassert(seqlock_held(sl))
+
+static inline cc_always_inline
+cc_maybe_unused void seqcount_write_guard_exit(struct seqcount **s) {
+    if (*s)
+        seqcount_end_write(*s);
+}
+
+static inline cc_always_inline cc_maybe_unused struct seqcount *
+seqcount_write_guard_enter(struct seqcount *s) {
+    seqcount_begin_write(s);
+    return s;
+}
+
+struct seqlock_write_guard {
+    struct seqlock *sl;
+    enum irql irql;
+};
+
+struct seqlock_write_raw_guard {
+    struct seqlock *sl;
+};
+
+static inline cc_always_inline cc_maybe_unused void
+seqlock_write_guard_exit(struct seqlock_write_guard *g) TSA_NO_ANALYSIS {
+    if (g->sl)
+        seq_write_unlock(g->sl, g->irql);
+}
+
+static inline cc_always_inline cc_maybe_unused struct seqlock_write_guard
+seqlock_write_guard_enter(struct seqlock *sl) TSA_NO_ANALYSIS {
+    return (struct seqlock_write_guard) {
+        .sl = sl,
+        .irql = seq_write_lock(sl),
+    };
+}
+
+static inline cc_always_inline cc_maybe_unused struct seqlock_write_guard
+seqlock_write_high_guard_enter(struct seqlock *sl) TSA_NO_ANALYSIS {
+    return (struct seqlock_write_guard) {
+        .sl = sl,
+        .irql = seq_write_lock_high(sl),
+    };
+}
+
+static inline cc_always_inline cc_maybe_unused void
+seqlock_write_raw_guard_exit(struct seqlock_write_raw_guard *g)
+    TSA_NO_ANALYSIS {
+    if (g->sl)
+        seq_write_unlock_raw(g->sl);
+}
+
+static inline cc_always_inline cc_maybe_unused struct seqlock_write_raw_guard
+seqlock_write_raw_guard_enter(struct seqlock *sl) TSA_NO_ANALYSIS {
+    seq_write_lock_raw(sl);
+    return (struct seqlock_write_raw_guard) {.sl = sl};
+}
+
+#define seqcount_write_guard(s_)                                               \
+    cc_cleanup(seqcount_write_guard_exit) struct seqcount *PP_CONCAT(          \
+        seqc_guard_, __COUNTER__) = seqcount_write_guard_enter(s_)
+
+#define seq_write_guard(sl_)                                                   \
+    cc_cleanup(seqlock_write_guard_exit) struct seqlock_write_guard PP_CONCAT( \
+        seq_wguard_, __COUNTER__) = seqlock_write_guard_enter(sl_)
+
+#define seq_write_guard_high(sl_)                                              \
+    cc_cleanup(seqlock_write_guard_exit) struct seqlock_write_guard PP_CONCAT( \
+        seq_wguard_high_, __COUNTER__) = seqlock_write_high_guard_enter(sl_)
+
+#define seq_write_guard_raw(sl_)                                               \
+    cc_cleanup(seqlock_write_raw_guard_exit) struct seqlock_write_raw_guard    \
+    PP_CONCAT(seq_wguard_raw_, __COUNTER__) =                                  \
+        seqlock_write_raw_guard_enter(sl_)

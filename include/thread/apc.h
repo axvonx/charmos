@@ -1,6 +1,7 @@
 /* @title: APCs */
 #pragma once
 #include <atomic.h>
+#include <compiler/core.h>
 #include <irq/irq.h>
 #include <sch/sched.h>
 #include <smp/core.h>
@@ -84,3 +85,37 @@ static inline bool apc_enqueue_on_curr(struct apc *a, enum apc_type type) {
 static inline void apc_queue_init(struct apc_queue *q) {
     q->head = q->tail = NULL;
 }
+
+static inline cc_always_inline cc_maybe_unused void
+apc_kernel_guard_exit(int *unused) {
+    cc_unused(unused);
+    apc_enable_kernel();
+}
+
+static inline cc_always_inline cc_maybe_unused int
+apc_kernel_guard_enter(void) {
+    apc_disable_kernel();
+    return 0;
+}
+
+static inline cc_always_inline cc_maybe_unused void
+apc_special_guard_exit(int *unused) {
+    cc_unused(unused);
+    apc_enable_special();
+}
+
+static inline cc_always_inline cc_maybe_unused int
+apc_special_guard_enter(void) {
+    apc_disable_special();
+    return 0;
+}
+
+#define apc_kernel_guard()                                                     \
+    cc_cleanup(apc_kernel_guard_exit) int PP_CONCAT(                           \
+        apc_kernel_guard_, __COUNTER__) = apc_kernel_guard_enter()
+
+#define apc_guard() apc_kernel_guard()
+
+#define apc_special_guard()                                                    \
+    cc_cleanup(apc_special_guard_exit) int PP_CONCAT(                          \
+        apc_special_guard_, __COUNTER__) = apc_special_guard_enter()

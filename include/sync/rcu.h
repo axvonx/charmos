@@ -36,22 +36,6 @@ void rcu_init(void);
 void rcu_read_lock(void) TSA_ACQUIRES(RCU_READ_LOCKED);
 void rcu_read_unlock(void) TSA_RELEASES(RCU_READ_LOCKED);
 
-static inline cc_always_inline cc_maybe_unused void
-rcu_read_guard_exit(int *unused) TSA_NO_ANALYSIS {
-    cc_unused(unused);
-    rcu_read_unlock();
-}
-
-static inline cc_always_inline cc_maybe_unused int
-rcu_read_guard_enter(void) TSA_NO_ANALYSIS {
-    rcu_read_lock();
-    return 0;
-}
-
-#define rcu_read_guard()                                                       \
-    cc_cleanup(rcu_read_guard_exit) int PP_CONCAT(                             \
-        rcu_read_guard_, __COUNTER__) = rcu_read_guard_enter()
-
 void rcu_synchronize(void);
 
 void rcu_defer(struct rcu_cb *cb, rcu_fn func);
@@ -74,3 +58,19 @@ void rcu_note_irq_exit(void);
 
 #define rcu_access_pointer(p) ((rcu_plain_t(p)) ca_read_once(p))
 #define RCU_INIT_POINTER(p, v) ((p) = (typeof(p)) (rcu_plain_t(p))(v))
+
+static inline cc_always_inline
+cc_maybe_unused void rcu_read_guard_exit(int *unused) TSA_NO_ANALYSIS {
+    cc_unused(unused);
+    rcu_read_unlock();
+}
+
+static inline cc_always_inline cc_maybe_unused int
+rcu_read_guard_enter(void) TSA_NO_ANALYSIS {
+    rcu_read_lock();
+    return 0;
+}
+
+#define rcu_read_guard()                                                       \
+    cc_cleanup(rcu_read_guard_exit) int PP_CONCAT(                             \
+        rcu_read_guard_, __COUNTER__) = rcu_read_guard_enter()

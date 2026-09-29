@@ -119,3 +119,68 @@
 
 #define BIT_SPIN_LOCK_ASSERT_HELD(bit, ptr)                                    \
     kassert(bit_spin_is_locked_raw(bit, ptr), "bitlock not held")
+
+struct bit_spinlock_guard {
+    void *ptr;
+    uint8_t bit;
+    uint8_t size;
+    enum irql irql;
+};
+
+struct bit_spinlock_raw_guard {
+    void *ptr;
+    uint8_t bit;
+    uint8_t size;
+};
+
+static inline cc_always_inline void
+bit_spin_unlock_sized_raw(uint8_t bit, void *ptr, uint8_t size) {
+    switch (size) {
+    case 1: bit_spin_unlock_raw(bit, (uint8_t *) ptr); break;
+    case 2: bit_spin_unlock_raw(bit, (uint16_t *) ptr); break;
+    case 4: bit_spin_unlock_raw(bit, (uint32_t *) ptr); break;
+    case 8:
+    default: bit_spin_unlock_raw(bit, (uint64_t *) ptr); break;
+    }
+}
+
+static inline cc_always_inline cc_maybe_unused void
+bit_spin_raw_guard_exit(struct bit_spinlock_raw_guard *g) {
+    if (g->ptr)
+        bit_spin_unlock_sized_raw(g->bit, g->ptr, g->size);
+}
+
+static inline cc_always_inline cc_maybe_unused void
+bit_spin_guard_exit(struct bit_spinlock_guard *g) TSA_NO_ANALYSIS {
+    if (g->ptr) {
+        bit_spin_unlock_sized_raw(g->bit, g->ptr, g->size);
+        irql_lower(g->irql);
+    }
+}
+
+#define bit_spin_guard(bit_, ptr_)                                             \
+    cc_cleanup(bit_spin_guard_exit) struct bit_spinlock_guard PP_CONCAT(       \
+        bit_spin_guard_, __COUNTER__) = {                                      \
+        .ptr = (void *) (ptr_),                                                \
+        .bit = (uint8_t) (bit_),                                               \
+        .size = (uint8_t) sizeof(*(ptr_)),                                     \
+        .irql = bit_spin_lock((bit_), (ptr_)),                                 \
+    }
+
+#define bit_spin_guard_high(bit_, ptr_)                                        \
+    cc_cleanup(bit_spin_guard_exit) struct bit_spinlock_guard PP_CONCAT(       \
+        bit_spin_guard_high_, __COUNTER__) = {                                 \
+        .ptr = (void *) (ptr_),                                                \
+        .bit = (uint8_t) (bit_),                                               \
+        .size = (uint8_t) sizeof(*(ptr_)),                                     \
+        .irql = bit_spin_lock_high((bit_), (ptr_)),                            \
+    }
+
+#define bit_spin_guard_raw(bit_, ptr_)                                         \
+    bit_spin_lock_raw((bit_), (ptr_));                                         \
+    cc_cleanup(bit_spin_raw_guard_exit) struct bit_spinlock_raw_guard          \
+    PP_CONCAT(bit_spin_guard_raw_, __COUNTER__) = {                            \
+        .ptr = (void *) (ptr_),                                                \
+        .bit = (uint8_t) (bit_),                                               \
+        .size = (uint8_t) sizeof(*(ptr_)),                                     \
+    }

@@ -58,3 +58,43 @@ static inline void raw_spin_unlock_irq_restore(struct raw_spinlock *lock,
     if (irqs_were_enabled)
         irq_enable();
 }
+
+struct raw_spinlock_high_guard {
+    struct raw_spinlock *lock;
+    bool irqs_were_enabled;
+};
+
+static inline cc_always_inline cc_maybe_unused void
+raw_spin_guard_exit(struct raw_spinlock **lock) TSA_NO_ANALYSIS {
+    if (*lock)
+        raw_spin_unlock(*lock);
+}
+
+static inline cc_always_inline cc_maybe_unused struct raw_spinlock *
+raw_spin_guard_enter(struct raw_spinlock *lock) TSA_NO_ANALYSIS {
+    raw_spin_lock(lock);
+    return lock;
+}
+
+static inline cc_always_inline cc_maybe_unused void
+raw_spin_high_guard_exit(struct raw_spinlock_high_guard *g) TSA_NO_ANALYSIS {
+    if (g->lock)
+        raw_spin_unlock_irq_restore(g->lock, g->irqs_were_enabled);
+}
+
+static inline cc_always_inline cc_maybe_unused struct raw_spinlock_high_guard
+raw_spin_high_guard_enter(struct raw_spinlock *lock) TSA_NO_ANALYSIS {
+    return (struct raw_spinlock_high_guard) {
+        .lock = lock,
+        .irqs_were_enabled = raw_spin_lock_high(lock),
+    };
+}
+
+#define raw_spin_guard(lock_)                                                  \
+    cc_cleanup(raw_spin_guard_exit) struct raw_spinlock *PP_CONCAT(            \
+        raw_spin_guard_, __COUNTER__) = raw_spin_guard_enter(lock_)
+
+#define raw_spin_guard_high(lock_)                                             \
+    cc_cleanup(raw_spin_high_guard_exit) struct raw_spinlock_high_guard        \
+    PP_CONCAT(raw_spin_guard_high_, __COUNTER__) =                             \
+        raw_spin_high_guard_enter(lock_)
