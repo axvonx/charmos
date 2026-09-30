@@ -3,15 +3,11 @@
 #include <thread/wait.h>
 #include <time/timer.h>
 
-#define CONDVAR_INIT_IRQ_DISABLE true
-#define CONDVAR_INIT_NORMAL false
-
 typedef void (*condvar_callback)(void *);
 typedef void (*thread_action_callback)(struct thread *woke);
 
 struct condvar {
     struct thread_wait_header waiters;
-    bool irq_disable;
 };
 
 /* wait object */
@@ -27,7 +23,7 @@ struct condvar_with_cb {
 enum wake_reason condvar_wait(struct condvar *cv, struct spinlock *lock,
                               enum irql irql, enum irql *out);
 
-void condvar_init(struct condvar *cv, bool irq_disable);
+void condvar_init(struct condvar *cv);
 struct thread *condvar_signal(struct condvar *cv);
 struct thread *condvar_signal_callback(struct condvar *cv,
                                        thread_action_callback cb);

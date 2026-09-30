@@ -60,7 +60,7 @@ TEST_DECLARE_UNIT(condvar, timeout_no_lost_wake) {
     static const size_t stalled_progress_limit = 2;
 
     struct condvar_timeout_race race = {0};
-    condvar_init(&race.cv, CONDVAR_INIT_NORMAL);
+    condvar_init(&race.cv);
     spinlock_init(&race.lock);
 
     struct thread *t =
@@ -106,13 +106,13 @@ TEST_DECLARE_UNIT(semaphore, timedwait_standard) {
     semaphore_init(&s, 1, false);
 
     TEST_ASSERT(semaphore_timedwait(&s, 50));
-    TEST_ASSERT_EQ(atomic_load_relaxed(&s.count), 0);
+    TEST_ASSERT_EQ(s.count, 0);
 
     time_ms_t t0 = time_get_ms();
     TEST_ASSERT(!semaphore_timedwait(&s, 30));
     time_ms_t elapsed = time_get_ms() - t0;
     TEST_ASSERT_GE(elapsed, 25);
-    TEST_ASSERT_EQ(atomic_load_relaxed(&s.count), 0);
+    TEST_ASSERT_EQ(s.count, 0);
 
     struct timed_helper_args a = {
         .sem = &s,
@@ -123,7 +123,7 @@ TEST_DECLARE_UNIT(semaphore, timedwait_standard) {
     thread_enqueue(t);
 
     TEST_ASSERT(semaphore_timedwait(&s, 200));
-    TEST_ASSERT_EQ(atomic_load_relaxed(&s.count), 0);
+    TEST_ASSERT_EQ(s.count, 0);
 
     return TEST_SUCCESS;
 }

@@ -3,41 +3,34 @@
 #include <thread/thread.h>
 #include <thread/workqueue.h>
 
-static enum irql condvar_lock_internal(struct condvar *cv,
-                                       struct spinlock *lock) TSA_NO_ANALYSIS {
-    if (cv->irq_disable)
-        return spin_lock_high(lock);
-
-    return spin_lock(lock);
-}
-
 static void condvar_prepare_wait(struct condvar *cv) {
     thread_wait_prepare_one(&cv->waiters, cv, THREAD_WAIT_UNINTERRUPTIBLE,
                             THREAD_BLOCK_REASON_MANUAL);
 }
 
-static enum wake_reason condvar_finish_wait(struct condvar *cv,
-                                            struct spinlock *lock,
+static enum wake_reason condvar_finish_wait(struct spinlock *lock,
                                             enum irql irql,
                                             enum irql *out) TSA_NO_ANALYSIS {
+    enum irql sirql = irql_get();
+
     spin_unlock(lock, irql);
     struct thread_wait_result result = thread_wait_complete();
     enum wake_reason reason = result.reason == THREAD_WAKE_REASON_SLEEP_TIMEOUT
                                   ? WAKE_REASON_TIMEOUT
                                   : WAKE_REASON_SIGNAL;
-    *out = condvar_lock_internal(cv, lock);
+
+    *out = sirql == IRQL_HIGH_LEVEL ? spin_lock_high(lock) : spin_lock(lock);
     return reason;
 }
 
 enum wake_reason condvar_wait(struct condvar *cv, struct spinlock *lock,
                               enum irql irql, enum irql *out) TSA_NO_ANALYSIS {
     condvar_prepare_wait(cv);
-    return condvar_finish_wait(cv, lock, irql, out);
+    return condvar_finish_wait(lock, irql, out);
 }
 
-void condvar_init(struct condvar *cv, bool irq_disable) {
+void condvar_init(struct condvar *cv) {
     thread_wait_header_init(&cv->waiters);
-    cv->irq_disable = irq_disable;
 }
 
 static void nop_callback(struct thread *unused) {
@@ -97,7 +90,7 @@ enum wake_reason condvar_wait_timeout(struct condvar *cv, struct spinlock *lock,
         TIMER_FLAG_IRQ | TIMER_FLAG_PINNED | TIMER_FLAG_CPU(smp_id(TOPC_NONE));
     timer_modify(&cwcb->timer, timer_delta_us(MS_TO_US(timeout_ms)));
 
-    enum wake_reason reason = condvar_finish_wait(cv, lock, irql, out);
+    enum wake_reason reason = condvar_finish_wait(lock, irql, out);
 
     timer_delete_sync(&cwcb->timer);
 

@@ -19,7 +19,7 @@ void completion_init(struct completion *c, bool irq_disable) {
         spinlock_init_chk(&c->lock, LOCK_CHK_CLASS(completion_disp),
                           LOCK_CHKD_FULL);
     }
-    condvar_init(&c->cv, irq_disable);
+    condvar_init(&c->cv);
 }
 
 static enum irql

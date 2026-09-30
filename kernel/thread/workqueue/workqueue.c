@@ -94,9 +94,7 @@ struct workqueue *workqueue_create_full(struct workqueue_attributes *attrs,
         panic("please set a CPU mask before creating the workqueue");
 
     wq->attrs = *attrs;
-    condvar_init(&wq->queue_cv, attrs->flags & WORKQUEUE_FLAG_ISR_SAFE
-                                    ? CONDVAR_INIT_IRQ_DISABLE
-                                    : CONDVAR_INIT_NORMAL);
+    condvar_init(&wq->queue_cv);
     kassert(THREAD_NICENESS_VALID(attrs->worker_niceness));
 
     if (attrs->flags & WORKQUEUE_FLAG_STATIC_WORKERS) {

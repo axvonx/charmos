@@ -236,7 +236,7 @@ static struct thread *thread_init(struct thread *thread,
     /* join_lock/join_cv are only ever touched from thread context, and
      * thread_join_timeout() has to allocate a timer while holding the
      * lock, which it could not do at IRQL_HIGH_LEVEL */
-    condvar_init(&thread->join_cv, CONDVAR_INIT_NORMAL);
+    condvar_init(&thread->join_cv);
     pairing_node_init(&thread->wq_pairing_node);
 
     turnstile_init(thread->turnstile);

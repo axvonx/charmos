@@ -24,7 +24,6 @@ struct completion {
         .lock = SPINLOCK_INIT,                                                 \
         .cv = {                                                                \
             .waiters = THREAD_WAIT_HEADER_INIT((name_).cv.waiters),            \
-            .irq_disable = (irq_dis),                                          \
         },                                                                     \
     }
 
