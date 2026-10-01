@@ -25,15 +25,15 @@ void mutex_simple_reinit_chk(struct mutex_simple *m,
                              const struct lock_chk_class *class,
                              enum lock_chk_flags flags);
 void mutex_simple_lock_full(struct mutex_simple *m,
-                            const struct lock_chk_site *site) TSA_ACQUIRES(m)
-    TSA_EXCLUDED(IRQL_RAISED);
+                            const struct lock_chk_site *site)
+    TSA_ACQUIRES(m) TSA_MAY_SLEEP;
 
 void mutex_simple_unlock_full(struct mutex_simple *m,
                               const struct lock_chk_site *site) TSA_RELEASES(m);
 
 void mutex_simple_lock_subclass_full(struct mutex_simple *m, uint8_t subclass,
                                      const struct lock_chk_site *site)
-    TSA_ACQUIRES(m) TSA_EXCLUDED(IRQL_RAISED);
+    TSA_ACQUIRES(m) TSA_MAY_SLEEP;
 
 bool mutex_simple_locked(struct mutex_simple *m);
 struct thread *mutex_simple_get_owner(struct mutex_simple *m);
@@ -126,15 +126,14 @@ mutex_simple_guard_assume(struct mutex_simple *m) TSA_ASSERT_CAPABILITY(m) {
 }
 
 static inline cc_always_inline cc_maybe_unused struct mutex_simple *
-mutex_simple_guard_enter(struct mutex_simple *m)
-    TSA_EXCLUDED(IRQL_RAISED) TSA_NO_ANALYSIS {
+mutex_simple_guard_enter(struct mutex_simple *m) TSA_MAY_SLEEP TSA_NO_ANALYSIS {
     mutex_simple_lock(m);
     return m;
 }
 
 static inline cc_always_inline cc_maybe_unused struct mutex_simple *
 mutex_simple_guard_subclass_enter(struct mutex_simple *m, uint8_t subclass)
-    TSA_EXCLUDED(IRQL_RAISED) TSA_NO_ANALYSIS {
+    TSA_MAY_SLEEP TSA_NO_ANALYSIS {
     mutex_simple_lock_subclass(m, subclass);
     return m;
 }

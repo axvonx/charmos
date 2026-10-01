@@ -34,7 +34,7 @@ struct test_phase {
 };
 
 bool test_phase_wait(struct test_phase *p, uint32_t expected,
-                     time_ms_t timeout_ms) TSA_EXCLUDED(IRQL_RAISED);
+                     time_ms_t timeout_ms) TSA_MAY_SLEEP;
 
 static inline void test_latch_init(struct test_latch *l) {
     completion_latch_init(&l->cl, 1, COMPLETION_INIT_NORMAL);
@@ -49,8 +49,7 @@ static inline bool test_latch_test(const struct test_latch *l) {
 }
 
 static inline bool test_latch_wait_timeout(struct test_latch *l,
-                                           time_ms_t timeout_ms)
-    TSA_EXCLUDED(IRQL_RAISED) {
+                                           time_ms_t timeout_ms) TSA_MAY_SLEEP {
     return completion_latch_wait_timeout(&l->cl, timeout_ms);
 }
 

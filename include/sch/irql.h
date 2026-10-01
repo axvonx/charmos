@@ -134,6 +134,7 @@
  */
 
 #pragma once
+#include <asm.h>
 #include <compiler/core.h>
 #include <sync/lock_general.h>
 

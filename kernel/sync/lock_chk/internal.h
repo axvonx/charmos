@@ -198,8 +198,8 @@ void lock_chk_before_rel(struct lock_chk_rel_token *token,
                          const struct lock_chk_rel_req *request);
 void lock_chk_reld(struct lock_chk_rel_token *token);
 
-struct lock_chk_guard lock_chk_enter(void);
-void lock_chk_leave(const struct lock_chk_guard *guard);
+struct lock_chk_guard lock_chk_enter(void) TSA_ACQUIRES_IRQS;
+void lock_chk_leave(const struct lock_chk_guard *guard) TSA_RELEASES_IRQS;
 
 void lock_chk_thread_init(struct thread *thread);
 void lock_chk_thread_exit(struct thread *thread);

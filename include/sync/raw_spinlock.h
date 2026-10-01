@@ -45,7 +45,7 @@ static inline void raw_spin_unlock(struct raw_spinlock *lock)
 /* whether interrupts were enabled on entry */
 static inline cc_warn_unused_result bool
 raw_spin_lock_high(struct raw_spinlock *lock)
-    TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
+    TSA_ACQUIRES_IRQS_LOCK(lock) TSA_NO_ANALYSIS {
     bool irqs_were_enabled = irq_disable_save();
     raw_spin_lock(lock);
     return irqs_were_enabled;
@@ -53,10 +53,9 @@ raw_spin_lock_high(struct raw_spinlock *lock)
 
 static inline void raw_spin_unlock_irq_restore(struct raw_spinlock *lock,
                                                bool irqs_were_enabled)
-    TSA_RELEASES(lock) TSA_NO_ANALYSIS {
+    TSA_RELEASES_IRQS_LOCK(lock) TSA_NO_ANALYSIS {
     raw_spin_unlock(lock);
-    if (irqs_were_enabled)
-        irq_enable();
+    irq_restore(irqs_were_enabled);
 }
 
 struct raw_spinlock_high_guard {
@@ -81,14 +80,15 @@ raw_spin_guard_enter(struct raw_spinlock *lock) TSA_NO_ANALYSIS {
     return lock;
 }
 
-static inline cc_always_inline cc_maybe_unused void
-raw_spin_high_guard_exit(struct raw_spinlock_high_guard *g) TSA_NO_ANALYSIS {
+static inline cc_always_inline cc_maybe_unused void raw_spin_high_guard_exit(
+    struct raw_spinlock_high_guard *g) TSA_RELEASES_IRQS TSA_NO_ANALYSIS {
     if (g->lock)
         raw_spin_unlock_irq_restore(g->lock, g->irqs_were_enabled);
 }
 
 static inline cc_always_inline cc_maybe_unused struct raw_spinlock_high_guard
-raw_spin_high_guard_enter(struct raw_spinlock *lock) TSA_NO_ANALYSIS {
+raw_spin_high_guard_enter(struct raw_spinlock *lock)
+    TSA_ACQUIRES_IRQS TSA_NO_ANALYSIS {
     return (struct raw_spinlock_high_guard) {
         .lock = lock,
         .irqs_were_enabled = raw_spin_lock_high(lock),

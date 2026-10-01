@@ -29,8 +29,7 @@ struct lock_chk_guard lock_chk_enter(void) {
 void lock_chk_leave(const struct lock_chk_guard *guard) {
     kassert(*guard->depth == 1);
     *guard->depth = 0;
-    if (guard->irqs_enabled)
-        irq_enable();
+    irq_restore(guard->irqs_enabled);
 }
 
 static enum lock_chk_result

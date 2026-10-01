@@ -4,6 +4,7 @@
 #include <compiler/intrinsic.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <sync/lock_general.h>
 
 //
 //
@@ -168,24 +169,35 @@ static inline void io_port_wait(void) {
     outb(0x80, 0);
 }
 
-static inline void irq_enable(void) {
+TSA_REENTRANT_CAPABILITY_DEFINE("irqs", IRQS_DISABLED);
+
+static inline void irq_enable(void) TSA_RELEASES_IRQS TSA_NO_ANALYSIS {
     asm volatile("sti");
 }
 
-static inline void irq_disable(void) {
+static inline void irq_disable(void) TSA_ACQUIRES_IRQS TSA_NO_ANALYSIS {
     asm volatile("cli");
 }
 
-static inline bool irq_disable_save(void) {
+static inline void irq_enable_untracked(void) {
+    asm volatile("sti");
+}
+
+static inline bool irq_disable_save(void) TSA_ACQUIRES_IRQS TSA_NO_ANALYSIS {
     bool enabled = irqs_enabled();
     irq_disable();
     return enabled;
 }
 
-static inline cc_always_inline cc_maybe_unused void
-irq_save_guard_exit(bool *was_enabled) {
-    if (*was_enabled)
+static inline void
+irq_restore(bool was_enabled) TSA_RELEASES_IRQS TSA_NO_ANALYSIS {
+    if (was_enabled)
         irq_enable();
+}
+
+static inline cc_always_inline cc_maybe_unused void
+irq_save_guard_exit(bool *was_enabled) TSA_RELEASES_IRQS TSA_NO_ANALYSIS {
+    irq_restore(*was_enabled);
 }
 
 #define irq_save_guard()                                                       \
@@ -231,7 +243,8 @@ static inline void cpu_freeze(void) {
     asm volatile("cli; hlt");
 }
 
-static inline void cpu_idle(void) {
+/* sti; hlt: ends the caller's interrupts-off region */
+static inline void cpu_idle(void) TSA_RELEASES_IRQS TSA_NO_ANALYSIS {
     asm volatile("sti\n\thlt" ::: "memory");
 }
 

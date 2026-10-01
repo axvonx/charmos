@@ -85,8 +85,7 @@ void bootstage_advance(enum bootstage new) {
     if (new > BOOTSTAGE_EARLY_FB)
         bootstage_patch_all(new);
 
-    if (ints)
-        irq_enable();
+    irq_restore(ints);
 
     log_info_global(LOG_HANDLE(bootstage), "Reached bootstage \'%s\'",
                     bootstage_str[new]);

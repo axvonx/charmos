@@ -92,7 +92,8 @@ void crash_broadcast_nmi(void) {
     panic_broadcast(smp_id(TOPC_NONE));
 }
 
-void panic_handler(struct crash_regs *regs) {
+/* called from panic.asm, returns with interrupts disabled */
+void panic_handler(struct crash_regs *regs) TSA_ACQUIRES_IRQS {
     irq_disable();
 
     if (PERCPU_READY(crash_regs)) {

@@ -434,8 +434,8 @@ void thread_set_joinable(struct thread *t);
 void thread_free(struct thread *t);
 
 void thread_init_thread_ids(void);
-void thread_sleep_for_ms(uint64_t ms) TSA_EXCLUDED(IRQL_RAISED);
-void thread_sleep_for_us(uint64_t us) TSA_EXCLUDED(IRQL_RAISED);
+void thread_sleep_for_ms(uint64_t ms) TSA_MAY_SLEEP;
+void thread_sleep_for_us(uint64_t us) TSA_MAY_SLEEP;
 cc_noreturn void thread_exit(void);
 void thread_print(const struct thread *t);
 

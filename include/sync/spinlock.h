@@ -346,9 +346,8 @@ static inline void spinlock_init_chk_full(struct spinlock *lock,
     spinlock_map_init_internal(lock, class, flags);
 }
 
-static inline void spinlock_restore_interrupts(bool enabled) {
-    if (enabled)
-        irq_enable();
+static inline void spinlock_restore_interrupts(bool enabled) TSA_RELEASES_IRQS {
+    irq_restore(enabled);
 }
 
 static inline cc_warn_unused_result bool

@@ -59,8 +59,8 @@ jobs:
               echo "::error::$t missing from the runner image"; exit 1; }
           done
           major="$(clang -dumpversion | cut -d. -f1)"
-          if [ "$major" -lt 19 ]; then
-            echo "::error::clang $major is too old: charmOS needs clang >= 19"
+          if [ "$major" -lt 22 ]; then
+            echo "::error::clang $major is too old: charmOS needs clang >= 22"
             exit 1
           fi
           clang --version | head -1

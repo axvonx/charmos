@@ -12,7 +12,8 @@ struct text_patch_window {
     bool interrupts;
 };
 
-static inline struct text_patch_window text_patch_begin(void) {
+static inline struct text_patch_window
+text_patch_begin(void) TSA_ACQUIRES_IRQS {
     struct text_patch_window w = {
         .interrupts = irq_disable_save(),
     };
@@ -22,9 +23,8 @@ static inline struct text_patch_window text_patch_begin(void) {
     return w;
 }
 
-static inline void text_patch_end(struct text_patch_window w) {
+static inline void
+text_patch_end(struct text_patch_window w) TSA_RELEASES_IRQS {
     cr0_write(w.cr0);
-
-    if (w.interrupts)
-        irq_enable();
+    irq_restore(w.interrupts);
 }

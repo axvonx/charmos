@@ -84,6 +84,25 @@ enum lock_acquire_policy {
 #define TSA_RELEASES_SPIN_IRQL
 #endif
 
+/* Interrupt primitives, just like IRQL raises, no
+ * irq sleeping with MAY_SLEEP */
+#if TSA_IRQL_TRACKS_SPINLOCKS
+#define TSA_ACQUIRES_IRQS TSA_ACQUIRES(IRQS_DISABLED)
+#define TSA_RELEASES_IRQS TSA_RELEASES(IRQS_DISABLED)
+#define TSA_ACQUIRES_IRQS_LOCK(lock)                                           \
+    __attribute__((acquire_capability(lock, IRQS_DISABLED)))
+#define TSA_RELEASES_IRQS_LOCK(lock)                                           \
+    __attribute__((release_capability(lock, IRQS_DISABLED)))
+#define TSA_MAY_SLEEP                                                          \
+    __attribute__((locks_excluded(IRQL_RAISED, IRQS_DISABLED)))
+#else
+#define TSA_ACQUIRES_IRQS
+#define TSA_RELEASES_IRQS
+#define TSA_ACQUIRES_IRQS_LOCK(lock) TSA_ACQUIRES(lock)
+#define TSA_RELEASES_IRQS_LOCK(lock) TSA_RELEASES(lock)
+#define TSA_MAY_SLEEP TSA_EXCLUDED(IRQL_RAISED)
+#endif
+
 #else
 
 #define TSA_CAPABILITY(kind)
@@ -103,5 +122,10 @@ enum lock_acquire_policy {
 #define TSA_TRY_ACQUIRES_SPIN(ret, lock)
 #define TSA_ACQUIRES_SPIN_IRQL
 #define TSA_RELEASES_SPIN_IRQL
+#define TSA_ACQUIRES_IRQS
+#define TSA_RELEASES_IRQS
+#define TSA_ACQUIRES_IRQS_LOCK(lock)
+#define TSA_RELEASES_IRQS_LOCK(lock)
+#define TSA_MAY_SLEEP
 
 #endif

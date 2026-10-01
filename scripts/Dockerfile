@@ -1,6 +1,6 @@
 FROM ubuntu:24.04
 
-ARG LLVM_VERSION=21 # Kernel requires it
+ARG LLVM_VERSION=22
 ARG GCC_VERSION=14
 
 RUN apt update -y && apt upgrade -y && \

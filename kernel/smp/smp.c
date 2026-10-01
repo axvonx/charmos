@@ -264,7 +264,8 @@ static inline void set_core_awake(void) {
     }
 }
 
-void smp_wakeup(struct limine_mp_info *info) {
+/* returns with interrupts disabled; the scheduler takes it from here */
+void smp_wakeup(struct limine_mp_info *info) TSA_ACQUIRES_IRQS {
     cc_unused(info);
     irq_disable();
 

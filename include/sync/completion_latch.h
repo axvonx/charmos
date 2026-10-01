@@ -39,16 +39,16 @@ completion_latch_count(const struct completion_latch *cl) {
     return once_latch_get_count(&cl->latch);
 }
 
-static inline void completion_latch_wait(struct completion_latch *cl)
-    TSA_EXCLUDED(IRQL_RAISED) {
+static inline void
+completion_latch_wait(struct completion_latch *cl) TSA_MAY_SLEEP {
     if (completion_latch_is_ready(cl))
         return;
     completion_wait(&cl->comp);
 }
 
-static inline bool completion_latch_wait_timeout(struct completion_latch *cl,
-                                                 time_ms_t timeout_ms)
-    TSA_EXCLUDED(IRQL_RAISED) {
+static inline bool
+completion_latch_wait_timeout(struct completion_latch *cl,
+                              time_ms_t timeout_ms) TSA_MAY_SLEEP {
     if (completion_latch_is_ready(cl))
         return true;
     return completion_wait_timeout(&cl->comp, timeout_ms);

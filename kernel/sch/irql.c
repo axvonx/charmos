@@ -62,7 +62,8 @@ enum irql irql_raise(enum irql new_level) TSA_NO_ANALYSIS {
     return old;
 }
 
-static void irql_lower_internal(enum irql new_level, bool allow_resched) {
+static void irql_lower_internal(enum irql new_level,
+                                bool allow_resched) TSA_NO_ANALYSIS {
     BOOTSTAGE_IF_LT(BOOTSTAGE_LATE) {
         return;
     }

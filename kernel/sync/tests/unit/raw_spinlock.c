@@ -42,8 +42,7 @@ TEST_DECLARE_UNIT(raw_spinlock, irq_restore) {
     raw_spin_unlock_irq_restore(&lock, saved_disabled_state);
     bool remained_disabled = !irqs_enabled();
 
-    if (entry_irqs_enabled)
-        irq_enable();
+    irq_restore(entry_irqs_enabled);
 
     TEST_ASSERT_EQ(saved_irqs_enabled, entry_irqs_enabled);
     TEST_ASSERT(disabled_while_held);

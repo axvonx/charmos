@@ -29,7 +29,7 @@ TEST_DECLARE_INTEGRATION(bio, async_submit, TEST_INTENSITY(1, 1, 16),
     uint64_t run_times = ctx->intensity_val ? ctx->intensity_val : 1;
     time_ms_t worst_ms = 0;
     atomic_store(&done, false);
-    irq_enable();
+    irq_enable_untracked();
 
     for (uint64_t i = 0; i < run_times; i++) {
         struct bio_request *bio =
