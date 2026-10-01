@@ -100,6 +100,22 @@
 #define cc_counted_by(member)
 #endif
 
+/* Compile-time constant argument diagnostics, non-constants do not get
+ * diagnostics. cc_diagnose_if: severity is error/warning, cc_enable_if:
+ * declaration only viable when cond is true */
+#if cn_has_attribute(diagnose_if)
+#define cc_diagnose_if(cond, msg, severity)                                    \
+    __attribute__((diagnose_if(cond, msg, severity)))
+#else
+#define cc_diagnose_if(cond, msg, severity)
+#endif
+
+#if cn_has_attribute(enable_if)
+#define cc_enable_if(cond, msg) __attribute__((enable_if(cond, msg)))
+#else
+#define cc_enable_if(cond, msg)
+#endif
+
 #if defined(cn_id_gcc)
 #define cc_access(mode, ...) __attribute__((access(mode, __VA_ARGS__)))
 #else
@@ -410,4 +426,4 @@
 /* Common/larger type to cast up to */
 #define ct_common_type_2(a, b)                                                 \
     typeof(__builtin_choose_expr(sizeof(typeof(a)) >= sizeof(typeof(b)), (a),  \
-                                 (b)))
+                                 (b))

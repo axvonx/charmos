@@ -144,9 +144,10 @@ struct alloc_flag_ex_desc {
     ALLOC_FLAG_PAGEABLE | ALLOC_FLAG_CLASS_DEFAULT |                           \
         ALLOC_FLAG_FLEXIBLE_LOCALITY
 
+#define ALLOC_FLAGS_VALID(flags) (((flags) & ALLOC_FLAGS_UNAVAILABLE_BITS) == 0)
+
 static inline bool alloc_flags_valid(enum alloc_flags flags) {
-    /* If an unavailable bit is set, it is not valid */
-    return !(flags & ALLOC_FLAGS_UNAVAILABLE_BITS);
+    return ALLOC_FLAGS_VALID(flags);
 }
 
 /* ─────────────────────────── ALLOC BEHAVIORS ─────────────────────────── */
@@ -254,33 +255,43 @@ size_t
 alloc_flag_ex_get_desc(enum alloc_flags flag,
                        struct alloc_flag_ex_desc out[ALLOC_FLAG_EX_DESC_MAX]);
 
-/* Extract base behavior (mask out flags) */
+#define ALLOC_BEHAVIOR_BASE(raw) ((raw) & ALLOC_BEHAVIOR_MASK)
+
+#define ALLOC_BEHAVIOR_MAY_FAULT(raw)                                          \
+    (ALLOC_BEHAVIOR_BASE(raw) != ALLOC_BEHAVIOR_IRQ_SAFE &&                    \
+     ALLOC_BEHAVIOR_BASE(raw) != ALLOC_BEHAVIOR_FAULT_SAFE)
+
+#define ALLOC_BEHAVIOR_MAY_BLOCK(raw)                                          \
+    (ALLOC_BEHAVIOR_BASE(raw) != ALLOC_BEHAVIOR_IRQ_SAFE &&                    \
+     ALLOC_BEHAVIOR_BASE(raw) != ALLOC_BEHAVIOR_NO_BLOCK)
+
+#define ALLOC_BEHAVIOR_IS_ISR_SAFE(raw)                                        \
+    (ALLOC_BEHAVIOR_BASE(raw) == ALLOC_BEHAVIOR_IRQ_SAFE ||                    \
+     ALLOC_BEHAVIOR_BASE(raw) == ALLOC_BEHAVIOR_NMI_SAFE)
+
+#define ALLOC_FLAGS_CAN_FAULT(flags)                                           \
+    (((flags) & (ALLOC_FLAG_PAGEABLE | ALLOC_FLAG_MOVABLE)) != 0)
+
+/* Check that flags and behavior are in agreement */
+#define ALLOC_FLAGS_BEHAVIOR_VALID(flags, behavior)                            \
+    (!(!ALLOC_BEHAVIOR_MAY_FAULT(behavior) && ALLOC_FLAGS_CAN_FAULT(flags)) && \
+     !(ALLOC_BEHAVIOR_IS_ISR_SAFE(behavior) &&                                 \
+       ((flags) & ALLOC_FLAG_PAGEABLE) != 0))
+
 static inline enum alloc_behavior alloc_behavior_base(enum alloc_behavior raw) {
-    return raw & ALLOC_BEHAVIOR_MASK;
+    return ALLOC_BEHAVIOR_BASE(raw);
 }
 
-/* Does this behavior allow page faults? */
 static inline bool alloc_behavior_may_fault(enum alloc_behavior raw) {
-    switch (alloc_behavior_base(raw)) {
-    case ALLOC_BEHAVIOR_IRQ_SAFE:
-    case ALLOC_BEHAVIOR_FAULT_SAFE: return false;
-    default: return true;
-    }
+    return ALLOC_BEHAVIOR_MAY_FAULT(raw);
 }
 
-/* Does this behavior allow blocking or waiting? */
 static inline bool alloc_behavior_may_block(enum alloc_behavior raw) {
-    switch (alloc_behavior_base(raw)) {
-    case ALLOC_BEHAVIOR_IRQ_SAFE:
-    case ALLOC_BEHAVIOR_NO_BLOCK: return false;
-    default: return true;
-    }
+    return ALLOC_BEHAVIOR_MAY_BLOCK(raw);
 }
 
-/* Is this behavior ISR-safe? */
 static inline bool alloc_behavior_is_isr_safe(enum alloc_behavior raw) {
-    return alloc_behavior_base(raw) == ALLOC_BEHAVIOR_IRQ_SAFE ||
-           alloc_behavior_base(raw) == ALLOC_BEHAVIOR_NMI_SAFE;
+    return ALLOC_BEHAVIOR_IS_ISR_SAFE(raw);
 }
 
 /* Fast hint: should this allocation prefer short paths? */
@@ -289,20 +300,7 @@ static inline bool alloc_behavior_is_fast(enum alloc_behavior raw) {
 }
 
 static inline bool alloc_flag_behavior_verify(struct alloc_params params) {
-    bool may_fault = alloc_behavior_may_fault(params.behavior);
-    bool flag_requires_residency = !(params.flags & ALLOC_FLAG_PAGEABLE);
-    bool flag_can_fault = (params.flags & ALLOC_FLAG_MOVABLE) ||
-                          (params.flags & ALLOC_FLAG_PAGEABLE);
-
-    /* Non-faulting behavior cannot tolerate pageable or movable allocations */
-    if (!may_fault && flag_can_fault)
-        return false;
-
-    /* ISR-safe behavior must use nonpageable memory */
-    if (alloc_behavior_is_isr_safe(params.behavior) && !flag_requires_residency)
-        return false;
-
-    return true;
+    return ALLOC_FLAGS_BEHAVIOR_VALID(params.flags, params.behavior);
 }
 
 /* TODO: Rework these into capabilities */
