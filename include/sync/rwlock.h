@@ -2,6 +2,7 @@
 #pragma once
 #include <atomic.h>
 #include <compiler/core.h>
+#include <sch/irql.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <sync/lock_chk_types.h>
@@ -44,7 +45,7 @@ enum rwlock_acquire_type {
 
 void rw_lock_full(struct rwlock *lock, enum rwlock_acquire_type type,
                   uint8_t subclass, const struct lock_chk_site *site)
-    TSA_ACQUIRES(lock);
+    TSA_ACQUIRES(lock) TSA_EXCLUDED(IRQL_RAISED);
 void rw_unlock_full(struct rwlock *lock, const struct lock_chk_site *site)
     TSA_RELEASES(lock);
 void rwlock_init_chk_full(struct rwlock *lock, enum thread_prio_class ceiling,
@@ -133,22 +134,31 @@ cc_maybe_unused void rwlock_guard_exit(struct rwlock **lock) TSA_NO_ANALYSIS {
         rw_unlock(*lock);
 }
 
+static inline cc_always_inline cc_maybe_unused void
+rwlock_guard_assume(struct rwlock *lock) TSA_ASSERT_CAPABILITY(lock) {
+    cc_unused(lock);
+}
+
 static inline cc_always_inline cc_maybe_unused struct rwlock *
-rw_read_guard_enter(struct rwlock *lock) TSA_NO_ANALYSIS {
+rw_read_guard_enter(struct rwlock *lock)
+    TSA_EXCLUDED(IRQL_RAISED) TSA_NO_ANALYSIS {
     rw_read_lock(lock);
     return lock;
 }
 
 static inline cc_always_inline cc_maybe_unused struct rwlock *
-rw_write_guard_enter(struct rwlock *lock) TSA_NO_ANALYSIS {
+rw_write_guard_enter(struct rwlock *lock)
+    TSA_EXCLUDED(IRQL_RAISED) TSA_NO_ANALYSIS {
     rw_write_lock(lock);
     return lock;
 }
 
 #define rw_read_guard(lock_)                                                   \
-    cc_cleanup(rwlock_guard_exit) struct rwlock *PP_CONCAT(                    \
-        rw_read_guard_, __COUNTER__) = rw_read_guard_enter(lock_)
+    cc_cleanup(rwlock_guard_exit) struct rwlock *PP_CONCAT(rw_read_guard_,     \
+                                                           __COUNTER__) =      \
+        (rwlock_guard_assume(lock_), rw_read_guard_enter(lock_))
 
 #define rw_write_guard(lock_)                                                  \
-    cc_cleanup(rwlock_guard_exit) struct rwlock *PP_CONCAT(                    \
-        rw_write_guard_, __COUNTER__) = rw_write_guard_enter(lock_)
+    cc_cleanup(rwlock_guard_exit) struct rwlock *PP_CONCAT(rw_write_guard_,    \
+                                                           __COUNTER__) =      \
+        (rwlock_guard_assume(lock_), rw_write_guard_enter(lock_))

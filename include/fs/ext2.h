@@ -315,12 +315,12 @@ static inline uint32_t ext2_get_inode_group(struct ext2_fs *fs, inode_t inode) {
 }
 
 static inline enum irql ext2_fs_lock(struct ext2_fs *fs)
-    TSA_ACQUIRES(&fs->lock) {
+    TSA_ACQUIRES_SPIN(&fs->lock) {
     return spin_lock(&fs->lock);
 }
 
 static inline void ext2_fs_unlock(struct ext2_fs *fs, enum irql i)
-    TSA_RELEASES(&fs->lock) {
+    TSA_RELEASES_SPIN(&fs->lock) {
     spin_unlock(&fs->lock, i);
 }
 

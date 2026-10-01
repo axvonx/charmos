@@ -284,7 +284,7 @@ static void timer_recalc_next_expiration(struct timer_base *base) {
 
 static enum irql timer_lock_base(struct timer *timer,
                                  struct timer_base **out_base)
-    TSA_ACQUIRES(&(*out_base)->lock) TSA_NO_ANALYSIS {
+    TSA_ACQUIRES_SPIN(&(*out_base)->lock) TSA_NO_ANALYSIS {
     while (true) {
         cpu_id_t cpu = timer_cpu_get(timer);
         struct timer_base *base = timer_base_for_cpu(timer->flags, cpu);

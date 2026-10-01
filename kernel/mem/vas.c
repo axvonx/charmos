@@ -547,7 +547,7 @@ out:
  * under the lock because reclamation could've moved the chunk */
 static enum irql vas_lock_owner(struct vas *vas, vaddr_t addr,
                                 struct vas_arena **out_arena)
-    TSA_ACQUIRES(&(*out_arena)->lock) TSA_NO_ANALYSIS {
+    TSA_ACQUIRES_SPIN(&(*out_arena)->lock) TSA_NO_ANALYSIS {
     size_t index = owner_index(vas, addr);
     while (true) {
         cpu_id_t owner = atomic_load_acq(&vas->chunk_owner[index]);

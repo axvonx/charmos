@@ -25,14 +25,15 @@ void mutex_simple_reinit_chk(struct mutex_simple *m,
                              const struct lock_chk_class *class,
                              enum lock_chk_flags flags);
 void mutex_simple_lock_full(struct mutex_simple *m,
-                            const struct lock_chk_site *site) TSA_ACQUIRES(m);
+                            const struct lock_chk_site *site) TSA_ACQUIRES(m)
+    TSA_EXCLUDED(IRQL_RAISED);
 
 void mutex_simple_unlock_full(struct mutex_simple *m,
                               const struct lock_chk_site *site) TSA_RELEASES(m);
 
 void mutex_simple_lock_subclass_full(struct mutex_simple *m, uint8_t subclass,
                                      const struct lock_chk_site *site)
-    TSA_ACQUIRES(m);
+    TSA_ACQUIRES(m) TSA_EXCLUDED(IRQL_RAISED);
 
 bool mutex_simple_locked(struct mutex_simple *m);
 struct thread *mutex_simple_get_owner(struct mutex_simple *m);
@@ -119,24 +120,32 @@ mutex_simple_guard_exit(struct mutex_simple **m) TSA_NO_ANALYSIS {
         mutex_simple_unlock(*m);
 }
 
+static inline cc_always_inline cc_maybe_unused void
+mutex_simple_guard_assume(struct mutex_simple *m) TSA_ASSERT_CAPABILITY(m) {
+    cc_unused(m);
+}
+
 static inline cc_always_inline cc_maybe_unused struct mutex_simple *
-mutex_simple_guard_enter(struct mutex_simple *m) TSA_NO_ANALYSIS {
+mutex_simple_guard_enter(struct mutex_simple *m)
+    TSA_EXCLUDED(IRQL_RAISED) TSA_NO_ANALYSIS {
     mutex_simple_lock(m);
     return m;
 }
 
 static inline cc_always_inline cc_maybe_unused struct mutex_simple *
-mutex_simple_guard_subclass_enter(struct mutex_simple *m,
-                                  uint8_t subclass) TSA_NO_ANALYSIS {
+mutex_simple_guard_subclass_enter(struct mutex_simple *m, uint8_t subclass)
+    TSA_EXCLUDED(IRQL_RAISED) TSA_NO_ANALYSIS {
     mutex_simple_lock_subclass(m, subclass);
     return m;
 }
 
 #define mutex_simple_guard(m_)                                                 \
     cc_cleanup(mutex_simple_guard_exit) struct mutex_simple *PP_CONCAT(        \
-        mtx_simple_guard_, __COUNTER__) = mutex_simple_guard_enter(m_)
+        mtx_simple_guard_, __COUNTER__) =                                      \
+        (mutex_simple_guard_assume(m_), mutex_simple_guard_enter(m_))
 
 #define mutex_simple_guard_subclass(m_, subclass_)                             \
     cc_cleanup(mutex_simple_guard_exit) struct mutex_simple *PP_CONCAT(        \
         mtx_simple_guard_, __COUNTER__) =                                      \
-        mutex_simple_guard_subclass_enter((m_), (subclass_))
+        (mutex_simple_guard_assume(m_),                                        \
+         mutex_simple_guard_subclass_enter((m_), (subclass_)))

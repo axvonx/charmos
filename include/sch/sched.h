@@ -204,7 +204,7 @@ static inline void scheduler_force_resched(struct scheduler *sched) {
 }
 
 enum irql thread_lock_scheduler(struct thread *t, struct scheduler **out_sched)
-    TSA_ACQUIRES(&(*out_sched)->lock);
+    TSA_ACQUIRES_SPIN(&(*out_sched)->lock);
 
 /* Uses the blocking ipi_send(), so no spinlock may be held. */
 static inline void scheduler_force_run_dpcs(cpu_id_t cpu) {

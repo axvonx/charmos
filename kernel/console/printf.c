@@ -485,11 +485,11 @@ void vprintf(struct printf_cursor *csr, const char *format, va_list args) {
     }
 }
 
-enum irql printf_lock() TSA_ACQUIRES(&k_printf_lock) {
+enum irql printf_lock() TSA_ACQUIRES_SPIN(&k_printf_lock) {
     return spin_lock_high(&k_printf_lock);
 }
 
-void printf_unlock(enum irql i) TSA_RELEASES(&k_printf_lock) {
+void printf_unlock(enum irql i) TSA_RELEASES_SPIN(&k_printf_lock) {
     spin_unlock(&k_printf_lock, i);
 }
 

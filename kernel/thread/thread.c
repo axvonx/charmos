@@ -474,7 +474,7 @@ void thread_sleep_for_ms(uint64_t ms) {
 }
 
 enum irql thread_lock_scheduler(struct thread *t, struct scheduler **out_sched)
-    TSA_ACQUIRES(&(*out_sched)->lock) TSA_NO_ANALYSIS {
+    TSA_ACQUIRES_SPIN(&(*out_sched)->lock) TSA_NO_ANALYSIS {
     do {
         size_t gen1 = thread_get_migration_generation(t);
         struct scheduler *sched = thread_get_scheduler_unsafe(t);

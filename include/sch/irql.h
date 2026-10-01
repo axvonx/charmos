@@ -137,7 +137,7 @@
 #include <compiler/core.h>
 #include <sync/lock_general.h>
 
-TSA_CAPABILITY_DEFINE("irql", IRQL_RAISED);
+TSA_REENTRANT_CAPABILITY_DEFINE("irql", IRQL_RAISED);
 
 enum irql {
     IRQL_PASSIVE_LEVEL = 0,  /* Normal execution */
@@ -169,7 +169,7 @@ void irql_lower_no_resched(enum irql old_level) TSA_RELEASES(IRQL_RAISED);
 enum irql irql_get();
 
 static inline cc_always_inline cc_maybe_unused void
-irql_guard_exit(enum irql *saved) TSA_NO_ANALYSIS {
+irql_guard_exit(enum irql *saved) TSA_RELEASES(IRQL_RAISED) TSA_NO_ANALYSIS {
     irql_lower(*saved);
 }
 

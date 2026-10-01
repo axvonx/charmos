@@ -53,6 +53,37 @@ enum lock_acquire_policy {
     struct TSA_CAPABILITY(name) __##symbol##_ctx {};                           \
     extern struct __##symbol##_ctx symbol
 
+/* IRQL tracking. Reentrant capabilities give us nested raises and spinlocks,
+ * and we exclude IRQL_RAISED for sleeping primitives like mutexes */
+#if cn_has_attribute(reentrant_capability)
+#define TSA_IRQL_TRACKS_SPINLOCKS 1
+#define TSA_REENTRANT_CAPABILITY_DEFINE(name, symbol)                          \
+    struct TSA_CAPABILITY(name)                                                \
+        __attribute__((reentrant_capability)) __##symbol##_ctx {};             \
+    extern struct __##symbol##_ctx symbol
+#else
+#define TSA_IRQL_TRACKS_SPINLOCKS 0
+#define TSA_REENTRANT_CAPABILITY_DEFINE(name, symbol)                          \
+    TSA_CAPABILITY_DEFINE(name, symbol)
+#endif
+
+#if TSA_IRQL_TRACKS_SPINLOCKS
+#define TSA_ACQUIRES_SPIN(lock)                                                \
+    __attribute__((acquire_capability(lock, IRQL_RAISED)))
+#define TSA_RELEASES_SPIN(lock)                                                \
+    __attribute__((release_capability(lock, IRQL_RAISED)))
+#define TSA_TRY_ACQUIRES_SPIN(ret, lock)                                       \
+    __attribute__((try_acquire_capability(ret, lock, IRQL_RAISED)))
+#define TSA_ACQUIRES_SPIN_IRQL TSA_ACQUIRES(IRQL_RAISED)
+#define TSA_RELEASES_SPIN_IRQL TSA_RELEASES(IRQL_RAISED)
+#else
+#define TSA_ACQUIRES_SPIN(lock) TSA_ACQUIRES(lock)
+#define TSA_RELEASES_SPIN(lock) TSA_RELEASES(lock)
+#define TSA_TRY_ACQUIRES_SPIN(ret, lock) TSA_TRY_ACQUIRES(ret, lock)
+#define TSA_ACQUIRES_SPIN_IRQL
+#define TSA_RELEASES_SPIN_IRQL
+#endif
+
 #else
 
 #define TSA_CAPABILITY(kind)
@@ -65,5 +96,12 @@ enum lock_acquire_policy {
 #define TSA_EXCLUDED(lock)
 #define TSA_NO_ANALYSIS
 #define TSA_CAPABILITY_DEFINE(name, symbol)
+#define TSA_IRQL_TRACKS_SPINLOCKS 0
+#define TSA_REENTRANT_CAPABILITY_DEFINE(name, symbol)
+#define TSA_ACQUIRES_SPIN(lock)
+#define TSA_RELEASES_SPIN(lock)
+#define TSA_TRY_ACQUIRES_SPIN(ret, lock)
+#define TSA_ACQUIRES_SPIN_IRQL
+#define TSA_RELEASES_SPIN_IRQL
 
 #endif

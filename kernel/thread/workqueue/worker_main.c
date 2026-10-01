@@ -84,7 +84,7 @@ static void worker_destroy(struct workqueue *queue, struct worker *worker) {
 }
 
 static void worker_exit(struct workqueue *queue, struct worker *worker,
-                        enum irql irql) TSA_RELEASES(&queue->lock) {
+                        enum irql irql) TSA_RELEASES_SPIN(&queue->lock) {
     worker->present = false;
     worker->idle = false;
     worker->should_exit = true;

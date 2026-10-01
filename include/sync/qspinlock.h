@@ -476,7 +476,7 @@ static inline void qspin_unlock_raw_full(struct qspinlock *lock,
 
 static inline void qspin_unlock_full(struct qspinlock *lock, enum irql old_irql,
                                      const struct lock_chk_site *site)
-    TSA_RELEASES(lock) TSA_NO_ANALYSIS {
+    TSA_RELEASES_SPIN(lock) TSA_NO_ANALYSIS {
     bool checked_shallow = qspinlock_order_checked(lock);
     struct qspinlock_rel_scope chk;
 
@@ -502,7 +502,7 @@ static inline void qspin_unlock_full(struct qspinlock *lock, enum irql old_irql,
 static inline cc_warn_unused_result enum irql
 qspin_lock_subclass_full(struct qspinlock *lock, uint8_t subclass,
                          const struct lock_chk_site *site)
-    TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
+    TSA_ACQUIRES_SPIN(lock) TSA_NO_ANALYSIS {
     kassert(subclass < LOCK_CHK_MAX_SUBCLASSES);
     if (bootstage_get() >= BOOTSTAGE_MID_MP &&
         (irq_in_interrupt() || irq_in_nmi()))
@@ -536,13 +536,13 @@ qspin_lock_subclass_full(struct qspinlock *lock, uint8_t subclass,
 
 static inline cc_warn_unused_result enum irql
 qspin_lock_full(struct qspinlock *lock, const struct lock_chk_site *site)
-    TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
+    TSA_ACQUIRES_SPIN(lock) TSA_NO_ANALYSIS {
     return qspin_lock_subclass_full(lock, 0, site);
 }
 
 static inline cc_warn_unused_result enum irql
 qspin_lock_high_full(struct qspinlock *lock, const struct lock_chk_site *site)
-    TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
+    TSA_ACQUIRES_SPIN(lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())
         panic("Attempted to take non-raw qspinlock from an NMI");
 
@@ -570,7 +570,7 @@ qspin_lock_high_full(struct qspinlock *lock, const struct lock_chk_site *site)
 static inline cc_warn_unused_result bool
 qspin_trylock_full(struct qspinlock *lock, enum irql *out,
                    const struct lock_chk_site *site)
-    TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
+    TSA_TRY_ACQUIRES_SPIN(true, lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP &&
         (irq_in_interrupt() || irq_in_nmi()))
         panic(
@@ -606,7 +606,7 @@ qspin_trylock_full(struct qspinlock *lock, enum irql *out,
 static inline cc_warn_unused_result bool
 qspin_trylock_high_full(struct qspinlock *lock, enum irql *out,
                         const struct lock_chk_site *site)
-    TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
+    TSA_TRY_ACQUIRES_SPIN(true, lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())
         panic("Attempted to take non-raw qspinlock from an NMI");
 
@@ -685,13 +685,19 @@ struct qspinlock_guard {
 };
 
 static inline cc_always_inline cc_maybe_unused void
-qspinlock_guard_exit(struct qspinlock_guard *g) TSA_NO_ANALYSIS {
+qspinlock_guard_assume(struct qspinlock *lock) TSA_ASSERT_CAPABILITY(lock) {
+    cc_unused(lock);
+}
+
+static inline cc_always_inline cc_maybe_unused void qspinlock_guard_exit(
+    struct qspinlock_guard *g) TSA_RELEASES_SPIN_IRQL TSA_NO_ANALYSIS {
     if (g->lock)
         qspin_unlock(g->lock, g->irql);
 }
 
 static inline cc_always_inline cc_maybe_unused struct qspinlock_guard
-qspin_guard_enter(struct qspinlock *lock) TSA_NO_ANALYSIS {
+qspin_guard_enter(struct qspinlock *lock)
+    TSA_ACQUIRES_SPIN_IRQL TSA_NO_ANALYSIS {
     return (struct qspinlock_guard) {
         .lock = lock,
         .irql = qspin_lock(lock),
@@ -699,7 +705,8 @@ qspin_guard_enter(struct qspinlock *lock) TSA_NO_ANALYSIS {
 }
 
 static inline cc_always_inline cc_maybe_unused struct qspinlock_guard
-qspin_guard_high_enter(struct qspinlock *lock) TSA_NO_ANALYSIS {
+qspin_guard_high_enter(struct qspinlock *lock)
+    TSA_ACQUIRES_SPIN_IRQL TSA_NO_ANALYSIS {
     return (struct qspinlock_guard) {
         .lock = lock,
         .irql = qspin_lock_high(lock),
@@ -707,8 +714,8 @@ qspin_guard_high_enter(struct qspinlock *lock) TSA_NO_ANALYSIS {
 }
 
 static inline cc_always_inline cc_maybe_unused struct qspinlock_guard
-qspin_guard_subclass_enter(struct qspinlock *lock,
-                           uint8_t subclass) TSA_NO_ANALYSIS {
+qspin_guard_subclass_enter(struct qspinlock *lock, uint8_t subclass)
+    TSA_ACQUIRES_SPIN_IRQL TSA_NO_ANALYSIS {
     return (struct qspinlock_guard) {
         .lock = lock,
         .irql = qspin_lock_subclass(lock, subclass),
@@ -717,13 +724,16 @@ qspin_guard_subclass_enter(struct qspinlock *lock,
 
 #define qspin_guard(lock_)                                                     \
     cc_cleanup(qspinlock_guard_exit) struct qspinlock_guard PP_CONCAT(         \
-        qspin_guard_, __COUNTER__) = qspin_guard_enter(lock_)
+        qspin_guard_, __COUNTER__) =                                           \
+        (qspinlock_guard_assume(lock_), qspin_guard_enter(lock_))
 
 #define qspin_guard_high(lock_)                                                \
     cc_cleanup(qspinlock_guard_exit) struct qspinlock_guard PP_CONCAT(         \
-        qspin_guard_high_, __COUNTER__) = qspin_guard_high_enter(lock_)
+        qspin_guard_high_, __COUNTER__) =                                      \
+        (qspinlock_guard_assume(lock_), qspin_guard_high_enter(lock_))
 
 #define qspin_guard_subclass(lock_, subclass_)                                 \
     cc_cleanup(qspinlock_guard_exit) struct qspinlock_guard PP_CONCAT(         \
         qspin_guard_, __COUNTER__) =                                           \
-        qspin_guard_subclass_enter((lock_), (subclass_))
+        (qspinlock_guard_assume(lock_),                                        \
+         qspin_guard_subclass_enter((lock_), (subclass_)))

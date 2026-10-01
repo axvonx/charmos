@@ -65,6 +65,11 @@ struct raw_spinlock_high_guard {
 };
 
 static inline cc_always_inline cc_maybe_unused void
+raw_spin_guard_assume(struct raw_spinlock *lock) TSA_ASSERT_CAPABILITY(lock) {
+    cc_unused(lock);
+}
+
+static inline cc_always_inline cc_maybe_unused void
 raw_spin_guard_exit(struct raw_spinlock **lock) TSA_NO_ANALYSIS {
     if (*lock)
         raw_spin_unlock(*lock);
@@ -92,9 +97,10 @@ raw_spin_high_guard_enter(struct raw_spinlock *lock) TSA_NO_ANALYSIS {
 
 #define raw_spin_guard(lock_)                                                  \
     cc_cleanup(raw_spin_guard_exit) struct raw_spinlock *PP_CONCAT(            \
-        raw_spin_guard_, __COUNTER__) = raw_spin_guard_enter(lock_)
+        raw_spin_guard_, __COUNTER__) =                                        \
+        (raw_spin_guard_assume(lock_), raw_spin_guard_enter(lock_))
 
 #define raw_spin_guard_high(lock_)                                             \
     cc_cleanup(raw_spin_high_guard_exit) struct raw_spinlock_high_guard        \
     PP_CONCAT(raw_spin_guard_high_, __COUNTER__) =                             \
-        raw_spin_high_guard_enter(lock_)
+        (raw_spin_guard_assume(lock_), raw_spin_high_guard_enter(lock_))

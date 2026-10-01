@@ -151,7 +151,8 @@ bit_spin_raw_guard_exit(struct bit_spinlock_raw_guard *g) {
 }
 
 static inline cc_always_inline cc_maybe_unused void
-bit_spin_guard_exit(struct bit_spinlock_guard *g) TSA_NO_ANALYSIS {
+bit_spin_guard_exit(struct bit_spinlock_guard *g)
+    TSA_RELEASES(IRQL_RAISED) TSA_NO_ANALYSIS {
     if (g->ptr) {
         bit_spin_unlock_sized_raw(g->bit, g->ptr, g->size);
         irql_lower(g->irql);

@@ -14,7 +14,7 @@ struct locked_list {
 };
 
 static inline enum irql locked_list_lock(struct locked_list *ll)
-    TSA_ACQUIRES(&ll->lock) {
+    TSA_ACQUIRES_SPIN(&ll->lock) {
     if (ll->lock_high) {
         return spin_lock_high(&ll->lock);
     } else {
@@ -23,7 +23,7 @@ static inline enum irql locked_list_lock(struct locked_list *ll)
 }
 
 static inline void locked_list_unlock(struct locked_list *ll, enum irql irql)
-    TSA_RELEASES(&ll->lock) {
+    TSA_RELEASES_SPIN(&ll->lock) {
     spin_unlock(&ll->lock, irql);
 }
 

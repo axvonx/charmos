@@ -60,13 +60,14 @@ void rcu_note_irq_exit(void);
 #define RCU_INIT_POINTER(p, v) ((p) = (typeof(p)) (rcu_plain_t(p))(v))
 
 static inline cc_always_inline
-cc_maybe_unused void rcu_read_guard_exit(int *unused) TSA_NO_ANALYSIS {
+cc_maybe_unused void rcu_read_guard_exit(int *unused)
+    TSA_RELEASES(RCU_READ_LOCKED) TSA_NO_ANALYSIS {
     cc_unused(unused);
     rcu_read_unlock();
 }
 
-static inline cc_always_inline cc_maybe_unused int
-rcu_read_guard_enter(void) TSA_NO_ANALYSIS {
+static inline cc_always_inline cc_maybe_unused int rcu_read_guard_enter(void)
+    TSA_ACQUIRES(RCU_READ_LOCKED) TSA_NO_ANALYSIS {
     rcu_read_lock();
     return 0;
 }

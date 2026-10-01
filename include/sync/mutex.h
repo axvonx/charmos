@@ -1,6 +1,7 @@
 /* @title: Mutex */
 #pragma once
 #include <compiler/core.h>
+#include <sch/irql.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <sync/lock_chk_types.h>
@@ -38,11 +39,11 @@ void mutex_unlock_full(struct mutex *mutex, const struct lock_chk_site *site)
     TSA_RELEASES(mutex);
 
 void mutex_lock_full(struct mutex *mutex, const struct lock_chk_site *site)
-    TSA_ACQUIRES(mutex);
+    TSA_ACQUIRES(mutex) TSA_EXCLUDED(IRQL_RAISED);
 
 void mutex_lock_subclass_full(struct mutex *mutex, uint8_t subclass,
                               const struct lock_chk_site *site)
-    TSA_ACQUIRES(mutex);
+    TSA_ACQUIRES(mutex) TSA_EXCLUDED(IRQL_RAISED);
 
 bool mutex_locked(struct mutex *mtx);
 struct thread *mutex_read_owner(struct mutex *mtx);
@@ -108,23 +109,31 @@ cc_maybe_unused void mutex_guard_exit(struct mutex **m) TSA_NO_ANALYSIS {
         mutex_unlock(*m);
 }
 
+static inline cc_always_inline cc_maybe_unused void
+mutex_guard_assume(struct mutex *m) TSA_ASSERT_CAPABILITY(m) {
+    cc_unused(m);
+}
+
 static inline cc_always_inline cc_maybe_unused struct mutex *
-mutex_guard_enter(struct mutex *m) TSA_NO_ANALYSIS {
+mutex_guard_enter(struct mutex *m) TSA_EXCLUDED(IRQL_RAISED) TSA_NO_ANALYSIS {
     mutex_lock(m);
     return m;
 }
 
 static inline cc_always_inline cc_maybe_unused struct mutex *
-mutex_guard_subclass_enter(struct mutex *m, uint8_t subclass) TSA_NO_ANALYSIS {
+mutex_guard_subclass_enter(struct mutex *m, uint8_t subclass)
+    TSA_EXCLUDED(IRQL_RAISED) TSA_NO_ANALYSIS {
     mutex_lock_subclass(m, subclass);
     return m;
 }
 
 #define mutex_guard(m_)                                                        \
-    cc_cleanup(mutex_guard_exit) struct mutex *PP_CONCAT(                      \
-        mtx_guard_, __COUNTER__) = mutex_guard_enter(m_)
+    cc_cleanup(mutex_guard_exit) struct mutex *PP_CONCAT(mtx_guard_,           \
+                                                         __COUNTER__) =        \
+        (mutex_guard_assume(m_), mutex_guard_enter(m_))
 
 #define mutex_guard_subclass(m_, subclass_)                                    \
     cc_cleanup(mutex_guard_exit) struct mutex *PP_CONCAT(mtx_guard_,           \
                                                          __COUNTER__) =        \
-        mutex_guard_subclass_enter((m_), (subclass_))
+        (mutex_guard_assume(m_),                                               \
+         mutex_guard_subclass_enter((m_), (subclass_)))

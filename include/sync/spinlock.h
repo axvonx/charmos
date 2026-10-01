@@ -397,7 +397,7 @@ static inline void spin_unlock_raw_full(struct spinlock *lock,
 
 static inline void spin_unlock_full(struct spinlock *lock, enum irql old,
                                     const struct lock_chk_site *site)
-    TSA_RELEASES(lock) TSA_NO_ANALYSIS {
+    TSA_RELEASES_SPIN(lock) TSA_NO_ANALYSIS {
 
     bool checked_shallow = spinlock_order_checked(lock);
     struct spinlock_rel_scope chk;
@@ -422,7 +422,7 @@ static inline void spin_unlock_full(struct spinlock *lock, enum irql old,
 static inline cc_warn_unused_result enum irql
 spin_lock_subclass_full(struct spinlock *lock, uint8_t subclass,
                         const struct lock_chk_site *site)
-    TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
+    TSA_ACQUIRES_SPIN(lock) TSA_NO_ANALYSIS {
     kassert(subclass < LOCK_CHK_MAX_SUBCLASSES);
     if (bootstage_get() >= BOOTSTAGE_MID_MP &&
         (irq_in_interrupt() || irq_in_nmi()))
@@ -454,13 +454,13 @@ spin_lock_subclass_full(struct spinlock *lock, uint8_t subclass,
 
 static inline cc_warn_unused_result enum irql
 spin_lock_full(struct spinlock *lock, const struct lock_chk_site *site)
-    TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
+    TSA_ACQUIRES_SPIN(lock) TSA_NO_ANALYSIS {
     return spin_lock_subclass_full(lock, 0, site);
 }
 
 static inline cc_warn_unused_result enum irql
 spin_lock_high_full(struct spinlock *lock, const struct lock_chk_site *site)
-    TSA_ACQUIRES(lock) TSA_NO_ANALYSIS {
+    TSA_ACQUIRES_SPIN(lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())
         panic("Attempted to take non-raw spinlock from an NMI");
 
@@ -487,7 +487,7 @@ spin_lock_high_full(struct spinlock *lock, const struct lock_chk_site *site)
 static inline cc_warn_unused_result bool
 spin_trylock_full(struct spinlock *lock, enum irql *out,
                   const struct lock_chk_site *site)
-    TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
+    TSA_TRY_ACQUIRES_SPIN(true, lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP &&
         (irq_in_interrupt() || irq_in_nmi()))
         panic("Attempted to take non-ISR safe spinlock outside thread context");
@@ -523,7 +523,7 @@ spin_trylock_full(struct spinlock *lock, enum irql *out,
 static inline cc_warn_unused_result bool
 spin_trylock_high_full(struct spinlock *lock, enum irql *out,
                        const struct lock_chk_site *site)
-    TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
+    TSA_TRY_ACQUIRES_SPIN(true, lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())
         panic("Attempted to take non-raw spinlock from an NMI");
 
@@ -614,19 +614,28 @@ spinlock_assert_not_held_full(struct spinlock *lock,
 #define SPINLOCK_ASSERT_NOT_HELD(l)                                            \
     spinlock_assert_not_held_full((l), LOCK_CHK_SITE_HERE())
 
+/* Scoped guards. TSA can't connect guard variables to lock expressions.
+ * IRQL_RAISED is acquired on entry and released on cleanup, and
+ * this prevents sleeping inside the guard. Lock expression is evaluated
+ * twice, remember to pass a lock address */
 struct spinlock_guard {
     struct spinlock *lock;
     enum irql irql;
 };
 
 static inline cc_always_inline cc_maybe_unused void
-spinlock_guard_exit(struct spinlock_guard *g) TSA_NO_ANALYSIS {
+spinlock_guard_assume(struct spinlock *lock) TSA_ASSERT_CAPABILITY(lock) {
+    cc_unused(lock);
+}
+
+static inline cc_always_inline cc_maybe_unused void spinlock_guard_exit(
+    struct spinlock_guard *g) TSA_RELEASES_SPIN_IRQL TSA_NO_ANALYSIS {
     if (g->lock)
         spin_unlock(g->lock, g->irql);
 }
 
 static inline cc_always_inline cc_maybe_unused struct spinlock_guard
-spin_guard_enter(struct spinlock *lock) TSA_NO_ANALYSIS {
+spin_guard_enter(struct spinlock *lock) TSA_ACQUIRES_SPIN_IRQL TSA_NO_ANALYSIS {
     return (struct spinlock_guard) {
         .lock = lock,
         .irql = spin_lock(lock),
@@ -634,7 +643,8 @@ spin_guard_enter(struct spinlock *lock) TSA_NO_ANALYSIS {
 }
 
 static inline cc_always_inline cc_maybe_unused struct spinlock_guard
-spin_guard_high_enter(struct spinlock *lock) TSA_NO_ANALYSIS {
+spin_guard_high_enter(struct spinlock *lock)
+    TSA_ACQUIRES_SPIN_IRQL TSA_NO_ANALYSIS {
     return (struct spinlock_guard) {
         .lock = lock,
         .irql = spin_lock_high(lock),
@@ -642,8 +652,8 @@ spin_guard_high_enter(struct spinlock *lock) TSA_NO_ANALYSIS {
 }
 
 static inline cc_always_inline cc_maybe_unused struct spinlock_guard
-spin_guard_subclass_enter(struct spinlock *lock,
-                          uint8_t subclass) TSA_NO_ANALYSIS {
+spin_guard_subclass_enter(struct spinlock *lock, uint8_t subclass)
+    TSA_ACQUIRES_SPIN_IRQL TSA_NO_ANALYSIS {
     return (struct spinlock_guard) {
         .lock = lock,
         .irql = spin_lock_subclass(lock, subclass),
@@ -652,13 +662,16 @@ spin_guard_subclass_enter(struct spinlock *lock,
 
 #define spin_guard(lock_)                                                      \
     cc_cleanup(spinlock_guard_exit) struct spinlock_guard PP_CONCAT(           \
-        spin_guard_, __COUNTER__) = spin_guard_enter(lock_)
+        spin_guard_, __COUNTER__) =                                            \
+        (spinlock_guard_assume(lock_), spin_guard_enter(lock_))
 
 #define spin_guard_high(lock_)                                                 \
     cc_cleanup(spinlock_guard_exit) struct spinlock_guard PP_CONCAT(           \
-        spin_guard_high_, __COUNTER__) = spin_guard_high_enter(lock_)
+        spin_guard_high_, __COUNTER__) =                                       \
+        (spinlock_guard_assume(lock_), spin_guard_high_enter(lock_))
 
 #define spin_guard_subclass(lock_, subclass_)                                  \
     cc_cleanup(spinlock_guard_exit) struct spinlock_guard PP_CONCAT(           \
         spin_guard_, __COUNTER__) =                                            \
-        spin_guard_subclass_enter((lock_), (subclass_))
+        (spinlock_guard_assume(lock_),                                         \
+         spin_guard_subclass_enter((lock_), (subclass_)))
