@@ -426,4 +426,4 @@
 /* Common/larger type to cast up to */
 #define ct_common_type_2(a, b)                                                 \
     typeof(__builtin_choose_expr(sizeof(typeof(a)) >= sizeof(typeof(b)), (a),  \
-                                 (b))
+                                 (b)))
