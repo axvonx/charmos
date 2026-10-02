@@ -153,12 +153,13 @@ static inline bool migrate_to_destination(struct thread *t, time_ms_t time) {
     struct scheduler *us = smp_core_scheduler();
     struct scheduler *other = global.schedulers[dst];
 
-    /* They're both DISPATCH */
     scheduler_acquire_two_locks(us, other, &irql_us, &irql_other);
 
     /* mark our own other_locked as `other` so that
      * upon the switch-in, the lock is dropped */
     us->other_locked = other;
+    us->locked_irql = irql_us;
+    us->other_locked_irql = irql_other;
 
     /* save ourselves to the other scheduler */
     save_thread(other, t, time);
@@ -398,8 +399,8 @@ void scheduler_switch_in() TSA_NO_ANALYSIS {
          * raise there, so it can't be any other */
         spin_unlock(&us->lock, IRQL_DISPATCH_LEVEL);
     } else {
-        scheduler_release_two_locks(us, other, IRQL_DISPATCH_LEVEL,
-                                    IRQL_DISPATCH_LEVEL);
+        scheduler_release_two_locks(us, other, us->locked_irql,
+                                    us->other_locked_irql);
     }
 
     struct thread *drop = us->drop_last_ref;

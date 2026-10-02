@@ -90,6 +90,9 @@ struct scheduler {
                                      * drop the raw lock for this in addition
                                      * to the lock for our scheduler */
 
+    enum irql locked_irql;
+    enum irql other_locked_irql;
+
     struct rt_scheduler_percpu *rt;
 };
 

@@ -532,10 +532,11 @@ retry:
         second = rq_a;
     }
 
-    *irq_a = spin_lock_high(&first->lock);
+    enum irql first_irql = spin_lock_high(&first->lock);
+    enum irql second_irql = first_irql;
 
     if (second)
-        *irq_b = spin_lock_high(&second->lock);
+        second_irql = spin_lock_high(&second->lock);
 
     if (thread_get_migration_generation(a) != gen_a1 ||
         thread_get_migration_generation(b) != gen_b1 ||
@@ -543,15 +544,17 @@ retry:
         thread_get_scheduler_unsafe(b) != rq_b) {
 
         if (second)
-            spin_unlock(&second->lock, *irq_b);
+            spin_unlock(&second->lock, second_irql);
 
-        spin_unlock(&first->lock, *irq_a);
+        spin_unlock(&first->lock, first_irql);
 
         goto retry;
     }
 
     *out_rq_a = rq_a;
     *out_rq_b = rq_b;
+    *irq_a = rq_a == first ? first_irql : second_irql;
+    *irq_b = rq_b == first ? first_irql : second_irql;
 }
 
 void thread_lock_thread_and_rq(struct thread *t, struct scheduler *other_rq,

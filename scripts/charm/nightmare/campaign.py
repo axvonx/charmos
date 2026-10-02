@@ -50,15 +50,19 @@ FULL_DIAGNOSTIC_STATUSES = {
     BootStatus.FINDING.value,
     BootStatus.STALL.value,
     BootStatus.CRASH.value,
+    BootStatus.TIMEOUT.value,
 }
 
 INFRASTRUCTURE_STATUSES = {
     BootStatus.FAIL.value,
-    BootStatus.TIMEOUT.value,
     BootStatus.INFRA.value,
     BootStatus.UNKNOWN.value,
     BootStatus.SKIP.value,
 }
+
+GATE_INFRASTRUCTURE_STATUSES = INFRASTRUCTURE_STATUSES | {BootStatus.TIMEOUT.value}
+
+HANG_STATUSES = {BootStatus.STALL.value, BootStatus.TIMEOUT.value}
 
 
 @dataclass(frozen=True)
@@ -259,7 +263,7 @@ class CampaignResult:
             kinds.add(DiscoveryKind.FINDING)
         if any(boot.status == BootStatus.CRASH.value for boot in self.all_boots):
             kinds.add(DiscoveryKind.CRASH)
-        if any(boot.status == BootStatus.STALL.value for boot in self.all_boots):
+        if any(boot.status in HANG_STATUSES for boot in self.all_boots):
             kinds.add(DiscoveryKind.STALL)
         if not kinds:
             return DiscoveryKind.NONE
@@ -968,7 +972,7 @@ class CampaignRunner:
         gate_res: BootResult | None = None
         if should_gate and not manifest.dry_run:
             gate_res = self._run_gate_boot()
-            if gate_res.status in INFRASTRUCTURE_STATUSES:
+            if gate_res.status in GATE_INFRASTRUCTURE_STATUSES:
                 # the rig could not run the subject, so there is nothing to
                 # learn from the rest of the lease
                 return CampaignResult(
@@ -1087,7 +1091,7 @@ class CampaignRunner:
                 BootStatus.INFRA.value,
             )
         )
-        stalled = sum(1 for b in counted if b.status == BootStatus.STALL.value)
+        stalled = sum(1 for b in counted if b.status in HANG_STATUSES)
         skipped = sum(1 for b in counted if b.status == BootStatus.SKIP.value)
 
         campaign_ok = (
