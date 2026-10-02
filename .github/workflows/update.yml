@@ -4,8 +4,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
   packages: write
+
+concurrency:
+  group: publish-ci-container
+  cancel-in-progress: false
 
 env:
   IMAGE: ghcr.io/axvonx/charmos-x86-env
@@ -17,6 +22,8 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Log in to GHCR
         uses: docker/login-action@v4
@@ -35,11 +42,70 @@ jobs:
           digest=$(docker inspect --format='{{index .RepoDigests 0}}' "$tag")
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
 
-      - name: Record digest for the user-reviewed pin
+      - name: Update workflow image pins
+        env:
+          RUNNER_IMAGE: ${{ steps.publish.outputs.digest }}
         run: |
-          echo '### Published runner image' >> "$GITHUB_STEP_SUMMARY"
-          echo '' >> "$GITHUB_STEP_SUMMARY"
-          echo '```text' >> "$GITHUB_STEP_SUMMARY"
-          echo '${{ steps.publish.outputs.digest }}' >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Update workflow image references in a separate user-reviewed commit.' >> "$GITHUB_STEP_SUMMARY"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import re
+
+          image = os.environ["IMAGE"]
+          digest = os.environ["RUNNER_IMAGE"]
+          pattern = re.compile(re.escape(image) + r"@sha256:[0-9a-f]{64}\b")
+          if not pattern.fullmatch(digest):
+              raise SystemExit(f"Invalid published image digest: {digest}")
+
+          references = 0
+          for path in sorted(Path(".github/workflows").glob("*.y*ml")):
+              original = path.read_text()
+              updated, count = pattern.subn(lambda match: digest, original)
+              references += count
+              if updated != original:
+                  path.write_text(updated)
+                  print(f"Updated {count} image reference(s) in {path}")
+
+          if not references:
+              raise SystemExit("No workflow image pins found")
+          PY
+
+      - name: Open pull request
+        id: pr
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "[ci]: bump container image"
+          title: "[ci]: bump container image"
+          body: |
+            Automated CI container update after publishing a new image.
+
+            - Image: `${{ steps.publish.outputs.digest }}`
+            - Source commit: `${{ github.sha }}`
+            - Publish run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Updates all workflow image pins together. Image build and publication succeeded;
+            review the build and test checks before merging.
+          branch: chore/bump-ci-container
+          delete-branch: true
+          add-paths: |
+            .github/workflows/*.yml
+            .github/workflows/*.yaml
+
+      - name: Record published image and pull request
+        env:
+          RUNNER_IMAGE: ${{ steps.publish.outputs.digest }}
+          PR_URL: ${{ steps.pr.outputs.pull-request-url }}
+        run: |
+          {
+            echo '### Published runner image'
+            echo ''
+            echo '```text'
+            echo "$RUNNER_IMAGE"
+            echo '```'
+            if [ -n "$PR_URL" ]; then
+              echo "Pull request: $PR_URL"
+            else
+              echo 'Workflow image pins are already up to date; no pull request needed.'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

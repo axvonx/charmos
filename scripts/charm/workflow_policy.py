@@ -14,7 +14,6 @@ EXECUTION_WORKFLOWS = (
     "nightmare.yml",
     "test.yml",
     "tools.yml",
-    "update.yml",
 )
 
 PROTECTED_WORKFLOWS = EXECUTION_WORKFLOWS

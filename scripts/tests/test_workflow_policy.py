@@ -12,6 +12,19 @@ def test_check_covers_more_than_the_execution_workflows() -> None:
     assert set(WP.EXECUTION_WORKFLOWS) < names
 
 
+def test_publisher_can_write_but_build_cannot(tmp_path: Path) -> None:
+    publisher = tmp_path / "update.yml"
+    build = tmp_path / "build.yml"
+    text = "permissions:\n  contents: write\n"
+    publisher.write_text(text)
+    build.write_text(text)
+
+    violations = WP.check((publisher, build))
+    assert [(v.path.name, v.rule) for v in violations] == [
+        ("build.yml", "repository_write"),
+    ]
+
+
 def test_every_rule_reports_its_line() -> None:
     text = """
 permissions:
