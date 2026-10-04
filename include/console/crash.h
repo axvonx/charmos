@@ -303,9 +303,9 @@ static inline void qemu_exit(int code) {
     outb(0xf4, (uint8_t) code);
 }
 
-static inline const char *crash_code_to_str(enum crash_code code) {
-    switch (code) {
+STRINGIFY_DECLARE_ENUM(crash_code) {
+    switch (stringify_in) {
     case CRASH_CODE_GENERIC: return "Generic";
-    default: return crash_code_from_facility_to_str(code);
+    default: return crash_code_from_facility_to_str(stringify_in);
     }
 }

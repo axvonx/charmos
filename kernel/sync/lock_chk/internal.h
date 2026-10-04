@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include <stringify.h>
 #include <structures/hlist.h>
 #include <structures/list.h>
 #include <sync/lock_chk_types.h>
@@ -356,21 +357,19 @@ static inline enum lock_chk_mode lock_chk_state_mode(uint16_t state) {
     return (state % 2) != 0 ? LOCK_CHK_MODE_EXCLUSIVE : LOCK_CHK_MODE_SHARED;
 }
 
-static inline const char *lock_chk_type_to_str(enum lock_chk_type type) {
-    switch (type) {
+STRINGIFY_DECLARE_ENUM(lock_chk_type) {
+    switch (stringify_in) {
     case LOCK_CHK_TYPE_SPIN: return "spinlock";
     case LOCK_CHK_TYPE_QSPIN: return "qspinlock";
     case LOCK_CHK_TYPE_MUTEX: return "mutex";
     case LOCK_CHK_TYPE_MUTEX_SIMPLE: return "simple mutex";
     case LOCK_CHK_TYPE_RWLOCK: return "rwlock";
+    default: cc_unreachable();
     }
-
-    return "unknown lock";
 }
 
-static inline const char *
-lock_chk_fail_kind_to_str(enum lock_chk_failure_kind kind) {
-    switch (kind) {
+STRINGIFY_DECLARE(lock_chk_fail_kind_to_str, enum lock_chk_failure_kind) {
+    switch (stringify_in) {
     case LOCK_CHK_FAIL_CYCLE: return "cycle";
     case LOCK_CHK_FAIL_RECURSION: return "recursion";
     case LOCK_CHK_FAIL_RELEASE: return "release";
@@ -381,8 +380,8 @@ lock_chk_fail_kind_to_str(enum lock_chk_failure_kind kind) {
     case LOCK_CHK_FAIL_UNINITIALIZED: return "uninitialized";
     case LOCK_CHK_FAIL_NOT_HELD: return "not_held";
     case LOCK_CHK_FAIL_UNEXPECTED_HELD: return "unexpected_held";
+    default: cc_unreachable();
     }
-    return "unknown";
 }
 
 #endif /* DEBUG_LOCK_CHK */

@@ -13,6 +13,7 @@
 #include <mem/pmm.h>
 #include <scaled_param.h>
 #include <stdbool.h>
+#include <stringify.h>
 #include <sync/lock_general.h>
 #include <test/test_api_internal.h>
 
@@ -333,35 +334,35 @@ static inline size_t test_current_message_count(void) {
     return log_site_message_count(test_global.current_test->site);
 }
 
-static inline const char *test_tier_to_str(enum test_tier tier) {
-    switch (tier) {
+STRINGIFY_DECLARE_ENUM(test_tier) {
+    switch (stringify_in) {
     case TEST_TIER_SMOKE: return "smoke";
     case TEST_TIER_UNIT: return "unit";
     case TEST_TIER_INTEGRATION: return "integration";
-    default: unreachable();
+    default: cc_unreachable();
     }
 }
 
-static inline const char *test_tier_to_str_color(enum test_tier tier) {
-    switch (tier) {
+STRINGIFY_DECLARE(test_tier_to_str_color, enum test_tier) {
+    switch (stringify_in) {
     case TEST_TIER_SMOKE: return ANSI_GRAY "smoke";
     case TEST_TIER_UNIT: return ANSI_MAGENTA "unit";
     case TEST_TIER_INTEGRATION: return ANSI_YELLOW "integration";
-    default: unreachable();
+    default: cc_unreachable();
     }
 }
 
-static inline const char *test_result_to_str(enum test_result result) {
-    switch (result) {
+STRINGIFY_DECLARE_ENUM(test_result) {
+    switch (stringify_in) {
     case TEST_RESULT_OK: return ANSI_BLUE "ok" ANSI_RESET;
     case TEST_RESULT_FAILED: return ANSI_RED "failed" ANSI_RESET;
     case TEST_RESULT_SKIPPED: return ANSI_GRAY "skipped" ANSI_RESET;
-    default: unreachable();
+    default: cc_unreachable();
     }
 }
 
-static inline const char *test_result_to_str_plain(enum test_result result) {
-    switch (result) {
+STRINGIFY_DECLARE(test_result_to_str_plain, enum test_result) {
+    switch (stringify_in) {
     case TEST_RESULT_OK: return "ok";
     case TEST_RESULT_FAILED: return "failed";
     case TEST_RESULT_SKIPPED: return "skipped";
@@ -369,15 +370,14 @@ static inline const char *test_result_to_str_plain(enum test_result result) {
     }
 }
 
-static inline const char *
-test_skip_reason_to_str(enum test_skip_reason reason) {
-    switch (reason) {
+STRINGIFY_DECLARE_ENUM(test_skip_reason) {
+    switch (stringify_in) {
     case TEST_SKIP_NONE: return "none";
     case TEST_SKIP_RAM_LOW: return "RAM low";
     case TEST_SKIP_UPSTREAM_FAILED: return "upstream failed";
     case TEST_SKIP_DISABLED: return "disabled";
     case TEST_SKIP_INSUFFICIENT_CORES: return "insufficient cores";
     case TEST_SKIP_UNSUPPORTED_FS: return "unsupported fs";
-    default: unreachable();
+    default: cc_unreachable();
     }
 }

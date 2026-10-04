@@ -33,53 +33,6 @@ static void nightmare_exit(uint8_t code, const char *reason) {
         cpu_pause();
 }
 
-const char *nightmare_result_to_str(enum nightmare_result result) {
-    switch (result) {
-    case NIGHTMARE_RESULT_OK: return "ok";
-    case NIGHTMARE_RESULT_FINDING: return "finding";
-    case NIGHTMARE_RESULT_FAIL: return "fail";
-    case NIGHTMARE_RESULT_STALL: return "stall";
-    case NIGHTMARE_RESULT_SKIP: return "skip";
-    default: return "unknown";
-    }
-}
-
-const char *nightmare_skip_to_str(enum nightmare_skip_reason reason) {
-    switch (reason) {
-    case NIGHTMARE_SKIP_NONE: return "none";
-    case NIGHTMARE_SKIP_NOT_COMPILED: return "not_compiled";
-    case NIGHTMARE_SKIP_NO_SUCH_NIGHTMARE: return "no_such_nightmare";
-    case NIGHTMARE_SKIP_NEEDS_SMP: return "needs_smp";
-    case NIGHTMARE_SKIP_NEEDS_PREEMPT: return "needs_preempt";
-    case NIGHTMARE_SKIP_NEEDS_ASAN: return "needs_asan";
-    case NIGHTMARE_SKIP_NEEDS_INJECT: return "needs_inject";
-    case NIGHTMARE_SKIP_RAM_LOW: return "ram_low";
-    case NIGHTMARE_SKIP_SEED_UNUSED: return "seed_unused";
-    case NIGHTMARE_SKIP_SEED_MISSING: return "seed_missing";
-    case NIGHTMARE_SKIP_SERVICE_MISSING: return "service_missing";
-    case NIGHTMARE_SKIP_PREPARE_REFUSED: return "prepare_refused";
-    default: return "unknown";
-    }
-}
-
-const char *nightmare_seed_policy_to_str(enum nightmare_seed_policy policy) {
-    switch (policy) {
-    case NIGHTMARE_SEED_IGNORED: return "ignored";
-    case NIGHTMARE_SEED_OPTIONAL: return "optional";
-    case NIGHTMARE_SEED_REQUIRED: return "required";
-    default: return "unknown";
-    }
-}
-
-const char *nightmare_seed_mode_to_str(enum nightmare_seed_mode mode) {
-    switch (mode) {
-    case NIGHTMARE_SEED_SPLIT: return "split";
-    case NIGHTMARE_SEED_SEEDFUL: return "seedful";
-    case NIGHTMARE_SEED_SEEDLESS: return "seedless";
-    default: return "unknown";
-    }
-}
-
 static uint8_t nightmare_exit_for_result(enum nightmare_result result) {
     switch (result) {
     case NIGHTMARE_RESULT_OK: return NIGHTMARE_EXIT_OK;

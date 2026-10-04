@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stringify.h>
 #include <sync/completion.h>
 #include <time/time.h>
 #include <types/types.h>
@@ -32,6 +33,17 @@ enum test_stop : uint8_t {
     TEST_STOP_FAIL,    /* harness-side failure, e.g. spawn failed */
     TEST_STOP_STALL,   /* hard deadline */
 };
+
+STRINGIFY_DECLARE_ENUM(test_stop) {
+    switch (stringify_in) {
+    case TEST_RUN: return "run";
+    case TEST_STOP_BUDGET: return "budget";
+    case TEST_STOP_FINDING: return "finding";
+    case TEST_STOP_FAIL: return "fail";
+    case TEST_STOP_STALL: return "stall";
+    default: cc_unreachable();
+    }
+}
 
 enum test_on_stall : uint8_t {
     TEST_ON_STALL_REPORT = 0,
@@ -103,7 +115,6 @@ struct test_liveness_state {
     struct test_conc *conc;
 };
 
-const char *test_stop_to_str(enum test_stop stop);
 uint64_t test_rng_seed_for(uint64_t base_seed, size_t index);
 
 void test_conc_init(struct test_conc *c, struct test_conc_worker *workers,

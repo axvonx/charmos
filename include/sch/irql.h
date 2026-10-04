@@ -136,6 +136,7 @@
 #pragma once
 #include <asm.h>
 #include <compiler/core.h>
+#include <stringify.h>
 #include <sync/lock_general.h>
 
 TSA_REENTRANT_CAPABILITY_DEFINE("irql", IRQL_RAISED);
@@ -149,16 +150,16 @@ enum irql {
     IRQL_NONE = -1,
 };
 
-static inline const char *irql_to_str(enum irql level) {
-    switch (level) {
+STRINGIFY_DECLARE_ENUM(irql) {
+    switch (stringify_in) {
     case IRQL_PASSIVE_LEVEL: return "PASSIVE LEVEL";
     case IRQL_APC_LEVEL: return "APC LEVEL";
     case IRQL_DISPATCH_LEVEL: return "DISPATCH LEVEL";
     case IRQL_DEVICE_LEVEL: return "DEVICE LEVEL";
     case IRQL_HIGH_LEVEL: return "HIGH LEVEL";
     case IRQL_NONE: return "NONE";
+    default: cc_unreachable();
     }
-    return "UNKNOWN";
 }
 
 enum irql irql_raise(enum irql new_level) TSA_ACQUIRES(IRQL_RAISED);

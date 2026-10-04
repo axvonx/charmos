@@ -16,6 +16,7 @@
 #include <mem/must.h>
 #include <parse.h>
 #include <string.h>
+#include <stringify.h>
 
 LINKER_SECTION_DEFINE(struct cmdline_entry, cmdline_entries);
 LINKER_SECTION_DEFINE(struct cmdline_schema, cmdline_schemas);
@@ -38,8 +39,8 @@ LINKER_SECTION_DEFINE(struct cmdline_schema, cmdline_schemas);
     X(CMDLINE_TYPE_STRING, "string", "<string>", "string")                     \
     X(CMDLINE_TYPE_LIST, "list", "<list>", "list")
 
-static inline const char *cmdline_type_to_str(enum cmdline_type type) {
-    switch (type) {
+STRINGIFY_DECLARE_ENUM(cmdline_type) {
+    switch (stringify_in) {
 #define _CMDLINE_TYPE_STR(e, ident, ...)                                       \
     case e: return ident;
         CMDLINE_TYPE_LIST_DEF(_CMDLINE_TYPE_STR)
@@ -50,8 +51,8 @@ static inline const char *cmdline_type_to_str(enum cmdline_type type) {
     }
 }
 
-static inline const char *cmdline_expr_type_to_str(enum cmdline_type type) {
-    switch (type) {
+STRINGIFY_DECLARE(cmdline_expr_type_to_str, enum cmdline_type) {
+    switch (stringify_in) {
 #define _CMDLINE_TYPE_ARG(e, ident, hint, ...)                                 \
     case e: return hint;
         CMDLINE_TYPE_LIST_DEF(_CMDLINE_TYPE_ARG)

@@ -17,6 +17,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <stringify.h>
 #include <structures/locked_list.h>
 #include <thread/thread.h>
 #include <time/time.h>
@@ -229,14 +230,14 @@ static void k_printf_from_log(const char *fmt, const uint64_t *args,
     }
 }
 
-static const char *log_level_to_str(enum log_level l) {
-    switch (l) {
+STRINGIFY_DECLARE_ENUM(log_level) {
+    switch (stringify_in) {
     case LOG_TRACE: return "trace";
     case LOG_DEBUG: return "debug";
     case LOG_INFO: return "info";
     case LOG_WARN: return "warn";
     case LOG_ERROR: return "error";
-    default: return "unknown";
+    default: cc_unreachable();
     }
 }
 

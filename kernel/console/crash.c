@@ -24,6 +24,7 @@
 #include <smp/percpu.h>
 #include <stdarg.h>
 #include <string.h>
+#include <stringify.h>
 #include <sync/mutex.h>
 #include <sync/qspinlock.h>
 #include <sync/raw_spinlock.h>
@@ -1050,15 +1051,14 @@ static void (*unwind_cbs[CRASH_UNWIND_MAX])(struct crash_unwind_node_data *) = {
     [CRASH_UNWIND_QSPINLOCK] = unwind_qspinlock,
 };
 
-static inline const char *
-crash_unwind_type_to_str(enum crash_unwind_type type) {
-    switch (type) {
+STRINGIFY_DECLARE_ENUM(crash_unwind_type) {
+    switch (stringify_in) {
     case CRASH_UNWIND_RCU: return "RCU";
     case CRASH_UNWIND_MUTEX: return "MUTEX";
     case CRASH_UNWIND_RWLOCK: return "RWLOCK";
     case CRASH_UNWIND_SPINLOCK: return "SPINLOCK";
     case CRASH_UNWIND_QSPINLOCK: return "QSPINLOCK";
-    default: unreachable("Invalid %u", type);
+    default: cc_unreachable();
     }
 }
 

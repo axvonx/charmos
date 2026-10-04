@@ -6,6 +6,7 @@
 #include <linker/symbols.h>
 #include <stdarg.h>
 #include <stdint.h>
+#include <stringify.h>
 
 #define ERR_IS_FATAL(e) (e != ERR_OK && e != ERR_AGAIN)
 
@@ -106,8 +107,8 @@ LINKER_SECTION_DEFINE(struct err_facility, err_facilities);
 const char *err_facility_to_str(enum err err);
 void err_facilities_init();
 
-static inline const char *errno_to_str(enum err err) {
-    switch (err) {
+STRINGIFY_DECLARE(errno_to_str, enum err) {
+    switch (stringify_in) {
     case ERR_OK: return "No error";
     case ERR_UNKNOWN: return "Unknown error";
     case ERR_NO_MEM: return "Out of memory";
@@ -127,6 +128,6 @@ static inline const char *errno_to_str(enum err err) {
     case ERR_OVERFLOW: return "Value too large";
     case ERR_NOT_EMPTY: return "Directory not empty";
 
-    default: return err_facility_to_str(err);
+    default: return err_facility_to_str(stringify_in);
     }
 }

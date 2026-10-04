@@ -20,17 +20,6 @@ uint64_t test_conc_progress_sum(void) {
     return sum;
 }
 
-const char *test_stop_to_str(enum test_stop stop) {
-    switch (stop) {
-    case TEST_RUN: return "run";
-    case TEST_STOP_BUDGET: return "budget";
-    case TEST_STOP_FINDING: return "finding";
-    case TEST_STOP_FAIL: return "fail";
-    case TEST_STOP_STALL: return "stall";
-    default: return "unknown";
-    }
-}
-
 uint64_t test_rng_seed_for(uint64_t base_seed, size_t index) {
     struct test_rng rng = {.state = base_seed ^
                                     (PRNG_SPLITMIX64_GAMMA * (index + 1))};
