@@ -49,7 +49,7 @@ static struct watchdog_config config = {
 static struct watchdog_master watchdog_master = {0};
 static struct watchdog_globals watchdog_global = {0};
 
-/* TODO: a LOG_SITE + HANDLE DECLARE, with printing explicitly turned off
+/* TODO: a LOG_SITE + HANDLE EXTERN, with printing explicitly turned off
  * because we cannot take the implicit printf lock(s) from the NMI */
 LOG_SITE_DEFINE(watchdog_master);
 LOG_HANDLE_DEFINE(watchdog_master);

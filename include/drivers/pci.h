@@ -36,7 +36,7 @@ struct pci_driver {
     uint16_t vendor_id;
 };
 
-LINKER_SECTION_DECLARE(struct pci_driver, pci_devices);
+LINKER_SECTION_EXTERN(struct pci_driver, pci_devices);
 
 #define PCI_DEV_REGISTER(n, cc, sc, pi, vi, init)                              \
     LINKER_SECTION_OBJECT(struct pci_driver, pci_devices)                      \

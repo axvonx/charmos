@@ -18,8 +18,8 @@
 #include <string.h>
 #include <stringify.h>
 
-LINKER_SECTION_DECLARE(struct cmdline_entry, cmdline_entries);
-LINKER_SECTION_DECLARE(struct cmdline_schema, cmdline_schemas);
+LINKER_SECTION_EXTERN(struct cmdline_entry, cmdline_entries);
+LINKER_SECTION_EXTERN(struct cmdline_schema, cmdline_schemas);
 
 #define MAX_VAR_LEN 128
 #define MAX_VAL_LEN 256

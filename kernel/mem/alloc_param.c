@@ -1,6 +1,6 @@
 #include <mem/alloc.h>
 
-LINKER_SECTION_DECLARE(struct alloc_flag_ex_desc, alloc_flag_ex_descs);
+LINKER_SECTION_EXTERN(struct alloc_flag_ex_desc, alloc_flag_ex_descs);
 
 size_t
 alloc_flag_ex_get_desc(enum alloc_flags flag,

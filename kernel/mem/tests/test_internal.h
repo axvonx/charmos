@@ -30,10 +30,10 @@
 #include <structures/rbit.h>
 #include <thread/thread.h>
 
-TEST_GROUP_DECLARE(mem);
-TEST_GROUP_DECLARE(folio);
-TEST_GROUP_DECLARE(mm);
-TEST_GROUP_DECLARE(rmap);
-TEST_GROUP_DECLARE(page_table);
-TEST_GROUP_DECLARE(elcm);
-TEST_GROUP_DECLARE(vas);
+TEST_GROUP_EXTERN(mem);
+TEST_GROUP_EXTERN(folio);
+TEST_GROUP_EXTERN(mm);
+TEST_GROUP_EXTERN(rmap);
+TEST_GROUP_EXTERN(page_table);
+TEST_GROUP_EXTERN(elcm);
+TEST_GROUP_EXTERN(vas);

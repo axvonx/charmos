@@ -267,7 +267,7 @@ struct crash_context {
     LINKER_SECTION_OBJECT(struct crash_facility, crash_facilities)             \
     __crash_facility_##n = {.name = #n, __VA_ARGS__}
 
-LINKER_SECTION_DECLARE(struct crash_facility, crash_facilities);
+LINKER_SECTION_EXTERN(struct crash_facility, crash_facilities);
 
 cc_noreturn void assert_impl_default(struct crash_payload payload,
                                      const char *file, int line,

@@ -325,7 +325,7 @@ static inline size_t log_site_message_count(struct log_site *site) {
 
 #define LOG_HANDLE(name) &(__log_handle_##name)
 
-LINKER_SECTION_DECLARE(struct log_site, log_sites);
+LINKER_SECTION_EXTERN(struct log_site, log_sites);
 
 LOG_HANDLE_EXTERN(global);
 LOG_SITE_EXTERN(global);

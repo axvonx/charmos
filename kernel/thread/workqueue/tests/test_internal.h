@@ -17,5 +17,5 @@
 #include <time/spin_sleep.h>
 #include <time/time.h>
 
-TEST_GROUP_DECLARE(workqueue);
-TEST_GROUP_DECLARE(defer);
+TEST_GROUP_EXTERN(workqueue);
+TEST_GROUP_EXTERN(defer);

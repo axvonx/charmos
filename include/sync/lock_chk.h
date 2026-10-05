@@ -94,7 +94,7 @@ struct lock_chk_class {
         .line = __LINE__,                                                      \
     }
 
-#define LOCK_CHK_CLASS_DECLARE(id)                                             \
+#define LOCK_CHK_CLASS_EXTERN(id)                                              \
     extern const struct lock_chk_class __lock_chk_class_##id
 
 #else /* !defined(DEBUG_LOCK_CHK) */
@@ -103,7 +103,7 @@ struct lock_chk_class {
 #define LOCK_CHK_CLASS(id) ((const struct lock_chk_class *) NULL)
 #define LOCK_CHK_CLASS_DEFINE(id)
 #define LOCK_CHK_CLASS_DEFINE_LOCAL(id)
-#define LOCK_CHK_CLASS_DECLARE(id)
+#define LOCK_CHK_CLASS_EXTERN(id)
 
 #endif /* DEBUG_LOCK_CHK */
 

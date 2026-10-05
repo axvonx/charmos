@@ -65,7 +65,7 @@
 #define TEST_DEFINE_INTEGRATION(grp, id, ...)                                  \
     TEST_DEFINE(grp, id, .tier = TEST_TIER_INTEGRATION, ##__VA_ARGS__)
 
-/* Goofy macros needed for the DECLARE macro,
+/* Goofy macros needed for the EXTERN macro,
  * TODO: do something about this HACK: */
 #define __test_group_TEST_GROUP_NONE test_group_orphan_parent
 #define __test_group_none test_group_orphan_parent

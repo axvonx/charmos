@@ -20,13 +20,13 @@
 #include <sync/qspinlock.h>
 #include <sync/turnstile.h>
 
-TEST_GROUP_DECLARE(mutex);
-TEST_GROUP_DECLARE(rcu);
-TEST_GROUP_DECLARE(rwlock);
-TEST_GROUP_DECLARE(qspinlock);
-TEST_GROUP_DECLARE(turnstile);
-TEST_GROUP_DECLARE(lock_chk);
-TEST_GROUP_DECLARE(raw_spinlock);
-TEST_GROUP_DECLARE(condvar);
-TEST_GROUP_DECLARE(semaphore);
-TEST_GROUP_DECLARE(completion);
+TEST_GROUP_EXTERN(mutex);
+TEST_GROUP_EXTERN(rcu);
+TEST_GROUP_EXTERN(rwlock);
+TEST_GROUP_EXTERN(qspinlock);
+TEST_GROUP_EXTERN(turnstile);
+TEST_GROUP_EXTERN(lock_chk);
+TEST_GROUP_EXTERN(raw_spinlock);
+TEST_GROUP_EXTERN(condvar);
+TEST_GROUP_EXTERN(semaphore);
+TEST_GROUP_EXTERN(completion);

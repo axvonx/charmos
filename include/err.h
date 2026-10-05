@@ -102,7 +102,7 @@ struct err_facility {
 /* Used as a return value to reduce signature length noise */
 #define err_checked enum err cc_warn_unused_result
 
-LINKER_SECTION_DECLARE(struct err_facility, err_facilities);
+LINKER_SECTION_EXTERN(struct err_facility, err_facilities);
 
 const char *err_facility_to_str(enum err err);
 void err_facilities_init();

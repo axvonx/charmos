@@ -46,4 +46,4 @@ void slab_domain_init(void);
 void slab_domains_print();
 void slab_domain_init_late();
 
-LINKER_SECTION_DECLARE(struct slab_size_constant, slab_sizes);
+LINKER_SECTION_EXTERN(struct slab_size_constant, slab_sizes);

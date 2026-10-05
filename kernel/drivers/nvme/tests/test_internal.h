@@ -3,4 +3,4 @@
 #include <drivers/nvme.h>
 #include <test/test.h>
 
-TEST_GROUP_DECLARE(nvme);
+TEST_GROUP_EXTERN(nvme);

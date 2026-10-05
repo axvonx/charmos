@@ -144,8 +144,8 @@ LOG_HANDLE_DEFINE(test_ndjson, .flags = LOG_HANDLE_FLAGS_DEFAULT);
     OSC "8;;file://" CHARMOS_SOURCE_ROOT "/" path OSC_ST
 #define OSC8_LINK_END OSC "8;;" OSC_ST
 
-LINKER_SECTION_DECLARE(struct test, tests);
-LINKER_SECTION_DECLARE(struct test_group, test_groups);
+LINKER_SECTION_EXTERN(struct test, tests);
+LINKER_SECTION_EXTERN(struct test_group, test_groups);
 /* no need to clean up allocations in these tests, we are supposed to
  * reboot/poweroff after all tests complete, and the userland should
  * not be in a state where we can boot it when running tests */

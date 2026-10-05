@@ -35,7 +35,7 @@ struct address_range {
 
 #define ADDRESS_RANGE(sym) (__address_range_##sym)
 
-LINKER_SECTION_DECLARE(struct address_range, address_ranges);
+LINKER_SECTION_EXTERN(struct address_range, address_ranges);
 
 void address_ranges_init();
 void address_ranges_print();

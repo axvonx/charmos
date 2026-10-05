@@ -13,7 +13,7 @@
 
 #include <parse.h>
 
-TEST_GROUP_DECLARE(log);
-TEST_GROUP_DECLARE(stack_depot);
-TEST_GROUP_DECLARE(parse);
-TEST_GROUP_DECLARE(string);
+TEST_GROUP_EXTERN(log);
+TEST_GROUP_EXTERN(stack_depot);
+TEST_GROUP_EXTERN(parse);
+TEST_GROUP_EXTERN(string);

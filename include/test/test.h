@@ -247,7 +247,7 @@ struct test_globals {
 
 #define TEST_GROUP_NONE test_group_orphan_parent
 #define TEST_GROUP(name) &(__test_group_##name)
-#define TEST_GROUP_DECLARE(name) extern struct test_group __test_group_##name
+#define TEST_GROUP_EXTERN(name) extern struct test_group __test_group_##name
 
 #define TEST(grp, id) __test_##grp##_##id
 
@@ -324,7 +324,7 @@ struct test_globals {
     }
 
 void tests_run(void);
-CMDLINE_DECLARE(test_root);
+CMDLINE_EXTERN(test_root);
 
 extern struct test_globals test_global;
 extern const char *large_test_string;

@@ -197,8 +197,8 @@ TEST_DEFINE_UNIT(cmdline, flags_table) {
     return TEST_SUCCESS;
 }
 
-CMDLINE_CHILD_DECLARE(test_root, group_opt_in);
-CMDLINE_CHILD_DECLARE(watchdog, master, heartbeat_interval);
+CMDLINE_CHILD_EXTERN(test_root, group_opt_in);
+CMDLINE_CHILD_EXTERN(watchdog, master, heartbeat_interval);
 
 TEST_DEFINE_UNIT(cmdline, runtime_query) {
     struct cmdline_entry *e_root = cmdline_lookup("root");

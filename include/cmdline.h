@@ -250,11 +250,11 @@ struct cmdline_flag {
 #define CMDLINE_NODE_4(a, b, c, d) a##_##b##_##c##_##d
 #define CMDLINE_NODE(...) PP_CALL(CMDLINE_NODE, __VA_ARGS__)
 
-#define CMDLINE_DECLARE(n) extern struct cmdline_entry PP_CONCAT(__cmdline_, n)
+#define CMDLINE_EXTERN(n) extern struct cmdline_entry PP_CONCAT(__cmdline_, n)
 #define CMDLINE(n) (&PP_CONCAT(__cmdline_, n))
 #define CMDLINE_VALUE(n) cmdline_entry_value_u64(CMDLINE(n))
 
-#define CMDLINE_CHILD_DECLARE(...) CMDLINE_DECLARE(CMDLINE_NODE(__VA_ARGS__))
+#define CMDLINE_CHILD_EXTERN(...) CMDLINE_EXTERN(CMDLINE_NODE(__VA_ARGS__))
 #define CMDLINE_CHILD(...) CMDLINE(CMDLINE_NODE(__VA_ARGS__))
 #define CMDLINE_CHILD_VALUE(...)                                               \
     cmdline_entry_value_u64(CMDLINE_CHILD(__VA_ARGS__))

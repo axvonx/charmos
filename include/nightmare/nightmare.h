@@ -125,7 +125,7 @@ struct nightmare {
     size_t min_mem_mib;
 } cc_aligned(8);
 
-LINKER_SECTION_DECLARE(struct nightmare, nightmares);
+LINKER_SECTION_EXTERN(struct nightmare, nightmares);
 
 #define NIGHTMARE_DEFINE(id, ...)                                              \
     cc_wno_override_init_start extern struct nightmare __nightmare_##id;       \
@@ -139,7 +139,7 @@ LINKER_SECTION_DECLARE(struct nightmare, nightmares);
     cc_wno_override_init_end
 
 #define NIGHTMARE(id) (&__nightmare_##id)
-#define NIGHTMARE_DECLARE(id) extern struct nightmare __nightmare_##id
+#define NIGHTMARE_EXTERN(id) extern struct nightmare __nightmare_##id
 #define NIGHTMARE_PERTURB(...) ((const char *const[]) {__VA_ARGS__, NULL})
 
 #define NIGHTMARE_INTENSITY_SENTINEL ((fx32_32_t) - 1LL)

@@ -13,4 +13,4 @@
 #include <stdint.h>
 #include <time/spin_sleep.h>
 
-TEST_GROUP_DECLARE(bio);
+TEST_GROUP_EXTERN(bio);

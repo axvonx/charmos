@@ -88,7 +88,7 @@ struct ndjson_record {
     const struct ndjson_field *fields;
 };
 
-LINKER_SECTION_DECLARE(struct ndjson_record, ndjson_records);
+LINKER_SECTION_EXTERN(struct ndjson_record, ndjson_records);
 
 #define NDJSON_CTYPE_U64 uint64_t
 #define NDJSON_CTYPE_I64 int64_t
