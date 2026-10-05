@@ -129,7 +129,7 @@ void hpet_setup_timer(uint8_t timer_index, irq_t irq_line, bool periodic,
 void hpet_init(void) {
     struct uacpi_table hpet_table;
     if (uacpi_table_find_by_signature("HPET", &hpet_table) != UACPI_STATUS_OK) {
-        log_err_global(LOG_HANDLE(hpet), "Did not find HPET ACPI entry");
+        log_global(LOG_HANDLE(hpet), LOG_ERROR, "Did not find HPET ACPI entry");
     }
 
     struct acpi_hpet *hpet = hpet_table.ptr;

@@ -366,8 +366,8 @@ static void setup_new_rt_scheduler(struct rt_scheduler *rts,
     kassert(rts->thread_count == 0);
     kassert(!rts->failed_internal);
     rts->mapping_source = rtm;
-    log_trace(rts->log_site, &rts->log_handle, "rts %p setting up by %zu", rts,
-              smp_id(TOPC_IRQL));
+    log(rts->log_site, &rts->log_handle, LOG_TRACE, "rts %p setting up by %zu",
+        rts, smp_id(TOPC_IRQL));
 }
 
 /* On NUMA systems, we'll iterate to the next closest node

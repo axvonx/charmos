@@ -254,17 +254,6 @@ static inline size_t log_site_message_count(struct log_site *site) {
 #define log_msg_once(lvl, fmt, ...)                                            \
     log_global_once(LOG_HANDLE(global), lvl, fmt, ##__VA_ARGS__)
 
-#define log_err(site, handle, fmt, ...)                                        \
-    log(site, handle, LOG_ERROR, fmt, ##__VA_ARGS__)
-#define log_warn(site, handle, fmt, ...)                                       \
-    log(site, handle, LOG_WARN, fmt, ##__VA_ARGS__)
-#define log_info(site, handle, fmt, ...)                                       \
-    log(site, handle, LOG_INFO, fmt, ##__VA_ARGS__)
-#define log_debug(site, handle, fmt, ...)                                      \
-    log(site, handle, LOG_DEBUG, fmt, ##__VA_ARGS__)
-#define log_trace(site, handle, fmt, ...)                                      \
-    log(site, handle, LOG_TRACE, fmt, ##__VA_ARGS__)
-
 #define log_err_global(handle, fmt, ...)                                       \
     log_global(handle, LOG_ERROR, fmt, ##__VA_ARGS__)
 #define log_warn_global(handle, fmt, ...)                                      \
