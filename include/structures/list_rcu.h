@@ -20,8 +20,7 @@ static inline void INIT_LIST_HEAD_RCU(struct list_head *list) {
 
 static inline void __list_add_rcu(struct list_head *new, struct list_head *prev,
                                   struct list_head *next) {
-    if (cc_unlikely(!__list_add_valid(new, prev, next)))
-        return;
+    list_add_check(new, prev, next);
 
     new->next = next;
     new->prev = prev;
@@ -39,16 +38,14 @@ static inline void list_add_tail_rcu(struct list_head *new,
 }
 
 static inline void list_del_rcu(struct list_head *entry) {
-    if (cc_unlikely(!__list_del_entry_valid(entry)))
-        return;
+    list_del_check(entry);
 
     __list_del(entry->prev, entry->next);
     entry->prev = NULL;
 }
 
 static inline void list_bidir_del_rcu(struct list_head *entry) {
-    if (cc_unlikely(!__list_del_entry_valid(entry)))
-        return;
+    list_del_check(entry);
 
     __list_del(entry->prev, entry->next);
 }
@@ -65,8 +62,7 @@ static inline void list_replace_rcu(struct list_head *old,
 static inline void __list_splice_rcu(const struct list_head *list,
                                      struct list_head *prev,
                                      struct list_head *next) {
-    if (cc_unlikely(!__list_splice_valid(list, prev, next)))
-        return;
+    list_splice_check(list, prev, next);
 
     struct list_head *first = list->next;
     struct list_head *last = list->prev;

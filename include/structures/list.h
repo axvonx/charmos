@@ -10,30 +10,27 @@ struct list_head {
 };
 
 #ifdef DEBUG_LIST
-bool __list_add_valid(const struct list_head *new, const struct list_head *prev,
-                      const struct list_head *next);
-bool __list_del_entry_valid(const struct list_head *entry);
-bool __list_splice_valid(const struct list_head *list,
-                         const struct list_head *prev,
-                         const struct list_head *next);
+void list_add_check(const struct list_head *new, const struct list_head *prev,
+                    const struct list_head *next);
+void list_del_check(const struct list_head *entry);
+void list_splice_check(const struct list_head *list,
+                       const struct list_head *prev,
+                       const struct list_head *next);
 #else
-static inline bool __list_add_valid(const struct list_head *new,
-                                    const struct list_head *prev,
-                                    const struct list_head *next) {
+static inline void list_add_check(const struct list_head *new,
+                                  const struct list_head *prev,
+                                  const struct list_head *next) {
     cc_unused(new, prev, next);
-    return true;
 }
 
-static inline bool __list_del_entry_valid(const struct list_head *entry) {
+static inline void list_del_check(const struct list_head *entry) {
     cc_unused(entry);
-    return true;
 }
 
-static inline bool __list_splice_valid(const struct list_head *list,
-                                       const struct list_head *prev,
-                                       const struct list_head *next) {
+static inline void list_splice_check(const struct list_head *list,
+                                     const struct list_head *prev,
+                                     const struct list_head *next) {
     cc_unused(list, prev, next);
-    return true;
 }
 #endif /* DEBUG_LIST */
 
@@ -48,8 +45,7 @@ static inline void INIT_LIST_HEAD(struct list_head *list) {
 
 static inline void __list_add(struct list_head *new, struct list_head *prev,
                               struct list_head *next) {
-    if (cc_unlikely(!__list_add_valid(new, prev, next)))
-        return;
+    list_add_check(new, prev, next);
 
     next->prev = new;
     new->next = next;
@@ -72,8 +68,7 @@ static inline void __list_del(struct list_head *prev, struct list_head *next) {
 }
 
 static inline void list_del(struct list_head *entry) {
-    if (cc_unlikely(!__list_del_entry_valid(entry)))
-        return;
+    list_del_check(entry);
 
     __list_del(entry->prev, entry->next);
     entry->next = NULL;
@@ -140,8 +135,7 @@ static inline struct list_head *list_pop_tail_init(struct list_head *head) {
 static inline void __list_splice(const struct list_head *list,
                                  struct list_head *prev,
                                  struct list_head *next) {
-    if (cc_unlikely(!__list_splice_valid(list, prev, next)))
-        return;
+    list_splice_check(list, prev, next);
 
     struct list_head *first = list->next;
     struct list_head *last = list->prev;
@@ -156,8 +150,7 @@ static inline void __list_splice(const struct list_head *list,
 static inline void list_splice_init(struct list_head *src,
                                     struct list_head *dst) {
     if (!list_empty(src)) {
-        if (cc_unlikely(!__list_splice_valid(src, dst->prev, dst)))
-            return;
+        list_splice_check(src, dst->prev, dst);
 
         struct list_head *first = src->next;
         struct list_head *last = src->prev;

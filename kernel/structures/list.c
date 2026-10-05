@@ -24,107 +24,69 @@ static bool list_node_looks_linked(const struct list_head *n) {
     return n->next->prev == n && n->prev->next == n;
 }
 
-bool __list_add_valid(const struct list_head *new, const struct list_head *prev,
-                      const struct list_head *next) {
-    if (cc_unlikely(new == NULL || prev == NULL || next == NULL)) {
-        panic("list_add: NULL operand (new %p, prev %p, next %p)", (void *) new,
-              (void *) prev, (void *) next);
-        return false;
-    }
+void list_add_check(const struct list_head *new, const struct list_head *prev,
+                    const struct list_head *next) {
+    if (cc_unlikely(new == NULL || prev == NULL || next == NULL))
+        panic("list_add: NULL operand (new %p, prev %p, next %p)", new, prev,
+              next);
 
-    if (cc_unlikely(prev->next != next)) {
+    if (cc_unlikely(prev->next != next))
         panic("list_add corruption: prev %p ->next should be next %p, was %p",
-              (void *) prev, (void *) next, (void *) prev->next);
-        return false;
-    }
+              prev, next, prev->next);
 
-    if (cc_unlikely(next->prev != prev)) {
+    if (cc_unlikely(next->prev != prev))
         panic("list_add corruption: next %p ->prev should be prev %p, was %p",
-              (void *) next, (void *) prev, (void *) next->prev);
-        return false;
-    }
+              next, prev, next->prev);
 
-    if (cc_unlikely(new == prev || new == next)) {
-        panic("list_add: double add of %p (prev %p, next %p)", (void *) new,
-              (void *) prev, (void *) next);
-        return false;
-    }
+    if (cc_unlikely(new == prev || new == next))
+        panic("list_add: double add of %p (prev %p, next %p)", new, prev, next);
 
-    if (cc_unlikely(list_node_looks_linked(new))) {
+    if (cc_unlikely(list_node_looks_linked(new)))
         panic("list_add: %p is already linked (next %p, prev %p) -- adding it "
               "to %p would unlink it; swapped arguments?",
-              (void *) new, (void *) new->next, (void *) new->prev,
-              (void *) next);
-        return false;
-    }
-
-    return true;
+              new, new->next, new->prev, next);
 }
 
-bool __list_del_entry_valid(const struct list_head *entry) {
-    if (cc_unlikely(entry == NULL)) {
+void list_del_check(const struct list_head *entry) {
+    if (cc_unlikely(entry == NULL))
         panic("list_del: NULL entry");
-        return false;
-    }
 
-    if (cc_unlikely(entry->next == NULL || entry->prev == NULL)) {
-        panic("list_del: %p already removed (next %p, prev %p)", (void *) entry,
-              (void *) entry->next, (void *) entry->prev);
-        return false;
-    }
+    if (cc_unlikely(entry->next == NULL || entry->prev == NULL))
+        panic("list_del: %p already removed (next %p, prev %p)", entry,
+              entry->next, entry->prev);
 
-    if (cc_unlikely(entry->prev->next != entry)) {
+    if (cc_unlikely(entry->prev->next != entry))
         panic("list_del corruption: %p ->prev %p ->next should be %p, was %p",
-              (void *) entry, (void *) entry->prev, (void *) entry,
-              (void *) entry->prev->next);
-        return false;
-    }
+              entry, entry->prev, entry, entry->prev->next);
 
-    if (cc_unlikely(entry->next->prev != entry)) {
+    if (cc_unlikely(entry->next->prev != entry))
         panic("list_del corruption: %p ->next %p ->prev should be %p, was %p",
-              (void *) entry, (void *) entry->next, (void *) entry,
-              (void *) entry->next->prev);
-        return false;
-    }
-
-    return true;
+              entry, entry->next, entry, entry->next->prev);
 }
 
-bool __list_splice_valid(const struct list_head *list,
-                         const struct list_head *prev,
-                         const struct list_head *next) {
-    if (cc_unlikely(list == NULL || prev == NULL || next == NULL)) {
-        panic("list_splice: NULL operand (list %p, prev %p, next %p)",
-              (void *) list, (void *) prev, (void *) next);
-        return false;
-    }
+void list_splice_check(const struct list_head *list,
+                       const struct list_head *prev,
+                       const struct list_head *next) {
+    if (cc_unlikely(list == NULL || prev == NULL || next == NULL))
+        panic("list_splice: NULL operand (list %p, prev %p, next %p)", list,
+              prev, next);
 
-    if (cc_unlikely(prev->next != next || next->prev != prev)) {
+    if (cc_unlikely(prev->next != next || next->prev != prev))
         panic("list_splice corruption at destination: prev %p ->next %p, "
               "next %p ->prev %p",
-              (void *) prev, (void *) prev->next, (void *) next,
-              (void *) next->prev);
-        return false;
-    }
+              prev, prev->next, next, next->prev);
 
     const struct list_head *first = list->next;
     const struct list_head *last = list->prev;
 
-    if (cc_unlikely(first == NULL || last == NULL)) {
+    if (cc_unlikely(first == NULL || last == NULL))
         panic("list_splice: source %p is not initialised (next %p, prev %p)",
-              (void *) list, (void *) first, (void *) last);
-        return false;
-    }
+              list, first, last);
 
-    if (cc_unlikely(first->prev != list || last->next != list)) {
+    if (cc_unlikely(first->prev != list || last->next != list))
         panic("list_splice corruption at source %p: first %p ->prev %p, "
               "last %p ->next %p",
-              (void *) list, (void *) first, (void *) first->prev,
-              (void *) last, (void *) last->next);
-        return false;
-    }
-
-    return true;
+              list, first, first->prev, last, last->next);
 }
 #endif /* DEBUG_LIST */
 

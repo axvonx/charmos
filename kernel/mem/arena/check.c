@@ -31,6 +31,8 @@ bool arena_check(struct arena *a) {
         arena_check_assert_return_false(
             !bitmap_test_and_set(id_bitmap, inmem_descs[i].id));
 
+    arena_check_assert_return_false(a->n_segs == arena_seg_count(a));
+
 #endif
 
     return true;

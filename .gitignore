@@ -31,3 +31,5 @@ __pycache__/
 # .envrc for direnv convenience
 .envrc
 .env
+
+scratch*/

@@ -17,7 +17,7 @@ typedef uint8_t thread_act_reason_t; /* Polymorphic type:
                                       * This is that. */
 
 /* Both ASAN and the lock validator are very eager to consume
- * stack memory, so we'll give threads four times as many pages
+ * stack memory, so we'll give threads 16 times as many pages
  * if either of those happen to be on, and this should
  * give enough headroom for when both are on too */
 #if defined(DEBUG_ASAN) || defined(DEBUG_LOCK_CHK)

@@ -174,7 +174,7 @@ struct arena *arena_create_full(struct arena_seg_desc *seg_descs,
         }
     }
 
-    size_t cursor_offset = 0;
+    size_t cc_maybe_unused cursor_offset = 0;
     for (uint16_t i = 0; i < n_segs; i++) {
         uint16_t size;
 
@@ -187,6 +187,7 @@ struct arena *arena_create_full(struct arena_seg_desc *seg_descs,
         }
 
         cursor_offset += size;
+
 #ifdef DEBUG_ARENA
         inmem_descs[i].seg =
             (struct arena_seg *) &arena->payload[cursor_offset];
@@ -199,10 +200,27 @@ struct arena *arena_create_full(struct arena_seg_desc *seg_descs,
     return arena;
 }
 
-/* We very much expect that seg_id is valid. If it isn't, UB is possible
- * as this lookup could read out of bounds. */
+size_t arena_seg_count(struct arena *a) {
+    struct arena_seg_inmem_desc *descs = arena_get_inmem_descs(a);
+
+#ifdef DEBUG_ARENA
+    kassert(a->n_segs, "attempted to count segments of arena with no segments");
+#endif
+
+    size_t count = 0;
+    uint16_t end = descs[0].offset_bump / sizeof(struct arena_seg_inmem_desc);
+    for (uint16_t i = 0; i < end; i++) {
+        struct arena_seg_inmem_desc *desc = &descs[i];
+        if (desc->offset_bump)
+            count++;
+    }
+
+    return count;
+}
+
 struct arena_seg arena_seg_lookup(struct arena *a, uint16_t seg_id) {
     struct arena_seg_inmem_desc *inmem_descs = arena_get_inmem_descs(a);
+
 #ifdef DEBUG_ARENA
     bool found = false;
     for (uint16_t i = 0; i < a->n_segs; i++) {
@@ -213,14 +231,168 @@ struct arena_seg arena_seg_lookup(struct arena *a, uint16_t seg_id) {
     kassert(found, "segment %u not found", seg_id);
 #endif
 
-    size_t cursor = 0;
+    size_t cc_maybe_unused cursor = 0;
     for (int i = 0; i < ARENA_MAX_SEG; i++) {
         cursor += inmem_descs[i].offset_bump;
         if (inmem_descs[i].id == seg_id) {
             uint8_t *storage = &a->payload[cursor];
-            return (struct arena_seg){.storage = storage};
+            return (struct arena_seg){.storage = storage,
+                                      .id = inmem_descs[i].id};
         }
     }
 
     panic("segment %u not found, likely UB during traversal", seg_id);
+}
+
+struct arena_seg arena_seg_for_idx(struct arena *a, uint16_t idx) {
+#ifdef DEBUG_ARENA
+    kassert(idx < a->n_segs, "index %u out of bounds of %u", idx, a->n_segs);
+#endif
+
+    struct arena_seg_inmem_desc *inmem_descs = arena_get_inmem_descs(a);
+
+    size_t cursor = 0;
+    for (int i = 0; i < ARENA_MAX_SEG; i++) {
+        cursor += inmem_descs[i].offset_bump;
+        if (i == idx) {
+            uint8_t *storage = &a->payload[cursor];
+            return (struct arena_seg){.storage = storage,
+                                      .id = inmem_descs[i].id};
+        }
+    }
+
+    unreachable();
+}
+
+static struct arena_bucket *get_bucket(struct arena_dumpster *ad,
+                                       arena_identity_t id) {
+    uint32_t hash = hash_jenkins_qword(id, /* TODO: seed = */ 12345);
+    size_t idx = hash % ad->n_buckets;
+
+    struct arena_bucket *bkt = &ad->buckets[idx];
+    return kassert(bkt);
+}
+
+static struct arena_bin *bucket_id_lookup(struct arena_bucket *bkt,
+                                          arena_identity_t id) {
+    struct arena_bin *entry, *leader = NULL;
+    hlist_for_each_entry_rcu(entry, &bkt->bins, hlist_node) {
+        if (entry->identity == id) {
+            leader = entry;
+            break;
+        }
+    }
+
+    return leader;
+}
+
+/*
+ * Memory arena buckets have physical and acting leaders. For every bucket,
+ * we have an hlist that looks something like
+ *
+ * bucket
+ * |
+ * +-> hlist_head -> node -> node -> node -> NULL
+ *
+ * The nodes on this list are the "physical" leaders. However, the "physical"
+ * leaders are merely an optimization, because the logical leaders are the
+ * "acting" leaders.
+ *
+ * The reason we have this split at all is because any traversal of a bucket
+ * leader list necessarily races with simultaneous deletion of arena bins,
+ * i.e. marking the arena bin as dying and dropping its reference count.
+ *
+ * Such bins are NOT to be used any more, unless someone owned a reference
+ * count prior to the start of the destruction.
+ *
+ * Thus, any traversal treats the leader as being the "first bin in the list
+ * of the physical leader that we could successfully acquire a reference to".
+ *
+ * Thus, if a physical leader is alive, it is also the acting leader.
+ * However, if a physical leader is dying/has died, but is still momentarily
+ * visible on the list in the read-side critical section, as the RCU
+ * free callback has not run, we know that the next-in-line is the acting
+ * leader, which is where the arenas would get freed to in a dumpster.
+ */
+struct arena_bin *arena_dumpster_find_leader(struct arena_dumpster *ad,
+                                             arena_identity_t id) {
+    struct arena_bucket *bkt = get_bucket(ad, id);
+    struct arena_bin *entry, **found = NULL;
+
+    rcu_read_lock();
+
+    struct arena_bin *first_leader = bucket_id_lookup(bkt, id);
+
+    if (!first_leader)
+        goto out;
+
+    found = &first_leader;
+
+    /* list_del_rcu prevents the middle links from getting
+     * their own references wiped, so traversal under the
+     * leader's list is fine */
+    if (!arena_bin_get_rcu(first_leader)) {
+        found = NULL;
+        list_for_each_entry_rcu(entry, &first_leader->bin_list, bin_list) {
+            if (arena_bin_get_rcu(entry)) {
+                found = &entry;
+                goto out;
+            }
+        }
+    }
+
+out:
+    rcu_read_unlock();
+
+    return found ? *found : NULL;
+}
+
+void arena_dumpster_add_bin(struct arena_dumpster *ad, struct arena_bin *ab) {
+    struct arena_bucket *bkt = get_bucket(ad, ab->identity);
+    struct mutex *mtx = &bkt->mutex;
+
+    mutex_lock(mtx);
+
+    struct arena_bin *leader = arena_dumpster_find_leader(ad, ab->identity);
+
+    if (!leader) {
+        INIT_LIST_HEAD(&ab->bin_list);
+        hlist_add_head_rcu(&ab->hlist_node, &bkt->bins);
+    } else {
+        list_add_tail_rcu(&ab->bin_list, &leader->bin_list);
+        ab->not_head_magic = ARENA_BIN_NOT_HEAD_MAGIC;
+    }
+
+    ab->dumpster = ad;
+    mutex_unlock(mtx);
+
+    if (leader)
+        arena_bin_put(leader);
+}
+
+void arena_dumpster_delete_bin(struct arena_dumpster *ad,
+                               struct arena_bin *ab) {
+    struct arena_bucket *bkt = get_bucket(ad, ab->identity);
+    struct mutex *mtx = &bkt->mutex;
+
+    mutex_guard(mtx);
+
+    struct arena_bin *leader = bucket_id_lookup(bkt, ab->identity);
+    kassert(leader, "likely double delete");
+
+    list_del_rcu(&ab->bin_list);
+    if (leader == ab) {
+        struct arena_bin *iter, *next = NULL;
+        list_for_each_entry_rcu(iter, &leader->bin_list, bin_list) {
+            /* This is the next physical leader */
+            if (arena_bin_get_rcu(iter)) {
+                next = iter;
+                break;
+            }
+        }
+
+        /* Make the new one visible, then unpublish the old one */
+        hlist_add_head_rcu(&next->hlist_node, &bkt->bins);
+        hlist_del_rcu(&ab->hlist_node);
+    }
 }

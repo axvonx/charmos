@@ -59,6 +59,9 @@ enum arena_flags : uint64_t {
 
     /* Protected by RCU and a defer callback */
     ARENA_FLAG_RCU = 1 << 5,
+
+    /* Have a budget */
+    ARENA_FLAG_BUDGETED = 1 << 6,
 };
 
 /* There are 31 default arena policies (1-31, 0 is omitted

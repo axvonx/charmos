@@ -1,5 +1,6 @@
 /* @title: Memory Arena Provider API */
 #pragma once
+#include "types/types.h"
 #include <math/bit.h>
 #include <mem/arena.h>
 #include <structures/bitmap.h>
@@ -7,6 +8,7 @@
 #include <structures/mpmc_list.h>
 #include <structures/rbt.h>
 #include <sync/mutex.h>
+#include <sync/rcu.h>
 #include <sync/rwlock.h>
 
 /* TODO: Arena unregistration */
@@ -85,7 +87,20 @@ struct arena_ops {
 
     /* If an arena cannot implement a free operation without other
      * information, it should be using an extended function */
-    enum err (*free)(struct arena *a, void *p, enum alloc_behavior bh);
+    enum err (*free)(struct arena *a, void *p, struct alloc_params params);
+
+    enum err (*free_sized)(struct arena *a, void *p, size_t size,
+                           struct alloc_params params);
+
+    /* Aligned variants */
+    void *(*alloc_aligned)(struct arena *a, size_t size, size_t align,
+                           struct alloc_params params);
+
+    enum err (*free_aligned)(struct arena *a, void *p, size_t align,
+                             struct alloc_params params);
+
+    enum err (*free_sized_aligned)(struct arena *a, void *p, size_t size,
+                                   size_t align, struct alloc_params params);
 
     /* Responsible for clearing out all memory allocations
      * inside of the arena. It does not necessarily reset its
@@ -139,6 +154,8 @@ struct arena_ops {
 
     enum err (*on_gc_entry)(struct arena *a);
 
+    bool (*is_empty)(struct arena *a);
+
     /* These merely handle the internal reference counting, notably
      * NOT destroying or recycling arenas */
     bool (*get)(struct arena *a);
@@ -164,79 +181,84 @@ static_assert((sizeof(struct arena_ops) -
  * landfill globally, as its job is primarily profiling and tracking
  * dumpsters so that on, say, an OOM, dumpsters and bins can be reached.
  *
- *             ┌──────────────────────────────────────┐
- *             │           Arena Descriptor           │
- *             └──────────────────────────────────────┘
- *                                │
- *                                ▼
- *             ┌──────────────────────────────────────┐
- *             │       Arena Landfill (only 1)        │
- *             └──────────────────────────────────────┘
- *                       │                  │
- *                       ▼                  ▼
- *             ┌──────────────────┐┌──────────────────┐
- *             │ Arena Dumpster 1 ││ Arena Dumpster 2 │
- *             └──────────────────┘└──────────────────┘
- *                       │
- *                   ┌───┴───────────────────────┐
- *                   ▼                           ▼
- *             ┌──────────┐                ┌──────────┐
- *             │ Bucket 1 │   ●  ●  ●  ●   │ Bucket N │
- *             └──────────┘                └──────────┘
- *                   │
- *                   │
- *             ┌─────┘
- *             │  ┌───────────────┐   ┌───────────────┐
- *             └─▶│ Bin ID A Head │──▶│ Bin ID B Head │
- *                └───────────────┘   └───────────────┘
- *                        │
- *                        │
- *             ┌──────────┘
- *             │  ┌──────────────┐     ┌──────────────┐
- *             └─▶│  Bin ID A 1  │────▶│  Bin ID A 2  │
- *                └──────────────┘     └──────────────┘
- *                        │
- *                        │
- *             ┌──────────┘
- *             │  ┌─────────┐  ┌─────────┐  ┌─────────┐
- *             └─▶│ Arena 1 │─▶│ Arena 2 │─▶│ Arena 3 │
- *                └─────────┘  └─────────┘  └─────────┘
+ * ┌──────────────────────────────────────┐
+ * │           Arena Descriptor           │
+ * └──────────────────────────────────────┘
+ *                    │
+ *                    ▼
+ * ┌──────────────────────────────────────┐
+ * │       Arena Landfill (only 1)        │
+ * └──────────────────────────────────────┘
+ *           │                  │
+ *           ▼                  ▼
+ * ┌──────────────────┐┌──────────────────┐
+ * │ Arena Dumpster 1 ││ Arena Dumpster 2 │
+ * └──────────────────┘└──────────────────┘
+ *           │
+ *       ┌───┴───────────────────────┐
+ *       ▼                           ▼
+ * ┌──────────┐                ┌──────────┐
+ * │ Bucket 1 │   ●  ●  ●  ●   │ Bucket N │
+ * └──────────┘                └──────────┘
+ *       │
+ *       │
+ * ┌─────┘
+ * │  ┌───────────────┐   ┌───────────────┐
+ * └─▶│ Bin ID A Lead │──▶│ Bin ID B Lead │
+ *    └───────────────┘   └───────────────┘
+ *            │
+ *            │
+ * ┌──────────┘
+ * │  ┌──────────────┐     ┌──────────────┐
+ * └─▶│  Bin ID A 1  │────▶│  Bin ID A 2  │
+ *    └──────────────┘     └──────────────┘
+ *            │
+ *            │
+ * ┌──────────┘
+ * │  ┌─────────┐  ┌─────────┐  ┌─────────┐
+ * └─▶│ Arena 1 │─▶│ Arena 2 │─▶│ Arena 3 │
+ *    └─────────┘  └─────────┘  └─────────┘
+ *
+ * The way that the dumpsters store bins is they select a single "leader", and
+ * subsequent followers. Bins can choose to not participate in the dumpster,
+ * and such bins would be independently reference counted.
  */
 struct arena_bin {
-    /* Only one arena bin identity exists at the dumpster scope.
-     * Subsequent bins attach their identities to the head */
-    struct hlist_node bucket_node;
-
     union {
-        struct hlist_head identical_bins;
-
-        /* If this bin is not the head, this will contain some
-         * ARENA_BIN_NOT_HEAD_MAGIC number.
-         *
-         * The reason we can't just say "if identical_bins == NULL"
-         * is because a head that has no identical bins will
-         * report that, whereas it could never contain ARENA_BIN_HEAD_MAGIC */
-        uintptr_t bin_head_magic;
+        struct hlist_node hlist_node;
+        uintptr_t not_head_magic;
     };
 
-    size_t arena_size;
+    struct list_head bin_list;
+
+    atomic_bool dying;
+
+    uint32_t arena_size;
+
     arena_identity_t identity;
     refcount_t refcount;
 
     struct mpmc_slist arenas;
     struct arena_dumpster *dumpster;
+
+    struct rcu_cb rcu;
 };
 
+/* Arena dumpster buckets only hold "leader" bins, which link
+ * identical identity bins under themselves. Upon arena bin deletion,
+ * the next-in-line bin is promoted to be the leader, so
+ * any dying bin that is read by an RCU reader under a bucket merely
+ * requires ->next traversal to find the successor leader */
 struct arena_bucket {
+    struct mutex mutex;
     struct hlist_head bins;
-    struct spinlock lock;
 };
 
 struct arena_dumpster {
     struct arena_landfill *landfill;
 
     refcount_t refcount;
-    size_t n_buckets;
+    size_t n_buckets; /* Stays constant after init */
     struct arena_bucket *buckets;
 };
 
@@ -286,7 +308,9 @@ struct arena_seg_props {
     size_t capacity;
 };
 
+/* Given back to callers */
 struct arena_seg {
+    uint16_t id;
     uint8_t *storage;
 };
 
@@ -401,6 +425,11 @@ struct arena {
      * It is permitted to have one very large segment, however,
      * that must be explicitly flagged as trailing.
      *
+     * We can still track the amount of segments
+     * by going from payload[0] up until the first segment (the delta being given by
+     * the cursor bump of the first in memory descriptor), and counting the amount
+     * of non-zero inmem_descs (zero being invalid due to size zero).
+     *
      * ┌────────────────────────────────────────────────────────────┐
      * │                  struct arena's payload[]                  │
      * └────────────────────────────────────────────────────────────┘
@@ -427,12 +456,34 @@ struct arena {
 };
 
 /* A wrapper around e^(x - n) where n is scale, and x is used */
-enum err arena_budget_prio_scale(sz_b_t used, int scale,
-                                 ALLOC_PRIORITY_BITMAP_DECLARE(prio_map_out));
+err_checked
+arena_budget_prio_scale(sz_b_t used, int scale,
+                        ALLOC_PRIORITY_BITMAP_DECLARE(prio_map_out));
 
 /* Arena strategies call into this with their fully formed descriptors */
 struct arena *arena_create_full(struct arena_seg_desc *seg_descs,
                                 size_t n_segs);
 struct arena_seg arena_seg_lookup(struct arena *a, uint16_t seg_id);
-enum err arena_desc_register(struct arena_desc *d);
+struct arena_seg arena_seg_for_idx(struct arena *a, uint16_t idx);
+err_checked arena_desc_register(struct arena_desc *d);
 struct arena_desc *arena_desc_lookup(enum arena_strategy strat);
+
+/* NOTE: with no segments, this is UB */
+size_t arena_seg_count(struct arena *a);
+
+void arena_dumpster_add_bin(struct arena_dumpster *dumpster,
+                            struct arena_bin *bin);
+
+#define arena_for_each_seg(seg, arena)                                         \
+    for (uint16_t __i = 0; (__i < arena_seg_count(arena) &&                    \
+                            (seg = arena_seg_for_idx(arena, __i), true));      \
+         __i++)
+
+/* TODO: Figure out dying semantics */
+static inline bool arena_bin_get_rcu(struct arena_bin *bin) {
+    return refcount_inc_not_zero(&bin->refcount);
+}
+
+static inline void arena_bin_put(struct arena_bin *bin) {
+    cc_unused(bin);
+}

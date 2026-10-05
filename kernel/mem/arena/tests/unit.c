@@ -9,9 +9,9 @@ TEST_DECLARE_UNIT(arena, create_lookup_basic) {
         {.id = 3, .size = 8},   {.id = 4, .size = 12},
         {.id = 5, .size = 256}, {.id = 6, .large = true, .size = 4096},
         {.id = 7, .size = 19},  {.id = 8, .size = 48},
-    };
+        {.id = 9, .size = 53}};
 
-    struct arena *a = arena_create_full(descs, 8);
+    struct arena *a = arena_create_full(descs, 9);
 
     struct arena_seg seg = arena_seg_lookup(a, 3);
     seg.storage[3] = 67;
@@ -31,6 +31,21 @@ TEST_DECLARE_UNIT(arena, create_lookup_basic) {
     }
 
 #endif
+
+    TEST_ASSERT_EQ(arena_seg_count(a), 9);
+
+    arena_for_each_seg(seg, a) {
+        uint16_t id = seg.id;
+        struct arena_seg_desc *found = NULL;
+        for (int i = 0; i < 9; i++) {
+            if (descs[i].id == id) {
+                found = &descs[i];
+                break;
+            }
+        }
+
+        TEST_ASSERT_NONNULL(found);
+    }
 
     cc_unused(a);
     return TEST_SUCCESS;
