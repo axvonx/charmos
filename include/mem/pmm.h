@@ -26,8 +26,9 @@ uint64_t pmm_get_usable_ram(void);
 #define pmm_alloc_pages_1(count)                                               \
     ({                                                                         \
         if ((enum alloc_flags) count == ALLOC_FLAGS_DEFAULT)                   \
-            log_warn_once("Input to alloc_pages matches ALLOC_FLAGS_DEFAULT, " \
-                          "possible mistake");                                 \
+            log_msg_once(LOG_WARN,                                             \
+                         "Input to alloc_pages matches ALLOC_FLAGS_DEFAULT, "  \
+                         "possible mistake");                                  \
                                                                                \
         pmm_alloc_pages_2(count, ALLOC_FLAGS_DEFAULT);                         \
     })

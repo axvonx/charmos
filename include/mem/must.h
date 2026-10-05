@@ -7,7 +7,7 @@
 #define must(expr)                                                             \
     ({                                                                         \
         if (global.current_bootstage >= BOOTSTAGE_COMPLETE)                    \
-            log_warn_once("must() invoked after boot");                        \
+            log_msg_once(LOG_WARN, "must() invoked after boot");               \
         typeof(expr) _p_ = (expr);                                             \
         if (cc_unlikely(!_p_))                                                 \
             panic("OOM: %s == NULL, bootstage: %s", #expr,                     \

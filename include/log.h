@@ -224,29 +224,35 @@ static inline size_t log_site_message_count(struct log_site *site) {
         .clear_after_dump = false,                                             \
     }
 
-#define log_msg(lvl, fmt, ...)                                                 \
-    log_emit_full(LOG_SITE(global), LOG_HANDLE(global), lvl, __func__,         \
-                  __FILE__, __LINE__, (uintptr_t) ci_return_address(0),        \
-                  PP_NARG(__VA_ARGS__), fmt, ##__VA_ARGS__)
-
-#define log_warn_once(fmt, ...)                                                \
-    do {                                                                       \
-        static bool done_internal_log = false;                                 \
-        if (!done_internal_log) {                                              \
-            log_msg(LOG_WARN, fmt, ##__VA_ARGS__);                             \
-            done_internal_log = true;                                          \
-        }                                                                      \
-    } while (0)
+#define log(site, handle, lvl, fmt, ...)                                       \
+    log_emit_full(site, handle, lvl, __func__, __FILE__, __LINE__,             \
+                  (uintptr_t) ci_return_address(0), PP_NARG(__VA_ARGS__), fmt, \
+                  ##__VA_ARGS__)
 
 #define log_global(handle, lvl, fmt, ...)                                      \
     log_emit_full(LOG_SITE(global), handle, lvl, __func__, __FILE__, __LINE__, \
                   (uintptr_t) ci_return_address(0), PP_NARG(__VA_ARGS__), fmt, \
                   ##__VA_ARGS__)
 
-#define log(site, handle, lvl, fmt, ...)                                       \
-    log_emit_full(site, handle, lvl, __func__, __FILE__, __LINE__,             \
-                  (uintptr_t) ci_return_address(0), PP_NARG(__VA_ARGS__), fmt, \
-                  ##__VA_ARGS__)
+#define log_msg(lvl, fmt, ...)                                                 \
+    log_emit_full(LOG_SITE(global), LOG_HANDLE(global), lvl, __func__,         \
+                  __FILE__, __LINE__, (uintptr_t) ci_return_address(0),        \
+                  PP_NARG(__VA_ARGS__), fmt, ##__VA_ARGS__)
+
+#define log_once(site, handle, lvl, fmt, ...)                                  \
+    do {                                                                       \
+        static bool done_internal_log = false;                                 \
+        if (!done_internal_log) {                                              \
+            log(site, handle, lvl, fmt, ##__VA_ARGS__);                        \
+            done_internal_log = true;                                          \
+        }                                                                      \
+    } while (0)
+
+#define log_global_once(handle, lvl, fmt, ...)                                 \
+    log_once(LOG_SITE(global), handle, lvl, fmt, ##__VA_ARGS__)
+
+#define log_msg_once(lvl, fmt, ...)                                            \
+    log_global_once(LOG_HANDLE(global), lvl, fmt, ##__VA_ARGS__)
 
 #define log_err(site, handle, fmt, ...)                                        \
     log(site, handle, LOG_ERROR, fmt, ##__VA_ARGS__)

@@ -1100,7 +1100,7 @@ void vmm_unmap(void *addr, uint64_t len, enum vmm_flags vflags) {
 void *vmm_map_bump_full(uintptr_t addr, uint64_t len, uint64_t flags,
                         enum vmm_flags vflags) {
     if (global.current_bootstage >= BOOTSTAGE_LATE)
-        log_warn_once("vmm_map_bump called after BOOTSTAGE_LATE...");
+        log_msg_once(LOG_WARN, "vmm_map_bump called after BOOTSTAGE_LATE...");
 
     if (len == 0)
         return NULL;
