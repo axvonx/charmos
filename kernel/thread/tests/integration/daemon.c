@@ -1,9 +1,9 @@
 #include "thread/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(daemon, .intensity_desc = {
-                               .curve = SCALE_PIECEWISE_LOG,
-                               .unit = "iters",
-                           });
+TEST_GROUP_DEFINE(daemon, .intensity_desc = {
+                              .curve = SCALE_PIECEWISE_LOG,
+                              .unit = "iters",
+                          });
 
 static atomic_bool daemon_work_run = false;
 static enum daemon_thread_command daemon_work(void *a, void *b) {
@@ -15,7 +15,7 @@ static enum daemon_thread_command daemon_work(void *a, void *b) {
 static struct daemon_work dwork =
     DAEMON_WORK_FROM(daemon_work, WORK_ARGS(NULL, NULL));
 
-TEST_DECLARE_INTEGRATION(daemon, timesharing_worker) {
+TEST_DEFINE_INTEGRATION(daemon, timesharing_worker) {
     atomic_store(&daemon_work_run, false);
 
     struct cpu_mask cmask;

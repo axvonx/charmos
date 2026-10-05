@@ -49,7 +49,7 @@ struct timer {
     void *data;
 };
 
-#define TIMER_DECLARE(n, fn, ...)                                              \
+#define TIMER_DEFINE(n, fn, ...)                                               \
     struct timer n = (struct timer) {                                          \
         .func = fn                                                             \
     }

@@ -1,6 +1,6 @@
 #include "mem/tests/test_internal.h"
 
-TEST_DECLARE_SMOKE(mem, demand_alloc) {
+TEST_DEFINE_SMOKE(mem, demand_alloc) {
     void *ptr = page_alloc_demand(8, ALLOC_ZERO);
     memset(ptr, 67, PAGE_SIZE);
     test_info("successfully demand allocated and memsetted memory");

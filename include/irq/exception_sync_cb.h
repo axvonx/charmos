@@ -25,7 +25,7 @@ struct exception_sync_cb {
     void *private;
 };
 
-LINKER_SECTION_DEFINE(struct exception_sync_cb, exception_sync_cbs);
+LINKER_SECTION_DECLARE(struct exception_sync_cb, exception_sync_cbs);
 #define EXCEPTION_SYNC_CB_REGISTER(n, v, func, priv)                           \
     LINKER_SECTION_OBJECT(struct exception_sync_cb, exception_sync_cbs)        \
     exception_sync_cb_##n = {                                                  \

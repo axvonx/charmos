@@ -1,9 +1,9 @@
 #include "structures/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(rbit, .intensity_desc = {
-                             .curve = SCALE_PIECEWISE_LOG,
-                             .unit = "ops",
-                         });
+TEST_GROUP_DEFINE(rbit, .intensity_desc = {
+                            .curve = SCALE_PIECEWISE_LOG,
+                            .unit = "ops",
+                        });
 
 #define RBIT_N 256
 #define RBIT_OPS 4000
@@ -19,7 +19,7 @@ static int overlaps(struct interval a, struct interval b) {
     return a.low <= b.high && b.low <= a.high;
 }
 
-TEST_DECLARE_UNIT(rbit, order_and_search, TEST_INTENSITY(32, 256, 4096)) {
+TEST_DEFINE_UNIT(rbit, order_and_search, TEST_INTENSITY(32, 256, 4096)) {
     prng_seed(RBIT_SEED);
     struct rbit tree;
     rbit_init(&tree);
@@ -66,7 +66,7 @@ TEST_DECLARE_UNIT(rbit, order_and_search, TEST_INTENSITY(32, 256, 4096)) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(rbit, overlap_search, TEST_INTENSITY(200, 4000, 20000)) {
+TEST_DEFINE_UNIT(rbit, overlap_search, TEST_INTENSITY(200, 4000, 20000)) {
     prng_seed(RBIT_SEED + 1);
     struct rbit tree;
     rbit_init(&tree);
@@ -129,7 +129,7 @@ static bool count_augment(struct rbit_node *n) {
     return n->max != old_max || c->subtree_count != old_cnt;
 }
 
-TEST_DECLARE_UNIT(rbit, augment_hook, TEST_INTENSITY(200, 4000, 20000)) {
+TEST_DEFINE_UNIT(rbit, augment_hook, TEST_INTENSITY(200, 4000, 20000)) {
     prng_seed(RBIT_SEED + 2);
     struct rbit tree;
     rbit_init(&tree);

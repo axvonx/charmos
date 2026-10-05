@@ -1,9 +1,9 @@
 #include "thread/tests/test_internal.h"
 #include <thread/io_wait.h>
 
-TEST_GROUP_DECLARE(wait_block);
+TEST_GROUP_DEFINE(wait_block);
 
-TEST_DECLARE_UNIT(wait_block, caller_storage_wait_any) {
+TEST_DEFINE_UNIT(wait_block, caller_storage_wait_any) {
     struct thread_wait_header headers[6];
     struct thread_wait_object objects[6];
     struct thread_wait_block blocks[6];
@@ -25,7 +25,7 @@ TEST_DECLARE_UNIT(wait_block, caller_storage_wait_any) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(wait_block, io_boost_and_cancel) {
+TEST_DEFINE_UNIT(wait_block, io_boost_and_cancel) {
     struct thread_wait_header request;
     struct io_wait_token token = IO_WAIT_TOKEN_EMPTY;
     struct thread *t = thread_get_current();
@@ -65,7 +65,7 @@ static void race_satisfy(void *arg) {
         atomic_inc(r->wins);
 }
 
-TEST_DECLARE_UNIT(wait_block, mt_wait_any) {
+TEST_DEFINE_UNIT(wait_block, mt_wait_any) {
     struct thread_wait_header headers[2];
     struct thread_wait_object objects[2];
     struct wait_racer racers[2];
@@ -125,7 +125,7 @@ static void apc_waiter(void *arg) {
     thread_wait_complete();
 }
 
-TEST_DECLARE_UNIT(wait_block, apc_preserves_registration) {
+TEST_DEFINE_UNIT(wait_block, apc_preserves_registration) {
     struct apc_wait_case c = {0};
     thread_wait_header_init(&c.header);
     struct apc apc;
@@ -148,7 +148,7 @@ TEST_DECLARE_UNIT(wait_block, apc_preserves_registration) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(wait_block, uninterruptible_latches_alert) {
+TEST_DEFINE_UNIT(wait_block, uninterruptible_latches_alert) {
     struct thread_wait_header header;
     struct thread *t = thread_get_current();
     thread_wait_header_init(&header);
@@ -167,7 +167,7 @@ TEST_DECLARE_UNIT(wait_block, uninterruptible_latches_alert) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(wait_block, stale_timeout_cannot_satisfy_next_wait) {
+TEST_DEFINE_UNIT(wait_block, stale_timeout_cannot_satisfy_next_wait) {
     struct thread_wait_header header;
     struct thread *t = thread_get_current();
     thread_wait_header_init(&header);
@@ -187,7 +187,7 @@ TEST_DECLARE_UNIT(wait_block, stale_timeout_cannot_satisfy_next_wait) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(wait_block, alert_wait_any_and_single_permit) {
+TEST_DEFINE_UNIT(wait_block, alert_wait_any_and_single_permit) {
     struct thread *t = thread_get_current();
     struct thread_wait_header headers[2];
     struct thread_wait_object objects[2];

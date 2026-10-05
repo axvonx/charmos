@@ -18,7 +18,7 @@
 
 uint32_t cc_mem_io *lapic;
 bool x2apic_enabled = false;
-LOG_HANDLE_DECLARE_PRINT_STATIC(lapic);
+LOG_HANDLE_DEFINE_PRINT_STATIC(lapic);
 
 void lapic_init(void) {
     uintptr_t lapic_phys = rdmsr(IA32_APIC_BASE_MSR) & IA32_APIC_BASE_MASK;

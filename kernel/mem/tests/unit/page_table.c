@@ -1,6 +1,6 @@
 #include "mem/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(page_table);
+TEST_GROUP_DEFINE(page_table);
 
 /* Tagged PTEs:
  *   [ payload high 53 ][ AVAIL2 ][ LOCK ][ payload low 6 ][ type 2 ][ P=0 ]
@@ -8,7 +8,7 @@ TEST_GROUP_DECLARE(page_table);
 
 #define PTE_PAYLOAD_MAX (BIT(PTE_TAGGED_PAYLOAD_BITS) - 1)
 
-TEST_DECLARE_UNIT(page_table, tagged_roundtrip) {
+TEST_DEFINE_UNIT(page_table, tagged_roundtrip) {
     static const uint64_t payloads[] = {
         0,     1,          0x3F, /* fills the low chunk */
         0x40,                    /* first bit of the high chunk */
@@ -30,7 +30,7 @@ TEST_DECLARE_UNIT(page_table, tagged_roundtrip) {
 
 /* Walking a single bit across the whole payload width catches shifts
  * that are short or long, which some values can step over */
-TEST_DECLARE_UNIT(page_table, tagged_payload_walk) {
+TEST_DEFINE_UNIT(page_table, tagged_payload_walk) {
     for (unsigned bit = 0; bit < PTE_TAGGED_PAYLOAD_BITS; bit++) {
         struct pte_tagged in = {.type = PTE_TAG_TYPE_DEMAND_PAGED,
                                 .payload = BIT(bit)};
@@ -44,7 +44,7 @@ TEST_DECLARE_UNIT(page_table, tagged_payload_walk) {
 
 /* Packed format must be safe to OR into live PTE, so it cannot be PRESENT,
  * LOCK or AVAIL2 no matter what */
-TEST_DECLARE_UNIT(page_table, tagged_pack_reserved_bits) {
+TEST_DEFINE_UNIT(page_table, tagged_pack_reserved_bits) {
     const uint64_t reserved = PAGE_PRESENT | PTE_LOCK_BIT | PTE_AVAIL2_BIT;
 
     for (unsigned bit = 0; bit < PTE_TAGGED_PAYLOAD_BITS; bit++) {
@@ -61,7 +61,7 @@ TEST_DECLARE_UNIT(page_table, tagged_pack_reserved_bits) {
 }
 
 /* Unpack ignores */
-TEST_DECLARE_UNIT(page_table, tagged_unpack_reserved_bits) {
+TEST_DEFINE_UNIT(page_table, tagged_unpack_reserved_bits) {
     struct pte_tagged in = {.type = PTE_TAG_TYPE_DEMAND_PAGED,
                             .payload = 0x1234567};
 
@@ -78,7 +78,7 @@ TEST_DECLARE_UNIT(page_table, tagged_unpack_reserved_bits) {
 }
 
 /* Type sits above PRESENT */
-TEST_DECLARE_UNIT(page_table, tagged_type_field) {
+TEST_DEFINE_UNIT(page_table, tagged_type_field) {
     struct pte_tagged in = {.type = PTE_TAG_TYPE_DEMAND_PAGED, .payload = 0};
     uint64_t packed = pte_tagged_pack(&in);
 
@@ -94,7 +94,7 @@ TEST_DECLARE_UNIT(page_table, tagged_type_field) {
 
 /* Two chunk widths and positions they are stored at have to add up to
  * payload width */
-TEST_DECLARE_UNIT(page_table, tagged_layout_consistency) {
+TEST_DEFINE_UNIT(page_table, tagged_layout_consistency) {
     TEST_ASSERT_EQ(PTE_TAGGED_PAYLOAD_BITS,
                    PTE_TAGGED_PAYLOAD_LOW_BITS +
                        (64 - PTE_TAGGED_PAYLOAD_HIGH_SHIFT));
@@ -115,7 +115,7 @@ TEST_DECLARE_UNIT(page_table, tagged_layout_consistency) {
 
 /* pte_is_shared only means something on present entries, SHARED
  * is used as payload space when tagged encoding is used */
-TEST_DECLARE_UNIT(page_table, is_shared_requires_present) {
+TEST_DEFINE_UNIT(page_table, is_shared_requires_present) {
     TEST_ASSERT(!pte_is_shared(0));
     TEST_ASSERT(!pte_is_shared(PTE_SHARED_BIT));
     TEST_ASSERT(!pte_is_shared(PAGE_PRESENT));

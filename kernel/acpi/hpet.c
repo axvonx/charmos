@@ -12,7 +12,7 @@
 #include "uacpi/acpi.h"
 #include "uacpi/status.h"
 
-LOG_HANDLE_DECLARE_PRINT(hpet);
+LOG_HANDLE_DEFINE_PRINT(hpet);
 
 uint64_t cc_mem_io *hpet_base;
 uint64_t hpet_timer_count;

@@ -14,8 +14,8 @@
 #include <stdint.h>
 #include <time/spin_sleep.h>
 
-LOG_SITE_DECLARE_PRINT(ide);
-LOG_HANDLE_DECLARE_PRINT(ide);
+LOG_SITE_DEFINE_PRINT(ide);
+LOG_HANDLE_DEFINE_PRINT(ide);
 
 void ide_print_info(struct block_device *d) {
     struct ata_drive *drive = (struct ata_drive *) d->driver_data;

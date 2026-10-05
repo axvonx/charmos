@@ -1,12 +1,12 @@
 #include "crypto/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(prng, .intensity_desc = {
-                             .curve = SCALE_PIECEWISE_LOG,
-                             .unit = "samples",
-                         });
+TEST_GROUP_DEFINE(prng, .intensity_desc = {
+                            .curve = SCALE_PIECEWISE_LOG,
+                            .unit = "samples",
+                        });
 
-TEST_DECLARE_UNIT(prng, same_seed_replays_sequence,
-                  TEST_INTENSITY(16, 256, 65536)) {
+TEST_DEFINE_UNIT(prng, same_seed_replays_sequence,
+                 TEST_INTENSITY(16, 256, 65536)) {
     size_t samples = ctx->intensity_val ? ctx->intensity_val : 256;
     uint64_t seed_val = 0xDEADBEEFCAFEULL;
     uint64_t *seq1 =
@@ -30,8 +30,7 @@ TEST_DECLARE_UNIT(prng, same_seed_replays_sequence,
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(prng, splitmix64_determinism,
-                  TEST_INTENSITY(16, 256, 65536)) {
+TEST_DEFINE_UNIT(prng, splitmix64_determinism, TEST_INTENSITY(16, 256, 65536)) {
     size_t samples = ctx->intensity_val ? ctx->intensity_val : 256;
     uint64_t seed_val = 0x123456789ABCDEF0ULL;
     uint64_t *seq1 =

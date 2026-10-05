@@ -1,6 +1,6 @@
 #include "math/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(sort);
+TEST_GROUP_DEFINE(sort);
 
 static int cmp_int(const void *a, const void *b) {
     int va = *(const int *) a;
@@ -8,7 +8,7 @@ static int cmp_int(const void *a, const void *b) {
     return (va > vb) - (va < vb);
 }
 
-TEST_DECLARE_UNIT(sort, heapsort_and_bsearch) {
+TEST_DEFINE_UNIT(sort, heapsort_and_bsearch) {
     int arr[] = {42, 17, 93, 1, 56, 8, 23, 74, 31, 65};
     size_t n = sizeof(arr) / sizeof(arr[0]);
 

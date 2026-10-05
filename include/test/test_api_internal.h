@@ -51,19 +51,19 @@
                                              .custom_print = (print_fn),       \
     }
 
-#define TEST_DECLARE_SMOKE(grp, id, ...)                                       \
-    TEST_DECLARE(grp, id, .tier = TEST_TIER_SMOKE, ##__VA_ARGS__)
-#define TEST_DECLARE_UNIT(grp, id, ...)                                        \
-    TEST_DECLARE(grp, id, .tier = TEST_TIER_UNIT, ##__VA_ARGS__)
-#define TEST_DECLARE_INTEGRATION(grp, id, ...)                                 \
-    TEST_DECLARE(grp, id, .tier = TEST_TIER_INTEGRATION, ##__VA_ARGS__)
+#define TEST_DEFINE_SMOKE(grp, id, ...)                                        \
+    TEST_DEFINE(grp, id, .tier = TEST_TIER_SMOKE, ##__VA_ARGS__)
+#define TEST_DEFINE_UNIT(grp, id, ...)                                         \
+    TEST_DEFINE(grp, id, .tier = TEST_TIER_UNIT, ##__VA_ARGS__)
+#define TEST_DEFINE_INTEGRATION(grp, id, ...)                                  \
+    TEST_DEFINE(grp, id, .tier = TEST_TIER_INTEGRATION, ##__VA_ARGS__)
 
-#define TEST_DECLARE_SMOKE(grp, id, ...)                                       \
-    TEST_DECLARE(grp, id, .tier = TEST_TIER_SMOKE, ##__VA_ARGS__)
-#define TEST_DECLARE_UNIT(grp, id, ...)                                        \
-    TEST_DECLARE(grp, id, .tier = TEST_TIER_UNIT, ##__VA_ARGS__)
-#define TEST_DECLARE_INTEGRATION(grp, id, ...)                                 \
-    TEST_DECLARE(grp, id, .tier = TEST_TIER_INTEGRATION, ##__VA_ARGS__)
+#define TEST_DEFINE_SMOKE(grp, id, ...)                                        \
+    TEST_DEFINE(grp, id, .tier = TEST_TIER_SMOKE, ##__VA_ARGS__)
+#define TEST_DEFINE_UNIT(grp, id, ...)                                         \
+    TEST_DEFINE(grp, id, .tier = TEST_TIER_UNIT, ##__VA_ARGS__)
+#define TEST_DEFINE_INTEGRATION(grp, id, ...)                                  \
+    TEST_DEFINE(grp, id, .tier = TEST_TIER_INTEGRATION, ##__VA_ARGS__)
 
 /* Goofy macros needed for the DECLARE macro,
  * TODO: do something about this HACK: */

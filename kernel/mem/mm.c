@@ -14,8 +14,8 @@
 #define MM_USER_MIN 0x0000000000010000UL
 #define MM_USER_MAX 0x0000800000000000UL
 
-FIXED_SIZE_RANGE_PERDOMAIN_DECLARE(mm, .obj_size = sizeof(struct mm),
-                                   .obj_align = _Alignof(struct mm));
+FIXED_SIZE_RANGE_PERDOMAIN_DEFINE(mm, .obj_size = sizeof(struct mm),
+                                  .obj_align = _Alignof(struct mm));
 
 /* VMA tree is rbit keyed [vma_range_start, vma_range_end - 1], carrying custom
  * agumentation to track max_gap to make gap search O(log n)

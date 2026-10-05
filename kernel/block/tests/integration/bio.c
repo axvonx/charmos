@@ -8,10 +8,10 @@
 #define BIO_COMPLETE_TIMEOUT_MS 2000
 #define BIO_POLL_INTERVAL_US 200
 
-TEST_GROUP_DECLARE(bio, .intensity_desc = {
-                            .curve = SCALE_PIECEWISE_LINEAR,
-                            .unit = "ios",
-                        });
+TEST_GROUP_DEFINE(bio, .intensity_desc = {
+                           .curve = SCALE_PIECEWISE_LINEAR,
+                           .unit = "ios",
+                       });
 
 #define EXT2_ROOT struct vfs_node *root = global.root_node
 
@@ -21,8 +21,8 @@ static void bio_callback(struct bio_request *req) {
     atomic_store(&done, true);
 }
 
-TEST_DECLARE_INTEGRATION(bio, async_submit, TEST_INTENSITY(1, 1, 16),
-                         .required_fs = FS_EXT2) {
+TEST_DEFINE_INTEGRATION(bio, async_submit, TEST_INTENSITY(1, 1, 16),
+                        .required_fs = FS_EXT2) {
     EXT2_ROOT;
     struct ext2_fs *fs = root->fs_data;
     struct block_device *d = fs->drive;

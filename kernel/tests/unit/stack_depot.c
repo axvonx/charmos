@@ -1,9 +1,9 @@
 #include "tests/test_internal.h"
 
-TEST_GROUP_DECLARE(stack_depot, .intensity_desc = {
-                                    .curve = SCALE_PIECEWISE_LOG,
-                                    .unit = "records",
-                                });
+TEST_GROUP_DEFINE(stack_depot, .intensity_desc = {
+                                   .curve = SCALE_PIECEWISE_LOG,
+                                   .unit = "records",
+                               });
 
 #define SD_SEED 0xDEADBEEFULL
 #define SD_TRACE_LEN 8
@@ -15,7 +15,7 @@ static void sd_make_trace(uintptr_t *entries, size_t len, uint64_t id) {
         entries[i] = (uintptr_t) (0xffffffff80000000ULL + (id << 20) + i * 16);
 }
 
-TEST_DECLARE_UNIT(stack_depot, save_current_roundtrip) {
+TEST_DEFINE_UNIT(stack_depot, save_current_roundtrip) {
     stack_handle_t handle = stack_depot_save_current();
     TEST_ASSERT_NONNULL(handle);
 
@@ -34,7 +34,7 @@ TEST_DECLARE_UNIT(stack_depot, save_current_roundtrip) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(stack_depot, identical_trace_dedups) {
+TEST_DEFINE_UNIT(stack_depot, identical_trace_dedups) {
     uintptr_t trace[SD_TRACE_LEN];
     sd_make_trace(trace, SD_TRACE_LEN, 1);
 
@@ -70,7 +70,7 @@ TEST_DECLARE_UNIT(stack_depot, identical_trace_dedups) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(stack_depot, distinct_traces_get_distinct_records) {
+TEST_DEFINE_UNIT(stack_depot, distinct_traces_get_distinct_records) {
     uintptr_t a[SD_TRACE_LEN], b[SD_TRACE_LEN];
     sd_make_trace(a, SD_TRACE_LEN, 2);
     sd_make_trace(b, SD_TRACE_LEN, 3);
@@ -107,7 +107,7 @@ TEST_DECLARE_UNIT(stack_depot, distinct_traces_get_distinct_records) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(stack_depot, hash_bucket) {
+TEST_DEFINE_UNIT(stack_depot, hash_bucket) {
     uintptr_t trace[SD_TRACE_LEN];
     sd_make_trace(trace, SD_TRACE_LEN, 4);
 
@@ -138,8 +138,8 @@ TEST_DECLARE_UNIT(stack_depot, hash_bucket) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(stack_depot, bulk_save_roundtrip,
-                  TEST_INTENSITY(128, 1024, 4096)) {
+TEST_DEFINE_UNIT(stack_depot, bulk_save_roundtrip,
+                 TEST_INTENSITY(128, 1024, 4096)) {
     size_t count = ctx->intensity_val ? ctx->intensity_val : SD_MANY;
     stack_handle_t *handles = kmalloc(sizeof(*handles) * count, ALLOC_ZERO);
     TEST_ASSERT_NONNULL(handles);
@@ -186,8 +186,8 @@ TEST_DECLARE_UNIT(stack_depot, bulk_save_roundtrip,
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(stack_depot, random_save_put_churn,
-                  TEST_INTENSITY(200, 2000, 20000)) {
+TEST_DEFINE_UNIT(stack_depot, random_save_put_churn,
+                 TEST_INTENSITY(200, 2000, 20000)) {
     prng_seed(SD_SEED + 1);
 
     enum { SD_CHURN_SET = 32 };
@@ -226,7 +226,7 @@ static cc_noinline void sd_save_n(stack_handle_t *out, size_t n) {
         out[i] = stack_depot_save_current();
 }
 
-TEST_DECLARE_UNIT(stack_depot, save_current_dedup) {
+TEST_DEFINE_UNIT(stack_depot, save_current_dedup) {
     stack_handle_t h[2] = {0};
     volatile size_t n = 2;
 

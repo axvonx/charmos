@@ -1,6 +1,6 @@
 #include "structures/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(avl);
+TEST_GROUP_DEFINE(avl);
 
 struct test_avl_node {
     int key;
@@ -54,7 +54,7 @@ static bool verify_avl_invariants(struct avl_tree_node *n) {
     return verify_avl_invariants(n->left) && verify_avl_invariants(n->right);
 }
 
-TEST_DECLARE_UNIT(avl, rotations_and_balance) {
+TEST_DEFINE_UNIT(avl, rotations_and_balance) {
     struct avl_tree tree;
     avl_tree_init(&tree, &test_avl_ops);
 

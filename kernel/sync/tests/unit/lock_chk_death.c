@@ -15,26 +15,26 @@
 #include "sync/lock_chk/internal.h"
 #endif /* DEBUG_LOCK_CHK */
 
-TEST_GROUP_DECLARE(lock_chk);
+TEST_GROUP_DEFINE(lock_chk);
 
-LOCK_CHK_CLASS_DECLARE_LOCAL(death_abba_class1);
-LOCK_CHK_CLASS_DECLARE_LOCAL(death_abba_class2);
-LOCK_CHK_CLASS_DECLARE_LOCAL(death_recurse_class);
-LOCK_CHK_CLASS_DECLARE_LOCAL(death_foreign_class);
-LOCK_CHK_CLASS_DECLARE_LOCAL(death_unbalanced_class);
-LOCK_CHK_CLASS_DECLARE_LOCAL(death_spin_class1);
-LOCK_CHK_CLASS_DECLARE_LOCAL(death_spin_class2);
-LOCK_CHK_CLASS_DECLARE_LOCAL(death_nmi_class);
-LOCK_CHK_CLASS_DECLARE_LOCAL(death_sleep_spin_class);
-LOCK_CHK_CLASS_DECLARE_LOCAL(death_exit_class);
-LOCK_CHK_CLASS_DECLARE_LOCAL(death_cross_rw_class);
-LOCK_CHK_CLASS_DECLARE_LOCAL(death_upgrade_rw_class);
-LOCK_CHK_CLASS_DECLARE_LOCAL(death_exhaust_class);
-LOCK_CHK_CLASS_DECLARE_LOCAL(death_assert_held_spin_class);
-LOCK_CHK_CLASS_DECLARE_LOCAL(death_assert_not_held_mutex_class);
-LOCK_CHK_CLASS_DECLARE_LOCAL(death_assert_held_foreign_qspin_class);
-LOCK_CHK_CLASS_DECLARE_LOCAL(death_assert_held_rw_wrong_mode_class);
-LOCK_CHK_CLASS_DECLARE_LOCAL(death_assert_not_held_mutex_simple_class);
+LOCK_CHK_CLASS_DEFINE_LOCAL(death_abba_class1);
+LOCK_CHK_CLASS_DEFINE_LOCAL(death_abba_class2);
+LOCK_CHK_CLASS_DEFINE_LOCAL(death_recurse_class);
+LOCK_CHK_CLASS_DEFINE_LOCAL(death_foreign_class);
+LOCK_CHK_CLASS_DEFINE_LOCAL(death_unbalanced_class);
+LOCK_CHK_CLASS_DEFINE_LOCAL(death_spin_class1);
+LOCK_CHK_CLASS_DEFINE_LOCAL(death_spin_class2);
+LOCK_CHK_CLASS_DEFINE_LOCAL(death_nmi_class);
+LOCK_CHK_CLASS_DEFINE_LOCAL(death_sleep_spin_class);
+LOCK_CHK_CLASS_DEFINE_LOCAL(death_exit_class);
+LOCK_CHK_CLASS_DEFINE_LOCAL(death_cross_rw_class);
+LOCK_CHK_CLASS_DEFINE_LOCAL(death_upgrade_rw_class);
+LOCK_CHK_CLASS_DEFINE_LOCAL(death_exhaust_class);
+LOCK_CHK_CLASS_DEFINE_LOCAL(death_assert_held_spin_class);
+LOCK_CHK_CLASS_DEFINE_LOCAL(death_assert_not_held_mutex_class);
+LOCK_CHK_CLASS_DEFINE_LOCAL(death_assert_held_foreign_qspin_class);
+LOCK_CHK_CLASS_DEFINE_LOCAL(death_assert_held_rw_wrong_mode_class);
+LOCK_CHK_CLASS_DEFINE_LOCAL(death_assert_not_held_mutex_simple_class);
 
 /* ABBA cycle between two threads */
 static struct mutex death_abba_m1;
@@ -51,7 +51,7 @@ static void death_abba_worker(void *arg) {
     mutex_unlock(&death_abba_m2);
 }
 
-TEST_DECLARE_UNIT(lock_chk, death_abba_mutex, .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(lock_chk, death_abba_mutex, .enabled = TEST_STATE_DISABLED) {
     mutex_init_chk(&death_abba_m1, LOCK_CHK_CLASS(death_abba_class1),
                    LOCK_CHKD_FULL);
     mutex_init_chk(&death_abba_m2, LOCK_CHK_CLASS(death_abba_class2),
@@ -75,8 +75,8 @@ static void death_recursive_mutex_body(void) TSA_NO_ANALYSIS {
     mutex_unlock(&m);
 }
 
-TEST_DECLARE_UNIT(lock_chk, death_recursive_mutex,
-                  .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(lock_chk, death_recursive_mutex,
+                 .enabled = TEST_STATE_DISABLED) {
     death_recursive_mutex_body();
     return TEST_SUCCESS;
 }
@@ -89,8 +89,8 @@ static void death_foreign_worker(void *arg) TSA_NO_ANALYSIS {
     mutex_unlock(&death_foreign_m);
 }
 
-TEST_DECLARE_UNIT(lock_chk, death_foreign_unlock,
-                  .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(lock_chk, death_foreign_unlock,
+                 .enabled = TEST_STATE_DISABLED) {
     mutex_init_chk(&death_foreign_m, LOCK_CHK_CLASS(death_foreign_class),
                    LOCK_CHKD_FULL);
     mutex_lock(&death_foreign_m);
@@ -108,14 +108,14 @@ static void death_unbalanced_unlock_body(void) TSA_NO_ANALYSIS {
     mutex_unlock(&m);
 }
 
-TEST_DECLARE_UNIT(lock_chk, death_unbalanced_unlock,
-                  .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(lock_chk, death_unbalanced_unlock,
+                 .enabled = TEST_STATE_DISABLED) {
     death_unbalanced_unlock_body();
     return TEST_SUCCESS;
 }
 
 /* Non-LIFO spinlock unlock */
-TEST_DECLARE_UNIT(lock_chk, death_spin_order, .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(lock_chk, death_spin_order, .enabled = TEST_STATE_DISABLED) {
     struct spinlock s1, s2;
     spinlock_init_chk(&s1, LOCK_CHK_CLASS(death_spin_class1), LOCK_CHKD_FULL);
     spinlock_init_chk(&s2, LOCK_CHK_CLASS(death_spin_class2), LOCK_CHKD_FULL);
@@ -127,8 +127,8 @@ TEST_DECLARE_UNIT(lock_chk, death_spin_order, .enabled = TEST_STATE_DISABLED) {
 }
 
 /* Inconsistent IRQ safety usage */
-TEST_DECLARE_UNIT(lock_chk, death_irq_unsafe_spin,
-                  .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(lock_chk, death_irq_unsafe_spin,
+                 .enabled = TEST_STATE_DISABLED) {
     struct spinlock s;
     spinlock_init_chk(&s, LOCK_CHK_CLASS(death_spin_class1), LOCK_CHKD_FULL);
     enum irql old = spin_lock(&s);
@@ -139,8 +139,8 @@ TEST_DECLARE_UNIT(lock_chk, death_irq_unsafe_spin,
 }
 
 /* lock acquire in NMI */
-TEST_DECLARE_UNIT(lock_chk, death_checked_in_nmi,
-                  .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(lock_chk, death_checked_in_nmi,
+                 .enabled = TEST_STATE_DISABLED) {
 #ifdef DEBUG_LOCK_CHK
     struct lock_chk_map map =
         LOCK_CHK_MAP_VALUE_INIT(LOCK_CHK_CLASS(death_nmi_class));
@@ -161,8 +161,8 @@ TEST_DECLARE_UNIT(lock_chk, death_checked_in_nmi,
 }
 
 /* Assert schedulable / sleep while holding a thread checked spinlock */
-TEST_DECLARE_UNIT(lock_chk, death_sleep_holding_spin,
-                  .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(lock_chk, death_sleep_holding_spin,
+                 .enabled = TEST_STATE_DISABLED) {
     struct spinlock s;
     spinlock_init_chk(&s, LOCK_CHK_CLASS(death_sleep_spin_class),
                       LOCK_CHKD_FULL);
@@ -181,8 +181,8 @@ static void death_exit_worker(void *arg) TSA_NO_ANALYSIS {
     /* Worker function returns without unlocking */
 }
 
-TEST_DECLARE_UNIT(lock_chk, death_exit_holding_lock,
-                  .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(lock_chk, death_exit_holding_lock,
+                 .enabled = TEST_STATE_DISABLED) {
     struct thread *th =
         thread_spawn("death_exit_worker", death_exit_worker, .joinable = true);
     thread_join(th);
@@ -197,8 +197,8 @@ static void death_cross_rw_worker(void *arg) TSA_NO_ANALYSIS {
     rw_unlock(&death_cross_rw);
 }
 
-TEST_DECLARE_UNIT(lock_chk, death_rw_cross_thread_release,
-                  .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(lock_chk, death_rw_cross_thread_release,
+                 .enabled = TEST_STATE_DISABLED) {
     rwlock_init_chk(&death_cross_rw, THREAD_PRIO_CLASS_TIMESHARE,
                     LOCK_CHK_CLASS(death_cross_rw_class), LOCK_CHKD_FULL);
     rw_read_lock(&death_cross_rw);
@@ -220,8 +220,8 @@ static void death_rw_invalid_upgrade_body(void) TSA_NO_ANALYSIS {
     rw_unlock(&rw);
 }
 
-TEST_DECLARE_UNIT(lock_chk, death_rw_invalid_upgrade,
-                  .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(lock_chk, death_rw_invalid_upgrade,
+                 .enabled = TEST_STATE_DISABLED) {
     death_rw_invalid_upgrade_body();
     return TEST_SUCCESS;
 }
@@ -232,8 +232,8 @@ static void death_uninitialized_body(void) TSA_NO_ANALYSIS {
     mutex_lock(&uninit_m);
 }
 
-TEST_DECLARE_UNIT(lock_chk, death_uninitialized,
-                  .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(lock_chk, death_uninitialized,
+                 .enabled = TEST_STATE_DISABLED) {
     death_uninitialized_body();
     return TEST_SUCCESS;
 }
@@ -250,14 +250,14 @@ static void death_exhaust_held_capacity_body(void) TSA_NO_ANALYSIS {
         mutex_unlock(&m[i]);
 }
 
-TEST_DECLARE_UNIT(lock_chk, death_exhaust_held_capacity,
-                  .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(lock_chk, death_exhaust_held_capacity,
+                 .enabled = TEST_STATE_DISABLED) {
     death_exhaust_held_capacity_body();
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(lock_chk, death_assert_held_spin_unheld,
-                  .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(lock_chk, death_assert_held_spin_unheld,
+                 .enabled = TEST_STATE_DISABLED) {
     struct spinlock s;
     spinlock_init_chk(&s, LOCK_CHK_CLASS(death_assert_held_spin_class),
                       LOCK_CHKD_FULL);
@@ -265,8 +265,8 @@ TEST_DECLARE_UNIT(lock_chk, death_assert_held_spin_unheld,
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(lock_chk, death_assert_not_held_mutex_while_held,
-                  .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(lock_chk, death_assert_not_held_mutex_while_held,
+                 .enabled = TEST_STATE_DISABLED) {
     struct mutex m;
     mutex_init_chk(&m, LOCK_CHK_CLASS(death_assert_not_held_mutex_class),
                    LOCK_CHKD_FULL);
@@ -287,8 +287,8 @@ static void death_foreign_qspin_worker(void *arg) {
     qspin_unlock(&death_foreign_qspin, old);
 }
 
-TEST_DECLARE_UNIT(lock_chk, death_assert_held_qspin_foreign_owner,
-                  .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(lock_chk, death_assert_held_qspin_foreign_owner,
+                 .enabled = TEST_STATE_DISABLED) {
     qspinlock_init_chk(&death_foreign_qspin,
                        LOCK_CHK_CLASS(death_assert_held_foreign_qspin_class),
                        LOCK_CHKD_FULL);
@@ -299,8 +299,8 @@ TEST_DECLARE_UNIT(lock_chk, death_assert_held_qspin_foreign_owner,
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(lock_chk, death_assert_held_rwlock_wrong_mode,
-                  .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(lock_chk, death_assert_held_rwlock_wrong_mode,
+                 .enabled = TEST_STATE_DISABLED) {
     struct rwlock rw;
     rwlock_init_chk(&rw, THREAD_PRIO_CLASS_TIMESHARE,
                     LOCK_CHK_CLASS(death_assert_held_rw_wrong_mode_class),
@@ -311,8 +311,8 @@ TEST_DECLARE_UNIT(lock_chk, death_assert_held_rwlock_wrong_mode,
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(lock_chk, death_assert_not_held_mutex_simple_while_held,
-                  .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(lock_chk, death_assert_not_held_mutex_simple_while_held,
+                 .enabled = TEST_STATE_DISABLED) {
     struct mutex_simple m;
     mutex_simple_init_chk(
         &m, LOCK_CHK_CLASS(death_assert_not_held_mutex_simple_class),

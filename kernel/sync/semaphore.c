@@ -4,8 +4,8 @@
 #include <sync/spinlock.h>
 #include <thread/thread_types.h>
 
-LOCK_CHK_CLASS_DECLARE_LOCAL(semaphore_irq);
-LOCK_CHK_CLASS_DECLARE_LOCAL(semaphore_disp);
+LOCK_CHK_CLASS_DEFINE_LOCAL(semaphore_irq);
+LOCK_CHK_CLASS_DEFINE_LOCAL(semaphore_disp);
 
 void semaphore_init(struct semaphore *s, int value, bool irq_disable) {
     s->count = value;

@@ -4,5 +4,5 @@
 #include <string.h>
 #include <test/test.h>
 
-TEST_GROUP_DEFINE(chacha20);
-TEST_GROUP_DEFINE(prng);
+TEST_GROUP_DECLARE(chacha20);
+TEST_GROUP_DECLARE(prng);

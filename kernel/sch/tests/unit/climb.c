@@ -1,11 +1,11 @@
 #include "sch/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(climb, .intensity_desc = {
-                              .curve = SCALE_PIECEWISE_LOG,
-                              .unit = "steps",
-                          });
+TEST_GROUP_DEFINE(climb, .intensity_desc = {
+                             .curve = SCALE_PIECEWISE_LOG,
+                             .unit = "steps",
+                         });
 
-TEST_DECLARE_UNIT(climb, pressure_cubic_curve, TEST_INTENSITY(20, 100, 1000)) {
+TEST_DEFINE_UNIT(climb, pressure_cubic_curve, TEST_INTENSITY(20, 100, 1000)) {
     /* Pressure p = 0 -> boost target = 0 */
     TEST_ASSERT_EQ_S(TEST_CALL(climb_pressure_to_boost_target)(0), 0);
 
@@ -44,8 +44,8 @@ static int32_t climb_cmp(struct climb_thread_state *a,
 }
 
 /* climb_pressure_t is 32.32 */
-TEST_DECLARE_UNIT(climb, tree_key_orders_by_pressure,
-                  TEST_INTENSITY(8, 64, 4096)) {
+TEST_DEFINE_UNIT(climb, tree_key_orders_by_pressure,
+                 TEST_INTENSITY(8, 64, 4096)) {
     size_t steps = ctx->intensity_val ? ctx->intensity_val : 64;
 
     struct climb_thread_state prev = climb_keyed(1, 0);
@@ -66,8 +66,8 @@ TEST_DECLARE_UNIT(climb, tree_key_orders_by_pressure,
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(climb, tree_key_comparator_is_consistent,
-                  TEST_INTENSITY(4, 32, 512)) {
+TEST_DEFINE_UNIT(climb, tree_key_comparator_is_consistent,
+                 TEST_INTENSITY(4, 32, 512)) {
     size_t steps = ctx->intensity_val ? ctx->intensity_val : 32;
 
     for (size_t i = 0; i <= steps; i++) {
@@ -95,7 +95,7 @@ TEST_DECLARE_UNIT(climb, tree_key_comparator_is_consistent,
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(climb, tree_key_trades_periods_against_pressure) {
+TEST_DEFINE_UNIT(climb, tree_key_trades_periods_against_pressure) {
     struct climb_thread_state waited = climb_keyed(3, 0);
     struct climb_thread_state pressured = climb_keyed(1, CLIMB_PRESSURE_MAX);
 

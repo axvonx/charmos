@@ -163,15 +163,15 @@ const size_t slab_class_sizes_const[] = {
 #define SLAB_CLASS_SIZES_CONST_COUNT                                           \
     sizeof(slab_class_sizes_const) / sizeof(*slab_class_sizes_const)
 
-ADDRESS_RANGE_DECLARE(
+ADDRESS_RANGE_DEFINE(
     slab, .base = SLAB_HEAP_START, .size = SLAB_HEAP_END - SLAB_HEAP_START,
     .flags = ADDRESS_RANGE_STATIC,
     .page_fault_handler = &slab_page_fault_handler
     /* alignment does not need to be provided for static entries */);
 
 struct slab_globals slab_global = {0};
-LOG_HANDLE_DECLARE_PRINT(slab);
-LOG_SITE_DECLARE_PRINT(slab);
+LOG_HANDLE_DEFINE_PRINT(slab);
+LOG_SITE_DEFINE_PRINT(slab);
 
 /* If our cache is PAGEABLE_ZERO, we can demand page it in
  *
@@ -1537,8 +1537,8 @@ void kfree_init(void *p, enum alloc_behavior b) {
     kfree_old(p);
 }
 
-STATIC_CALL_DECLARE(alloc, kmalloc_init);
-STATIC_CALL_DECLARE(free, kfree_init);
+STATIC_CALL_DEFINE(alloc, kmalloc_init);
+STATIC_CALL_DEFINE(free, kfree_init);
 
 void slab_switch_to_domain_allocations(void) {
     static_call_update(alloc, kmalloc_new);

@@ -14,4 +14,4 @@
 #include <string.h>
 #include <time/spin_sleep.h>
 
-TEST_GROUP_DEFINE(bio_sched);
+TEST_GROUP_DECLARE(bio_sched);

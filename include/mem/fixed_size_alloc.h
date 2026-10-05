@@ -65,7 +65,7 @@ fixed_size_range_create(struct fixed_size_range_attributes *attrs);
 void fixed_size_range_init(struct fixed_size_range *fsr,
                            struct fixed_size_range_attributes *attrs);
 
-#define FIXED_SIZE_RANGE_PERDOMAIN_DECLARE(name, ...)                          \
+#define FIXED_SIZE_RANGE_PERDOMAIN_DEFINE(name, ...)                           \
     static cc_fn_unused bool __fsr_##name##_enabled = false;                   \
     static void __##name##_fsr_init(struct fixed_size_range *__fsr,            \
                                     size_t __domain) {                         \
@@ -82,8 +82,8 @@ void fixed_size_range_init(struct fixed_size_range *fsr,
         if (__domain == global.domain_count - 1)                               \
             __fsr_##name##_enabled = true;                                     \
     }                                                                          \
-    PERDOMAIN_DECLARE(struct fixed_size_range, __##name##_fsr,                 \
-                      __##name##_fsr_init)
+    PERDOMAIN_DEFINE(struct fixed_size_range, __##name##_fsr,                  \
+                     __##name##_fsr_init)
 
 #define FSR_PERDOMAIN_ENABLED(name) __fsr_##name##_enabled
 #define FSR_PERDOMAIN(name) PERDOMAIN(__##name##_fsr)

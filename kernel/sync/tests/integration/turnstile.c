@@ -16,7 +16,7 @@ static void collision_waiter(void *arg) {
     mutex_unlock(lock);
 }
 
-TEST_DECLARE_INTEGRATION(turnstile, lookup_collision_miss) {
+TEST_DEFINE_INTEGRATION(turnstile, lookup_collision_miss) {
     struct mutex *occupied = &collision_locks[0].lock;
     struct mutex *missing = &collision_locks[1].lock;
     TEST_ASSERT_EQ(TURNSTILE_OBJECT_HASH(occupied),
@@ -58,7 +58,7 @@ TEST_DECLARE_INTEGRATION(turnstile, lookup_collision_miss) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_INTEGRATION(turnstile, lookup_collision_chain) {
+TEST_DEFINE_INTEGRATION(turnstile, lookup_collision_chain) {
     struct thread *waiters[2];
     bool blocked[2] = {false, false};
     bool found[2] = {false, false};

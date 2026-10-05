@@ -1,10 +1,10 @@
 #include "mem/tests/test_internal.h"
 #include <mem/address_range.h>
 
-ADDRESS_RANGE_DECLARE(vas_test_map, .flags = ADDRESS_RANGE_DYNAMIC,
-                      .size = PAGE_2MB, .align = PAGE_SIZE);
+ADDRESS_RANGE_DEFINE(vas_test_map, .flags = ADDRESS_RANGE_DYNAMIC,
+                     .size = PAGE_2MB, .align = PAGE_SIZE);
 
-TEST_DECLARE_SMOKE(vas, reserve_query_free) {
+TEST_DEFINE_SMOKE(vas, reserve_query_free) {
     const vaddr_t base = 0x700000000000ULL;
     struct vas *vas = vas_create(base, base + PAGE_1GB);
     TEST_ASSERT_NONNULL(vas);
@@ -27,7 +27,7 @@ TEST_DECLARE_SMOKE(vas, reserve_query_free) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_SMOKE(vas, map_unaligned_physical_address) {
+TEST_DEFINE_SMOKE(vas, map_unaligned_physical_address) {
     struct vas *vas = vas_from(&ADDRESS_RANGE(vas_test_map));
     TEST_ASSERT_NONNULL(vas);
     paddr_t phys = pmm_alloc_pages(2);

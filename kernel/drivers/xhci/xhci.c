@@ -19,12 +19,12 @@
 #include "internal.h"
 
 struct workqueue *xhci_wq;
-LOG_HANDLE_DECLARE_PRINT(xhci);
+LOG_HANDLE_DEFINE_PRINT(xhci);
 
 #ifdef DEBUG_USB_XHCI
-LOG_SITE_DECLARE_PRINT(xhci);
+LOG_SITE_DEFINE_PRINT(xhci);
 #else
-LOG_SITE_DECLARE_PRINT(xhci, .enabled_mask = LOG_SITE_LEVEL(LOG_ERROR));
+LOG_SITE_DEFINE_PRINT(xhci, .enabled_mask = LOG_SITE_LEVEL(LOG_ERROR));
 #endif
 
 enum usb_error xhci_address_device(struct xhci_port *p, uint8_t slot_id,

@@ -1,6 +1,6 @@
 #include "structures/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(treap);
+TEST_GROUP_DEFINE(treap);
 
 struct test_treap_node {
     int key;
@@ -60,7 +60,7 @@ static bool verify_treap_invariants(struct treap_node *n, int *min, int *max) {
     return true;
 }
 
-TEST_DECLARE_UNIT(treap, insert_find_remove) {
+TEST_DEFINE_UNIT(treap, insert_find_remove) {
     struct treap_tree tree;
     treap_tree_init(&tree, &test_treap_ops);
 

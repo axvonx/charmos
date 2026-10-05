@@ -1,9 +1,9 @@
 #include "fs/ext2/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(ext2, .intensity_desc = {
-                             .curve = SCALE_PIECEWISE_LOG,
-                             .unit = "ops",
-                         });
+TEST_GROUP_DEFINE(ext2, .intensity_desc = {
+                            .curve = SCALE_PIECEWISE_LOG,
+                            .unit = "ops",
+                        });
 
 #define EXT2_ROOT struct vfs_node *root = global.root_node
 
@@ -14,8 +14,8 @@ static void flush() {
     bio_sched_dispatch_all(d);
 }
 
-TEST_DECLARE_INTEGRATION(ext2, stat, TEST_INTENSITY(1, 1, 16),
-                         .required_fs = FS_EXT2) {
+TEST_DEFINE_INTEGRATION(ext2, stat, TEST_INTENSITY(1, 1, 16),
+                        .required_fs = FS_EXT2) {
     EXT2_ROOT;
     TEST_ASSERT(!ERR_IS_FATAL(
         root->ops->create(root, "ext2_stat_test", VFS_MODE_FILE)));
@@ -40,8 +40,8 @@ TEST_DECLARE_INTEGRATION(ext2, stat, TEST_INTENSITY(1, 1, 16),
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_INTEGRATION(ext2, rename, TEST_INTENSITY(1, 1, 16),
-                         .required_fs = FS_EXT2) {
+TEST_DEFINE_INTEGRATION(ext2, rename, TEST_INTENSITY(1, 1, 16),
+                        .required_fs = FS_EXT2) {
     EXT2_ROOT;
     TEST_ASSERT(!ERR_IS_FATAL(
         root->ops->create(root, "ext2_rename_test", VFS_MODE_FILE)));
@@ -71,8 +71,8 @@ TEST_DECLARE_INTEGRATION(ext2, rename, TEST_INTENSITY(1, 1, 16),
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_INTEGRATION(ext2, chmod, TEST_INTENSITY(1, 1, 16),
-                         .required_fs = FS_EXT2) {
+TEST_DEFINE_INTEGRATION(ext2, chmod, TEST_INTENSITY(1, 1, 16),
+                        .required_fs = FS_EXT2) {
     EXT2_ROOT;
     TEST_ASSERT(!ERR_IS_FATAL(
         root->ops->create(root, "ext2_chmod_test", VFS_MODE_FILE)));
@@ -101,8 +101,8 @@ TEST_DECLARE_INTEGRATION(ext2, chmod, TEST_INTENSITY(1, 1, 16),
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_INTEGRATION(ext2, symlink, TEST_INTENSITY(1, 1, 16),
-                         .required_fs = FS_EXT2) {
+TEST_DEFINE_INTEGRATION(ext2, symlink, TEST_INTENSITY(1, 1, 16),
+                        .required_fs = FS_EXT2) {
     EXT2_ROOT;
     TEST_ASSERT(
         !ERR_IS_FATAL(root->ops->symlink(root, "/tmp", "ext2_symlink_test")));
@@ -127,8 +127,8 @@ TEST_DECLARE_INTEGRATION(ext2, symlink, TEST_INTENSITY(1, 1, 16),
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_INTEGRATION(ext2, mkdir_rmdir, TEST_INTENSITY(1, 1, 16),
-                         .required_fs = FS_EXT2) {
+TEST_DEFINE_INTEGRATION(ext2, mkdir_rmdir, TEST_INTENSITY(1, 1, 16),
+                        .required_fs = FS_EXT2) {
     EXT2_ROOT;
     TEST_ASSERT(
         !ERR_IS_FATAL(root->ops->mkdir(root, "ext2_dir_test", VFS_MODE_DIR)));

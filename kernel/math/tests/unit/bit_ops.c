@@ -1,11 +1,11 @@
 #include "math/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(bit_ops, .intensity_desc = {
-                                .curve = SCALE_PIECEWISE_LOG,
-                                .unit = "iters",
-                            });
+TEST_GROUP_DEFINE(bit_ops, .intensity_desc = {
+                               .curve = SCALE_PIECEWISE_LOG,
+                               .unit = "iters",
+                           });
 
-TEST_DECLARE_UNIT(bit_ops, next_pow2_standard) {
+TEST_DEFINE_UNIT(bit_ops, next_pow2_standard) {
     TEST_ASSERT_EQ(next_pow2(1), 1);
     TEST_ASSERT_EQ(next_pow2(2), 2);
     TEST_ASSERT_EQ(next_pow2(3), 4);
@@ -27,7 +27,7 @@ TEST_DECLARE_UNIT(bit_ops, next_pow2_standard) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bit_ops, next_pow2_edge) {
+TEST_DEFINE_UNIT(bit_ops, next_pow2_edge) {
     TEST_ASSERT_EQ(next_pow2(0), 1);
 
     /* Must avoid infinite loop */
@@ -39,7 +39,7 @@ TEST_DECLARE_UNIT(bit_ops, next_pow2_edge) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bit_ops, prev_pow2_standard) {
+TEST_DEFINE_UNIT(bit_ops, prev_pow2_standard) {
     TEST_ASSERT_EQ(prev_pow2(1), 1);
     TEST_ASSERT_EQ(prev_pow2(2), 2);
     TEST_ASSERT_EQ(prev_pow2(3), 2);
@@ -58,7 +58,7 @@ TEST_DECLARE_UNIT(bit_ops, prev_pow2_standard) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bit_ops, prev_pow2_edge) {
+TEST_DEFINE_UNIT(bit_ops, prev_pow2_edge) {
     TEST_ASSERT_EQ(prev_pow2(0), 1);
 
     size_t top = (size_t) 1 << 63;
@@ -69,8 +69,8 @@ TEST_DECLARE_UNIT(bit_ops, prev_pow2_edge) {
 }
 
 /* prev_pow2(x) <= x <= next_pow2(x) must always be true */
-TEST_DECLARE_UNIT(bit_ops, pow2_bracket_invariant,
-                  TEST_INTENSITY(256, 4096, 65536)) {
+TEST_DEFINE_UNIT(bit_ops, pow2_bracket_invariant,
+                 TEST_INTENSITY(256, 4096, 65536)) {
     size_t iters = ctx->intensity_val ? ctx->intensity_val : 4096;
     for (size_t x = 1; x <= iters; x++) {
         size_t lo = prev_pow2(x);
@@ -85,7 +85,7 @@ TEST_DECLARE_UNIT(bit_ops, pow2_bracket_invariant,
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bit_ops, ilog2_standard) {
+TEST_DEFINE_UNIT(bit_ops, ilog2_standard) {
     TEST_ASSERT_EQ(ilog2(1), 0);
     TEST_ASSERT_EQ(ilog2(2), 1);
     TEST_ASSERT_EQ(ilog2(3), 1);
@@ -107,14 +107,14 @@ TEST_DECLARE_UNIT(bit_ops, ilog2_standard) {
 }
 
 /* ilog2(0) == 0, which is also ilog2(1) */
-TEST_DECLARE_UNIT(bit_ops, ilog2_edge) {
+TEST_DEFINE_UNIT(bit_ops, ilog2_edge) {
     TEST_ASSERT_EQ(ilog2(0), 0);
     TEST_ASSERT_EQ(ilog2(UINT64_MAX), 63);
 
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bit_ops, popcount_standard) {
+TEST_DEFINE_UNIT(bit_ops, popcount_standard) {
     TEST_ASSERT_EQ(popcount(0), 0);
     TEST_ASSERT_EQ(popcount(1), 1);
     TEST_ASSERT_EQ(popcount(3), 2);
@@ -128,7 +128,7 @@ TEST_DECLARE_UNIT(bit_ops, popcount_standard) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bit_ops, bit_macros_standard) {
+TEST_DEFINE_UNIT(bit_ops, bit_macros_standard) {
     uint8_t u8 = 0;
     u8 = BIT_SET(u8, 2);
     TEST_ASSERT_EQ(u8, 4);
@@ -153,7 +153,7 @@ TEST_DECLARE_UNIT(bit_ops, bit_macros_standard) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bit_ops, bit_fields_and_ranges) {
+TEST_DEFINE_UNIT(bit_ops, bit_fields_and_ranges) {
     uint32_t reg32 = 0;
     reg32 = BIT_SET_FIELD(reg32, 0xA, 4, 7);
     TEST_ASSERT_EQ(reg32, 0xA0);
@@ -176,7 +176,7 @@ TEST_DECLARE_UNIT(bit_ops, bit_fields_and_ranges) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bit_ops, align_and_rounding) {
+TEST_DEFINE_UNIT(bit_ops, align_and_rounding) {
     size_t value = 5;
     size_t alignment = 4;
     TEST_ASSERT_EQ(ALIGN_UP(value++, alignment++), 8);
@@ -214,7 +214,7 @@ TEST_DECLARE_UNIT(bit_ops, align_and_rounding) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bit_ops, abs_and_pow2_macros) {
+TEST_DEFINE_UNIT(bit_ops, abs_and_pow2_macros) {
     int value = -3;
     TEST_ASSERT_EQ(abs(value++), 3);
     TEST_ASSERT_EQ(value, -2);
@@ -236,7 +236,7 @@ TEST_DECLARE_UNIT(bit_ops, abs_and_pow2_macros) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bit_ops, common_domain_comparisons) {
+TEST_DEFINE_UNIT(bit_ops, common_domain_comparisons) {
     uint32_t small = 5;
     uint64_t big = 9;
     TEST_ASSERT_EQ(MIN(small, big), 5);
@@ -277,7 +277,7 @@ TEST_DECLARE_UNIT(bit_ops, common_domain_comparisons) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bit_ops, common_domain_range_and_clamp) {
+TEST_DEFINE_UNIT(bit_ops, common_domain_range_and_clamp) {
     uint64_t value = 40;
     uint32_t low = 10;
     TEST_ASSERT(IN_RANGE(value, low, 64));
@@ -301,7 +301,7 @@ TEST_DECLARE_UNIT(bit_ops, common_domain_range_and_clamp) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bit_ops, bit_macros_preserve_operand_type) {
+TEST_DEFINE_UNIT(bit_ops, bit_macros_preserve_operand_type) {
     uint32_t reg = 0x80000000u;
     TEST_ASSERT_EQ(sizeof(BIT_TEST(reg, 31)), sizeof(bool));
     TEST_ASSERT(BIT_TEST(reg, 31));
@@ -331,7 +331,7 @@ TEST_DECLARE_UNIT(bit_ops, bit_macros_preserve_operand_type) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bit_ops, compiler_wrappers_popcount_and_bswap) {
+TEST_DEFINE_UNIT(bit_ops, compiler_wrappers_popcount_and_bswap) {
     uint8_t u8 = 0b1011;
     uint16_t u16 = 0x00FF;
     uint32_t u32 = 0x00FF00FF;
@@ -350,7 +350,7 @@ TEST_DECLARE_UNIT(bit_ops, compiler_wrappers_popcount_and_bswap) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bit_ops, compiler_wrappers_clz_ctz_ffs_fls) {
+TEST_DEFINE_UNIT(bit_ops, compiler_wrappers_clz_ctz_ffs_fls) {
     TEST_ASSERT_EQ(cw_clz((uint8_t) 0), 8);
     TEST_ASSERT_EQ(cw_clz((uint8_t) 1), 7);
     TEST_ASSERT_EQ(cw_clz((uint8_t) 0x80), 0);
@@ -386,7 +386,7 @@ TEST_DECLARE_UNIT(bit_ops, compiler_wrappers_clz_ctz_ffs_fls) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bit_ops, compiler_wrappers_rotations_and_saturation) {
+TEST_DEFINE_UNIT(bit_ops, compiler_wrappers_rotations_and_saturation) {
     uint32_t val32 = 0x12345678;
     TEST_ASSERT_EQ(cw_rol(val32, 4), 0x23456781);
     TEST_ASSERT_EQ(cw_ror(val32, 4), 0x81234567);

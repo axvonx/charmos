@@ -79,7 +79,7 @@ struct test_signature_record {
     uint32_t line;
 };
 
-LINKER_SECTION_DEFINE(struct test_import_entry, test_imports);
-LINKER_SECTION_DEFINE(struct test_export_entry, test_exports);
-LINKER_SECTION_DEFINE(struct test_signature_record, test_canonical_signatures);
-LINKER_SECTION_DEFINE(struct test_signature_record, test_unsafe_signatures);
+LINKER_SECTION_DECLARE(struct test_import_entry, test_imports);
+LINKER_SECTION_DECLARE(struct test_export_entry, test_exports);
+LINKER_SECTION_DECLARE(struct test_signature_record, test_canonical_signatures);
+LINKER_SECTION_DECLARE(struct test_signature_record, test_unsafe_signatures);

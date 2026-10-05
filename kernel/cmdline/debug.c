@@ -3,7 +3,7 @@
 #include "internal.h"
 
 static bool cmdline_test_exit_flag = false;
-CMDLINE_DECLARE_VAR(
+CMDLINE_DEFINE_VAR(
     cmdline_test_exit, cmdline_test_exit_flag,
     .desc = "Exit QEMU immediately after command-line parsing for unit testing",
     .flags = CMDLINE_ENTRY_HIDDEN);

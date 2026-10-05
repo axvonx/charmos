@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <text_patch.h>
 
-#define STATIC_CALL_DECLARE(name, default_fn)                                  \
+#define STATIC_CALL_DEFINE(name, default_fn)                                   \
     extern typeof(default_fn) name##_trampoline;                               \
     asm(".pushsection .text, \"ax\"\n\t"                                       \
         ".globl " #name "_trampoline\n\t" #name "_trampoline:\n\t"             \

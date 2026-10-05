@@ -18,4 +18,4 @@
 #include <string.h>
 #include <thread/thread.h>
 
-TEST_GROUP_DEFINE(slab);
+TEST_GROUP_DECLARE(slab);

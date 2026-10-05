@@ -1,9 +1,9 @@
 #include "structures/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(bitmap, .intensity_desc = {
-                               .curve = SCALE_PIECEWISE_LOG,
-                               .unit = "bits",
-                           });
+TEST_GROUP_DEFINE(bitmap, .intensity_desc = {
+                              .curve = SCALE_PIECEWISE_LOG,
+                              .unit = "bits",
+                          });
 
 /* Bitmaps are arrays of 64 bit words, so every op that takes a bit count
  * has a partial trailing word to deal with, which can cause counting/reporting
@@ -35,7 +35,7 @@ static void bm_fill_n(bitmap_word_t *map, size_t nwords) {
         map[i] = ~(bitmap_word_t) 0;
 }
 
-TEST_DECLARE_UNIT(bitmap, set_test_clear, TEST_INTENSITY(64, 256, 4096)) {
+TEST_DEFINE_UNIT(bitmap, set_test_clear, TEST_INTENSITY(64, 256, 4096)) {
     size_t nbits = ctx->intensity_val ? ctx->intensity_val : BM_BITS;
     size_t nwords = BITMAP_WORDS(nbits);
     bitmap_word_t *map = kmalloc(sizeof(bitmap_word_t) * nwords, ALLOC_ZERO);
@@ -59,7 +59,7 @@ TEST_DECLARE_UNIT(bitmap, set_test_clear, TEST_INTENSITY(64, 256, 4096)) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bitmap, bit_isolation, TEST_INTENSITY(64, 256, 1024)) {
+TEST_DEFINE_UNIT(bitmap, bit_isolation, TEST_INTENSITY(64, 256, 1024)) {
     size_t nbits = ctx->intensity_val ? ctx->intensity_val : BM_BITS;
     size_t nwords = BITMAP_WORDS(nbits);
     bitmap_word_t *map =
@@ -80,7 +80,7 @@ TEST_DECLARE_UNIT(bitmap, bit_isolation, TEST_INTENSITY(64, 256, 1024)) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bitmap, toggle_and_test_ops) {
+TEST_DEFINE_UNIT(bitmap, toggle_and_test_ops) {
     bitmap_word_t map[BM_WORDS];
     bm_reset(map);
 
@@ -99,7 +99,7 @@ TEST_DECLARE_UNIT(bitmap, toggle_and_test_ops) {
 }
 
 /* Bits above nbits are memory and could be set, but shan't be counted */
-TEST_DECLARE_UNIT(bitmap, weight_ignores_past_end) {
+TEST_DEFINE_UNIT(bitmap, weight_ignores_past_end) {
     bitmap_word_t map[BM_WORDS];
     bm_fill(map);
 
@@ -114,7 +114,7 @@ TEST_DECLARE_UNIT(bitmap, weight_ignores_past_end) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bitmap, weight_counts, TEST_INTENSITY(64, 256, 4096)) {
+TEST_DEFINE_UNIT(bitmap, weight_counts, TEST_INTENSITY(64, 256, 4096)) {
     size_t nbits = ctx->intensity_val ? ctx->intensity_val : BM_BITS;
     size_t nwords = BITMAP_WORDS(nbits);
     bitmap_word_t *map = kmalloc(sizeof(bitmap_word_t) * nwords, ALLOC_ZERO);
@@ -130,7 +130,7 @@ TEST_DECLARE_UNIT(bitmap, weight_counts, TEST_INTENSITY(64, 256, 4096)) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bitmap, set_clear_range) {
+TEST_DEFINE_UNIT(bitmap, set_clear_range) {
     bitmap_word_t map[BM_WORDS];
     bm_reset(map);
 
@@ -151,7 +151,7 @@ TEST_DECLARE_UNIT(bitmap, set_clear_range) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bitmap, find_first_set, TEST_INTENSITY(64, 256, 2048)) {
+TEST_DEFINE_UNIT(bitmap, find_first_set, TEST_INTENSITY(64, 256, 2048)) {
     size_t nbits = ctx->intensity_val ? ctx->intensity_val : BM_BITS;
     size_t nwords = BITMAP_WORDS(nbits);
     bitmap_word_t *map =
@@ -179,7 +179,7 @@ TEST_DECLARE_UNIT(bitmap, find_first_set, TEST_INTENSITY(64, 256, 2048)) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bitmap, find_first_zero, TEST_INTENSITY(64, 256, 2048)) {
+TEST_DEFINE_UNIT(bitmap, find_first_zero, TEST_INTENSITY(64, 256, 2048)) {
     size_t nbits = ctx->intensity_val ? ctx->intensity_val : BM_BITS;
     size_t nwords = BITMAP_WORDS(nbits);
     bitmap_word_t *map =
@@ -209,7 +209,7 @@ TEST_DECLARE_UNIT(bitmap, find_first_zero, TEST_INTENSITY(64, 256, 2048)) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bitmap, find_next_bit) {
+TEST_DEFINE_UNIT(bitmap, find_next_bit) {
     bitmap_word_t map[BM_WORDS];
     bm_reset(map);
 
@@ -239,7 +239,7 @@ TEST_DECLARE_UNIT(bitmap, find_next_bit) {
 
 /* Walking every set bit via find_next_bit must visit the bits that
  * bitmap_test agrees are set, and terminate */
-TEST_DECLARE_UNIT(bitmap, find_next_bit_walk, TEST_INTENSITY(64, 256, 4096)) {
+TEST_DEFINE_UNIT(bitmap, find_next_bit_walk, TEST_INTENSITY(64, 256, 4096)) {
     size_t nbits = ctx->intensity_val ? ctx->intensity_val : BM_BITS;
     size_t nwords = BITMAP_WORDS(nbits);
     bitmap_word_t *map = kmalloc(sizeof(bitmap_word_t) * nwords, ALLOC_ZERO);
@@ -262,7 +262,7 @@ TEST_DECLARE_UNIT(bitmap, find_next_bit_walk, TEST_INTENSITY(64, 256, 4096)) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(bitmap, word_index_math) {
+TEST_DEFINE_UNIT(bitmap, word_index_math) {
     TEST_ASSERT_EQ(BITMAP_WORD_INDEX(0), 0);
     TEST_ASSERT_EQ(BITMAP_WORD_INDEX(63), 0);
     TEST_ASSERT_EQ(BITMAP_WORD_INDEX(64), 1);

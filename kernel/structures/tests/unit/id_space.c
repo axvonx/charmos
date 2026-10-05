@@ -1,8 +1,8 @@
 #include "structures/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(id_space);
+TEST_GROUP_DEFINE(id_space);
 
-TEST_DECLARE_UNIT(id_space, alloc_and_free_coalesce) {
+TEST_DEFINE_UNIT(id_space, alloc_and_free_coalesce) {
     struct id_space *is = id_space_init(100);
     TEST_ASSERT_NONNULL(is);
 

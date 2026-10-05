@@ -1,9 +1,9 @@
 #include "mem/arena/tests/import.h"
 #include "mem/arena/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(arena);
+TEST_GROUP_DEFINE(arena);
 
-TEST_DECLARE_UNIT(arena, create_lookup_basic) {
+TEST_DEFINE_UNIT(arena, create_lookup_basic) {
     struct arena_seg_desc descs[ARENA_MAX_SEG] = {
         {.id = 1, .size = 512}, {.id = 2, .size = 4},
         {.id = 3, .size = 8},   {.id = 4, .size = 12},

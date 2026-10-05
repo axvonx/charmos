@@ -9,12 +9,12 @@
 
 #include "internal.h"
 
-NDJSON_DECLARE(lock_chk_finding, NDJSON_SECTION_LOCK_CHK, NDJSON_KIND_FINDING,
-               1, NDJSON_STR(kind), NDJSON_STR(sig), NDJSON_STR(file),
-               NDJSON_U64(line), NDJSON_STR(class), NDJSON_STR(msg),
-               NDJSON_STR(mode), NDJSON_U64(cycle_len),
-               NDJSON_STR(capacity_pool), NDJSON_U64(capacity_used),
-               NDJSON_U64(capacity_limit));
+NDJSON_DEFINE(lock_chk_finding, NDJSON_SECTION_LOCK_CHK, NDJSON_KIND_FINDING, 1,
+              NDJSON_STR(kind), NDJSON_STR(sig), NDJSON_STR(file),
+              NDJSON_U64(line), NDJSON_STR(class), NDJSON_STR(msg),
+              NDJSON_STR(mode), NDJSON_U64(cycle_len),
+              NDJSON_STR(capacity_pool), NDJSON_U64(capacity_used),
+              NDJSON_U64(capacity_limit));
 
 static const char *lock_chk_mode_name(enum lock_chk_mode mode) {
     if (mode == LOCK_CHK_MODE_EXCLUSIVE)

@@ -2,10 +2,10 @@
 #include <ndjson.h>
 #include <string.h>
 
-NDJSON_DECLARE(ndjson_schema, NDJSON_SECTION_NDJSON, NDJSON_KIND_SCHEMA, 1,
-               NDJSON_STR(section), NDJSON_STR(kind), NDJSON_U64(rec_version),
-               NDJSON_U64(nfields), NDJSON_U64(index), NDJSON_STR(field),
-               NDJSON_STR(type));
+NDJSON_DEFINE(ndjson_schema, NDJSON_SECTION_NDJSON, NDJSON_KIND_SCHEMA, 1,
+              NDJSON_STR(section), NDJSON_STR(kind), NDJSON_U64(rec_version),
+              NDJSON_U64(nfields), NDJSON_U64(index), NDJSON_STR(field),
+              NDJSON_STR(type));
 
 static const char *ndjson_type_str(enum ndjson_type t) {
     switch (t) {

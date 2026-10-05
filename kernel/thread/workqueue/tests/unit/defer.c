@@ -1,9 +1,9 @@
 #include "thread/workqueue/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(defer, .intensity_desc = {
-                              .curve = SCALE_PIECEWISE_LOG,
-                              .unit = "iters",
-                          });
+TEST_GROUP_DEFINE(defer, .intensity_desc = {
+                             .curve = SCALE_PIECEWISE_LOG,
+                             .unit = "iters",
+                         });
 
 static atomic_bool defer_worked = false;
 static uint64_t enqueue_ms;
@@ -23,7 +23,7 @@ static void defer_func(void *boo, void *unused) {
     atomic_store_release(&defer_worked, true);
 }
 
-TEST_DECLARE_UNIT(defer, delayed_work_schedule) {
+TEST_DEFINE_UNIT(defer, delayed_work_schedule) {
     atomic_store_relaxed(&defer_worked, false);
     delayed_work_init(&test_dwork, defer_func, WORK_ARGS(NULL, NULL));
     enqueue_ms = time_get_ms();

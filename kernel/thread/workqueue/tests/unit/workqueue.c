@@ -1,9 +1,9 @@
 #include "thread/workqueue/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(workqueue, .intensity_desc = {
-                                  .curve = SCALE_PIECEWISE_LOG,
-                                  .unit = "items",
-                              });
+TEST_GROUP_DEFINE(workqueue, .intensity_desc = {
+                                 .curve = SCALE_PIECEWISE_LOG,
+                                 .unit = "items",
+                             });
 
 #define WQ_2_THREADS 2
 
@@ -41,8 +41,8 @@ static void enqueue_thread(void *arg) {
     atomic_dec(&threads_left);
 }
 
-TEST_DECLARE_UNIT(workqueue, mt_enqueue_scaling,
-                  TEST_INTENSITY(512, 4096, 32768)) {
+TEST_DEFINE_UNIT(workqueue, mt_enqueue_scaling,
+                 TEST_INTENSITY(512, 4096, 32768)) {
     size_t total_items = ctx->intensity_val ? ctx->intensity_val : 4096;
     wq_2_items_per_thread = total_items / WQ_2_THREADS;
     atomic_store(&times_2, 0);

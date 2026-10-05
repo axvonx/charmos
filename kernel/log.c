@@ -22,16 +22,16 @@
 #include <thread/thread.h>
 #include <time/time.h>
 
-NDJSON_DECLARE(log_message, NDJSON_SECTION_LOG, NDJSON_KIND_MESSAGE, 1,
-               NDJSON_STR(site), NDJSON_STR(level), NDJSON_STR(msg),
-               NDJSON_STR(file), NDJSON_U64(line), NDJSON_STR(func));
+NDJSON_DEFINE(log_message, NDJSON_SECTION_LOG, NDJSON_KIND_MESSAGE, 1,
+              NDJSON_STR(site), NDJSON_STR(level), NDJSON_STR(msg),
+              NDJSON_STR(file), NDJSON_U64(line), NDJSON_STR(func));
 
 #define LOG_IMPORTANT_RETRY 32
-LOG_SITE_DECLARE(global, .flags = LOG_SITE_DEFAULT,
-                 .capacity = LOG_SITE_CAPACITY_DEFAULT,
-                 .dump_opts = LOG_DUMP_CONSOLE, .enabled_mask = LOG_SITE_ALL);
+LOG_SITE_DEFINE(global, .flags = LOG_SITE_DEFAULT,
+                .capacity = LOG_SITE_CAPACITY_DEFAULT,
+                .dump_opts = LOG_DUMP_CONSOLE, .enabled_mask = LOG_SITE_ALL);
 
-LOG_HANDLE_DECLARE(global, .flags = LOG_HANDLE_PRINT);
+LOG_HANDLE_DEFINE(global, .flags = LOG_HANDLE_PRINT);
 
 struct log_globals {
     bool initialized;

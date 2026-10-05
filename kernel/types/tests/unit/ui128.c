@@ -1,9 +1,9 @@
 #include "types/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(ui128, .intensity_desc = {
-                              .curve = SCALE_PIECEWISE_LOG,
-                              .unit = "iters",
-                          });
+TEST_GROUP_DEFINE(ui128, .intensity_desc = {
+                             .curve = SCALE_PIECEWISE_LOG,
+                             .unit = "iters",
+                         });
 
 /* These are runtime functions the compiler wants to exist, so we can
  * support 128 bit integers. Each 128 bit integer is two 64 bit halves,
@@ -14,7 +14,7 @@ static uint128_t ref_shl(uint128_t a, int b) {
     return b == 0 ? a : a << b;
 }
 
-TEST_DECLARE_UNIT(ui128, shift_left_standard) {
+TEST_DEFINE_UNIT(ui128, shift_left_standard) {
     static const uint128_t vals[] = {
         0,
         1,
@@ -31,7 +31,7 @@ TEST_DECLARE_UNIT(ui128, shift_left_standard) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(ui128, shift_left_edge) {
+TEST_DEFINE_UNIT(ui128, shift_left_edge) {
     uint128_t one = 1;
 
     TEST_ASSERT(__ashlti3(one, 0) == one);
@@ -46,7 +46,7 @@ TEST_DECLARE_UNIT(ui128, shift_left_edge) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(ui128, shift_right_logical_standard) {
+TEST_DEFINE_UNIT(ui128, shift_right_logical_standard) {
     static const uint128_t vals[] = {
         0,
         1,
@@ -65,7 +65,7 @@ TEST_DECLARE_UNIT(ui128, shift_right_logical_standard) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(ui128, shift_right_logical_edge) {
+TEST_DEFINE_UNIT(ui128, shift_right_logical_edge) {
     uint128_t top = U128(1ULL << 63, 0);
 
     TEST_ASSERT(__lshrti3(top, 0) == top);
@@ -81,7 +81,7 @@ TEST_DECLARE_UNIT(ui128, shift_right_logical_edge) {
 
 /* The arithmetic shift is the one with a sign to preserve; a logical shift
  * substituted here would pass every non-negative case in the sweep above. */
-TEST_DECLARE_UNIT(ui128, shift_right_arithmetic_standard) {
+TEST_DEFINE_UNIT(ui128, shift_right_arithmetic_standard) {
     static const int128_t vals[] = {
         0, 1, -1, 12345, -12345, INT128_MAX, INT128_MIN,
     };
@@ -95,7 +95,7 @@ TEST_DECLARE_UNIT(ui128, shift_right_arithmetic_standard) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(ui128, shift_right_arithmetic_signs) {
+TEST_DEFINE_UNIT(ui128, shift_right_arithmetic_signs) {
     /* -1 stays -1 at every shift; that is the whole point of sign fill. */
     for (int b = 0; b < 128; b++)
         TEST_ASSERT(__ashrti3((int128_t) -1, b) == (int128_t) -1);
@@ -111,7 +111,7 @@ TEST_DECLARE_UNIT(ui128, shift_right_arithmetic_signs) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(ui128, negate_standard, TEST_INTENSITY(16, 64, 1024)) {
+TEST_DEFINE_UNIT(ui128, negate_standard, TEST_INTENSITY(16, 64, 1024)) {
     size_t iters = ctx->intensity_val ? ctx->intensity_val : 64;
     TEST_ASSERT(__negti2(0) == 0);
     TEST_ASSERT(__negti2(1) == (int128_t) -1);
@@ -130,7 +130,7 @@ TEST_DECLARE_UNIT(ui128, negate_standard, TEST_INTENSITY(16, 64, 1024)) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(ui128, mul_standard, TEST_INTENSITY(8, 32, 256)) {
+TEST_DEFINE_UNIT(ui128, mul_standard, TEST_INTENSITY(8, 32, 256)) {
     size_t bound = ctx->intensity_val ? ctx->intensity_val : 32;
     TEST_ASSERT(__multi3(0, 12345) == 0);
     TEST_ASSERT(__multi3(1, 12345) == 12345);
@@ -155,7 +155,7 @@ TEST_DECLARE_UNIT(ui128, mul_standard, TEST_INTENSITY(8, 32, 256)) {
 
 /* Division is checked through its own contract rather than a table: whatever
  * the quotient is, q*d + r must reproduce n and r must stay below d. */
-TEST_DECLARE_UNIT(ui128, divmod_identity) {
+TEST_DEFINE_UNIT(ui128, divmod_identity) {
     static const uint128_t nums[] = {
         0,           1,
         12345,       U128(0, UINT64_MAX),
@@ -181,7 +181,7 @@ TEST_DECLARE_UNIT(ui128, divmod_identity) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(ui128, divmod_edge) {
+TEST_DEFINE_UNIT(ui128, divmod_edge) {
     uint128_t rem = 0;
 
     /* A numerator smaller than the divisor is all remainder. */
@@ -198,7 +198,7 @@ TEST_DECLARE_UNIT(ui128, divmod_edge) {
 /* C rounds signed division toward zero, which makes the remainder take the
  * sign of the dividend -- not the divisor. Both directions are easy to invert.
  */
-TEST_DECLARE_UNIT(ui128, divmod_signs, TEST_INTENSITY(10, 40, 512)) {
+TEST_DEFINE_UNIT(ui128, divmod_signs, TEST_INTENSITY(10, 40, 512)) {
     size_t bound = ctx->intensity_val ? ctx->intensity_val : 40;
     int128_t rem;
 
@@ -233,7 +233,7 @@ TEST_DECLARE_UNIT(ui128, divmod_signs, TEST_INTENSITY(10, 40, 512)) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(ui128, popcount_parity) {
+TEST_DEFINE_UNIT(ui128, popcount_parity) {
     TEST_ASSERT_EQ(__popcountti2(0), 0);
     TEST_ASSERT_EQ(__popcountti2(UINT128_MAX), 128);
     TEST_ASSERT_EQ(__popcountti2(U128(UINT64_MAX, 0)), 64);
@@ -251,7 +251,7 @@ TEST_DECLARE_UNIT(ui128, popcount_parity) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(ui128, count_zeros) {
+TEST_DEFINE_UNIT(ui128, count_zeros) {
     for (int b = 0; b < 128; b++) {
         uint128_t v = __ashlti3(1, b);
         TEST_ASSERT_EQ(__clzti2(v), 127 - b);
@@ -267,7 +267,7 @@ TEST_DECLARE_UNIT(ui128, count_zeros) {
 }
 
 /* Test the overflow checks in __negvti2 and similar functions */
-TEST_DECLARE_UNIT(ui128, min_max_constants) {
+TEST_DEFINE_UNIT(ui128, min_max_constants) {
     TEST_ASSERT(INT128_MAX > 0);
     TEST_ASSERT(INT128_MIN < 0);
     TEST_ASSERT(INT128_MAX == (int128_t) (UINT128_MAX >> 1));

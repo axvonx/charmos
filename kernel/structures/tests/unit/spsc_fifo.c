@@ -1,8 +1,8 @@
 #include "structures/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(spsc_fifo);
+TEST_GROUP_DEFINE(spsc_fifo);
 
-TEST_DECLARE_UNIT(spsc_fifo, byte_stream_and_wraparound) {
+TEST_DEFINE_UNIT(spsc_fifo, byte_stream_and_wraparound) {
     struct spsc_fifo fifo;
     bool ok = spsc_fifo_init(&fifo, 16);
     TEST_ASSERT(ok);
@@ -48,7 +48,7 @@ TEST_DECLARE_UNIT(spsc_fifo, byte_stream_and_wraparound) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(spsc_fifo, ptr_helpers) {
+TEST_DEFINE_UNIT(spsc_fifo, ptr_helpers) {
     struct spsc_fifo fifo;
     bool ok = spsc_fifo_init(&fifo, 8 * sizeof(void *));
     TEST_ASSERT(ok);

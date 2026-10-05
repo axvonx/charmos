@@ -27,7 +27,7 @@
 #include "mem/slab/internal.h"
 
 /* Basically, every test and test setting wires back here */
-CMDLINE_DECLARE(test_root, .name = "test", .flags = CMDLINE_ENTRY_SYMBOLIC);
+CMDLINE_DEFINE(test_root, .name = "test", .flags = CMDLINE_ENTRY_SYMBOLIC);
 
 LINKER_SECTION_OBJECT(struct test_group, test_groups)
 test_group_orphan_parent = {.name = "test_group_orphan_parent",
@@ -36,7 +36,7 @@ test_group_orphan_parent = {.name = "test_group_orphan_parent",
                             .incremental = false,
                             .flags = TEST_GROUP_FLAG_DEFAULT};
 
-CMDLINE_CHILDREN_DECLARE(
+CMDLINE_CHILDREN_DEFINE(
     test_root,
     CMDLINE_INNER(
         filter, .types = CMDLINE_TYPES(CMDLINE_TYPE_STRING, CMDLINE_TYPE_LIST),
@@ -59,29 +59,29 @@ CMDLINE_CHILDREN_DECLARE(
     CMDLINE_INNER_VAR(no_progress, test_global.no_progress,
                       .desc = "Do not show progress bar"));
 
-NDJSON_DECLARE(test_begin, NDJSON_SECTION_TEST, NDJSON_KIND_BEGIN, 1,
-               NDJSON_U64(declared_total));
+NDJSON_DEFINE(test_begin, NDJSON_SECTION_TEST, NDJSON_KIND_BEGIN, 1,
+              NDJSON_U64(declared_total));
 
-NDJSON_DECLARE(test_group_start, NDJSON_SECTION_TEST, NDJSON_KIND_GROUP_START,
-               1, NDJSON_STR(group), NDJSON_U64(test_count), NDJSON_STR(file));
+NDJSON_DEFINE(test_group_start, NDJSON_SECTION_TEST, NDJSON_KIND_GROUP_START, 1,
+              NDJSON_STR(group), NDJSON_U64(test_count), NDJSON_STR(file));
 
-NDJSON_DECLARE(test_result, NDJSON_SECTION_TEST, NDJSON_KIND_RESULT, 1,
-               NDJSON_STR(group), NDJSON_STR(tier), NDJSON_STR(name),
-               NDJSON_STR(status), NDJSON_U64(duration_ms), NDJSON_STR(reason),
-               NDJSON_STR(msg), NDJSON_U64(runs_requested),
-               NDJSON_U64(runs_attempted), NDJSON_U64(runs_failed),
-               NDJSON_U64(runs_skipped));
+NDJSON_DEFINE(test_result, NDJSON_SECTION_TEST, NDJSON_KIND_RESULT, 1,
+              NDJSON_STR(group), NDJSON_STR(tier), NDJSON_STR(name),
+              NDJSON_STR(status), NDJSON_U64(duration_ms), NDJSON_STR(reason),
+              NDJSON_STR(msg), NDJSON_U64(runs_requested),
+              NDJSON_U64(runs_attempted), NDJSON_U64(runs_failed),
+              NDJSON_U64(runs_skipped));
 
-NDJSON_DECLARE(test_group_end, NDJSON_SECTION_TEST, NDJSON_KIND_GROUP_END, 1,
-               NDJSON_STR(group), NDJSON_U64(duration_ms), NDJSON_U64(failed),
-               NDJSON_U64(skipped));
+NDJSON_DEFINE(test_group_end, NDJSON_SECTION_TEST, NDJSON_KIND_GROUP_END, 1,
+              NDJSON_STR(group), NDJSON_U64(duration_ms), NDJSON_U64(failed),
+              NDJSON_U64(skipped));
 
-NDJSON_DECLARE(test_totals, NDJSON_SECTION_TEST, NDJSON_KIND_TOTALS, 1,
-               NDJSON_U64(total), NDJSON_U64(passed), NDJSON_U64(failed),
-               NDJSON_U64(skipped));
+NDJSON_DEFINE(test_totals, NDJSON_SECTION_TEST, NDJSON_KIND_TOTALS, 1,
+              NDJSON_U64(total), NDJSON_U64(passed), NDJSON_U64(failed),
+              NDJSON_U64(skipped));
 
-NDJSON_DECLARE(test_verdict, NDJSON_SECTION_TEST, NDJSON_KIND_VERDICT, 1,
-               NDJSON_BOOL(ok), NDJSON_U64(duration_ms));
+NDJSON_DEFINE(test_verdict, NDJSON_SECTION_TEST, NDJSON_KIND_VERDICT, 1,
+              NDJSON_BOOL(ok), NDJSON_U64(duration_ms));
 
 static const char *test_status_plain(enum test_result r) {
     switch (r) {
@@ -101,14 +101,14 @@ static const char *test_tier_plain(enum test_tier t) {
     }
 }
 
-LOG_SITE_DECLARE_PRINT(test_harness);
-LOG_HANDLE_DECLARE_PRINT(test_harness,
-                         .flags = LOG_HANDLE_PRINT | LOG_HANDLE_NO_NEWLINE);
+LOG_SITE_DEFINE_PRINT(test_harness);
+LOG_HANDLE_DEFINE_PRINT(test_harness,
+                        .flags = LOG_HANDLE_PRINT | LOG_HANDLE_NO_NEWLINE);
 
-LOG_SITE_DECLARE(test_ndjson, .flags = LOG_SITE_DEFAULT | LOG_SITE_NDJSON,
-                 .capacity = LOG_SITE_CAPACITY_DEFAULT,
-                 .dump_opts = LOG_DUMP_DEFAULT, .enabled_mask = LOG_SITE_ALL);
-LOG_HANDLE_DECLARE(test_ndjson, .flags = LOG_HANDLE_FLAGS_DEFAULT);
+LOG_SITE_DEFINE(test_ndjson, .flags = LOG_SITE_DEFAULT | LOG_SITE_NDJSON,
+                .capacity = LOG_SITE_CAPACITY_DEFAULT,
+                .dump_opts = LOG_DUMP_DEFAULT, .enabled_mask = LOG_SITE_ALL);
+LOG_HANDLE_DEFINE(test_ndjson, .flags = LOG_HANDLE_FLAGS_DEFAULT);
 
 #define test_ndjson_log(lvl, fmt, ...)                                         \
     log(LOG_SITE(test_ndjson), LOG_HANDLE(test_ndjson), lvl, fmt, ##__VA_ARGS__)
@@ -144,8 +144,8 @@ LOG_HANDLE_DECLARE(test_ndjson, .flags = LOG_HANDLE_FLAGS_DEFAULT);
     OSC "8;;file://" CHARMOS_SOURCE_ROOT "/" path OSC_ST
 #define OSC8_LINK_END OSC "8;;" OSC_ST
 
-LINKER_SECTION_DEFINE(struct test, tests);
-LINKER_SECTION_DEFINE(struct test_group, test_groups);
+LINKER_SECTION_DECLARE(struct test, tests);
+LINKER_SECTION_DECLARE(struct test_group, test_groups);
 /* no need to clean up allocations in these tests, we are supposed to
  * reboot/poweroff after all tests complete, and the userland should
  * not be in a state where we can boot it when running tests */
@@ -195,7 +195,7 @@ static void *test_group_instance_resolver(const char *path, size_t path_len) {
     return NULL;
 }
 
-CMDLINE_SCHEMA_DECLARE(
+CMDLINE_SCHEMA_DEFINE(
     test_props, "test", "<group>.<name>", "Test parameters",
     test_instance_resolver, CMDLINE_SCHEMA_PROP(struct test, enabled),
     CMDLINE_SCHEMA_PROP_FX(struct test, intensity,
@@ -214,7 +214,7 @@ CMDLINE_SCHEMA_DECLARE(
     CMDLINE_SCHEMA_PROP(struct test, print_logs,
                         .desc = "Print logs in real time"));
 
-CMDLINE_SCHEMA_DECLARE(
+CMDLINE_SCHEMA_DEFINE(
     test_group_props, "test_group", "<group>", "Test group parameters",
     test_group_instance_resolver,
     CMDLINE_SCHEMA_PROP(struct test_group, enabled),

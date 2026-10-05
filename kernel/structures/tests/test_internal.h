@@ -21,16 +21,16 @@
 #include <structures/mpmc_queue.h>
 #include <structures/spsc_fifo.h>
 
-TEST_GROUP_DEFINE(minheap);
-TEST_GROUP_DEFINE(rbt);
-TEST_GROUP_DEFINE(rbit);
-TEST_GROUP_DEFINE(bitmap);
-TEST_GROUP_DEFINE(radix);
-TEST_GROUP_DEFINE(avl);
-TEST_GROUP_DEFINE(bloom);
-TEST_GROUP_DEFINE(splay);
-TEST_GROUP_DEFINE(treap);
-TEST_GROUP_DEFINE(mpmc_queue);
-TEST_GROUP_DEFINE(spsc_fifo);
-TEST_GROUP_DEFINE(id_space);
-TEST_GROUP_DEFINE(cpu_mask);
+TEST_GROUP_DECLARE(minheap);
+TEST_GROUP_DECLARE(rbt);
+TEST_GROUP_DECLARE(rbit);
+TEST_GROUP_DECLARE(bitmap);
+TEST_GROUP_DECLARE(radix);
+TEST_GROUP_DECLARE(avl);
+TEST_GROUP_DECLARE(bloom);
+TEST_GROUP_DECLARE(splay);
+TEST_GROUP_DECLARE(treap);
+TEST_GROUP_DECLARE(mpmc_queue);
+TEST_GROUP_DECLARE(spsc_fifo);
+TEST_GROUP_DECLARE(id_space);
+TEST_GROUP_DECLARE(cpu_mask);

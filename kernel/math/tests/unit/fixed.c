@@ -1,9 +1,9 @@
 #include "math/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(fixed, .intensity_desc = {
-                              .curve = SCALE_PIECEWISE_LOG,
-                              .unit = "iters",
-                          });
+TEST_GROUP_DEFINE(fixed, .intensity_desc = {
+                             .curve = SCALE_PIECEWISE_LOG,
+                             .unit = "iters",
+                         });
 
 /* Q32.32, [integer] [fraction], everything here is signed, so we try to test
  * those cases more because _mul/_div work on absolute values and reapply
@@ -17,7 +17,7 @@ static bool fx_near(fx32_32_t a, fx32_32_t b, fx32_32_t tol) {
     return abs(d) <= tol;
 }
 
-TEST_DECLARE_UNIT(fixed, mul_identity) {
+TEST_DEFINE_UNIT(fixed, mul_identity) {
     static const fx32_32_t vals[] = {
         0,        FX_ONE,    -FX_ONE,  FX_HALF,   -FX_HALF,
         FX(3.25), FX(-3.25), FX(1000), FX(-1000), FX(0.001),
@@ -39,7 +39,7 @@ TEST_DECLARE_UNIT(fixed, mul_identity) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(fixed, mul_standard) {
+TEST_DEFINE_UNIT(fixed, mul_standard) {
     TEST_ASSERT_EQ(fx_mul(FX_HALF, FX_HALF), FX_QUARTER);
     TEST_ASSERT_EQ(fx_mul(FX(2.0), FX(3.0)), FX(6.0));
     TEST_ASSERT_EQ(fx_mul(FX(0.25), FX(4.0)), FX_ONE);
@@ -51,7 +51,7 @@ TEST_DECLARE_UNIT(fixed, mul_standard) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(fixed, mul_signs) {
+TEST_DEFINE_UNIT(fixed, mul_signs) {
     TEST_ASSERT_EQ_S(fx_mul(FX(-2.0), FX(3.0)), FX(-6.0));
     TEST_ASSERT_EQ_S(fx_mul(FX(2.0), FX(-3.0)), FX(-6.0));
     TEST_ASSERT_EQ(fx_mul(FX(-2.0), FX(-3.0)), FX(6.0));
@@ -60,7 +60,7 @@ TEST_DECLARE_UNIT(fixed, mul_signs) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(fixed, div_identity) {
+TEST_DEFINE_UNIT(fixed, div_identity) {
     static const fx32_32_t vals[] = {
         FX_ONE, -FX_ONE, FX_HALF, -FX_HALF, FX(3.25), FX(-3.25), FX(1000),
     };
@@ -77,7 +77,7 @@ TEST_DECLARE_UNIT(fixed, div_identity) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(fixed, div_standard, TEST_INTENSITY(16, 64, 1024)) {
+TEST_DEFINE_UNIT(fixed, div_standard, TEST_INTENSITY(16, 64, 1024)) {
     size_t iters = ctx->intensity_val ? ctx->intensity_val : 64;
     TEST_ASSERT_EQ(fx_div(FX_ONE, FX(2.0)), FX_HALF);
     TEST_ASSERT_EQ(fx_div(FX(6.0), FX(3.0)), FX(2.0));
@@ -96,7 +96,7 @@ TEST_DECLARE_UNIT(fixed, div_standard, TEST_INTENSITY(16, 64, 1024)) {
 }
 
 /* Masking fractional bits rounds toward -inf both +/- */
-TEST_DECLARE_UNIT(fixed, floor_ceil_standard) {
+TEST_DEFINE_UNIT(fixed, floor_ceil_standard) {
     TEST_ASSERT_EQ(fx_floor(0), 0);
     TEST_ASSERT_EQ(fx_ceil(0), 0);
 
@@ -112,7 +112,7 @@ TEST_DECLARE_UNIT(fixed, floor_ceil_standard) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(fixed, floor_ceil_signs) {
+TEST_DEFINE_UNIT(fixed, floor_ceil_signs) {
     TEST_ASSERT_EQ_S(fx_floor(-FX_HALF), -FX_ONE);
     TEST_ASSERT_EQ(fx_ceil(-FX_HALF), 0);
 
@@ -125,7 +125,7 @@ TEST_DECLARE_UNIT(fixed, floor_ceil_signs) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(fixed, floor_ceil_invariant, TEST_INTENSITY(4, 16, 256)) {
+TEST_DEFINE_UNIT(fixed, floor_ceil_invariant, TEST_INTENSITY(4, 16, 256)) {
     int64_t bound = ctx->intensity_val ? (int64_t) (ctx->intensity_val / 2) : 8;
     if (bound == 0)
         bound = 1;
@@ -146,7 +146,7 @@ TEST_DECLARE_UNIT(fixed, floor_ceil_invariant, TEST_INTENSITY(4, 16, 256)) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(fixed, pow_i32_standard) {
+TEST_DEFINE_UNIT(fixed, pow_i32_standard) {
     TEST_ASSERT_EQ(fx_pow_i32(FX(2.0), 0), FX_ONE);
     TEST_ASSERT_EQ(fx_pow_i32(FX(2.0), 1), FX(2.0));
     TEST_ASSERT_EQ(fx_pow_i32(FX(2.0), 2), FX(4.0));
@@ -162,7 +162,7 @@ TEST_DECLARE_UNIT(fixed, pow_i32_standard) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(fixed, pow_i32_negative_exponent) {
+TEST_DEFINE_UNIT(fixed, pow_i32_negative_exponent) {
     TEST_ASSERT_EQ(fx_pow_i32(FX(2.0), -1), FX_HALF);
     TEST_ASSERT_EQ(fx_pow_i32(FX(2.0), -2), FX_QUARTER);
     TEST_ASSERT(fx_near(fx_pow_i32(FX(4.0), -1), FX(0.25), FX_EPS));
@@ -176,7 +176,7 @@ TEST_DECLARE_UNIT(fixed, pow_i32_negative_exponent) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(fixed, sqrt_standard) {
+TEST_DEFINE_UNIT(fixed, sqrt_standard) {
     static const int64_t roots[] = {1, 2, 3, 4, 5, 8, 10, 16};
 
     for (size_t i = 0; i < TEST_ARRAY_LEN(roots); i++) {
@@ -191,7 +191,7 @@ TEST_DECLARE_UNIT(fixed, sqrt_standard) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(fixed, sqrt_edge) {
+TEST_DEFINE_UNIT(fixed, sqrt_edge) {
     TEST_ASSERT_EQ(fx_sqrt(0), 0);
     TEST_ASSERT_EQ(fx_sqrt(-FX_ONE), 0);
     TEST_ASSERT_EQ(fx_sqrt(FX_ONE), FX_ONE);
@@ -199,8 +199,8 @@ TEST_DECLARE_UNIT(fixed, sqrt_edge) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(fixed, conversion_roundtrip,
-                  TEST_INTENSITY(256, 1024, 65536)) {
+TEST_DEFINE_UNIT(fixed, conversion_roundtrip,
+                 TEST_INTENSITY(256, 1024, 65536)) {
     int64_t bound = ctx->intensity_val ? (int64_t) ctx->intensity_val : 1024;
     for (int64_t n = -bound; n <= bound; n++)
         TEST_ASSERT_EQ_S(fx_to_int(fx_from_int(n)), n);
@@ -213,7 +213,7 @@ TEST_DECLARE_UNIT(fixed, conversion_roundtrip,
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(fixed, clamp_standard) {
+TEST_DEFINE_UNIT(fixed, clamp_standard) {
     TEST_ASSERT_EQ(fx_clamp(FX(5.0), 0, FX_ONE), FX_ONE);
     TEST_ASSERT_EQ(fx_clamp(FX(-5.0), 0, FX_ONE), 0);
     TEST_ASSERT_EQ(fx_clamp(FX_HALF, 0, FX_ONE), FX_HALF);

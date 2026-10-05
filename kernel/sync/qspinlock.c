@@ -9,7 +9,7 @@ struct qnode {
     atomic_uint8_t locked;
 } cc_cache_aligned;
 
-PERCPU_DECLARE(struct qnode[QSPINLOCK_LEVEL_MAX], qnodes, NULL);
+PERCPU_DEFINE(struct qnode[QSPINLOCK_LEVEL_MAX], qnodes, NULL);
 
 /* The idea here: if we are running at DISPATCH, this lock
  * is also a DISPATCH lock, otherwise, this is a HIGH lock

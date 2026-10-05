@@ -21,7 +21,7 @@ struct wake_storm_options {
 
 static struct wake_storm_options wake_storm_options;
 
-NIGHTMARE_OPTIONS_DECLARE(
+NIGHTMARE_OPTIONS_DEFINE(
     wake_storm, struct wake_storm_options, wake_storm_options,
     CMDLINE_SCHEMA_PROP(struct wake_storm_options, sleeper_stall_ms,
                         .types = CMDLINE_TYPES(CMDLINE_TYPE_DURATION),
@@ -95,9 +95,9 @@ struct wake_storm_state {
     struct wake_storm_sleeper sleepers[];
 };
 
-LOCK_CHK_CLASS_DECLARE_LOCAL(wake_storm_mtx);
-LOCK_CHK_CLASS_DECLARE_LOCAL(wake_storm_rw);
-LOCK_CHK_CLASS_DECLARE_LOCAL(wake_storm_qspin);
+LOCK_CHK_CLASS_DEFINE_LOCAL(wake_storm_mtx);
+LOCK_CHK_CLASS_DEFINE_LOCAL(wake_storm_rw);
+LOCK_CHK_CLASS_DEFINE_LOCAL(wake_storm_qspin);
 
 static struct wake_storm_state *wake_state(struct nightmare_ctx *ctx) {
     return ctx->private;
@@ -497,7 +497,7 @@ static const struct nightmare_ops wake_storm_ops = {
     .finish = wake_storm_finish,
 };
 
-NIGHTMARE_DECLARE(
+NIGHTMARE_DEFINE(
     wake_storm,
     .desc = "Wake/sleep handoff under lock, APC and migration pressure",
     .ops = &wake_storm_ops, .seed_policy = NIGHTMARE_SEED_IGNORED,

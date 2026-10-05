@@ -1,8 +1,8 @@
 #include "drivers/nvme/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(nvme);
+TEST_GROUP_DEFINE(nvme);
 
-TEST_DECLARE_UNIT(nvme, status_code_decode) {
+TEST_DEFINE_UNIT(nvme, status_code_decode) {
     /* Status 0 (with phase bit 0 or 1) -> BIO_STATUS_OK */
     TEST_ASSERT_EQ_S(TEST_CALL(nvme_to_bio_status)(0x0000), BIO_STATUS_OK);
     TEST_ASSERT_EQ_S(TEST_CALL(nvme_to_bio_status)(0x0001), BIO_STATUS_OK);

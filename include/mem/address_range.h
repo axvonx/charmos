@@ -27,7 +27,7 @@ struct address_range {
     struct page_fault_handler *page_fault_handler;
 };
 
-#define ADDRESS_RANGE_DECLARE(sym, ...)                                        \
+#define ADDRESS_RANGE_DEFINE(sym, ...)                                         \
     cc_wno_override_init_start LINKER_SECTION_OBJECT(                          \
         struct address_range, address_ranges) __address_range_##sym = {        \
         .name = #sym, __VA_ARGS__, .rbt_node_internal = RBT_NODE_INIT};        \
@@ -35,7 +35,7 @@ struct address_range {
 
 #define ADDRESS_RANGE(sym) (__address_range_##sym)
 
-LINKER_SECTION_DEFINE(struct address_range, address_ranges);
+LINKER_SECTION_DECLARE(struct address_range, address_ranges);
 
 void address_ranges_init();
 void address_ranges_print();

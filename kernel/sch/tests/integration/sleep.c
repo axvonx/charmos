@@ -1,16 +1,16 @@
 #include "sch/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(sched, .intensity_desc = {
-                              .curve = SCALE_PIECEWISE_LOG,
-                              .unit = "iters",
-                          });
+TEST_GROUP_DEFINE(sched, .intensity_desc = {
+                             .curve = SCALE_PIECEWISE_LOG,
+                             .unit = "iters",
+                         });
 
 static void sleepy_entry(void *arg) {
     cc_unused(arg);
     thread_sleep_for_ms(50);
 }
 
-TEST_DECLARE_INTEGRATION(sched, sleep_ms) {
+TEST_DEFINE_INTEGRATION(sched, sleep_ms) {
     struct thread *t =
         thread_spawn("sched_sleepy_test", sleepy_entry, .joinable = true);
     TEST_ASSERT_NONNULL(t);
@@ -26,7 +26,7 @@ static void micro_sleep_entry(void *arg) {
     atomic_store(&slept_for_us, true);
 }
 
-TEST_DECLARE_INTEGRATION(sched, sleep_us) {
+TEST_DEFINE_INTEGRATION(sched, sleep_us) {
     atomic_store(&slept_for_us, false);
     struct thread *t = thread_spawn("sched_micro_sleep_test", micro_sleep_entry,
                                     .joinable = true);
@@ -47,7 +47,7 @@ static void short_sleep_entry(void *arg) {
     }
 }
 
-TEST_DECLARE_INTEGRATION(sched, short_sleep_lost_wake) {
+TEST_DEFINE_INTEGRATION(sched, short_sleep_lost_wake) {
     atomic_store(&short_sleep_stop, false);
     atomic_store(&short_sleep_count, 0);
 
@@ -118,7 +118,7 @@ static void waking_thread(void *arg) {
     thread_wait_header_satisfy(&si_wait, THREAD_WAKE_REASON_SLEEP_MANUAL, NULL);
 }
 
-TEST_DECLARE_INTEGRATION(sched, sleep_interruptible_apc, .min_cores = 4) {
+TEST_DEFINE_INTEGRATION(sched, sleep_interruptible_apc, .min_cores = 4) {
     thread_wait_header_init(&si_wait);
     atomic_store(&si_apc_ran, false);
     atomic_store(&si_ok, false);
@@ -184,7 +184,7 @@ static void sleeping_sub_thread(void *arg) {
     atomic_store(&sub_interrupted, true);
 }
 
-TEST_DECLARE_INTEGRATION(sched, wait_interruptible_substrate, .min_cores = 3) {
+TEST_DEFINE_INTEGRATION(sched, wait_interruptible_substrate, .min_cores = 3) {
     atomic_store(&sub_apc_ran, false);
     atomic_store(&sub_interrupted, false);
     atomic_store(&sub_started, false);
@@ -228,7 +228,7 @@ static void arbitrary_waking_thread(void *arg) {
     thread_alert(arb_t);
 }
 
-TEST_DECLARE_INTEGRATION(sched, park_alert, .min_cores = 3) {
+TEST_DEFINE_INTEGRATION(sched, park_alert, .min_cores = 3) {
     atomic_store(&arb_started, false);
     atomic_store(&arb_matched, false);
 

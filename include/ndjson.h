@@ -13,7 +13,7 @@
  *
  * e.g.
  *
- *   NDJSON_DECLARE(test_result, "test", "result", 1,
+ *   NDJSON_DEFINE(test_result, "test", "result", 1,
  *                  NDJSON_STR(name),
  *                  NDJSON_STR(status),
  *                  NDJSON_U64(duration_ms));
@@ -88,7 +88,7 @@ struct ndjson_record {
     const struct ndjson_field *fields;
 };
 
-LINKER_SECTION_DEFINE(struct ndjson_record, ndjson_records);
+LINKER_SECTION_DECLARE(struct ndjson_record, ndjson_records);
 
 #define NDJSON_CTYPE_U64 uint64_t
 #define NDJSON_CTYPE_I64 int64_t
@@ -96,7 +96,7 @@ LINKER_SECTION_DEFINE(struct ndjson_record, ndjson_records);
 #define NDJSON_CTYPE_STR const char *
 #define NDJSON_CTYPE_HEX uint64_t
 
-/* NDJSON_DECLARE uses this */
+/* NDJSON_DEFINE uses this */
 #define NDJSON_U64(n) (U64, n)
 #define NDJSON_I64(n) (I64, n)
 #define NDJSON_BOOL(n) (BOOL, n)
@@ -139,7 +139,7 @@ LINKER_SECTION_DEFINE(struct ndjson_record, ndjson_records);
 
 #define NDJSON_MAX_FIELDS 16
 
-#define NDJSON_DECLARE(id, section_, kind_, version_, ...)                     \
+#define NDJSON_DEFINE(id, section_, kind_, version_, ...)                      \
     struct __ndjson_args_##id {                                                \
         NDJSON_MAP(NDJSON_MEMBER, id, __VA_ARGS__)                             \
     };                                                                         \

@@ -51,16 +51,16 @@ static struct watchdog_globals watchdog_global = {0};
 
 /* TODO: a LOG_SITE + HANDLE DECLARE, with printing explicitly turned off
  * because we cannot take the implicit printf lock(s) from the NMI */
-LOG_SITE_DECLARE(watchdog_master);
-LOG_HANDLE_DECLARE(watchdog_master);
+LOG_SITE_DEFINE(watchdog_master);
+LOG_HANDLE_DEFINE(watchdog_master);
 
-PERCPU_DECLARE(struct watchdog_percpu, watchdog_percpu, watchdog_percpu_ctor);
-CMDLINE_DECLARE_STATIC(watchdog, .flags = CMDLINE_ENTRY_SYMBOLIC,
-                       .desc = "Watchdog command line namespace");
+PERCPU_DEFINE(struct watchdog_percpu, watchdog_percpu, watchdog_percpu_ctor);
+CMDLINE_DEFINE_STATIC(watchdog, .flags = CMDLINE_ENTRY_SYMBOLIC,
+                      .desc = "Watchdog command line namespace");
 
-CMDLINE_CHILD_DECLARE(watchdog, master, .flags = CMDLINE_ENTRY_SYMBOLIC);
+CMDLINE_CHILD_DEFINE(watchdog, master, .flags = CMDLINE_ENTRY_SYMBOLIC);
 
-CMDLINE_CHILDREN_DECLARE(
+CMDLINE_CHILDREN_DEFINE(
     CMDLINE_NODE(watchdog, master),
     CMDLINE_INNER_DURATION(heartbeat_interval, config.master_tick_interval,
                            .range = RANGE(MS_TO_NS(1), SECONDS_TO_NS(60))),
@@ -75,7 +75,7 @@ CMDLINE_CHILDREN_DECLARE(
     CMDLINE_INNER_DURATION(stall_timeout, config.master_stall_timeout,
                            .range = RANGE(0, SECONDS_TO_NS(600))));
 
-/* PERCPU_DECLARE zero-initializes, but we explicitly init buckets */
+/* PERCPU_DEFINE zero-initializes, but we explicitly init buckets */
 static void watchdog_percpu_ctor(struct watchdog_percpu *pcpu, cpu_id_t cpu) {
     pcpu->id = cpu;
     pcpu->pets_enabled = false;

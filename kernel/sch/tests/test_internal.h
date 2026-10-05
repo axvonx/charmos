@@ -12,5 +12,5 @@
 #include <thread/thread.h>
 #include <thread/workqueue.h>
 
-TEST_GROUP_DEFINE(sched);
-TEST_GROUP_DEFINE(climb);
+TEST_GROUP_DECLARE(sched);
+TEST_GROUP_DECLARE(climb);

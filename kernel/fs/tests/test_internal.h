@@ -7,4 +7,4 @@
 #include <fs/vfs.h>
 #include <mem/alloc.h>
 
-TEST_GROUP_DEFINE(tmpfs);
+TEST_GROUP_DECLARE(tmpfs);

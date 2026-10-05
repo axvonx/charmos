@@ -469,7 +469,7 @@ static inline const char *usb_error_str(const enum usb_error err) {
     }
 }
 
-LINKER_SECTION_DEFINE(struct usb_driver, usb_drivers);
+LINKER_SECTION_DECLARE(struct usb_driver, usb_drivers);
 #define USB_DRIVER_REGISTER(n, cc, sc, proto, bringup_fn, teardown_fn,         \
                             free_fn)                                           \
     LINKER_SECTION_OBJECT(struct usb_driver, usb_drivers)                      \

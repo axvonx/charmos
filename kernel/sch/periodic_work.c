@@ -11,8 +11,8 @@ static void scheduler_percpu_work_ctor(struct scheduler_periodic_work_percpu *,
                                        cpu_id_t);
 
 SLAB_SIZE_REGISTER_FOR_STRUCT(scheduler_periodic_work, SLAB_OBJ_ALIGN_DEFAULT);
-PERCPU_DECLARE(struct scheduler_periodic_work_percpu, periodic_percpu,
-               scheduler_percpu_work_ctor);
+PERCPU_DEFINE(struct scheduler_periodic_work_percpu, periodic_percpu,
+              scheduler_percpu_work_ctor);
 
 static int32_t work_cmp(struct pairing_node *a, struct pairing_node *b) {
     struct scheduler_periodic_work *wa =

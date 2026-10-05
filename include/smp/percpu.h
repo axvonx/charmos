@@ -20,9 +20,9 @@ struct percpu_descriptor {
     atomic_bool ready;
 };
 
-LINKER_SECTION_DEFINE(struct percpu_descriptor, percpu_desc);
+LINKER_SECTION_DECLARE(struct percpu_descriptor, percpu_desc);
 
-#define PERCPU_DECLARE(__type, __n, __ctor)                                    \
+#define PERCPU_DEFINE(__type, __n, __ctor)                                     \
     static typeof(__type) __percpu_##__n cc_fn_unused;                         \
     static struct percpu_descriptor __percpu_desc_##__n;                       \
     static void __percpu_ctor_##__n(void *inst, size_t cpu) {                  \
@@ -50,13 +50,13 @@ LINKER_SECTION_DEFINE(struct percpu_descriptor, percpu_desc);
 
 #define PERCPU_EXPORT(name) PERCPU_EXPORT_AS(name, name)
 
-#define PERCPU_DEFINE_AS(type, name, sym_name)                                 \
+#define PERCPU_DECLARE_AS(type, name, sym_name)                                \
     extern struct percpu_descriptor __percpu_desc_sym_##sym_name;              \
     static typeof(type) __percpu_##name cc_fn_unused;                          \
     static struct percpu_descriptor *const __percpu_desc_ref_##name            \
         cc_fn_unused = &__percpu_desc_sym_##sym_name
 
-#define PERCPU_DEFINE(type, name) PERCPU_DEFINE_AS(type, name, name)
+#define PERCPU_DECLARE(type, name) PERCPU_DECLARE_AS(type, name, name)
 
 #define PERCPU(name) &(__percpu_##name)
 #define PERCPU_READY(name) (atomic_load(&(__percpu_desc_ref_##name)->ready))

@@ -3,7 +3,7 @@
 #include <string.h>
 #include <test/test.h>
 
-TEST_GROUP_DECLARE(watchdog);
+TEST_GROUP_DEFINE(watchdog);
 
 static void watchdog_populate_full_window(struct watchdog_buckets *buckets) {
     memset(buckets, 0, sizeof(*buckets));
@@ -14,7 +14,7 @@ static void watchdog_populate_full_window(struct watchdog_buckets *buckets) {
         buckets->buckets_internal[i].heartbeats = 20;
 }
 
-TEST_DECLARE_UNIT(watchdog, frozen_window_missing_heartbeats) {
+TEST_DEFINE_UNIT(watchdog, frozen_window_missing_heartbeats) {
     struct watchdog_buckets buckets;
     watchdog_populate_full_window(&buckets);
 
@@ -31,7 +31,7 @@ TEST_DECLARE_UNIT(watchdog, frozen_window_missing_heartbeats) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(watchdog, current_window_recent_heartbeats) {
+TEST_DEFINE_UNIT(watchdog, current_window_recent_heartbeats) {
     struct watchdog_buckets buckets;
     watchdog_populate_full_window(&buckets);
 
@@ -48,7 +48,7 @@ TEST_DECLARE_UNIT(watchdog, current_window_recent_heartbeats) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(watchdog, ewma_fixed_point_sample) {
+TEST_DEFINE_UNIT(watchdog, ewma_fixed_point_sample) {
     struct ewma score;
     ewma_init(&score, FX(0.15));
     score.ewma = FX(0.25);

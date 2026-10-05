@@ -34,8 +34,8 @@
     } while (0)
 
 #ifdef DEBUG_ASAN
-LOG_SITE_DECLARE_PRINT(asan);
-LOG_HANDLE_DECLARE_PRINT(asan);
+LOG_SITE_DEFINE_PRINT(asan);
+LOG_HANDLE_DEFINE_PRINT(asan);
 
 /* If we widen this, ASAN_SHADOW_OFFSET must be recomputed, because right now
  * it maps exactly this window into the shadow region */
@@ -254,13 +254,13 @@ void asan_init(void) {
     asan_ready = true;
 }
 
-NDJSON_DECLARE(asan_fault, NDJSON_SECTION_ASAN, NDJSON_KIND_FAULT, 1,
-               NDJSON_STR(what), NDJSON_HEX(addr), NDJSON_U64(size),
-               NDJSON_STR(access));
+NDJSON_DEFINE(asan_fault, NDJSON_SECTION_ASAN, NDJSON_KIND_FAULT, 1,
+              NDJSON_STR(what), NDJSON_HEX(addr), NDJSON_U64(size),
+              NDJSON_STR(access));
 
-NDJSON_DECLARE(asan_frame, NDJSON_SECTION_ASAN, NDJSON_KIND_FRAME, 1,
-               NDJSON_U64(idx), NDJSON_HEX(addr), NDJSON_STR(sym),
-               NDJSON_U64(off));
+NDJSON_DEFINE(asan_frame, NDJSON_SECTION_ASAN, NDJSON_KIND_FRAME, 1,
+              NDJSON_U64(idx), NDJSON_HEX(addr), NDJSON_STR(sym),
+              NDJSON_U64(off));
 
 static void asan_report_shadow(const void *addr) {
     const uint8_t *sh = asan_shadow_for_internal(addr);

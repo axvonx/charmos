@@ -1,9 +1,9 @@
 #include "thread/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(apc, .intensity_desc = {
-                            .curve = SCALE_PIECEWISE_LOG,
-                            .unit = "iters",
-                        });
+TEST_GROUP_DEFINE(apc, .intensity_desc = {
+                           .curve = SCALE_PIECEWISE_LOG,
+                           .unit = "iters",
+                       });
 
 static atomic_bool apc_ran = false;
 static atomic_uint apc_destroyed = 0;
@@ -25,7 +25,7 @@ static void apc_thread(void *arg) {
 }
 
 static struct thread *ted = NULL;
-TEST_DECLARE_INTEGRATION(apc, kernel_apc_runs_then_destroys) {
+TEST_DEFINE_INTEGRATION(apc, kernel_apc_runs_then_destroys) {
     atomic_store(&apc_ran, false);
     atomic_store(&apc_destroyed, 0);
     ted = thread_spawn("apc_test_thread", apc_thread, .joinable = true);
@@ -61,7 +61,7 @@ static void apc_ref_destroy(struct apc *apc) {
     atomic_inc(&apc_ref_destroyed);
 }
 
-TEST_DECLARE_INTEGRATION(apc, refcount_finalizes_at_zero) {
+TEST_DEFINE_INTEGRATION(apc, refcount_finalizes_at_zero) {
     struct apc apc;
     atomic_store(&apc_ref_destroyed, 0);
     apc_init(&apc, the_apc, NULL, apc_ref_destroy);
@@ -74,7 +74,7 @@ TEST_DECLARE_INTEGRATION(apc, refcount_finalizes_at_zero) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_INTEGRATION(apc, null_destroy_valid) {
+TEST_DEFINE_INTEGRATION(apc, null_destroy_valid) {
     struct apc apc;
     apc_init(&apc, the_apc, NULL, NULL);
     apc_put(&apc);
@@ -104,7 +104,7 @@ static void apc_cancel_target(void *arg) {
         scheduler_yield();
 }
 
-TEST_DECLARE_INTEGRATION(apc, cancel_releases_queue_ref) {
+TEST_DEFINE_INTEGRATION(apc, cancel_releases_queue_ref) {
     atomic_store(&apc_cancel_ready, false);
     atomic_store(&apc_cancel_release, false);
     atomic_store(&apc_cancel_ran, false);
@@ -158,7 +158,7 @@ static void apc_rundown_target(void *arg) {
         scheduler_yield();
 }
 
-TEST_DECLARE_INTEGRATION(apc, thread_rundown_releases_queue_ref) {
+TEST_DEFINE_INTEGRATION(apc, thread_rundown_releases_queue_ref) {
     atomic_store(&apc_rundown_ready, false);
     atomic_store(&apc_rundown_release, false);
     atomic_store(&apc_rundown_ran, false);
@@ -206,7 +206,7 @@ static void apc_reuse_target(void *arg) {
         scheduler_yield();
 }
 
-TEST_DECLARE_INTEGRATION(apc, caller_ref_allows_reuse) {
+TEST_DEFINE_INTEGRATION(apc, caller_ref_allows_reuse) {
     atomic_store(&apc_reuse_ran, 0);
     atomic_store(&apc_reuse_destroyed, 0);
 
@@ -261,7 +261,7 @@ static void apc_race_target(void *arg) {
         scheduler_yield();
 }
 
-TEST_DECLARE_INTEGRATION(apc, cancel_races_delivery) {
+TEST_DEFINE_INTEGRATION(apc, cancel_races_delivery) {
     atomic_store(&apc_race_ready, false);
     atomic_store(&apc_race_release, false);
     atomic_store(&apc_race_settled, false);
@@ -330,7 +330,7 @@ static void apc_event_test_thread(void *arg) TSA_NO_ANALYSIS {
 }
 
 static struct thread *ated = NULL;
-TEST_DECLARE_INTEGRATION(apc, event_masking_and_signal) {
+TEST_DEFINE_INTEGRATION(apc, event_masking_and_signal) {
     atomic_store(&the_event_apc_ran_times, 0);
     atomic_store(&event_apc_test_ok, false);
 

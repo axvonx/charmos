@@ -8,7 +8,7 @@
 #include <time/time.h>
 #include <types/types.h>
 
-LOG_HANDLE_DECLARE_PRINT(pit);
+LOG_HANDLE_DEFINE_PRINT(pit);
 
 static inline void pit_write_command(uint8_t cmd) {
     outb(PIT_PORT_COMMAND, cmd);

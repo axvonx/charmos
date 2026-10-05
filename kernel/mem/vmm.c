@@ -58,16 +58,16 @@ struct pt_walk {
     int depth;
 };
 
-ADDRESS_RANGE_DECLARE(hhdm, .base = 0xFFFF800000000000ULL,
-                      /* default size: from the base up to the slab heap */
-                      .size = SLAB_HEAP_START - 0xFFFF800000000000ULL);
+ADDRESS_RANGE_DEFINE(hhdm, .base = 0xFFFF800000000000ULL,
+                     /* default size: from the base up to the slab heap */
+                     .size = SLAB_HEAP_START - 0xFFFF800000000000ULL);
 
-ADDRESS_RANGE_DECLARE(kernel, .base = 0xffffffff80000000,
-                      .size = 0); /* Filled in at boot */
+ADDRESS_RANGE_DEFINE(kernel, .base = 0xffffffff80000000,
+                     .size = 0); /* Filled in at boot */
 
-CMDLINE_DECLARE_VAR(mem, ADDRESS_RANGE(hhdm).size,
-                    .desc = "Cap on physical memory the allocator will use",
-                    .arg = "<hex bytes>", .default_val = "0x700000000000");
+CMDLINE_DEFINE_VAR(mem, ADDRESS_RANGE(hhdm).size,
+                   .desc = "Cap on physical memory the allocator will use",
+                   .arg = "<hex bytes>", .default_val = "0x700000000000");
 
 bool hhdm_vaddr_in_range(vaddr_t vaddr) {
     return address_range_addr_in_range(&ADDRESS_RANGE(hhdm), vaddr);

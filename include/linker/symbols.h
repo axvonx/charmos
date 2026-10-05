@@ -17,7 +17,7 @@ extern uint64_t __kernel_virt_end;
 #define LINKER_SECTION_OBJECT(type, section)                                   \
     LINKER_SECTION_ATTRIBUTE(section) type
 
-#define LINKER_SECTION_DEFINE(type, name)                                      \
+#define LINKER_SECTION_DECLARE(type, name)                                     \
     extern type __skernel_##name[];                                            \
     extern type __ekernel_##name[];
 

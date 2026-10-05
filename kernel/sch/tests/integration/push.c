@@ -14,8 +14,8 @@ static void sched_push_try(void *arg) {
     atomic_store(&at_least_one_migrated, true);
 }
 
-TEST_DECLARE_INTEGRATION(sched, push_target, TEST_INTENSITY(32, 256, 1024),
-                         .min_cores = 2) {
+TEST_DEFINE_INTEGRATION(sched, push_target, TEST_INTENSITY(32, 256, 1024),
+                        .min_cores = 2) {
     test_info("This test takes a bit. uncomment me to run it");
     return TEST_SKIP(TEST_SKIP_NONE);
 

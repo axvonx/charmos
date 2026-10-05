@@ -45,8 +45,8 @@
 
 #include "rcu_internal.h"
 
-LOG_SITE_DECLARE_PRINT(rcu);
-LOG_HANDLE_DECLARE_PRINT(rcu);
+LOG_SITE_DEFINE_PRINT(rcu);
+LOG_HANDLE_DEFINE_PRINT(rcu);
 static struct rcu_state rcu;
 
 static inline struct rcu_node *rcu_leaf_for_cpu(cpu_id_t cpu) {

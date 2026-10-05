@@ -1,8 +1,8 @@
 #include "drivers/ahci/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(ahci);
+TEST_GROUP_DEFINE(ahci);
 
-TEST_DECLARE_UNIT(ahci, fis_h2d_lba48_pack) {
+TEST_DEFINE_UNIT(ahci, fis_h2d_lba48_pack) {
     struct ahci_fis_reg_h2d fis = {0};
 
     uint64_t lba          = 0x0000123456789ABCULL;

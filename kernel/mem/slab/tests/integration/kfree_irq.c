@@ -36,8 +36,8 @@ static enum irq_result kfree_irq_test_irq(void *ctx, uint8_t vector,
     return IRQ_HANDLED;
 }
 
-TEST_DECLARE_INTEGRATION(slab, kfree_defer_irq,
-                         TEST_INTENSITY(256, 2048, 16384), .min_cores = 4) {
+TEST_DEFINE_INTEGRATION(slab, kfree_defer_irq, TEST_INTENSITY(256, 2048, 16384),
+                        .min_cores = 4) {
     size_t total = ctx->intensity_val ? ctx->intensity_val : 2048;
     kfree_irq_total_allocs = total;
     kfree_irq_allocs = kmalloc(sizeof(void *) * total);

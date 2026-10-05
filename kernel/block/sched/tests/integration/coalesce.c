@@ -1,9 +1,9 @@
 #include "block/sched/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(bio_sched, .intensity_desc = {
-                                  .curve = SCALE_PIECEWISE_LOG,
-                                  .unit = "requests",
-                              });
+TEST_GROUP_DEFINE(bio_sched, .intensity_desc = {
+                                 .curve = SCALE_PIECEWISE_LOG,
+                                 .unit = "requests",
+                             });
 
 #define EXT2_ROOT struct vfs_node *root = global.root_node
 
@@ -16,8 +16,8 @@ static void bio_sch_callback1(struct bio_request *req) {
     test_info("cb 1 success");
 }
 
-TEST_DECLARE_INTEGRATION(bio_sched, coalesce, TEST_INTENSITY(1, 2, 16),
-                         .required_fs = FS_EXT2) {
+TEST_DEFINE_INTEGRATION(bio_sched, coalesce, TEST_INTENSITY(1, 2, 16),
+                        .required_fs = FS_EXT2) {
     EXT2_ROOT;
     struct ext2_fs *fs = root->fs_data;
     struct block_device *d = fs->drive;

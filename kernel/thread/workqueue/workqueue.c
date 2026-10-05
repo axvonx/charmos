@@ -13,8 +13,8 @@
 
 #include "internal.h"
 
-LOCK_CHK_CLASS_DECLARE_LOCAL(workqueue_irq);
-LOCK_CHK_CLASS_DECLARE_LOCAL(workqueue_disp);
+LOCK_CHK_CLASS_DEFINE_LOCAL(workqueue_irq);
+LOCK_CHK_CLASS_DEFINE_LOCAL(workqueue_disp);
 
 static struct workqueue *find_optimal_domain_wq(void) {
     struct core *pos;

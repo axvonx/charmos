@@ -23,9 +23,9 @@ static uint64_t runs_per_lvl[BIO_SCHED_LEVELS] = {0};
 static struct bio_request *rqs[BIO_SCHED_TEST_RUNS_MAX] = {0};
 static uint8_t *buffers[BIO_SCHED_TEST_RUNS_MAX] = {0};
 
-TEST_DECLARE_INTEGRATION(bio_sched, delay_enqueue,
-                         TEST_INTENSITY(64, 1024, 4096), .min_ram_mib = 8,
-                         .required_fs = FS_EXT2) {
+TEST_DEFINE_INTEGRATION(bio_sched, delay_enqueue,
+                        TEST_INTENSITY(64, 1024, 4096), .min_ram_mib = 8,
+                        .required_fs = FS_EXT2) {
     EXT2_ROOT;
     struct ext2_fs *fs = root->fs_data;
     struct block_device *d = fs->drive;

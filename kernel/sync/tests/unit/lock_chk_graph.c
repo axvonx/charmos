@@ -9,15 +9,15 @@
 #include <sync/rwlock.h>
 #include <sync/spinlock.h>
 
-LOCK_CHK_CLASS_DECLARE_LOCAL(graph_test_class_a);
-LOCK_CHK_CLASS_DECLARE_LOCAL(graph_test_class_b);
-LOCK_CHK_CLASS_DECLARE_LOCAL(graph_test_class_c);
+LOCK_CHK_CLASS_DEFINE_LOCAL(graph_test_class_a);
+LOCK_CHK_CLASS_DEFINE_LOCAL(graph_test_class_b);
+LOCK_CHK_CLASS_DEFINE_LOCAL(graph_test_class_c);
 
 static struct lock_chk_graph lock_chk_test_graph;
 
 #define TEST_CTX(g, ...) (&(struct lock_chk_ctx){.graph = (g), __VA_ARGS__})
 
-TEST_DECLARE_UNIT(lock_chk, graph_node_resolution) {
+TEST_DEFINE_UNIT(lock_chk, graph_node_resolution) {
     struct lock_chk_graph *graph = &lock_chk_test_graph;
     lock_chk_graph_init(graph);
 
@@ -57,7 +57,7 @@ TEST_DECLARE_UNIT(lock_chk, graph_node_resolution) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(lock_chk, graph_cycle_detection) {
+TEST_DEFINE_UNIT(lock_chk, graph_cycle_detection) {
     struct lock_chk_graph *graph = &lock_chk_test_graph;
     lock_chk_graph_init(graph);
 
@@ -128,7 +128,7 @@ TEST_DECLARE_UNIT(lock_chk, graph_cycle_detection) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(lock_chk, irq_safety_conflict) {
+TEST_DEFINE_UNIT(lock_chk, irq_safety_conflict) {
     struct lock_chk_graph *graph = &lock_chk_test_graph;
     lock_chk_graph_init(graph);
 
@@ -172,7 +172,7 @@ TEST_DECLARE_UNIT(lock_chk, irq_safety_conflict) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(lock_chk, graph_acquire_dedup) {
+TEST_DEFINE_UNIT(lock_chk, graph_acquire_dedup) {
     struct lock_chk_graph *graph = &lock_chk_test_graph;
     lock_chk_graph_init(graph);
 
@@ -218,7 +218,7 @@ TEST_DECLARE_UNIT(lock_chk, graph_acquire_dedup) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(lock_chk, graph_acquire_cycle_fault_populated) {
+TEST_DEFINE_UNIT(lock_chk, graph_acquire_cycle_fault_populated) {
     struct lock_chk_graph *graph = &lock_chk_test_graph;
     lock_chk_graph_init(graph);
 
@@ -275,7 +275,7 @@ TEST_DECLARE_UNIT(lock_chk, graph_acquire_cycle_fault_populated) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(lock_chk, graph_acquire_rollback) {
+TEST_DEFINE_UNIT(lock_chk, graph_acquire_rollback) {
     struct lock_chk_graph *graph = &lock_chk_test_graph;
     lock_chk_graph_init(graph);
 
@@ -320,7 +320,7 @@ TEST_DECLARE_UNIT(lock_chk, graph_acquire_rollback) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(lock_chk, spin_qspin_lifecycle) {
+TEST_DEFINE_UNIT(lock_chk, spin_qspin_lifecycle) {
     struct spinlock spin_disp;
     struct spinlock spin_irq;
     struct spinlock spin_raw;
@@ -375,7 +375,7 @@ TEST_DECLARE_UNIT(lock_chk, spin_qspin_lifecycle) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(lock_chk, mutex_out_of_order_release) {
+TEST_DEFINE_UNIT(lock_chk, mutex_out_of_order_release) {
     struct mutex m1;
     struct mutex m2;
 
@@ -391,7 +391,7 @@ TEST_DECLARE_UNIT(lock_chk, mutex_out_of_order_release) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(lock_chk, mutex_simple_lifecycle) {
+TEST_DEFINE_UNIT(lock_chk, mutex_simple_lifecycle) {
     struct mutex_simple s1;
     struct mutex_simple s2;
 
@@ -413,7 +413,7 @@ TEST_DECLARE_UNIT(lock_chk, mutex_simple_lifecycle) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(lock_chk, rw_reader_ring_and_conflict) {
+TEST_DEFINE_UNIT(lock_chk, rw_reader_ring_and_conflict) {
     struct lock_chk_graph *graph = &lock_chk_test_graph;
     lock_chk_graph_init(graph);
 
@@ -484,7 +484,7 @@ TEST_DECLARE_UNIT(lock_chk, rw_reader_ring_and_conflict) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(lock_chk, rwlock_lifecycle) {
+TEST_DEFINE_UNIT(lock_chk, rwlock_lifecycle) {
     struct rwlock rw;
     rwlock_init(&rw, THREAD_PRIO_CLASS_TIMESHARE);
 
@@ -506,7 +506,7 @@ TEST_DECLARE_UNIT(lock_chk, rwlock_lifecycle) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(lock_chk, subclasses_all_primitives) {
+TEST_DEFINE_UNIT(lock_chk, subclasses_all_primitives) {
     struct spinlock spin;
     struct qspinlock qspin;
     struct mutex mtx;

@@ -4,9 +4,9 @@
 #include <thread/thread.h>
 
 #if defined(TEST_ENABLED) && defined(TEST_NIGHTMARE_SMOKE)
-TEST_GROUP_DECLARE(nightmare);
+TEST_GROUP_DEFINE(nightmare);
 
-TEST_DECLARE_UNIT(nightmare, perturb_verdict_mailbox) {
+TEST_DEFINE_UNIT(nightmare, perturb_verdict_mailbox) {
     char reason[] = "first_reason";
     char msg[] = "first message";
     struct nightmare_verdict first = NIGHTMARE_FAIL(reason, msg);
@@ -30,7 +30,7 @@ TEST_DECLARE_UNIT(nightmare, perturb_verdict_mailbox) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(nightmare, stop_priority) {
+TEST_DEFINE_UNIT(nightmare, stop_priority) {
     atomic_store_relaxed(&nightmare_runtime.conc.stop, TEST_RUN);
 
     nightmare_publish_stop(TEST_STOP_BUDGET);
@@ -62,7 +62,7 @@ static void heartbeat_waiter(void *arg) {
     thread_park();
 }
 
-TEST_DECLARE_UNIT(nightmare, first_stop_wakes_sleepers) {
+TEST_DEFINE_UNIT(nightmare, first_stop_wakes_sleepers) {
     atomic_store_relaxed(&stop_sleepers_waiting, 0);
     atomic_store_relaxed(&nightmare_runtime.conc.stop, TEST_RUN);
 
@@ -103,7 +103,7 @@ TEST_DECLARE_UNIT(nightmare, first_stop_wakes_sleepers) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(nightmare, finding_stop_preserves_finding_verdict) {
+TEST_DEFINE_UNIT(nightmare, finding_stop_preserves_finding_verdict) {
     struct nightmare_verdict verdict =
         nightmare_verdict_for_stop(NIGHTMARE_OK, TEST_STOP_FINDING);
     TEST_ASSERT_EQ(verdict.result, NIGHTMARE_RESULT_OK);
@@ -114,7 +114,7 @@ TEST_DECLARE_UNIT(nightmare, finding_stop_preserves_finding_verdict) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(nightmare, forced_stop_verdicts_override_ok) {
+TEST_DEFINE_UNIT(nightmare, forced_stop_verdicts_override_ok) {
     struct nightmare_verdict failed =
         nightmare_verdict_for_stop(NIGHTMARE_OK, TEST_STOP_FAIL);
     TEST_ASSERT_EQ(failed.result, NIGHTMARE_RESULT_FAIL);

@@ -95,14 +95,14 @@ struct err_facility {
 
 #define ERR_FACILITY(n) __err_facility_##n
 #define ERR_FACILITY_EXTERN(n) extern struct err_facility __err_facility_##n
-#define ERR_FACILITY_DECLARE(n, ...)                                           \
+#define ERR_FACILITY_DEFINE(n, ...)                                            \
     LINKER_SECTION_OBJECT(struct err_facility, err_facilities)                 \
     __err_facility_##n = {.name = #n, __VA_ARGS__}
 
 /* Used as a return value to reduce signature length noise */
 #define err_checked enum err cc_warn_unused_result
 
-LINKER_SECTION_DEFINE(struct err_facility, err_facilities);
+LINKER_SECTION_DECLARE(struct err_facility, err_facilities);
 
 const char *err_facility_to_str(enum err err);
 void err_facilities_init();

@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <types/types.h>
 
-TEST_GROUP_DEFINE(ui128);
+TEST_GROUP_DECLARE(ui128);
 
 uint128_t __ashlti3(uint128_t a, int b);
 uint128_t __lshrti3(uint128_t a, int b);

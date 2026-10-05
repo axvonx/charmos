@@ -1,9 +1,9 @@
 #include "sync/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(rwlock, .intensity_desc = {
-                               .curve = SCALE_PIECEWISE_LOG,
-                               .unit = "threads",
-                           });
+TEST_GROUP_DEFINE(rwlock, .intensity_desc = {
+                              .curve = SCALE_PIECEWISE_LOG,
+                              .unit = "threads",
+                          });
 
 #define RWLOCK_REPORT_PROBLEMS()                                               \
     test_info("rwlock tests are encountering problems and will be skipped");   \
@@ -11,7 +11,7 @@ TEST_GROUP_DECLARE(rwlock, .intensity_desc = {
 
 static struct rwlock rw_basic = RWLOCK_INIT(THREAD_PRIO_CLASS_TIMESHARE);
 
-TEST_DECLARE_SMOKE(rwlock, read_lock_unlock) {
+TEST_DEFINE_SMOKE(rwlock, read_lock_unlock) {
     rw_lock(&rw_basic, RWLOCK_READ);
     scheduler_yield();
     rw_unlock(&rw_basic);
@@ -21,7 +21,7 @@ TEST_DECLARE_SMOKE(rwlock, read_lock_unlock) {
 
 static struct rwlock rw_basic_w = RWLOCK_INIT(THREAD_PRIO_CLASS_TIMESHARE);
 
-TEST_DECLARE_SMOKE(rwlock, write_lock_unlock) {
+TEST_DEFINE_SMOKE(rwlock, write_lock_unlock) {
     rw_lock(&rw_basic_w, RWLOCK_WRITE);
     scheduler_yield();
     rw_unlock(&rw_basic_w);

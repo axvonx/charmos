@@ -29,7 +29,7 @@ struct rcu_cb {
 };
 #define rcu_cb_from_list_node(ln) (container_of(ln, struct rcu_cb, list))
 
-TSA_REENTRANT_CAPABILITY_DEFINE("rcu", RCU_READ_LOCKED);
+TSA_REENTRANT_CAPABILITY_DECLARE("rcu", RCU_READ_LOCKED);
 
 void rcu_init(void);
 

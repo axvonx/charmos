@@ -6,8 +6,8 @@
 
 #define COMPLETION_ALL (UINT32_MAX / 2)
 
-LOCK_CHK_CLASS_DECLARE_LOCAL(completion_irq);
-LOCK_CHK_CLASS_DECLARE_LOCAL(completion_disp);
+LOCK_CHK_CLASS_DEFINE_LOCAL(completion_irq);
+LOCK_CHK_CLASS_DEFINE_LOCAL(completion_disp);
 
 void completion_init(struct completion *c, bool irq_disable) {
     atomic_init(&c->done, 0);

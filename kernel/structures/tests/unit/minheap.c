@@ -1,9 +1,9 @@
 #include "structures/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(minheap, .intensity_desc = {
-                                .curve = SCALE_PIECEWISE_LOG,
-                                .unit = "nodes",
-                            });
+TEST_GROUP_DEFINE(minheap, .intensity_desc = {
+                               .curve = SCALE_PIECEWISE_LOG,
+                               .unit = "nodes",
+                           });
 
 static void mhtest_do_inserts(struct minheap *mh, struct minheap_node **nodes,
                               size_t count) {
@@ -16,8 +16,8 @@ static void mhtest_do_inserts(struct minheap *mh, struct minheap_node **nodes,
     }
 }
 
-TEST_DECLARE_UNIT(minheap, insert_remove_pop_order,
-                  TEST_INTENSITY(10, 50, 1024)) {
+TEST_DEFINE_UNIT(minheap, insert_remove_pop_order,
+                 TEST_INTENSITY(10, 50, 1024)) {
     size_t count = ctx->intensity_val ? ctx->intensity_val : 50;
     struct minheap_node **nodes =
         kmalloc(sizeof(struct minheap_node *) * count, ALLOC_ZERO);

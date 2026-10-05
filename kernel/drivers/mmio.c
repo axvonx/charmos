@@ -6,8 +6,8 @@
 #include <mem/vmm.h>
 
 static struct vas *mmio_vas_space = NULL;
-ADDRESS_RANGE_DECLARE(mmio, .align = PAGE_1GB, .flags = ADDRESS_RANGE_DYNAMIC,
-                      .size = MMIO_RANGE_SIZE);
+ADDRESS_RANGE_DEFINE(mmio, .align = PAGE_1GB, .flags = ADDRESS_RANGE_DYNAMIC,
+                     .size = MMIO_RANGE_SIZE);
 
 void mmio_init() {
     mmio_vas_space = must(vas_from(&ADDRESS_RANGE(mmio)));

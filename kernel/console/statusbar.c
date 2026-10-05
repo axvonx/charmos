@@ -38,7 +38,7 @@ static bool bar_open;
 static struct bar_progress bar_progress;
 
 static void bar_timer_fn(struct timer *timer);
-TIMER_DECLARE(bar_timer, bar_timer_fn);
+TIMER_DEFINE(bar_timer, bar_timer_fn);
 
 static void bar_timer_arm(void) {
     timer_modify(&bar_timer, timer_delta_us(MS_TO_US(1000)));

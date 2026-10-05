@@ -6,7 +6,7 @@
 #include <sync/lock_general.h>
 
 struct stack_depot_globals stack_depot_global = {0};
-FIXED_SIZE_RANGE_PERDOMAIN_DECLARE(
+FIXED_SIZE_RANGE_PERDOMAIN_DEFINE(
     stack_depot, .obj_size = sizeof(struct stack_depot_record),
     .obj_align = _Alignof(struct stack_depot_record));
 static struct fixed_size_range boot_fsr;

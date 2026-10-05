@@ -1,9 +1,9 @@
 #include "sync/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(mutex, .intensity_desc = {
-                              .curve = SCALE_PIECEWISE_LOG,
-                              .unit = "threads",
-                          });
+TEST_GROUP_DEFINE(mutex, .intensity_desc = {
+                             .curve = SCALE_PIECEWISE_LOG,
+                             .unit = "threads",
+                         });
 
 #define MUTEX_REPORT_PROBLEMS()                                                \
     test_info("Mutex tests are encountering problems and will be skipped");    \
@@ -11,7 +11,7 @@ TEST_GROUP_DECLARE(mutex, .intensity_desc = {
 
 static struct mutex basic_test_mtx = MUTEX_INIT;
 
-TEST_DECLARE_SMOKE(mutex, lock_yield_unlock) {
+TEST_DEFINE_SMOKE(mutex, lock_yield_unlock) {
     mutex_lock(&basic_test_mtx);
     scheduler_yield();
     mutex_unlock(&basic_test_mtx);

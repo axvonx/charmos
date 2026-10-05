@@ -11,8 +11,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-LOG_SITE_DECLARE_PRINT(ahci);
-LOG_HANDLE_DECLARE_PRINT(ahci);
+LOG_SITE_DEFINE_PRINT(ahci);
+LOG_HANDLE_DEFINE_PRINT(ahci);
 
 struct ahci_disk *ahci_discover_device(uint8_t bus, uint8_t device,
                                        uint8_t   function,

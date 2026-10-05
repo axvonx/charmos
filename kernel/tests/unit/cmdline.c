@@ -3,7 +3,7 @@
 #include <cmdline.h>
 #include <math/units.h>
 
-TEST_GROUP_DECLARE(cmdline);
+TEST_GROUP_DEFINE(cmdline);
 
 struct shared_schema_probe {
     bool enabled;
@@ -24,17 +24,15 @@ static void *shared_right_resolve(const char *path, size_t len) {
                : NULL;
 }
 
-CMDLINE_SCHEMA_DECLARE(shared_left_schema, "schema_probe", "left",
-                       "shared-root resolver probe", shared_left_resolve,
-                       CMDLINE_SCHEMA_PROP(struct shared_schema_probe,
-                                           enabled));
+CMDLINE_SCHEMA_DEFINE(shared_left_schema, "schema_probe", "left",
+                      "shared-root resolver probe", shared_left_resolve,
+                      CMDLINE_SCHEMA_PROP(struct shared_schema_probe, enabled));
 
-CMDLINE_SCHEMA_DECLARE(shared_right_schema, "schema_probe", "right",
-                       "shared-root resolver probe", shared_right_resolve,
-                       CMDLINE_SCHEMA_PROP(struct shared_schema_probe,
-                                           enabled));
+CMDLINE_SCHEMA_DEFINE(shared_right_schema, "schema_probe", "right",
+                      "shared-root resolver probe", shared_right_resolve,
+                      CMDLINE_SCHEMA_PROP(struct shared_schema_probe, enabled));
 
-TEST_DECLARE_UNIT(cmdline, shared_schema_root) {
+TEST_DEFINE_UNIT(cmdline, shared_schema_root) {
     cmdline_dispatch("schema_probe.right.enabled", "true");
     cmdline_dispatch("schema_probe.left.enabled", "true");
     TEST_ASSERT(shared_left.enabled);
@@ -42,7 +40,7 @@ TEST_DECLARE_UNIT(cmdline, shared_schema_root) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(cmdline, xmacro_descriptors) {
+TEST_DEFINE_UNIT(cmdline, xmacro_descriptors) {
     TEST_ASSERT_STR_EQ(cmdline_type_to_str(CMDLINE_TYPE_BOOL), "bool");
     TEST_ASSERT_STR_EQ(cmdline_type_to_str(CMDLINE_TYPE_INT), "int");
     TEST_ASSERT_STR_EQ(cmdline_type_to_str(CMDLINE_TYPE_UINT), "uint");
@@ -72,7 +70,7 @@ TEST_DECLARE_UNIT(cmdline, xmacro_descriptors) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(cmdline, polymorphic_parsing) {
+TEST_DEFINE_UNIT(cmdline, polymorphic_parsing) {
     uint64_t mask = 0; /* 0 means unconstrained */
 
     struct cmdline_value vb = cmdline_parse_value_for("true", mask);
@@ -106,7 +104,7 @@ TEST_DECLARE_UNIT(cmdline, polymorphic_parsing) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(cmdline, extraction_helpers) {
+TEST_DEFINE_UNIT(cmdline, extraction_helpers) {
     struct cmdline_value vu = {.type = CMDLINE_TYPE_UINT,
                                .u64 = 0x123456789ABCDEF0ULL};
     uint64_t u64_val = 0;
@@ -158,7 +156,7 @@ TEST_DECLARE_UNIT(cmdline, extraction_helpers) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(cmdline, choices_and_mappings) {
+TEST_DEFINE_UNIT(cmdline, choices_and_mappings) {
     const char *const *choices = CMDLINE_CHOICES("alpha", "beta", "gamma");
     TEST_ASSERT(cmdline_has_choice(choices, "alpha"));
     TEST_ASSERT(cmdline_has_choice(choices, "beta"));
@@ -178,7 +176,7 @@ TEST_DECLARE_UNIT(cmdline, choices_and_mappings) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(cmdline, flags_table) {
+TEST_DEFINE_UNIT(cmdline, flags_table) {
     const struct cmdline_flag *flags =
         CMDLINE_FLAGS({"read", BIT(0)}, {"write", BIT(1)}, {"exec", BIT(2)});
     uint64_t mask = 0;
@@ -199,10 +197,10 @@ TEST_DECLARE_UNIT(cmdline, flags_table) {
     return TEST_SUCCESS;
 }
 
-CMDLINE_CHILD_DEFINE(test_root, group_opt_in);
-CMDLINE_CHILD_DEFINE(watchdog, master, heartbeat_interval);
+CMDLINE_CHILD_DECLARE(test_root, group_opt_in);
+CMDLINE_CHILD_DECLARE(watchdog, master, heartbeat_interval);
 
-TEST_DECLARE_UNIT(cmdline, runtime_query) {
+TEST_DEFINE_UNIT(cmdline, runtime_query) {
     struct cmdline_entry *e_root = cmdline_lookup("root");
     TEST_ASSERT_NONNULL(e_root);
     TEST_ASSERT_STR_EQ(e_root->name, "root");
@@ -240,7 +238,7 @@ TEST_DECLARE_UNIT(cmdline, runtime_query) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(cmdline, list_parsing) {
+TEST_DEFINE_UNIT(cmdline, list_parsing) {
     struct cmdline_value vlist = cmdline_parse_list("10,20,30", 0);
     TEST_ASSERT_EQ(vlist.type, CMDLINE_TYPE_LIST);
 

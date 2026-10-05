@@ -6,9 +6,8 @@
 #include <structures/list.h>
 #include <types/refcount.h>
 
-FIXED_SIZE_RANGE_PERDOMAIN_DECLARE(anon_vma,
-                                   .obj_size = sizeof(struct anon_vma),
-                                   .obj_align = _Alignof(struct anon_vma));
+FIXED_SIZE_RANGE_PERDOMAIN_DEFINE(anon_vma, .obj_size = sizeof(struct anon_vma),
+                                  .obj_align = _Alignof(struct anon_vma));
 
 struct anon_vma *anon_vma_alloc() {
     struct anon_vma *av = FSR_PERDOMAIN_ALLOC(anon_vma);

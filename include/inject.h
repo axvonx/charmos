@@ -22,15 +22,15 @@ struct inject_site {
     atomic_uint32_t counter;
 };
 
-LINKER_SECTION_DEFINE(struct inject_site, inject_sites);
+LINKER_SECTION_DECLARE(struct inject_site, inject_sites);
 
 #define INJECT_SITE_ATTRIBUTE cc_section(".kernel_inject_sites") cc_used
 
-#define INJECT_SITE_DECLARE(id, injkind, description)                          \
+#define INJECT_SITE_DEFINE(id, injkind, description)                           \
     INJECT_SITE_ATTRIBUTE struct inject_site __inject_site_##id = {            \
         .name = #id, .desc = (description), .kind = (injkind)}
 
-#define INJECT_SITE_DEFINE(id) extern struct inject_site __inject_site_##id
+#define INJECT_SITE_DECLARE(id) extern struct inject_site __inject_site_##id
 #define INJECT_SITE(id) (&__inject_site_##id)
 
 static inline void inject_arm(struct inject_site *s, uint32_t seed,

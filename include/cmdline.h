@@ -147,7 +147,7 @@ struct cmdline_flag {
 #define CMDLINE_CHOICES(...) ((const char *const[]) {__VA_ARGS__, NULL})
 #define CMDLINE_PARSER(fn) .value.parse = (fn)
 
-#define _CMDLINE_DECLARE(n, storage, ...)                                      \
+#define _CMDLINE_DEFINE(n, storage, ...)                                       \
     storage LINKER_SECTION_OBJECT(struct cmdline_entry, cmdline_entries)       \
         __cmdline_##n = {.name = #n,                                           \
                          .status = CMDLINE_ENTRY_NOT_FOUND,                    \
@@ -161,7 +161,7 @@ struct cmdline_flag {
                          .flags = CMDLINE_ENTRY_FLAGS_NONE,                    \
                          __VA_ARGS__}
 
-#define _CMDLINE_DECLARE_VAR(n, storage, var, ...)                             \
+#define _CMDLINE_DEFINE_VAR(n, storage, var, ...)                              \
     storage LINKER_SECTION_OBJECT(struct cmdline_entry, cmdline_entries)       \
         __cmdline_##n = {.name = #n,                                           \
                          .status = CMDLINE_ENTRY_NOT_FOUND,                    \
@@ -177,37 +177,37 @@ struct cmdline_flag {
                          .flags = CMDLINE_ENTRY_FLAGS_NONE,                    \
                          __VA_ARGS__}
 
-#define CMDLINE_DECLARE(n, ...)                                                \
-    cc_wno_override_init_start _CMDLINE_DECLARE(n, , __VA_ARGS__);             \
+#define CMDLINE_DEFINE(n, ...)                                                 \
+    cc_wno_override_init_start _CMDLINE_DEFINE(n, , __VA_ARGS__);              \
     cc_wno_override_init_end
 
-#define CMDLINE_DECLARE_VAR(n, var, ...)                                       \
-    cc_wno_override_init_start _CMDLINE_DECLARE_VAR(n, , var, __VA_ARGS__);    \
+#define CMDLINE_DEFINE_VAR(n, var, ...)                                        \
+    cc_wno_override_init_start _CMDLINE_DEFINE_VAR(n, , var, __VA_ARGS__);     \
     cc_wno_override_init_end
 
-#define CMDLINE_DECLARE_STATIC(n, ...)                                         \
-    cc_wno_override_init_start _CMDLINE_DECLARE(n, static, __VA_ARGS__);       \
+#define CMDLINE_DEFINE_STATIC(n, ...)                                          \
+    cc_wno_override_init_start _CMDLINE_DEFINE(n, static, __VA_ARGS__);        \
     cc_wno_override_init_end
 
-#define CMDLINE_DECLARE_VAR_STATIC(n, var, ...)                                \
-    cc_wno_override_init_start _CMDLINE_DECLARE_VAR(n, static, var,            \
-                                                    __VA_ARGS__);              \
+#define CMDLINE_DEFINE_VAR_STATIC(n, var, ...)                                 \
+    cc_wno_override_init_start _CMDLINE_DEFINE_VAR(n, static, var,             \
+                                                   __VA_ARGS__);               \
     cc_wno_override_init_end
 
-#define CMDLINE_CHILD_DECLARE(parent_n, n, ...)                                \
-    CMDLINE_DECLARE(parent_n##_##n, .name = #n, .parent = CMDLINE(parent_n),   \
-                    __VA_ARGS__)
+#define CMDLINE_CHILD_DEFINE(parent_n, n, ...)                                 \
+    CMDLINE_DEFINE(parent_n##_##n, .name = #n, .parent = CMDLINE(parent_n),    \
+                   __VA_ARGS__)
 
-#define CMDLINE_CHILD_DECLARE_VAR(parent_n, n, var, ...)                       \
-    CMDLINE_DECLARE_VAR(parent_n##_##n, var, .name = #n,                       \
-                        .parent = CMDLINE(parent_n), __VA_ARGS__)
+#define CMDLINE_CHILD_DEFINE_VAR(parent_n, n, var, ...)                        \
+    CMDLINE_DEFINE_VAR(parent_n##_##n, var, .name = #n,                        \
+                       .parent = CMDLINE(parent_n), __VA_ARGS__)
 
 #define CMDLINE_INNER(n, ...) (_CMDLINE_CHILD_KIND_POLY, n, 0, ##__VA_ARGS__)
 
 #define CMDLINE_INNER_VAR(n, var, ...)                                         \
     (_CMDLINE_CHILD_KIND_VAR, n, var, ##__VA_ARGS__)
 
-#define CMDLINE_CHILDREN_DECLARE(parent_n, ...)                                \
+#define CMDLINE_CHILDREN_DEFINE(parent_n, ...)                                 \
     PP_OVERLOAD(_CMDLINE_CHILDREN_MAP, __VA_ARGS__)(parent_n, __VA_ARGS__)
 
 #define CMDLINE_EXTRACT(val, var)                                              \
@@ -250,11 +250,11 @@ struct cmdline_flag {
 #define CMDLINE_NODE_4(a, b, c, d) a##_##b##_##c##_##d
 #define CMDLINE_NODE(...) PP_CALL(CMDLINE_NODE, __VA_ARGS__)
 
-#define CMDLINE_DEFINE(n) extern struct cmdline_entry PP_CONCAT(__cmdline_, n)
+#define CMDLINE_DECLARE(n) extern struct cmdline_entry PP_CONCAT(__cmdline_, n)
 #define CMDLINE(n) (&PP_CONCAT(__cmdline_, n))
 #define CMDLINE_VALUE(n) cmdline_entry_value_u64(CMDLINE(n))
 
-#define CMDLINE_CHILD_DEFINE(...) CMDLINE_DEFINE(CMDLINE_NODE(__VA_ARGS__))
+#define CMDLINE_CHILD_DECLARE(...) CMDLINE_DECLARE(CMDLINE_NODE(__VA_ARGS__))
 #define CMDLINE_CHILD(...) CMDLINE(CMDLINE_NODE(__VA_ARGS__))
 #define CMDLINE_CHILD_VALUE(...)                                               \
     cmdline_entry_value_u64(CMDLINE_CHILD(__VA_ARGS__))
@@ -306,8 +306,8 @@ struct cmdline_schema {
      .flags_table = NULL,                                                      \
      __VA_ARGS__}
 
-#define CMDLINE_SCHEMA_DECLARE(n, prefix_str, path_hint_str, desc_str,         \
-                               resolver_fn, ...)                               \
+#define CMDLINE_SCHEMA_DEFINE(n, prefix_str, path_hint_str, desc_str,          \
+                              resolver_fn, ...)                                \
     cc_wno_override_init_start static const struct cmdline_schema_prop         \
         __cmdline_schema_props_##n[] = {__VA_ARGS__};                          \
     LINKER_SECTION_OBJECT(struct cmdline_schema, cmdline_schemas)              \

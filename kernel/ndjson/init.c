@@ -11,10 +11,10 @@ static bool ndjson_enabled = true;
 static bool ndjson_schema_dump = true;
 static bool ndjson_selftest_enabled = false;
 
-CMDLINE_DECLARE_STATIC(ndjson, .flags = CMDLINE_ENTRY_SYMBOLIC,
-                       .desc = "NDJSON symbolic parent");
+CMDLINE_DEFINE_STATIC(ndjson, .flags = CMDLINE_ENTRY_SYMBOLIC,
+                      .desc = "NDJSON symbolic parent");
 
-CMDLINE_CHILDREN_DECLARE(
+CMDLINE_CHILDREN_DEFINE(
     ndjson,
     CMDLINE_INNER_VAR(enabled, ndjson_enabled, .desc = "Emit NDJSON records"),
     CMDLINE_INNER_VAR(port, ndjson_port, .desc = "NDJSON carrier port",
@@ -49,8 +49,8 @@ void ndjson_init(void) {
         ndjson_selftest();
 }
 
-NDJSON_DECLARE(ndjson_bye, NDJSON_SECTION_NDJSON, NDJSON_KIND_BYE, 1,
-               NDJSON_U64(code), NDJSON_STR(reason));
+NDJSON_DEFINE(ndjson_bye, NDJSON_SECTION_NDJSON, NDJSON_KIND_BYE, 1,
+              NDJSON_U64(code), NDJSON_STR(reason));
 
 /* Signal the end of kernel execution */
 void ndjson_bye(uint64_t code, const char *reason) {

@@ -2,9 +2,9 @@
 
 #include <test/fleet.h>
 
-TEST_GROUP_DECLARE(qspinlock);
+TEST_GROUP_DEFINE(qspinlock);
 
-TEST_DECLARE_UNIT(qspinlock, tail_encoding) {
+TEST_DEFINE_UNIT(qspinlock, tail_encoding) {
     /* Test tail encoding across CPUs and context levels */
     cpu_id_t cpus[] = {0, 1, 15, 255, 1024, 65534};
     enum qspinlock_level levels[] = {QSPINLOCK_LEVEL_NORMAL,
@@ -34,7 +34,7 @@ TEST_DECLARE_UNIT(qspinlock, tail_encoding) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(qspinlock, pending_to_locked_math) {
+TEST_DEFINE_UNIT(qspinlock, pending_to_locked_math) {
     /* Test the transition: lock has tail + pending bit, and adding
      * (Q_SPIN_LOCKED_VAL - Q_SPIN_PENDING_VAL) = -255 */
     uint32_t tail = (42 << Q_SPIN_TAIL_CPU_OFFSET) |
@@ -73,7 +73,7 @@ static bool qspinlock_contention_worker(struct test_fleet *f,
     return true;
 }
 
-TEST_DECLARE_INTEGRATION(qspinlock, contended_handoff, .min_cores = 2) {
+TEST_DEFINE_INTEGRATION(qspinlock, contended_handoff, .min_cores = 2) {
     struct test_fleet *fleet = test_fleet_init(ctx, NULL);
     TEST_ASSERT_NONNULL(fleet);
 

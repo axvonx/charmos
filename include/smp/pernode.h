@@ -19,9 +19,9 @@ struct pernode_descriptor {
     atomic_bool ready;
 };
 
-LINKER_SECTION_DEFINE(struct pernode_descriptor, pernode_desc);
+LINKER_SECTION_DECLARE(struct pernode_descriptor, pernode_desc);
 
-#define PERNODE_DECLARE(__type, __n, __ctor)                                   \
+#define PERNODE_DEFINE(__type, __n, __ctor)                                    \
     static typeof(__type) __pernode_##__n cc_fn_unused;                        \
     static struct pernode_descriptor __pernode_desc_##__n;                     \
     static void __pernode_ctor_##__n(void *inst, size_t node) {                \
@@ -49,13 +49,13 @@ LINKER_SECTION_DEFINE(struct pernode_descriptor, pernode_desc);
 
 #define PERNODE_EXPORT(name) PERNODE_EXPORT_AS(name, name)
 
-#define PERNODE_DEFINE_AS(type, name, sym_name)                                \
+#define PERNODE_DECLARE_AS(type, name, sym_name)                               \
     extern struct pernode_descriptor __pernode_desc_sym_##sym_name;            \
     static typeof(type) __pernode_##name cc_fn_unused;                         \
     static struct pernode_descriptor *const __pernode_desc_ref_##name          \
         cc_fn_unused = &__pernode_desc_sym_##sym_name
 
-#define PERNODE_DEFINE(type, name) PERNODE_DEFINE_AS(type, name, name)
+#define PERNODE_DECLARE(type, name) PERNODE_DECLARE_AS(type, name, name)
 
 void pernode_obj_init(void);
 

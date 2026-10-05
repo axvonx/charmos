@@ -79,7 +79,7 @@ struct lock_chk_class {
 
 #define LOCK_CHK_CLASS(id) (&__lock_chk_class_##id)
 
-#define LOCK_CHK_CLASS_DECLARE(id)                                             \
+#define LOCK_CHK_CLASS_DEFINE(id)                                              \
     extern const struct lock_chk_class __lock_chk_class_##id;                  \
     const struct lock_chk_class __lock_chk_class_##id = {                      \
         .name = #id,                                                           \
@@ -87,23 +87,23 @@ struct lock_chk_class {
         .line = __LINE__,                                                      \
     }
 
-#define LOCK_CHK_CLASS_DECLARE_LOCAL(id)                                       \
+#define LOCK_CHK_CLASS_DEFINE_LOCAL(id)                                        \
     static const struct lock_chk_class __lock_chk_class_##id = {               \
         .name = #id,                                                           \
         .file = __RELFILE__,                                                   \
         .line = __LINE__,                                                      \
     }
 
-#define LOCK_CHK_CLASS_DEFINE(id)                                              \
+#define LOCK_CHK_CLASS_DECLARE(id)                                             \
     extern const struct lock_chk_class __lock_chk_class_##id
 
 #else /* !defined(DEBUG_LOCK_CHK) */
 
 #define LOCK_CHK_SITE_HERE() ((const struct lock_chk_site *) NULL)
 #define LOCK_CHK_CLASS(id) ((const struct lock_chk_class *) NULL)
-#define LOCK_CHK_CLASS_DECLARE(id)
-#define LOCK_CHK_CLASS_DECLARE_LOCAL(id)
 #define LOCK_CHK_CLASS_DEFINE(id)
+#define LOCK_CHK_CLASS_DEFINE_LOCAL(id)
+#define LOCK_CHK_CLASS_DECLARE(id)
 
 #endif /* DEBUG_LOCK_CHK */
 

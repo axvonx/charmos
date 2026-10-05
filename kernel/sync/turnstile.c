@@ -46,7 +46,7 @@ SLAB_SIZE_REGISTER_FOR_STRUCT(turnstile, SLAB_OBJ_ALIGN_DEFAULT);
  * turnstiles residing in the hash table.
  */
 
-LOCK_CHK_CLASS_DECLARE_LOCAL(turnstile_chain);
+LOCK_CHK_CLASS_DEFINE_LOCAL(turnstile_chain);
 
 void turnstiles_init(void) {
     global.turnstiles =

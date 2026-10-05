@@ -1,8 +1,8 @@
 #include "structures/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(cpu_mask);
+TEST_GROUP_DEFINE(cpu_mask);
 
-TEST_DECLARE_UNIT(cpu_mask, bits_ranges_and_scan) {
+TEST_DEFINE_UNIT(cpu_mask, bits_ranges_and_scan) {
     struct cpu_mask m;
     cpu_mask_zero(&m);
     TEST_ASSERT(cpu_mask_empty(&m));
@@ -50,7 +50,7 @@ TEST_DECLARE_UNIT(cpu_mask, bits_ranges_and_scan) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(cpu_mask, atomic_operations) {
+TEST_DEFINE_UNIT(cpu_mask, atomic_operations) {
     struct cpu_mask m;
     cpu_mask_zero(&m);
 
@@ -71,7 +71,7 @@ TEST_DECLARE_UNIT(cpu_mask, atomic_operations) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(cpu_mask, binary_bitwise_operations) {
+TEST_DEFINE_UNIT(cpu_mask, binary_bitwise_operations) {
     struct cpu_mask a, b, dst;
     cpu_mask_zero(&a);
     cpu_mask_zero(&b);

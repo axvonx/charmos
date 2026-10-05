@@ -221,7 +221,7 @@ static void sd_dedup_worker(void *arg) {
     atomic_dec(&sd_mt.left);
 }
 
-TEST_DECLARE_INTEGRATION(stack_depot, mt_dedup, TEST_INTENSITY(16, 64, 256)) {
+TEST_DEFINE_INTEGRATION(stack_depot, mt_dedup, TEST_INTENSITY(16, 64, 256)) {
     uintptr_t trace[SD_TRACE_LEN];
     sd_make_trace(trace, SD_TRACE_LEN, SD_MT_DEDUP_ID);
     TEST_ASSERT_EQ(sd_chain_count(trace, SD_TRACE_LEN), 0);
@@ -325,8 +325,8 @@ static void sd_shared_worker(void *arg) {
     atomic_dec(&sd_mt.left);
 }
 
-TEST_DECLARE_INTEGRATION(stack_depot, mt_shared_set,
-                         TEST_INTENSITY(200, 1500, 8000)) {
+TEST_DEFINE_INTEGRATION(stack_depot, mt_shared_set,
+                        TEST_INTENSITY(200, 1500, 8000)) {
     sd_mt_set_iters_count = ctx->intensity_val ? ctx->intensity_val : 1500;
     sd_mt_reset(ctx, SD_MT_THREADS);
     sd_mt_spawn("sd_shared", sd_shared_worker, SD_MT_THREADS);
@@ -408,7 +408,7 @@ static void sd_disjoint_worker(void *arg) {
     atomic_dec(&sd_mt.left);
 }
 
-TEST_DECLARE_INTEGRATION(stack_depot, mt_disjoint, TEST_INTENSITY(8, 32, 128)) {
+TEST_DEFINE_INTEGRATION(stack_depot, mt_disjoint, TEST_INTENSITY(8, 32, 128)) {
     sd_mt_disjoint_per_thread =
         MIN(ctx->intensity_val ? ctx->intensity_val : 32,
             SD_MT_DISJOINT_PER_THREAD_MAX);
@@ -473,8 +473,8 @@ static void sd_churn_worker(void *arg) {
     atomic_dec(&sd_mt.left);
 }
 
-TEST_DECLARE_INTEGRATION(stack_depot, mt_churn_race,
-                         TEST_INTENSITY(500, 4000, 20000)) {
+TEST_DEFINE_INTEGRATION(stack_depot, mt_churn_race,
+                        TEST_INTENSITY(500, 4000, 20000)) {
     sd_mt_churn_iters_count = ctx->intensity_val ? ctx->intensity_val : 4000;
     sd_mt_reset(ctx, SD_MT_THREADS);
     sd_mt_spawn("sd_churn", sd_churn_worker, SD_MT_THREADS);
@@ -537,7 +537,7 @@ static void sd_cur_worker(void *arg) {
     atomic_dec(&sd_mt.left);
 }
 
-TEST_DECLARE_INTEGRATION(stack_depot, mt_save_current) {
+TEST_DEFINE_INTEGRATION(stack_depot, mt_save_current) {
     sd_mt_reset(ctx, SD_MT_THREADS);
     memset(sd_cur_handles, 0, sizeof(sd_cur_handles));
     memset(sd_cur_lens, 0, sizeof(sd_cur_lens));

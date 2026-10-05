@@ -38,18 +38,18 @@ static atomic_int64_t crash_owner = -1;
 static atomic_uint32_t crash_depth = 0;
 static struct raw_spinlock crash_lock = RAW_SPINLOCK_INIT;
 
-PERCPU_DECLARE(atomic_uint32_t, crash_quiesced, NULL);
-PERCPU_DECLARE(struct crash_regs, crash_regs, NULL);
+PERCPU_DEFINE(atomic_uint32_t, crash_quiesced, NULL);
+PERCPU_DEFINE(struct crash_regs, crash_regs, NULL);
 static cc_fn_unused struct crash_regs boot_crash_regs = {0};
 
-NDJSON_DECLARE(panic_at, NDJSON_SECTION_PANIC, NDJSON_KIND_AT, 1,
-               NDJSON_STR(file), NDJSON_U64(line), NDJSON_STR(func),
-               NDJSON_STR(msg), NDJSON_STR(bootstage), NDJSON_STR(thread),
-               NDJSON_U64(depth));
+NDJSON_DEFINE(panic_at, NDJSON_SECTION_PANIC, NDJSON_KIND_AT, 1,
+              NDJSON_STR(file), NDJSON_U64(line), NDJSON_STR(func),
+              NDJSON_STR(msg), NDJSON_STR(bootstage), NDJSON_STR(thread),
+              NDJSON_U64(depth));
 
-NDJSON_DECLARE(panic_frame, NDJSON_SECTION_PANIC, NDJSON_KIND_FRAME, 1,
-               NDJSON_U64(idx), NDJSON_HEX(addr), NDJSON_STR(sym),
-               NDJSON_U64(off), NDJSON_STR(file), NDJSON_U64(line));
+NDJSON_DEFINE(panic_frame, NDJSON_SECTION_PANIC, NDJSON_KIND_FRAME, 1,
+              NDJSON_U64(idx), NDJSON_HEX(addr), NDJSON_STR(sym),
+              NDJSON_U64(off), NDJSON_STR(file), NDJSON_U64(line));
 
 extern void crash_capture_regs(struct crash_regs *out);
 static struct crash_facility *crash_facility_for(enum crash_code code);

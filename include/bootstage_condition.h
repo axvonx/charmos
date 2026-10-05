@@ -71,5 +71,5 @@ struct bootstage_condition_entry {
 #define BOOTSTAGE_IF_GT(stage)                                                 \
     if (BOOTSTAGE_COND(BOOTSTAGE_CONDITION_GT, stage))
 
-LINKER_SECTION_DEFINE(struct bootstage_condition_entry,
-                      bootstage_condition_entries);
+LINKER_SECTION_DECLARE(struct bootstage_condition_entry,
+                       bootstage_condition_entries);

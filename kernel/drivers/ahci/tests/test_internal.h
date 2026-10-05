@@ -3,4 +3,4 @@
 #include <drivers/ahci.h>
 #include <test/test.h>
 
-TEST_GROUP_DEFINE(ahci);
+TEST_GROUP_DECLARE(ahci);

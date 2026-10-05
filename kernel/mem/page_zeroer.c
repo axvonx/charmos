@@ -50,4 +50,4 @@ static void page_zeroer_perdomain_init(struct page_zeroer *pz,
                                     &pz_ts_work, &pz_bg_work, &wqattrs));
 }
 
-PERDOMAIN_DECLARE(struct page_zeroer, page_zeroers, page_zeroer_perdomain_init);
+PERDOMAIN_DEFINE(struct page_zeroer, page_zeroers, page_zeroer_perdomain_init);

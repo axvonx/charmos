@@ -6,4 +6,4 @@
 #include <stdint.h>
 #include <time/date_time.h>
 
-TEST_GROUP_DEFINE(date_time);
+TEST_GROUP_DECLARE(date_time);

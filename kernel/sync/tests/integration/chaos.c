@@ -338,11 +338,10 @@ static bool chaos_join_watched(struct thread *t, const char *role, size_t idx,
     return true;
 }
 
-TEST_DECLARE_INTEGRATION(mutex, interruptible_apc_fuzz,
-                         TEST_INTENSITY(CHAOS_THREADS_MIN,
-                                        CHAOS_THREADS_DEFAULT,
-                                        CHAOS_THREADS_INTENSE),
-                         .min_cores = 2) {
+TEST_DEFINE_INTEGRATION(mutex, interruptible_apc_fuzz,
+                        TEST_INTENSITY(CHAOS_THREADS_MIN, CHAOS_THREADS_DEFAULT,
+                                       CHAOS_THREADS_INTENSE),
+                        .min_cores = 2) {
     chaos_threads =
         ctx->intensity_val ? ctx->intensity_val : CHAOS_THREADS_DEFAULT;
     if (chaos_threads > CHAOS_THREADS_MAX)

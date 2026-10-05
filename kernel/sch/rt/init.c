@@ -9,10 +9,10 @@
 
 #include "internal.h"
 
-LOG_SITE_DECLARE(rt_sched, .flags = LOG_SITE_DEFAULT,
-                 .capacity = LOG_SITE_CAPACITY_DEFAULT,
-                 .enabled_mask = LOG_SITE_ALL,
-                 .dump_opts = (struct log_dump_options){});
+LOG_SITE_DEFINE(rt_sched, .flags = LOG_SITE_DEFAULT,
+                .capacity = LOG_SITE_CAPACITY_DEFAULT,
+                .enabled_mask = LOG_SITE_ALL,
+                .dump_opts = (struct log_dump_options){});
 
 static void init_scheduler_boot(struct scheduler *sched) {
     struct rt_scheduler_percpu *pcpu =

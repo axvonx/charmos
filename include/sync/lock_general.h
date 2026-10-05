@@ -49,7 +49,7 @@ enum lock_acquire_policy {
 #define TSA_ASSERT_CAPABILITY(lock) __attribute__((assert_capability(lock)))
 #define TSA_EXCLUDED(lock) __attribute__((locks_excluded(lock)))
 #define TSA_NO_ANALYSIS __attribute__((no_thread_safety_analysis))
-#define TSA_CAPABILITY_DEFINE(name, symbol)                                    \
+#define TSA_CAPABILITY_DECLARE(name, symbol)                                   \
     struct TSA_CAPABILITY(name) __##symbol##_ctx {};                           \
     extern struct __##symbol##_ctx symbol
 
@@ -57,14 +57,14 @@ enum lock_acquire_policy {
  * and we exclude IRQL_RAISED for sleeping primitives like mutexes */
 #if cn_has_attribute(reentrant_capability)
 #define TSA_IRQL_TRACKS_SPINLOCKS 1
-#define TSA_REENTRANT_CAPABILITY_DEFINE(name, symbol)                          \
+#define TSA_REENTRANT_CAPABILITY_DECLARE(name, symbol)                         \
     struct TSA_CAPABILITY(name)                                                \
         __attribute__((reentrant_capability)) __##symbol##_ctx {};             \
     extern struct __##symbol##_ctx symbol
 #else
 #define TSA_IRQL_TRACKS_SPINLOCKS 0
-#define TSA_REENTRANT_CAPABILITY_DEFINE(name, symbol)                          \
-    TSA_CAPABILITY_DEFINE(name, symbol)
+#define TSA_REENTRANT_CAPABILITY_DECLARE(name, symbol)                         \
+    TSA_CAPABILITY_DECLARE(name, symbol)
 #endif
 
 #if TSA_IRQL_TRACKS_SPINLOCKS
@@ -114,9 +114,9 @@ enum lock_acquire_policy {
 #define TSA_ASSERT_CAPABILITY(lock)
 #define TSA_EXCLUDED(lock)
 #define TSA_NO_ANALYSIS
-#define TSA_CAPABILITY_DEFINE(name, symbol)
+#define TSA_CAPABILITY_DECLARE(name, symbol)
 #define TSA_IRQL_TRACKS_SPINLOCKS 0
-#define TSA_REENTRANT_CAPABILITY_DEFINE(name, symbol)
+#define TSA_REENTRANT_CAPABILITY_DECLARE(name, symbol)
 #define TSA_ACQUIRES_SPIN(lock)
 #define TSA_RELEASES_SPIN(lock)
 #define TSA_TRY_ACQUIRES_SPIN(ret, lock)

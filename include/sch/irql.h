@@ -139,7 +139,7 @@
 #include <stringify.h>
 #include <sync/lock_general.h>
 
-TSA_REENTRANT_CAPABILITY_DEFINE("irql", IRQL_RAISED);
+TSA_REENTRANT_CAPABILITY_DECLARE("irql", IRQL_RAISED);
 
 enum irql {
     IRQL_PASSIVE_LEVEL = 0,  /* Normal execution */

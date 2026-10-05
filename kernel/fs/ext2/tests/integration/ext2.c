@@ -32,8 +32,8 @@ static void flush() {
     check_bcache();*/
 }
 
-TEST_DECLARE_INTEGRATION(ext2, file_lifecycle, TEST_INTENSITY(1, 4, 64),
-                         .required_fs = FS_EXT2) {
+TEST_DEFINE_INTEGRATION(ext2, file_lifecycle, TEST_INTENSITY(1, 4, 64),
+                        .required_fs = FS_EXT2) {
     EXT2_ROOT;
     size_t ops = ctx->intensity_val ? ctx->intensity_val : 4;
     const char *lstr = large_test_string;

@@ -2,11 +2,11 @@
 #include "mem/vas_internal.h"
 #include <asm.h>
 #include <compiler/intrinsic.h>
-TEST_GROUP_DECLARE(vas);
+TEST_GROUP_DEFINE(vas);
 
 #define TEST_VAS_BASE 0x700000000000ULL
 
-TEST_DECLARE_UNIT(vas, death_wrong_size, .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(vas, death_wrong_size, .enabled = TEST_STATE_DISABLED) {
     struct vas *vas = vas_create(TEST_VAS_BASE, TEST_VAS_BASE + 4 * PAGE_SIZE);
     TEST_ASSERT_NONNULL(vas);
 
@@ -17,7 +17,7 @@ TEST_DECLARE_UNIT(vas, death_wrong_size, .enabled = TEST_STATE_DISABLED) {
     return TEST_FAIL("wrong-size free was accepted");
 }
 
-TEST_DECLARE_UNIT(vas, death_double_free, .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(vas, death_double_free, .enabled = TEST_STATE_DISABLED) {
     struct vas *vas = vas_create(TEST_VAS_BASE, TEST_VAS_BASE + 4 * PAGE_SIZE);
     TEST_ASSERT_NONNULL(vas);
 
@@ -29,7 +29,7 @@ TEST_DECLARE_UNIT(vas, death_double_free, .enabled = TEST_STATE_DISABLED) {
     return TEST_FAIL("double free was accepted");
 }
 
-TEST_DECLARE_UNIT(vas, death_out_of_range, .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(vas, death_out_of_range, .enabled = TEST_STATE_DISABLED) {
     struct vas *vas = vas_create(TEST_VAS_BASE, TEST_VAS_BASE + 4 * PAGE_SIZE);
     TEST_ASSERT_NONNULL(vas);
     vas_free(vas, TEST_VAS_BASE - 1, PAGE_SIZE);
@@ -147,7 +147,7 @@ static bool vas_valid(struct vas *vas, size_t expected_live) {
            enrolled <= VAS_MAG_BYTE_LIMIT;
 }
 
-TEST_DECLARE_UNIT(vas, magazine_hits_preserve_query_and_exact_free)
+TEST_DEFINE_UNIT(vas, magazine_hits_preserve_query_and_exact_free)
 TSA_NO_ANALYSIS {
     const size_t sizes[] = {PAGE_SIZE, 5 * PAGE_SIZE, 17 * PAGE_SIZE, PAGE_2MB};
     for (uint32_t cls = 0; cls < VAS_MAG_CLASSES; cls++) {
@@ -188,7 +188,7 @@ TSA_NO_ANALYSIS {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(vas, magazine_alignment_overflow_and_drain)
+TEST_DEFINE_UNIT(vas, magazine_alignment_overflow_and_drain)
 TSA_NO_ANALYSIS {
     struct vas *vas = vas_create(TEST_VAS_BASE, TEST_VAS_BASE + VAS_CHUNK_SIZE);
     TEST_ASSERT_NONNULL(vas);
@@ -228,7 +228,7 @@ TSA_NO_ANALYSIS {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(vas, magazine_refill_failure_keeps_primary_allocation)
+TEST_DEFINE_UNIT(vas, magazine_refill_failure_keeps_primary_allocation)
 TSA_NO_ANALYSIS {
     struct vas *vas = vas_create(TEST_VAS_BASE, TEST_VAS_BASE + VAS_CHUNK_SIZE);
     TEST_ASSERT_NONNULL(vas);
@@ -247,7 +247,7 @@ TSA_NO_ANALYSIS {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(vas, magazine_claim_pins_tag_during_drain)
+TEST_DEFINE_UNIT(vas, magazine_claim_pins_tag_during_drain)
 TSA_NO_ANALYSIS {
     struct vas *vas = vas_create(TEST_VAS_BASE, TEST_VAS_BASE + VAS_CHUNK_SIZE);
     TEST_ASSERT_NONNULL(vas);
@@ -279,8 +279,8 @@ TSA_NO_ANALYSIS {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(vas, magazine_benchmark, .enabled = TEST_STATE_DISABLED,
-                  .print_logs = true)
+TEST_DEFINE_UNIT(vas, magazine_benchmark, .enabled = TEST_STATE_DISABLED,
+                 .print_logs = true)
 TSA_NO_ANALYSIS {
     const size_t sizes[] = {PAGE_SIZE, 5 * PAGE_SIZE, 17 * PAGE_SIZE, PAGE_2MB};
     const uint32_t iterations = 10000;
@@ -322,7 +322,7 @@ TSA_NO_ANALYSIS {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(vas, death_cached_double_free, .enabled = TEST_STATE_DISABLED)
+TEST_DEFINE_UNIT(vas, death_cached_double_free, .enabled = TEST_STATE_DISABLED)
 TSA_NO_ANALYSIS {
     struct vas *vas = vas_create(TEST_VAS_BASE, TEST_VAS_BASE + VAS_CHUNK_SIZE);
     TEST_ASSERT_NONNULL(vas);
@@ -335,8 +335,8 @@ TSA_NO_ANALYSIS {
     return TEST_FAIL("cached double free was accepted");
 }
 
-TEST_DECLARE_UNIT(vas, death_magazine_wrong_size,
-                  .enabled = TEST_STATE_DISABLED) {
+TEST_DEFINE_UNIT(vas, death_magazine_wrong_size,
+                 .enabled = TEST_STATE_DISABLED) {
     struct vas *vas = vas_create(TEST_VAS_BASE, TEST_VAS_BASE + VAS_CHUNK_SIZE);
     TEST_ASSERT_NONNULL(vas);
     vaddr_t addr = vas_alloc(vas, 5 * PAGE_SIZE, PAGE_SIZE);
@@ -345,7 +345,7 @@ TEST_DECLARE_UNIT(vas, death_magazine_wrong_size,
     return TEST_FAIL("magazine wrong-size free was accepted");
 }
 
-TEST_DECLARE_UNIT(vas, byte_sizes_and_exact_bin_fit) {
+TEST_DEFINE_UNIT(vas, byte_sizes_and_exact_bin_fit) {
     struct vas *vas = vas_create(TEST_VAS_BASE, TEST_VAS_BASE + 4 * PAGE_SIZE);
     TEST_ASSERT_NONNULL(vas);
     vaddr_t three_pages = vas_alloc(vas, 3 * PAGE_SIZE, PAGE_SIZE);
@@ -371,7 +371,7 @@ TEST_DECLARE_UNIT(vas, byte_sizes_and_exact_bin_fit) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(vas, alignment_and_partial_edge_buckets) {
+TEST_DEFINE_UNIT(vas, alignment_and_partial_edge_buckets) {
     vaddr_t base = TEST_VAS_BASE + PAGE_SIZE;
     struct vas *vas = vas_create(base, TEST_VAS_BASE + 2 * PAGE_1GB);
     TEST_ASSERT_NONNULL(vas);
@@ -400,7 +400,7 @@ TEST_DECLARE_UNIT(vas, alignment_and_partial_edge_buckets) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(vas, all_coalescing_orders) {
+TEST_DEFINE_UNIT(vas, all_coalescing_orders) {
     const uint32_t orders[][3] = {
         {0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0},
     };
@@ -426,7 +426,7 @@ TEST_DECLARE_UNIT(vas, all_coalescing_orders) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(vas, invalid_requests_and_high_address_arithmetic) {
+TEST_DEFINE_UNIT(vas, invalid_requests_and_high_address_arithmetic) {
     TEST_ASSERT_NULL(vas_create(0, PAGE_SIZE));
     TEST_ASSERT_NULL(vas_create(TEST_VAS_BASE, TEST_VAS_BASE));
     TEST_ASSERT_NULL(vas_create(TEST_VAS_BASE, TEST_VAS_BASE - 1));
@@ -451,7 +451,7 @@ TEST_DECLARE_UNIT(vas, invalid_requests_and_high_address_arithmetic) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(vas, metadata_failure_rolls_back_both_splits) {
+TEST_DEFINE_UNIT(vas, metadata_failure_rolls_back_both_splits) {
     vaddr_t base = TEST_VAS_BASE + 1;
     struct vas *vas = vas_create(base, base + 4 * PAGE_SIZE);
     TEST_ASSERT_NONNULL(vas);
@@ -470,7 +470,7 @@ TEST_DECLARE_UNIT(vas, metadata_failure_rolls_back_both_splits) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(vas, import_failure_rolls_back_ownership) {
+TEST_DEFINE_UNIT(vas, import_failure_rolls_back_ownership) {
     struct vas *vas = vas_create(TEST_VAS_BASE, TEST_VAS_BASE + VAS_CHUNK_SIZE);
     TEST_ASSERT_NONNULL(vas);
     for (ssize_t budget = 0; budget < 2; budget++) {
@@ -489,7 +489,7 @@ TEST_DECLARE_UNIT(vas, import_failure_rolls_back_ownership) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(vas, large_fallback_reclaims_adjacent_imports) {
+TEST_DEFINE_UNIT(vas, large_fallback_reclaims_adjacent_imports) {
     struct vas *vas =
         vas_create(TEST_VAS_BASE, TEST_VAS_BASE + 2 * VAS_CHUNK_SIZE);
     TEST_ASSERT_NONNULL(vas);
@@ -513,7 +513,7 @@ TEST_DECLARE_UNIT(vas, large_fallback_reclaims_adjacent_imports) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(vas, bootstrap_storage_and_repeated_teardown) {
+TEST_DEFINE_UNIT(vas, bootstrap_storage_and_repeated_teardown) {
     for (size_t i = 0; i < 8; i++) {
         struct vas *vas =
             i & 1 ? vas_bootstrap(TEST_VAS_BASE, TEST_VAS_BASE + (8ULL << 40))
@@ -530,7 +530,7 @@ TEST_DECLARE_UNIT(vas, bootstrap_storage_and_repeated_teardown) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(vas, fragmented_small_arena_has_no_false_exhaustion) {
+TEST_DEFINE_UNIT(vas, fragmented_small_arena_has_no_false_exhaustion) {
     enum { SLOTS = 32, BYTES = 2048, OPERATIONS = 1000 };
     uint8_t occupied[BYTES] = {0};
     struct {
@@ -583,7 +583,7 @@ TEST_DECLARE_UNIT(vas, fragmented_small_arena_has_no_false_exhaustion) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(vas, partial_bucket_and_alignment_rejection) {
+TEST_DEFINE_UNIT(vas, partial_bucket_and_alignment_rejection) {
     vaddr_t base = TEST_VAS_BASE + PAGE_SIZE;
     struct vas *vas = vas_create(base, base + 2 * PAGE_SIZE);
     TEST_ASSERT_NONNULL(vas);
@@ -595,7 +595,7 @@ TEST_DECLARE_UNIT(vas, partial_bucket_and_alignment_rejection) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(vas, seeded_churn_against_interval_oracle) {
+TEST_DEFINE_UNIT(vas, seeded_churn_against_interval_oracle) {
     enum { SLOTS = 64, OPERATIONS = 3000 };
     struct {
         vaddr_t addr;

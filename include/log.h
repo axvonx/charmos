@@ -277,7 +277,7 @@ static inline size_t log_site_message_count(struct log_site *site) {
 #define LOG_SITE_LEVEL(l) (1u << l)
 #define LOG_SITE_ALL UINT32_MAX
 
-#define LOG_SITE_DECLARE(_name, ...)                                           \
+#define LOG_SITE_DEFINE(_name, ...)                                            \
     cc_wno_override_init_start LINKER_SECTION_ATTRIBUTE(log_sites)             \
     struct log_site __log_site_##_name = {.capacity =                          \
                                               LOG_SITE_CAPACITY_DEFAULT,       \
@@ -287,7 +287,7 @@ static inline size_t log_site_message_count(struct log_site *site) {
                                           __VA_ARGS__};                        \
     cc_wno_override_init_end
 
-#define LOG_SITE_DECLARE_PRINT(_name, ...)                                     \
+#define LOG_SITE_DEFINE_PRINT(_name, ...)                                      \
     cc_wno_override_init_start LINKER_SECTION_ATTRIBUTE(log_sites)             \
     struct log_site __log_site_##_name = {                                     \
         .name = #_name,                                                        \
@@ -303,29 +303,29 @@ static inline size_t log_site_message_count(struct log_site *site) {
 #define LOG_HANDLE_SUBSYSTEM_NONE NULL
 #define LOG_HANDLE_EXTERN(name) extern struct log_handle __log_handle_##name
 
-#define LOG_HANDLE_DECLARE(_name, ...)                                         \
+#define LOG_HANDLE_DEFINE(_name, ...)                                          \
     cc_wno_override_init_start struct log_handle __log_handle_##_name = {      \
         .seen_internal = 0, .last_ts_internal = 0, __VA_ARGS__};               \
     cc_wno_override_init_end
 
-#define _LOG_HANDLE_DECLARE_PRINT(n, storage, ...)                             \
+#define _LOG_HANDLE_DEFINE_PRINT(n, storage, ...)                              \
     storage struct log_handle __log_handle_##n = {.flags = LOG_HANDLE_PRINT,   \
                                                   .seen_internal = 0,          \
                                                   .last_ts_internal = 0,       \
                                                   __VA_ARGS__}
 
-#define LOG_HANDLE_DECLARE_PRINT(n, ...)                                       \
-    cc_wno_override_init_start _LOG_HANDLE_DECLARE_PRINT(n, , __VA_ARGS__);    \
+#define LOG_HANDLE_DEFINE_PRINT(n, ...)                                        \
+    cc_wno_override_init_start _LOG_HANDLE_DEFINE_PRINT(n, , __VA_ARGS__);     \
     cc_wno_override_init_end
 
-#define LOG_HANDLE_DECLARE_PRINT_STATIC(n, ...)                                \
-    cc_wno_override_init_start _LOG_HANDLE_DECLARE_PRINT(n, static,            \
-                                                         __VA_ARGS__);         \
+#define LOG_HANDLE_DEFINE_PRINT_STATIC(n, ...)                                 \
+    cc_wno_override_init_start _LOG_HANDLE_DEFINE_PRINT(n, static,             \
+                                                        __VA_ARGS__);          \
     cc_wno_override_init_end
 
 #define LOG_HANDLE(name) &(__log_handle_##name)
 
-LINKER_SECTION_DEFINE(struct log_site, log_sites);
+LINKER_SECTION_DECLARE(struct log_site, log_sites);
 
 LOG_HANDLE_EXTERN(global);
 LOG_SITE_EXTERN(global);

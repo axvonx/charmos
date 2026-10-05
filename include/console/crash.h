@@ -263,11 +263,11 @@ struct crash_context {
 #define CRASH_FACILITY(n) __crash_facility_##n
 #define CRASH_FACILITY_EXTERN(n)                                               \
     extern struct crash_facility __crash_facility_##n
-#define CRASH_FACILITY_DECLARE(n, ...)                                         \
+#define CRASH_FACILITY_DEFINE(n, ...)                                          \
     LINKER_SECTION_OBJECT(struct crash_facility, crash_facilities)             \
     __crash_facility_##n = {.name = #n, __VA_ARGS__}
 
-LINKER_SECTION_DEFINE(struct crash_facility, crash_facilities);
+LINKER_SECTION_DECLARE(struct crash_facility, crash_facilities);
 
 cc_noreturn void assert_impl_default(struct crash_payload payload,
                                      const char *file, int line,

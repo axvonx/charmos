@@ -1,7 +1,7 @@
 #include "mem/slab/tests/test_internal.h"
 #include <mem/elcm.h>
 
-TEST_DECLARE_SMOKE(slab, elcm_params) {
+TEST_DEFINE_SMOKE(slab, elcm_params) {
     struct elcm_params params = {
         .obj_alignment = 8,
         .obj_size = 938,

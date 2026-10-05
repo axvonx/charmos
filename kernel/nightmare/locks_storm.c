@@ -25,7 +25,7 @@ struct locks_storm_options {
 
 static struct locks_storm_options locks_storm_options;
 
-NIGHTMARE_OPTIONS_DECLARE(
+NIGHTMARE_OPTIONS_DEFINE(
     locks_storm, struct locks_storm_options, locks_storm_options,
     CMDLINE_SCHEMA_PROP(struct locks_storm_options, worker_stall_ms,
                         .types = CMDLINE_TYPES(CMDLINE_TYPE_DURATION),
@@ -139,12 +139,12 @@ struct locks_storm_state {
     struct locks_storm_worker_state workers[];
 };
 
-LOCK_CHK_CLASS_DECLARE_LOCAL(locks_storm_mutex);
-LOCK_CHK_CLASS_DECLARE_LOCAL(locks_storm_mutex_simple);
-LOCK_CHK_CLASS_DECLARE_LOCAL(locks_storm_rw);
-LOCK_CHK_CLASS_DECLARE_LOCAL(locks_storm_spin);
-LOCK_CHK_CLASS_DECLARE_LOCAL(locks_storm_qspin);
-LOCK_CHK_CLASS_DECLARE_LOCAL(locks_storm_seq);
+LOCK_CHK_CLASS_DEFINE_LOCAL(locks_storm_mutex);
+LOCK_CHK_CLASS_DEFINE_LOCAL(locks_storm_mutex_simple);
+LOCK_CHK_CLASS_DEFINE_LOCAL(locks_storm_rw);
+LOCK_CHK_CLASS_DEFINE_LOCAL(locks_storm_spin);
+LOCK_CHK_CLASS_DEFINE_LOCAL(locks_storm_qspin);
+LOCK_CHK_CLASS_DEFINE_LOCAL(locks_storm_seq);
 
 static struct locks_storm_state *locks_state(struct nightmare_ctx *ctx) {
     return ctx->private;
@@ -747,7 +747,7 @@ static const struct nightmare_ops locks_storm_ops = {
     .finish = locks_storm_finish,
 };
 
-NIGHTMARE_DECLARE(
+NIGHTMARE_DEFINE(
     locks_storm,
     .desc = "Mixed lock contention with independent invariant checking",
     .ops = &locks_storm_ops, .seed_policy = NIGHTMARE_SEED_IGNORED,

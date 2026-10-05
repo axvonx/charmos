@@ -10,10 +10,10 @@
 
 struct lock_chk_globals lock_chk_global = {0};
 
-CMDLINE_DECLARE_STATIC(lock_chk, .flags = CMDLINE_ENTRY_SYMBOLIC,
-                       .desc = "Lock validator command line namespace");
+CMDLINE_DEFINE_STATIC(lock_chk, .flags = CMDLINE_ENTRY_SYMBOLIC,
+                      .desc = "Lock validator command line namespace");
 
-CMDLINE_CHILDREN_DECLARE(
+CMDLINE_CHILDREN_DEFINE(
     lock_chk,
     CMDLINE_INNER_VAR(
         panic_on_exhaustion, lock_chk_global.panic_on_exhaustion,

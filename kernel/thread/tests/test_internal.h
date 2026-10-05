@@ -11,5 +11,5 @@
 #include <thread/workqueue.h>
 #include <time/spin_sleep.h>
 
-TEST_GROUP_DEFINE(apc);
-TEST_GROUP_DEFINE(daemon);
+TEST_GROUP_DECLARE(apc);
+TEST_GROUP_DECLARE(daemon);

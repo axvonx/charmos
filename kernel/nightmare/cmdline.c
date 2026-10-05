@@ -23,12 +23,11 @@ static enum test_on_stall nightmare_on_stall = TEST_ON_STALL_REPORT;
 static uint64_t nightmare_boot_index;
 static const char *nightmare_campaign_id;
 
-CMDLINE_DECLARE_VAR(
-    nightmare_root, nightmare_selector, .name = "nightmare",
-    .types = CMDLINE_TYPES(CMDLINE_TYPE_STRING),
-    .desc = "Select the single nightmare subject for this boot");
+CMDLINE_DEFINE_VAR(nightmare_root, nightmare_selector, .name = "nightmare",
+                   .types = CMDLINE_TYPES(CMDLINE_TYPE_STRING),
+                   .desc = "Select the single nightmare subject for this boot");
 
-CMDLINE_CHILDREN_DECLARE(
+CMDLINE_CHILDREN_DEFINE(
     nightmare_root,
     CMDLINE_INNER_FX(intensity, nightmare_intensity,
                      .desc = "Nightmare intensity in [0,1]",

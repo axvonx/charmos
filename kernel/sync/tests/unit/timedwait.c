@@ -4,9 +4,9 @@
 #include <sync/condvar.h>
 #include <sync/semaphore.h>
 
-TEST_GROUP_DECLARE(condvar);
-TEST_GROUP_DECLARE(semaphore);
-TEST_GROUP_DECLARE(completion);
+TEST_GROUP_DEFINE(condvar);
+TEST_GROUP_DEFINE(semaphore);
+TEST_GROUP_DEFINE(completion);
 
 struct timed_helper_args {
     struct semaphore *sem;
@@ -55,7 +55,7 @@ static void condvar_timeout_race_worker(void *arg) {
     }
 }
 
-TEST_DECLARE_UNIT(condvar, timeout_no_lost_wake) {
+TEST_DEFINE_UNIT(condvar, timeout_no_lost_wake) {
     static const time_ms_t progress_timeout_ms = 1000;
     static const size_t stalled_progress_limit = 2;
 
@@ -101,7 +101,7 @@ TEST_DECLARE_UNIT(condvar, timeout_no_lost_wake) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(semaphore, timedwait_standard) {
+TEST_DEFINE_UNIT(semaphore, timedwait_standard) {
     struct semaphore s;
     semaphore_init(&s, 1, false);
 
@@ -128,7 +128,7 @@ TEST_DECLARE_UNIT(semaphore, timedwait_standard) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(completion, wait_timeout_standard) {
+TEST_DEFINE_UNIT(completion, wait_timeout_standard) {
     struct completion c;
     completion_init(&c, false);
 
@@ -158,7 +158,7 @@ TEST_DECLARE_UNIT(completion, wait_timeout_standard) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(completion, static_init) {
+TEST_DEFINE_UNIT(completion, static_init) {
     struct completion c = COMPLETION_INIT(c, COMPLETION_INIT_NORMAL);
     TEST_ASSERT(list_empty(&c.cv.waiters.waiters));
     TEST_ASSERT(!completion_try_wait(&c));

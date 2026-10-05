@@ -1,13 +1,13 @@
 #include "time/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(date_time, .intensity_desc = {
-                                  .curve = SCALE_PIECEWISE_LOG,
-                                  .unit = "years",
-                              });
+TEST_GROUP_DEFINE(date_time, .intensity_desc = {
+                                 .curve = SCALE_PIECEWISE_LOG,
+                                 .unit = "years",
+                             });
 
 /* NOTE: we use two different month conventions, since struct date_time
  * is 0-11, and days_in_month is 1-12, but we probably want to change that */
-TEST_DECLARE_UNIT(date_time, leap_year_rule) {
+TEST_DEFINE_UNIT(date_time, leap_year_rule) {
     TEST_ASSERT(is_leap_year(2004));  /* divisible by 4 */
     TEST_ASSERT(!is_leap_year(1900)); /* but by 100, so not */
     TEST_ASSERT(is_leap_year(2000));  /* unless also by 400 */
@@ -22,7 +22,7 @@ TEST_DECLARE_UNIT(date_time, leap_year_rule) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(date_time, days_in_month_table) {
+TEST_DEFINE_UNIT(date_time, days_in_month_table) {
     static const uint32_t common[13] = {0,  31, 28, 31, 30, 31, 30,
                                         31, 31, 30, 31, 30, 31};
 
@@ -37,7 +37,7 @@ TEST_DECLARE_UNIT(date_time, days_in_month_table) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(date_time, days_in_year_sums) {
+TEST_DEFINE_UNIT(date_time, days_in_year_sums) {
     for (year_t y = 1998; y <= 2005; y++) {
         uint32_t total = 0;
         for (int m = 1; m <= 12; m++)
@@ -51,7 +51,7 @@ TEST_DECLARE_UNIT(date_time, days_in_year_sums) {
 
 /* Day of year 0 is Jan 1, the boundaries here are the first day of
  * each following month*/
-TEST_DECLARE_UNIT(date_time, expand_month_edge) {
+TEST_DEFINE_UNIT(date_time, expand_month_edge) {
     struct date_time dt = {.year = 2001, .day = 0, .sec = 0};
 
     struct date_time_expanded e = date_time_expand(&dt);
@@ -81,7 +81,7 @@ TEST_DECLARE_UNIT(date_time, expand_month_edge) {
 }
 
 /* Test months after Feb */
-TEST_DECLARE_UNIT(date_time, expand_leap_year_edge) {
+TEST_DEFINE_UNIT(date_time, expand_leap_year_edge) {
     struct date_time dt = {.year = 2000, .day = 59, .sec = 0};
 
     struct date_time_expanded e = date_time_expand(&dt);
@@ -98,7 +98,7 @@ TEST_DECLARE_UNIT(date_time, expand_leap_year_edge) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(date_time, expand_time_of_day) {
+TEST_DEFINE_UNIT(date_time, expand_time_of_day) {
     struct date_time dt = {.year = 2001, .day = 0, .sec = 0};
 
     struct date_time_expanded e = date_time_expand(&dt);
@@ -115,8 +115,8 @@ TEST_DECLARE_UNIT(date_time, expand_time_of_day) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(date_time, expand_compact_roundtrip,
-                  TEST_INTENSITY(2, 5, 100)) {
+TEST_DEFINE_UNIT(date_time, expand_compact_roundtrip,
+                 TEST_INTENSITY(2, 5, 100)) {
     static const year_t base_years[] = {1999, 2000, 2001, 2024, 2100};
     size_t num_years =
         ctx->intensity_val ? ctx->intensity_val : TEST_ARRAY_LEN(base_years);
@@ -149,7 +149,7 @@ TEST_DECLARE_UNIT(date_time, expand_compact_roundtrip,
 }
 
 /* Weekdays advance by one day, and anchoring one date pins the offset */
-TEST_DECLARE_UNIT(date_time, weekday_progression) {
+TEST_DEFINE_UNIT(date_time, weekday_progression) {
     struct date_time dt = {.year = 2001, .day = 0, .sec = 0};
 
     uint8_t prev = date_time_expand(&dt).day_of_week;

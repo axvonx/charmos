@@ -13,7 +13,7 @@ struct harness_smoke_options {
 
 static struct harness_smoke_options harness_smoke_options;
 
-NIGHTMARE_OPTIONS_DECLARE(
+NIGHTMARE_OPTIONS_DEFINE(
     harness_smoke, struct harness_smoke_options, harness_smoke_options,
     CMDLINE_SCHEMA_PROP(struct harness_smoke_options, stall),
     CMDLINE_SCHEMA_PROP(struct harness_smoke_options, plateau),
@@ -66,10 +66,10 @@ static const struct nightmare_ops harness_smoke_ops = {
     .quiesce_check = harness_smoke_quiesce,
 };
 
-NIGHTMARE_DECLARE(harness_smoke,
-                  .desc = "Temporary P4 harness lifecycle smoke subject",
-                  .ops = &harness_smoke_ops,
-                  .seed_policy = NIGHTMARE_SEED_IGNORED,
-                  NIGHTMARE_INTENSITY_CORES(1, 1, 1, "workers/core"),
-                  .default_duration_ms = 1000);
+NIGHTMARE_DEFINE(harness_smoke,
+                 .desc = "Temporary P4 harness lifecycle smoke subject",
+                 .ops = &harness_smoke_ops,
+                 .seed_policy = NIGHTMARE_SEED_IGNORED,
+                 NIGHTMARE_INTENSITY_CORES(1, 1, 1, "workers/core"),
+                 .default_duration_ms = 1000);
 #endif

@@ -169,7 +169,7 @@ static inline void io_port_wait(void) {
     outb(0x80, 0);
 }
 
-TSA_REENTRANT_CAPABILITY_DEFINE("irqs", IRQS_DISABLED);
+TSA_REENTRANT_CAPABILITY_DECLARE("irqs", IRQS_DISABLED);
 
 static inline void irq_enable(void) TSA_RELEASES_IRQS TSA_NO_ANALYSIS {
     asm volatile("sti");

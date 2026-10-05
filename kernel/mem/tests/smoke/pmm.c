@@ -1,11 +1,11 @@
 #include "mem/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(mem, .intensity_desc = {
-                            .curve = SCALE_PIECEWISE_LOG,
-                            .unit = "iters",
-                        });
+TEST_GROUP_DEFINE(mem, .intensity_desc = {
+                           .curve = SCALE_PIECEWISE_LOG,
+                           .unit = "iters",
+                       });
 
-TEST_DECLARE_SMOKE(mem, pmm_alloc_free) {
+TEST_DEFINE_SMOKE(mem, pmm_alloc_free) {
     paddr_t p = pmm_alloc_page();
     TEST_ASSERT(p);
     pmm_free_page(p);

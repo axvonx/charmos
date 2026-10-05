@@ -13,7 +13,7 @@
 
 #include <math/sort.h>
 
-TEST_GROUP_DEFINE(fixed);
-TEST_GROUP_DEFINE(hash);
-TEST_GROUP_DEFINE(bit_ops);
-TEST_GROUP_DEFINE(sort);
+TEST_GROUP_DECLARE(fixed);
+TEST_GROUP_DECLARE(hash);
+TEST_GROUP_DECLARE(bit_ops);
+TEST_GROUP_DECLARE(sort);

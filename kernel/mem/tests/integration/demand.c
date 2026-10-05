@@ -69,9 +69,9 @@ static void dp_join(struct thread **t, size_t nthreads) {
 }
 
 /* 1 buffer, N threads, N CPUs = many CPUs racing for same PTEs */
-TEST_DECLARE_INTEGRATION(mem, mt_demand_single_buf,
-                         TEST_INTENSITY_CORES(1, 1, 4, "threads/core"),
-                         .min_cores = 2, .min_ram_mib = 8) {
+TEST_DEFINE_INTEGRATION(mem, mt_demand_single_buf,
+                        TEST_INTENSITY_CORES(1, 1, 4, "threads/core"),
+                        .min_cores = 2, .min_ram_mib = 8) {
     const size_t pages = DP_PAGES, nbuf = 1;
     size_t nthreads =
         MIN(ctx->intensity_val ? ctx->intensity_val : global.core_count,
@@ -95,9 +95,9 @@ TEST_DECLARE_INTEGRATION(mem, mt_demand_single_buf,
 
 /* N buffers, M threads (M > N), N CPUs = contention spread over multiple
  * regions */
-TEST_DECLARE_INTEGRATION(mem, mt_demand_multi_buf,
-                         TEST_INTENSITY_CORES(1, 2, 4, "threads/core"),
-                         .min_cores = 2, .min_ram_mib = 8) {
+TEST_DEFINE_INTEGRATION(mem, mt_demand_multi_buf,
+                        TEST_INTENSITY_CORES(1, 2, 4, "threads/core"),
+                        .min_cores = 2, .min_ram_mib = 8) {
     const size_t pages = DP_PAGES;
     size_t nbuf = MIN(global.core_count, DP_MAX_BUFS);
     size_t nthreads = MIN(ctx->intensity_val ? ctx->intensity_val : (2 * nbuf),

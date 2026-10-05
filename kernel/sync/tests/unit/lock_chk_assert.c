@@ -13,14 +13,14 @@
 #include <test/sync.h>
 #include <time/spin_sleep.h>
 
-LOCK_CHK_CLASS_DECLARE_LOCAL(assert_spin_class);
-LOCK_CHK_CLASS_DECLARE_LOCAL(assert_qspin_class);
-LOCK_CHK_CLASS_DECLARE_LOCAL(assert_mutex_class);
-LOCK_CHK_CLASS_DECLARE_LOCAL(assert_mutex_simple_class);
-LOCK_CHK_CLASS_DECLARE_LOCAL(assert_rwlock_class);
-LOCK_CHK_CLASS_DECLARE_LOCAL(assert_cross_thread_class);
+LOCK_CHK_CLASS_DEFINE_LOCAL(assert_spin_class);
+LOCK_CHK_CLASS_DEFINE_LOCAL(assert_qspin_class);
+LOCK_CHK_CLASS_DEFINE_LOCAL(assert_mutex_class);
+LOCK_CHK_CLASS_DEFINE_LOCAL(assert_mutex_simple_class);
+LOCK_CHK_CLASS_DEFINE_LOCAL(assert_rwlock_class);
+LOCK_CHK_CLASS_DEFINE_LOCAL(assert_cross_thread_class);
 
-TEST_DECLARE_UNIT(lock_chk, assert_held_roundtrip_spin) {
+TEST_DEFINE_UNIT(lock_chk, assert_held_roundtrip_spin) {
     struct spinlock s;
     spinlock_init_chk(&s, LOCK_CHK_CLASS(assert_spin_class), LOCK_CHKD_FULL);
 
@@ -35,7 +35,7 @@ TEST_DECLARE_UNIT(lock_chk, assert_held_roundtrip_spin) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(lock_chk, assert_held_roundtrip_qspin) {
+TEST_DEFINE_UNIT(lock_chk, assert_held_roundtrip_qspin) {
     struct qspinlock s;
     qspinlock_init_chk(&s, LOCK_CHK_CLASS(assert_qspin_class), LOCK_CHKD_FULL);
 
@@ -48,7 +48,7 @@ TEST_DECLARE_UNIT(lock_chk, assert_held_roundtrip_qspin) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(lock_chk, assert_held_roundtrip_mutex) {
+TEST_DEFINE_UNIT(lock_chk, assert_held_roundtrip_mutex) {
     struct mutex m;
     mutex_init_chk(&m, LOCK_CHK_CLASS(assert_mutex_class), LOCK_CHKD_FULL);
 
@@ -63,7 +63,7 @@ TEST_DECLARE_UNIT(lock_chk, assert_held_roundtrip_mutex) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(lock_chk, assert_held_roundtrip_mutex_simple) {
+TEST_DEFINE_UNIT(lock_chk, assert_held_roundtrip_mutex_simple) {
     struct mutex_simple m;
     mutex_simple_init_chk(&m, LOCK_CHK_CLASS(assert_mutex_simple_class),
                           LOCK_CHKD_FULL);
@@ -79,7 +79,7 @@ TEST_DECLARE_UNIT(lock_chk, assert_held_roundtrip_mutex_simple) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(lock_chk, assert_held_roundtrip_rwlock) {
+TEST_DEFINE_UNIT(lock_chk, assert_held_roundtrip_rwlock) {
     struct rwlock rw;
     rwlock_init_chk(&rw, THREAD_PRIO_CLASS_TIMESHARE,
                     LOCK_CHK_CLASS(assert_rwlock_class), LOCK_CHKD_FULL);
@@ -124,7 +124,7 @@ out:
     return false;
 }
 
-TEST_DECLARE_UNIT(lock_chk, assert_not_held_cross_thread_mutex) {
+TEST_DEFINE_UNIT(lock_chk, assert_not_held_cross_thread_mutex) {
     struct test_fleet *fleet = test_fleet_init(ctx, NULL);
     TEST_ASSERT_NONNULL(fleet);
 

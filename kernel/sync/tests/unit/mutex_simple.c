@@ -1,7 +1,7 @@
 #include "sync/tests/test_internal.h"
 #include <sync/mutex_simple.h>
 
-TEST_GROUP_DECLARE(mutex_simple);
+TEST_GROUP_DEFINE(mutex_simple);
 
 struct simple_contention {
     struct mutex_simple mutex;
@@ -18,7 +18,7 @@ static void simple_contender(void *arg) {
     }
 }
 
-TEST_DECLARE_UNIT(mutex_simple, object_wait_handoff) {
+TEST_DEFINE_UNIT(mutex_simple, object_wait_handoff) {
     struct simple_contention c = {0};
     mutex_simple_init(&c.mutex);
     struct thread *a =

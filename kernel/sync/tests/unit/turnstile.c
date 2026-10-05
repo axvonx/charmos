@@ -1,8 +1,8 @@
 #include "sync/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(turnstile);
+TEST_GROUP_DEFINE(turnstile);
 
-TEST_DECLARE_UNIT(turnstile, hash_and_init) {
+TEST_DEFINE_UNIT(turnstile, hash_and_init) {
     /* Fibonacci hashing mask invariant */
     uintptr_t dummy_locks[5] = {0x1000, 0x1020, 0x2000, 0x4000, 0x8000};
     for (size_t i = 0; i < 5; i++) {

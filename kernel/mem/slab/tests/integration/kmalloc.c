@@ -31,9 +31,9 @@ static void mt_kmalloc_worker(void *arg) {
     atomic_inc(&kmalloc_done);
 }
 
-TEST_DECLARE_INTEGRATION(slab, mt_alloc_free,
-                         TEST_INTENSITY_CORES(1, 2, 4, "threads/core"),
-                         .min_ram_mib = 8) {
+TEST_DEFINE_INTEGRATION(slab, mt_alloc_free,
+                        TEST_INTENSITY_CORES(1, 2, 4, "threads/core"),
+                        .min_ram_mib = 8) {
     size_t nthreads = ctx->intensity_val ? ctx->intensity_val : 8;
     struct thread **threads = kmalloc(sizeof(struct thread *) * nthreads);
     TEST_ASSERT_NONNULL(threads);
@@ -139,8 +139,8 @@ static volatile int done[STRESS_THREADS];
 static struct stress_arg args[STRESS_THREADS];
 static char msg[128];
 
-TEST_DECLARE_INTEGRATION(slab, mt_alloc_free_stress,
-                         TEST_INTENSITY(5000, 50000, 200000)) {
+TEST_DEFINE_INTEGRATION(slab, mt_alloc_free_stress,
+                        TEST_INTENSITY(5000, 50000, 200000)) {
     memset((void *) done, 0, sizeof(done));
     atomic_store_relaxed(&all_ready, false);
 

@@ -1,8 +1,8 @@
 #include "structures/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(mpmc_queue);
+TEST_GROUP_DEFINE(mpmc_queue);
 
-TEST_DECLARE_UNIT(mpmc_queue, fifo_capacity_and_wrap) {
+TEST_DEFINE_UNIT(mpmc_queue, fifo_capacity_and_wrap) {
     struct mpmc_queue q;
     bool ok = mpmc_queue_init(&q, 8);
     TEST_ASSERT(ok);

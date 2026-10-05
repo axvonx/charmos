@@ -28,7 +28,7 @@ static bool many_worker(struct test_fleet *f, struct test_conc_worker *w) {
     return true;
 }
 
-TEST_DECLARE_INTEGRATION(mutex, mt_many_waiters, TEST_INTENSITY(2, 10, 32)) {
+TEST_DEFINE_INTEGRATION(mutex, mt_many_waiters, TEST_INTENSITY(2, 10, 32)) {
     struct test_fleet_opts opts = {.pin = true};
     struct test_fleet *fleet = test_fleet_init(ctx, &opts);
     TEST_ASSERT_NONNULL(fleet);
@@ -82,7 +82,7 @@ static bool chaos(struct test_fleet *f, struct test_conc_worker *w) {
     return true;
 }
 
-TEST_DECLARE_INTEGRATION(mutex, mt_chaos, TEST_INTENSITY(20, 50, 100)) {
+TEST_DEFINE_INTEGRATION(mutex, mt_chaos, TEST_INTENSITY(20, 50, 100)) {
     struct test_fleet *fleet = test_fleet_init(ctx, NULL);
     TEST_ASSERT_NONNULL(fleet);
 

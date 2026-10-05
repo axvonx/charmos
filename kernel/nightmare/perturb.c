@@ -51,14 +51,14 @@ static void *perturb_stutter_resolve(const char *path, size_t path_len) {
     return config && strcmp(config->name, "stutter") == 0 ? config : NULL;
 }
 
-CMDLINE_SCHEMA_DECLARE(
+CMDLINE_SCHEMA_DEFINE(
     nightmare_perturb_interval, "nightmare", "perturb.<interval-svc>",
     "Nightmare interval perturbation options", perturb_interval_resolve,
     CMDLINE_SCHEMA_PROP(struct nightmare_perturb_config, interval_us,
                         .types = CMDLINE_TYPES(CMDLINE_TYPE_DURATION),
                         .range = RANGE(US_TO_NS(1), TIME_NS_MAX)));
 
-CMDLINE_SCHEMA_DECLARE(
+CMDLINE_SCHEMA_DEFINE(
     nightmare_perturb_stutter, "nightmare", "perturb.stutter",
     "Nightmare stutter perturbation options", perturb_stutter_resolve,
     CMDLINE_SCHEMA_PROP(struct nightmare_perturb_config, period_ms,

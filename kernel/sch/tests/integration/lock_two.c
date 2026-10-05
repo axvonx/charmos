@@ -8,7 +8,7 @@ static void lock_two_parked(void *arg) {
     completion_wait(&lock_two_release);
 }
 
-TEST_DECLARE_INTEGRATION(sched, lock_two_runqueues_irql, .min_cores = 2) {
+TEST_DEFINE_INTEGRATION(sched, lock_two_runqueues_irql, .min_cores = 2) {
     completion_init(&lock_two_release, COMPLETION_INIT_NORMAL);
 
     struct thread *t0 = thread_spawn("lock_two_0", lock_two_parked, .on_cpu = 0,

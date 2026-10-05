@@ -1,12 +1,12 @@
 #include "mem/slab/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(slab, .intensity_desc = {
-                             .curve = SCALE_PIECEWISE_LOG,
-                             .unit = "iters",
-                         });
+TEST_GROUP_DEFINE(slab, .intensity_desc = {
+                            .curve = SCALE_PIECEWISE_LOG,
+                            .unit = "iters",
+                        });
 
 static char hooray[128] = {0};
-TEST_DECLARE_SMOKE(slab, alloc_free) {
+TEST_DEFINE_SMOKE(slab, alloc_free) {
 
     void *p = kmalloc_new(
         67, (struct alloc_params){.flags = ALLOC_FLAGS_DEFAULT,
@@ -27,7 +27,7 @@ TEST_DECLARE_SMOKE(slab, alloc_free) {
 #endif
 
 static char a_msg[128];
-TEST_DECLARE_SMOKE(slab, pattern_integrity) {
+TEST_DEFINE_SMOKE(slab, pattern_integrity) {
 
     void *p1 = kmalloc_new(
         1, (struct alloc_params){.flags = ALLOC_FLAGS_DEFAULT,

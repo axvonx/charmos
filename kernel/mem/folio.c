@@ -7,8 +7,8 @@
 #include <string.h>
 #include <types/refcount.h>
 
-FIXED_SIZE_RANGE_PERDOMAIN_DECLARE(folio, .obj_size = sizeof(struct folio),
-                                   .obj_align = PAGE_PAYLOAD_ALIGNMENT);
+FIXED_SIZE_RANGE_PERDOMAIN_DEFINE(folio, .obj_size = sizeof(struct folio),
+                                  .obj_align = PAGE_PAYLOAD_ALIGNMENT);
 
 struct folio *folio_alloc_folio_struct() {
     return FSR_PERDOMAIN_ALLOC(folio);

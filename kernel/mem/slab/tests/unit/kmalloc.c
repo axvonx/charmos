@@ -1,7 +1,7 @@
 #include "mem/slab/tests/test_internal.h"
 
-TEST_DECLARE_UNIT(slab, random_free_stress, TEST_INTENSITY(256, 2048, 32768),
-                  .min_ram_mib = 8) {
+TEST_DEFINE_UNIT(slab, random_free_stress, TEST_INTENSITY(256, 2048, 32768),
+                 .min_ram_mib = 8) {
     size_t n = ctx->intensity_val ? ctx->intensity_val : 2048;
     void **stress_alloc_free_ptrs = kmalloc(sizeof(void *) * n, ALLOC_ZERO);
     TEST_ASSERT_NONNULL(stress_alloc_free_ptrs);
@@ -29,8 +29,8 @@ TEST_DECLARE_UNIT(slab, random_free_stress, TEST_INTENSITY(256, 2048, 32768),
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(slab, bulk_alloc_free_stress,
-                  TEST_INTENSITY(256, 2048, 16384), .min_ram_mib = 8) {
+TEST_DEFINE_UNIT(slab, bulk_alloc_free_stress, TEST_INTENSITY(256, 2048, 16384),
+                 .min_ram_mib = 8) {
     size_t n = ctx->intensity_val ? ctx->intensity_val : 2048;
     void **mixed_stress_test_ptrs = kmalloc(sizeof(void *) * n);
     TEST_ASSERT_NONNULL(mixed_stress_test_ptrs);
@@ -48,7 +48,7 @@ TEST_DECLARE_UNIT(slab, bulk_alloc_free_stress,
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(slab, atomic_behavior_flags) {
+TEST_DEFINE_UNIT(slab, atomic_behavior_flags) {
     /* ALLOC_BEHAVIOR_ATOMIC should require nonpageable/nonmovable - allocator
        or sanitizers might coerce flags. This test ensures allocation doesn't
        return NULL for such a request. */
@@ -74,6 +74,6 @@ TEST_DECLARE_UNIT(slab, atomic_behavior_flags) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE(slab, map_new) {
+TEST_DEFINE(slab, map_new) {
     return TEST_SUCCESS;
 }

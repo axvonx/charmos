@@ -5,4 +5,4 @@
 
 #include "mem/arena/internal.h"
 
-TEST_GROUP_DEFINE(arena);
+TEST_GROUP_DECLARE(arena);

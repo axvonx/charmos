@@ -1,6 +1,6 @@
 #include "structures/tests/test_internal.h"
 
-TEST_GROUP_DECLARE(rbt);
+TEST_GROUP_DEFINE(rbt);
 
 struct test_rbt_node {
     int key;
@@ -51,7 +51,7 @@ static bool verify_rbt_invariants(const struct rbt_node *node, const int *min,
            verify_rbt_invariants(node->right, &key, max);
 }
 
-TEST_DECLARE_UNIT(rbt, delete_black_leaf_rebalances) {
+TEST_DEFINE_UNIT(rbt, delete_black_leaf_rebalances) {
     struct rbt tree;
     struct test_rbt_node nodes[] = {
         {.key = 8}, {.key = 75}, {.key = 80}, {.key = 31}};

@@ -1,6 +1,6 @@
 #include "mem/slab/tests/test_internal.h"
 
-TEST_DECLARE_SMOKE(slab, demand_growth) {
+TEST_DEFINE_SMOKE(slab, demand_growth) {
     size_t count = 500;
     void *ptrs[count];
 

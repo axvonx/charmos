@@ -247,11 +247,11 @@ struct test_globals {
 
 #define TEST_GROUP_NONE test_group_orphan_parent
 #define TEST_GROUP(name) &(__test_group_##name)
-#define TEST_GROUP_DEFINE(name) extern struct test_group __test_group_##name
+#define TEST_GROUP_DECLARE(name) extern struct test_group __test_group_##name
 
 #define TEST(grp, id) __test_##grp##_##id
 
-#define TEST_DECLARE(grp, id, ...)                                             \
+#define TEST_DEFINE(grp, id, ...)                                              \
     cc_wno_override_init_start static struct test_verdict                      \
     __test_fn_##grp##_##id(struct test_context *ctx);                          \
     extern struct test_group __test_group_##grp;                               \
@@ -280,7 +280,7 @@ struct test_globals {
         static struct test_verdict                                             \
         __test_fn_##grp##_##id(struct test_context *ctx cc_fn_unused)
 
-#define TEST_GROUP_DECLARE(n, ...)                                             \
+#define TEST_GROUP_DEFINE(n, ...)                                              \
     cc_wno_override_init_start extern struct test_group __test_group_##n;      \
     LINKER_SECTION_OBJECT(struct test_group, test_groups)                      \
     __test_group_##n = {.name = #n,                                            \
@@ -324,7 +324,7 @@ struct test_globals {
     }
 
 void tests_run(void);
-CMDLINE_DEFINE(test_root);
+CMDLINE_DECLARE(test_root);
 
 extern struct test_globals test_global;
 extern const char *large_test_string;

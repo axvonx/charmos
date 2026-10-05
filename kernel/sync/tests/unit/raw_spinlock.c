@@ -3,7 +3,7 @@
 #include <asm.h>
 #include <sync/raw_spinlock.h>
 
-TEST_GROUP_DECLARE(raw_spinlock);
+TEST_GROUP_DEFINE(raw_spinlock);
 
 static void raw_spin_test_body(bool *rejected_out,
                                bool *acquired_out) TSA_NO_ANALYSIS {
@@ -18,7 +18,7 @@ static void raw_spin_test_body(bool *rejected_out,
         raw_spin_unlock(&lock);
 }
 
-TEST_DECLARE_UNIT(raw_spinlock, physical_operations) {
+TEST_DEFINE_UNIT(raw_spinlock, physical_operations) {
     bool rejected_while_held = false;
     bool acquired_after_release = false;
     raw_spin_test_body(&rejected_while_held, &acquired_after_release);
@@ -28,7 +28,7 @@ TEST_DECLARE_UNIT(raw_spinlock, physical_operations) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(raw_spinlock, irq_restore) {
+TEST_DEFINE_UNIT(raw_spinlock, irq_restore) {
     struct raw_spinlock lock = RAW_SPINLOCK_INIT;
     bool entry_irqs_enabled = irqs_enabled();
 

@@ -3,4 +3,4 @@
 #include <stdint.h>
 #include <test/test.h>
 
-TEST_GROUP_DEFINE(ioapic);
+TEST_GROUP_DECLARE(ioapic);

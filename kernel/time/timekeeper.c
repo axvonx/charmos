@@ -22,14 +22,14 @@ static struct timekeeper timekeeper = {
     .base_ns = 0,
 };
 
-CMDLINE_DECLARE_STATIC(timekeeper, .flags = CMDLINE_ENTRY_SYMBOLIC,
-                       .desc = "Timekeeper subsystem parent node");
+CMDLINE_DEFINE_STATIC(timekeeper, .flags = CMDLINE_ENTRY_SYMBOLIC,
+                      .desc = "Timekeeper subsystem parent node");
 
 static char *clock_to_use = NULL;
-CMDLINE_CHILDREN_DECLARE(timekeeper,
-                         CMDLINE_INNER_STRING(clock, clock_to_use,
-                                              .arg = "<clock>",
-                                              .default_val = "auto"));
+CMDLINE_CHILDREN_DEFINE(timekeeper,
+                        CMDLINE_INNER_STRING(clock, clock_to_use,
+                                             .arg = "<clock>",
+                                             .default_val = "auto"));
 
 static struct clock *timekeeper_get_clock(void) {
     if (clock_to_use && strcmp(clock_to_use, "auto") != 0) {

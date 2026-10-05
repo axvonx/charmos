@@ -8,10 +8,10 @@
 
 #include "internal.h"
 
-CMDLINE_DECLARE_STATIC(timer, .flags = CMDLINE_ENTRY_SYMBOLIC,
-                       .desc = "Timer subsystem cmdline entries");
+CMDLINE_DEFINE_STATIC(timer, .flags = CMDLINE_ENTRY_SYMBOLIC,
+                      .desc = "Timer subsystem cmdline entries");
 
-CMDLINE_CHILDREN_DECLARE(
+CMDLINE_CHILDREN_DEFINE(
     timer,
     CMDLINE_INNER_STRING(clock_evdev, clock_global.timer_clock_evdev,
                          .desc = "Timer subsystem clock event device",
@@ -38,7 +38,7 @@ static void timer_percpu_ctor(struct timer_percpu *p, cpu_id_t cpu) {
     dpc_init(&p->timer_dpc, timer_dpc, p, NULL);
 }
 
-PERCPU_DECLARE(struct timer_percpu, timer_percpu, timer_percpu_ctor);
+PERCPU_DEFINE(struct timer_percpu, timer_percpu, timer_percpu_ctor);
 
 static uint32_t wheel_index_for_level(time_us_t expiration, uint32_t level,
                                       time_us_t *bucket_expiration) {

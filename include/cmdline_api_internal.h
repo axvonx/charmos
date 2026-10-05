@@ -151,42 +151,42 @@ struct cpu_mask;
 
 /* ========== Wrappers ========== */
 
-#define CMDLINE_DECLARE_FX(n, var, ...)                                        \
-    CMDLINE_DECLARE_VAR(n, var, .types = CMDLINE_TYPES(CMDLINE_TYPE_FX),       \
-                        ##__VA_ARGS__)
-#define CMDLINE_DECLARE_DURATION(n, var, ...)                                  \
-    CMDLINE_DECLARE_VAR(n, var, .types = CMDLINE_TYPES(CMDLINE_TYPE_DURATION), \
-                        ##__VA_ARGS__)
-#define CMDLINE_DECLARE_SIZE(n, var, ...)                                      \
-    CMDLINE_DECLARE_VAR(                                                       \
-        n, var, .types = CMDLINE_TYPES(CMDLINE_TYPE_DATA_SIZE), ##__VA_ARGS__)
-#define CMDLINE_DECLARE_CPUS(n, var, ...)                                      \
-    CMDLINE_DECLARE_VAR(n, var, .types = CMDLINE_TYPES(CMDLINE_TYPE_CPU_MASK), \
-                        ##__VA_ARGS__)
-#define CMDLINE_DECLARE_STRING(n, var, ...)                                    \
-    CMDLINE_DECLARE_VAR(n, var, .types = CMDLINE_TYPES(CMDLINE_TYPE_STRING),   \
-                        ##__VA_ARGS__)
+#define CMDLINE_DEFINE_FX(n, var, ...)                                         \
+    CMDLINE_DEFINE_VAR(n, var, .types = CMDLINE_TYPES(CMDLINE_TYPE_FX),        \
+                       ##__VA_ARGS__)
+#define CMDLINE_DEFINE_DURATION(n, var, ...)                                   \
+    CMDLINE_DEFINE_VAR(n, var, .types = CMDLINE_TYPES(CMDLINE_TYPE_DURATION),  \
+                       ##__VA_ARGS__)
+#define CMDLINE_DEFINE_SIZE(n, var, ...)                                       \
+    CMDLINE_DEFINE_VAR(n, var, .types = CMDLINE_TYPES(CMDLINE_TYPE_DATA_SIZE), \
+                       ##__VA_ARGS__)
+#define CMDLINE_DEFINE_CPUS(n, var, ...)                                       \
+    CMDLINE_DEFINE_VAR(n, var, .types = CMDLINE_TYPES(CMDLINE_TYPE_CPU_MASK),  \
+                       ##__VA_ARGS__)
+#define CMDLINE_DEFINE_STRING(n, var, ...)                                     \
+    CMDLINE_DEFINE_VAR(n, var, .types = CMDLINE_TYPES(CMDLINE_TYPE_STRING),    \
+                       ##__VA_ARGS__)
 
-#define CMDLINE_CHILD_DECLARE_FX(parent_n, n, var, ...)                        \
-    CMDLINE_CHILD_DECLARE_VAR(parent_n, n, var,                                \
-                              .types = CMDLINE_TYPES(CMDLINE_TYPE_FX),         \
-                              ##__VA_ARGS__)
-#define CMDLINE_CHILD_DECLARE_DURATION(parent_n, n, var, ...)                  \
-    CMDLINE_CHILD_DECLARE_VAR(parent_n, n, var,                                \
-                              .types = CMDLINE_TYPES(CMDLINE_TYPE_DURATION),   \
-                              ##__VA_ARGS__)
-#define CMDLINE_CHILD_DECLARE_SIZE(parent_n, n, var, ...)                      \
-    CMDLINE_CHILD_DECLARE_VAR(parent_n, n, var,                                \
-                              .types = CMDLINE_TYPES(CMDLINE_TYPE_DATA_SIZE),  \
-                              ##__VA_ARGS__)
-#define CMDLINE_CHILD_DECLARE_CPUS(parent_n, n, var, ...)                      \
-    CMDLINE_CHILD_DECLARE_VAR(parent_n, n, var,                                \
-                              .types = CMDLINE_TYPES(CMDLINE_TYPE_CPU_MASK),   \
-                              ##__VA_ARGS__)
-#define CMDLINE_CHILD_DECLARE_STRING(parent_n, n, var, ...)                    \
-    CMDLINE_CHILD_DECLARE_VAR(parent_n, n, var,                                \
-                              .types = CMDLINE_TYPES(CMDLINE_TYPE_STRING),     \
-                              ##__VA_ARGS__)
+#define CMDLINE_CHILD_DEFINE_FX(parent_n, n, var, ...)                         \
+    CMDLINE_CHILD_DEFINE_VAR(parent_n, n, var,                                 \
+                             .types = CMDLINE_TYPES(CMDLINE_TYPE_FX),          \
+                             ##__VA_ARGS__)
+#define CMDLINE_CHILD_DEFINE_DURATION(parent_n, n, var, ...)                   \
+    CMDLINE_CHILD_DEFINE_VAR(parent_n, n, var,                                 \
+                             .types = CMDLINE_TYPES(CMDLINE_TYPE_DURATION),    \
+                             ##__VA_ARGS__)
+#define CMDLINE_CHILD_DEFINE_SIZE(parent_n, n, var, ...)                       \
+    CMDLINE_CHILD_DEFINE_VAR(parent_n, n, var,                                 \
+                             .types = CMDLINE_TYPES(CMDLINE_TYPE_DATA_SIZE),   \
+                             ##__VA_ARGS__)
+#define CMDLINE_CHILD_DEFINE_CPUS(parent_n, n, var, ...)                       \
+    CMDLINE_CHILD_DEFINE_VAR(parent_n, n, var,                                 \
+                             .types = CMDLINE_TYPES(CMDLINE_TYPE_CPU_MASK),    \
+                             ##__VA_ARGS__)
+#define CMDLINE_CHILD_DEFINE_STRING(parent_n, n, var, ...)                     \
+    CMDLINE_CHILD_DEFINE_VAR(parent_n, n, var,                                 \
+                             .types = CMDLINE_TYPES(CMDLINE_TYPE_STRING),      \
+                             ##__VA_ARGS__)
 
 #define CMDLINE_INNER_FX(n, var, ...)                                          \
     CMDLINE_INNER_VAR(n, var, .types = CMDLINE_TYPES(CMDLINE_TYPE_FX),         \

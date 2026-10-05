@@ -125,9 +125,9 @@ struct nightmare {
     size_t min_mem_mib;
 } cc_aligned(8);
 
-LINKER_SECTION_DEFINE(struct nightmare, nightmares);
+LINKER_SECTION_DECLARE(struct nightmare, nightmares);
 
-#define NIGHTMARE_DECLARE(id, ...)                                             \
+#define NIGHTMARE_DEFINE(id, ...)                                              \
     cc_wno_override_init_start extern struct nightmare __nightmare_##id;       \
     LINKER_SECTION_OBJECT(struct nightmare, nightmares)                        \
     __nightmare_##id = {.name = #id,                                           \
@@ -139,7 +139,7 @@ LINKER_SECTION_DEFINE(struct nightmare, nightmares);
     cc_wno_override_init_end
 
 #define NIGHTMARE(id) (&__nightmare_##id)
-#define NIGHTMARE_DEFINE(id) extern struct nightmare __nightmare_##id
+#define NIGHTMARE_DECLARE(id) extern struct nightmare __nightmare_##id
 #define NIGHTMARE_PERTURB(...) ((const char *const[]) {__VA_ARGS__, NULL})
 
 #define NIGHTMARE_INTENSITY_SENTINEL ((fx32_32_t) - 1LL)
@@ -155,7 +155,7 @@ LINKER_SECTION_DEFINE(struct nightmare, nightmares);
     static void id(struct nightmare_ctx *NM_CTX cc_fn_unused,                  \
                    struct test_conc_worker *NM_SELF cc_fn_unused)
 
-#define NIGHTMARE_OPTIONS_DECLARE(id, struct_type, instance, ...)              \
+#define NIGHTMARE_OPTIONS_DEFINE(id, struct_type, instance, ...)               \
     static void *__nightmare_options_resolve_##id(const char *path,            \
                                                   size_t path_len) {           \
         return path_len == sizeof(#id) - 1 &&                                  \
@@ -163,9 +163,9 @@ LINKER_SECTION_DEFINE(struct nightmare, nightmares);
                    ? &(instance)                                               \
                    : NULL;                                                     \
     }                                                                          \
-    CMDLINE_SCHEMA_DECLARE(__nightmare_options_##id, "nightmare", #id,         \
-                           "Nightmare subject options",                        \
-                           __nightmare_options_resolve_##id, __VA_ARGS__)
+    CMDLINE_SCHEMA_DEFINE(__nightmare_options_##id, "nightmare", #id,          \
+                          "Nightmare subject options",                         \
+                          __nightmare_options_resolve_##id, __VA_ARGS__)
 
 #define NIGHTMARE_OK                                                           \
     ((struct nightmare_verdict) {.result = NIGHTMARE_RESULT_OK})

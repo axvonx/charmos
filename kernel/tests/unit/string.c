@@ -1,8 +1,8 @@
 #include "tests/test_internal.h"
 
-TEST_GROUP_DECLARE(string);
+TEST_GROUP_DEFINE(string);
 
-TEST_DECLARE_UNIT(string, strncmp_edge) {
+TEST_DEFINE_UNIT(string, strncmp_edge) {
     TEST_ASSERT_EQ(strncmp("a", "a", 2), 0);
     TEST_ASSERT_EQ(strncmp("", "", 1), 0);
     TEST_ASSERT_EQ(strncmp("a", "b", 0), 0);
@@ -20,7 +20,7 @@ TEST_DECLARE_UNIT(string, strncmp_edge) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(string, memmem_binary) {
+TEST_DEFINE_UNIT(string, memmem_binary) {
     const unsigned char h[] = {0x80, 0, 0xff, 0x80, 0, 0xff};
     const unsigned char n[] = {0, 0xff};
     TEST_ASSERT_PTR_EQ(memmem(h, sizeof(h), n, sizeof(n)), h + 1);
@@ -36,7 +36,7 @@ TEST_DECLARE_UNIT(string, memmem_binary) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(string, bounded_substring_search) {
+TEST_DEFINE_UNIT(string, bounded_substring_search) {
     const char h[] = {'a', 'B', 'c', 'D', 'e'};
     TEST_ASSERT_PTR_EQ(strnstr(h, "BcD", sizeof(h)), h + 1);
     TEST_ASSERT_PTR_EQ(strnstr(h, "De", sizeof(h)), h + 3);
@@ -64,7 +64,7 @@ TEST_DECLARE_UNIT(string, bounded_substring_search) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(string, end_pointer_copies) {
+TEST_DEFINE_UNIT(string, end_pointer_copies) {
     char dst[8];
     memset(dst, '!', sizeof(dst));
     TEST_ASSERT_PTR_EQ(stpcpy(dst, "abc"), dst + 3);
@@ -96,7 +96,7 @@ TEST_DECLARE_UNIT(string, end_pointer_copies) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(string, ascii_classification) {
+TEST_DEFINE_UNIT(string, ascii_classification) {
     for (int c = -1; c <= 256; c++) {
         TEST_ASSERT_EQ(!!isblank(c), c == ' ' || c == '\t');
         TEST_ASSERT_EQ(!!iscntrl(c), (c >= 0 && c <= 31) || c == 127);
@@ -111,7 +111,7 @@ TEST_DECLARE_UNIT(string, ascii_classification) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(string, strcasestr_patterns) {
+TEST_DEFINE_UNIT(string, strcasestr_patterns) {
     const char h[] = "aAbAaBaAbAaX";
     TEST_ASSERT_PTR_EQ(strcasestr(h, ""), h);
     TEST_ASSERT_PTR_EQ(strcasestr(h, "AABAAX"), h + 6);
@@ -125,7 +125,7 @@ TEST_DECLARE_UNIT(string, strcasestr_patterns) {
     return TEST_SUCCESS;
 }
 
-TEST_DECLARE_UNIT(string, strstr_patterns) {
+TEST_DEFINE_UNIT(string, strstr_patterns) {
     /* Giving an empty needle returns start of haystack */
     const char *h1 = "abcdef";
     TEST_ASSERT_PTR_EQ(strstr(h1, ""), h1);
