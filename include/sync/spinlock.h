@@ -27,8 +27,7 @@ struct TSA_CAPABILITY("spinlock") spinlock {
 #define SPINLOCK_DEFINE_CHK(id, class_, flags_)                                \
     struct spinlock id = SPINLOCK_INIT_CHK((class_), (flags_))
 
-#define spinlock_init_1(lock_)                                                 \
-    spinlock_init_auto_internal((lock_), LOCK_CHKD_FULL)
+#define spinlock_init_1(lock_) spinlock_init_2(lock_, LOCK_CHKD_FULL)
 #define spinlock_init_2(lock_, flags_)                                         \
     spinlock_init_auto_internal((lock_), (flags_))
 #define spinlock_init(...) PP_CALL(spinlock_init, __VA_ARGS__)

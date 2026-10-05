@@ -209,20 +209,17 @@
 
 /* Unused argument discarders */
 #define PP_CC_VAR_UNUSED_1(a) ((void) (a))
-#define PP_CC_VAR_UNUSED_2(a, b) ((void) (a), (void) (b))
-#define PP_CC_VAR_UNUSED_3(a, b, c) ((void) (a), (void) (b), (void) (c))
-#define PP_CC_VAR_UNUSED_4(a, b, c, d)                                         \
-    ((void) (a), (void) (b), (void) (c), (void) (d))
+#define PP_CC_VAR_UNUSED_2(a, b) (PP_CC_VAR_UNUSED_1(a), (void) (b))
+#define PP_CC_VAR_UNUSED_3(a, b, c) (PP_CC_VAR_UNUSED_2(a, b), (void) (c))
+#define PP_CC_VAR_UNUSED_4(a, b, c, d) (PP_CC_VAR_UNUSED_3(a, b, c), (void) (d))
 #define PP_CC_VAR_UNUSED_5(a, b, c, d, e)                                      \
-    ((void) (a), (void) (b), (void) (c), (void) (d), (void) (e))
+    (PP_CC_VAR_UNUSED_4(a, b, c, d), (void) (e))
 #define PP_CC_VAR_UNUSED_6(a, b, c, d, e, f)                                   \
-    ((void) (a), (void) (b), (void) (c), (void) (d), (void) (e), (void) (f))
+    (PP_CC_VAR_UNUSED_5(a, b, c, d, e), (void) (f))
 #define PP_CC_VAR_UNUSED_7(a, b, c, d, e, f, g)                                \
-    ((void) (a), (void) (b), (void) (c), (void) (d), (void) (e), (void) (f),   \
-     (void) (g))
+    (PP_CC_VAR_UNUSED_6(a, b, c, d, e, f), (void) (g))
 #define PP_CC_VAR_UNUSED_8(a, b, c, d, e, f, g, h)                             \
-    ((void) (a), (void) (b), (void) (c), (void) (d), (void) (e), (void) (f),   \
-     (void) (g), (void) (h))
+    (PP_CC_VAR_UNUSED_7(a, b, c, d, e, f, g), (void) (h))
 
 #define PP_UNPAREN(x) PP_UNPAREN_ESC_(PP_UNPAREN_ISH_ x)
 #define PP_UNPAREN_ISH_(...) PP_UNPAREN_ISH_ __VA_ARGS__

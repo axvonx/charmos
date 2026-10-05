@@ -29,14 +29,14 @@ uint64_t pmm_get_usable_ram(void);
             log_warn_once("Input to alloc_pages matches ALLOC_FLAGS_DEFAULT, " \
                           "possible mistake");                                 \
                                                                                \
-        pmm_alloc_pages_full(count, ALLOC_FLAGS_DEFAULT);                      \
+        pmm_alloc_pages_2(count, ALLOC_FLAGS_DEFAULT);                         \
     })
 
 #define pmm_alloc_pages_2(count, f) pmm_alloc_pages_full((count), (f))
 
 #define pmm_alloc_pages(...) PP_CALL(pmm_alloc_pages, __VA_ARGS__)
 
-#define pmm_alloc_page_0() pmm_alloc_page_full((ALLOC_FLAGS_DEFAULT))
+#define pmm_alloc_page_0() pmm_alloc_page_1(ALLOC_FLAGS_DEFAULT)
 #define pmm_alloc_page_1(f) pmm_alloc_page_full((f))
 
 #define pmm_alloc_page(...) PP_CALL(pmm_alloc_page, __VA_ARGS__)

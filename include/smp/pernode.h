@@ -86,6 +86,6 @@ void pernode_obj_init(void);
 #define pernode_for_each_internal_3(name, var, node)                           \
     pernode_for_each_internal(name, var, node)
 #define pernode_for_each_internal_2(name, var)                                 \
-    pernode_for_each_internal(name, var, __node)
+    pernode_for_each_internal_3(name, var, __node)
 
 #define pernode_for_each(...) PP_CALL(pernode_for_each_internal, __VA_ARGS__)

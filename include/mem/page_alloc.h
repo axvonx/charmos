@@ -19,7 +19,7 @@
                                                       ##__VA_ARGS__))
 
 #define page_free_2(ptr, n_pages)                                              \
-    page_free_full((ptr), (n_pages), ALLOC_BEHAVIOR_NORMAL)
+    page_free_3((ptr), (n_pages), ALLOC_BEHAVIOR_NORMAL)
 #define page_free_3(ptr, n_pages, bh) page_free_full((ptr), (n_pages), (bh))
 
 #define page_free(...) PP_CALL(page_free, __VA_ARGS__)

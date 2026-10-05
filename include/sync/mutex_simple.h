@@ -97,8 +97,7 @@ void mutex_simple_assert_not_held_full(struct mutex_simple *m,
 #define MUTEX_SIMPLE_DEFINE_CHK(id, class_, flags_)                            \
     struct mutex_simple id = MUTEX_SIMPLE_INIT_CHK((id), (class_), (flags_))
 
-#define mutex_simple_init_1(mtx_)                                              \
-    mutex_simple_init_auto_internal((mtx_), LOCK_CHKD_FULL)
+#define mutex_simple_init_1(mtx_) mutex_simple_init_2(mtx_, LOCK_CHKD_FULL)
 #define mutex_simple_init_2(mtx_, flags_)                                      \
     mutex_simple_init_auto_internal((mtx_), (flags_))
 #define mutex_simple_init(...) PP_CALL(mutex_simple_init, __VA_ARGS__)

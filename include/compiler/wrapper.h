@@ -4,9 +4,8 @@
 #include <compiler/intrinsic.h>
 
 #define cw_alloc_0() cc_malloc_like cc_warn_unused_result
-#define cw_alloc_1(sz) cc_malloc_like cc_warn_unused_result cc_alloc_size(sz)
-#define cw_alloc_2(sz, align)                                                  \
-    cc_malloc_like cc_warn_unused_result cc_alloc_size(sz) cc_alloc_align(align)
+#define cw_alloc_1(sz) cw_alloc_0() cc_alloc_size(sz)
+#define cw_alloc_2(sz, align) cw_alloc_1(sz) cc_alloc_align(align)
 
 #define cw_alloc(...) PP_CALL2(cw_alloc, __VA_ARGS__)
 

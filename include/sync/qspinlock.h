@@ -384,8 +384,7 @@ static inline void qspinlock_init_chk_full(struct qspinlock *lock,
     qspinlock_map_init_internal(lock, class, flags);
 }
 
-#define qspinlock_init_1(lock_)                                                \
-    qspinlock_init_auto_internal((lock_), LOCK_CHKD_FULL)
+#define qspinlock_init_1(lock_) qspinlock_init_2(lock_, LOCK_CHKD_FULL)
 #define qspinlock_init_2(lock_, flags_)                                        \
     qspinlock_init_auto_internal((lock_), (flags_))
 #define qspinlock_init(...) PP_CALL(qspinlock_init, __VA_ARGS__)

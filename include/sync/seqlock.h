@@ -149,7 +149,7 @@ static inline void seqlock_init_chk_full(struct seqlock *sl,
 
 #endif /* DEBUG_LOCK_CHK */
 
-#define seqlock_init_1(sl_) seqlock_init_auto_internal((sl_), LOCK_CHKD_FULL)
+#define seqlock_init_1(sl_) seqlock_init_2(sl_, LOCK_CHKD_FULL)
 #define seqlock_init_2(sl_, flags_) seqlock_init_auto_internal((sl_), (flags_))
 #define seqlock_init(...) PP_CALL(seqlock_init, __VA_ARGS__)
 

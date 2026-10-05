@@ -10,7 +10,7 @@
                                 .priority = ALLOC_PRIORITY_DEFAULT,            \
                                 ##__VA_ARGS__}))
 
-#define kfree_1(ptr) kfree_full((ptr), ALLOC_BEHAVIOR_DEFAULT)
+#define kfree_1(ptr) kfree_2((ptr), ALLOC_BEHAVIOR_DEFAULT)
 #define kfree_2(ptr, bh) kfree_full((ptr), (bh))
 
 #define kfree(...) PP_CALL(kfree, __VA_ARGS__)
@@ -26,7 +26,7 @@
                                                     ALLOC_BEHAVIOR_DEFAULT,    \
                                                     ##__VA_ARGS__))
 
-#define kfree_aligned_1(ptr) kfree_aligned_full((ptr), ALLOC_BEHAVIOR_DEFAULT)
+#define kfree_aligned_1(ptr) kfree_aligned_2((ptr), ALLOC_BEHAVIOR_DEFAULT)
 #define kfree_aligned_2(ptr, bh) kfree_aligned_full((ptr), (bh))
 #define kfree_aligned(...) PP_CALL(kfree_aligned, __VA_ARGS__)
 

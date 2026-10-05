@@ -89,7 +89,7 @@ struct err_facility {
 #define ERR_DELTA_START (1)
 #define ERR(n, d) ERR_CREATE(ERR_PREFIX(n), d)
 
-#define ERR_PTR_INTERNAL_2(n, d) ((void *) ERR(n, d))
+#define ERR_PTR_INTERNAL_2(n, d) ERR_PTR_INTERNAL_1(ERR(n, d))
 #define ERR_PTR_INTERNAL_1(e) ((void *) (e))
 #define ERR_PTR(...) PP_CALL(ERR_PTR_INTERNAL, __VA_ARGS__)
 

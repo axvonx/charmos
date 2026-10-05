@@ -17,7 +17,7 @@
 void movealloc_full(domain_id_t domain, void *ptr, enum vmm_flags vf);
 
 /* movealloc(domain, ptr[, vf]) - vf defaults to VMM_FLAG_NONE */
-#define movealloc_2(d, p) movealloc_full((d), (p), VMM_FLAG_NONE)
+#define movealloc_2(d, p) movealloc_3((d), (p), VMM_FLAG_NONE)
 #define movealloc_3(d, p, vf) movealloc_full((d), (p), (vf))
 #define movealloc(...) PP_CALL(movealloc, __VA_ARGS__)
 

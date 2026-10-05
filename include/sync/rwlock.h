@@ -110,8 +110,7 @@ void rwlock_assert_not_held_full(struct rwlock *lock,
 #define RWLOCK_DEFINE_CHK(id, ceil_, class_, flags_)                           \
     struct rwlock id = RWLOCK_INIT_CHK((ceil_), (class_), (flags_))
 
-#define rwlock_init_2(lock_, ceil_)                                            \
-    rwlock_init_auto_internal((lock_), (ceil_), LOCK_CHKD_FULL)
+#define rwlock_init_2(lock_, ceil_) rwlock_init_3(lock_, ceil_, LOCK_CHKD_FULL)
 #define rwlock_init_3(lock_, ceil_, flags_)                                    \
     rwlock_init_auto_internal((lock_), (ceil_), (flags_))
 #define rwlock_init(...) PP_CALL(rwlock_init, __VA_ARGS__)

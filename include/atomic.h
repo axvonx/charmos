@@ -75,7 +75,7 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
         atomic_check_load_mo_internal(mo);                                     \
         atomic_load_explicit((ptr), (mo));                                     \
     })
-#define atomic_load_1(ptr) atomic_load_checked_internal((ptr), mo_seq_cst)
+#define atomic_load_1(ptr) atomic_load_2((ptr), mo_seq_cst)
 #define atomic_load_2(ptr, mo) atomic_load_checked_internal((ptr), (mo))
 #define atomic_load(...) atomic_call_internal(atomic_load, __VA_ARGS__)
 
@@ -86,8 +86,7 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
         atomic_check_store_mo_internal(mo);                                    \
         atomic_store_explicit((ptr), (val), (mo));                             \
     })
-#define atomic_store_2(ptr, val)                                               \
-    atomic_store_checked_internal((ptr), (val), mo_seq_cst)
+#define atomic_store_2(ptr, val) atomic_store_3((ptr), (val), mo_seq_cst)
 #define atomic_store_3(ptr, val, mo)                                           \
     atomic_store_checked_internal((ptr), (val), (mo))
 #define atomic_store(...) atomic_call_internal(atomic_store, __VA_ARGS__)
@@ -98,8 +97,7 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
         atomic_check_not_consume_internal(mo);                                 \
         atomic_exchange_explicit((ptr), (val), (mo));                          \
     })
-#define atomic_exchange_2(ptr, val)                                            \
-    atomic_xchg_checked_internal((ptr), (val), mo_seq_cst)
+#define atomic_exchange_2(ptr, val) atomic_exchange_3((ptr), (val), mo_seq_cst)
 #define atomic_exchange_3(ptr, val, mo)                                        \
     atomic_xchg_checked_internal((ptr), (val), (mo))
 #define atomic_exchange(...) atomic_call_internal(atomic_exchange, __VA_ARGS__)
@@ -114,8 +112,7 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
                                               (fail));                         \
     })
 #define atomic_compare_exchange_weak_3(ptr, exp, des)                          \
-    atomic_cas_weak_checked_internal((ptr), (exp), (des), mo_seq_cst,          \
-                                     mo_seq_cst)
+    atomic_compare_exchange_weak_5((ptr), (exp), (des), mo_seq_cst, mo_seq_cst)
 #define atomic_compare_exchange_weak_4(ptr, exp, des, mo)                      \
     ({                                                                         \
         static_assert(0, "4-argument CAS is prohibited");                      \
@@ -137,8 +134,8 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
                                                 (fail));                       \
     })
 #define atomic_compare_exchange_strong_3(ptr, exp, des)                        \
-    atomic_cas_strong_checked_internal((ptr), (exp), (des), mo_seq_cst,        \
-                                       mo_seq_cst)
+    atomic_compare_exchange_strong_5((ptr), (exp), (des), mo_seq_cst,          \
+                                     mo_seq_cst)
 #define atomic_compare_exchange_strong_4(ptr, exp, des, mo)                    \
     ({                                                                         \
         static_assert(0, "4-argument CAS is prohibited");                      \
@@ -160,8 +157,7 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
         cpx_exp_internal;                                                      \
     })
 #define atomic_cmpxchg_3(ptr, old_val, new_val)                                \
-    atomic_cmpxchg_checked_internal((ptr), (old_val), (new_val), mo_seq_cst,   \
-                                    mo_seq_cst)
+    atomic_cmpxchg_5((ptr), (old_val), (new_val), mo_seq_cst, mo_seq_cst)
 #define atomic_cmpxchg_4(ptr, old_val, new_val, mo)                            \
     ({                                                                         \
         static_assert(0, "4-argument cmpxchg is prohibited");                  \
@@ -179,7 +175,7 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
         atomic_fetch_add_explicit((ptr), (val), (mo));                         \
     })
 #define atomic_fetch_add_2(ptr, val)                                           \
-    atomic_fetch_add_checked_internal((ptr), (val), mo_seq_cst)
+    atomic_fetch_add_3((ptr), (val), mo_seq_cst)
 #define atomic_fetch_add_3(ptr, val, mo)                                       \
     atomic_fetch_add_checked_internal((ptr), (val), (mo))
 #define atomic_fetch_add(...)                                                  \
@@ -192,7 +188,7 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
         atomic_fetch_sub_explicit((ptr), (val), (mo));                         \
     })
 #define atomic_fetch_sub_2(ptr, val)                                           \
-    atomic_fetch_sub_checked_internal((ptr), (val), mo_seq_cst)
+    atomic_fetch_sub_3((ptr), (val), mo_seq_cst)
 #define atomic_fetch_sub_3(ptr, val, mo)                                       \
     atomic_fetch_sub_checked_internal((ptr), (val), (mo))
 #define atomic_fetch_sub(...)                                                  \
@@ -205,7 +201,7 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
         atomic_fetch_and_explicit((ptr), (val), (mo));                         \
     })
 #define atomic_fetch_and_2(ptr, val)                                           \
-    atomic_fetch_and_checked_internal((ptr), (val), mo_seq_cst)
+    atomic_fetch_and_3((ptr), (val), mo_seq_cst)
 #define atomic_fetch_and_3(ptr, val, mo)                                       \
     atomic_fetch_and_checked_internal((ptr), (val), (mo))
 #define atomic_fetch_and(...)                                                  \
@@ -217,8 +213,7 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
         atomic_check_not_consume_internal(mo);                                 \
         atomic_fetch_or_explicit((ptr), (val), (mo));                          \
     })
-#define atomic_fetch_or_2(ptr, val)                                            \
-    atomic_fetch_or_checked_internal((ptr), (val), mo_seq_cst)
+#define atomic_fetch_or_2(ptr, val) atomic_fetch_or_3((ptr), (val), mo_seq_cst)
 #define atomic_fetch_or_3(ptr, val, mo)                                        \
     atomic_fetch_or_checked_internal((ptr), (val), (mo))
 #define atomic_fetch_or(...) atomic_call_internal(atomic_fetch_or, __VA_ARGS__)
@@ -230,7 +225,7 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
         atomic_fetch_xor_explicit((ptr), (val), (mo));                         \
     })
 #define atomic_fetch_xor_2(ptr, val)                                           \
-    atomic_fetch_xor_checked_internal((ptr), (val), mo_seq_cst)
+    atomic_fetch_xor_3((ptr), (val), mo_seq_cst)
 #define atomic_fetch_xor_3(ptr, val, mo)                                       \
     atomic_fetch_xor_checked_internal((ptr), (val), (mo))
 #define atomic_fetch_xor(...)                                                  \
@@ -244,7 +239,7 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
         atomic_flag_test_and_set_explicit((ptr), (mo));                        \
     })
 #define atomic_flag_test_and_set_1(ptr)                                        \
-    atomic_flag_test_and_set_checked_internal((ptr), mo_seq_cst)
+    atomic_flag_test_and_set_2((ptr), mo_seq_cst)
 #define atomic_flag_test_and_set_2(ptr, mo)                                    \
     atomic_flag_test_and_set_checked_internal((ptr), (mo))
 #define atomic_flag_test_and_set(...)                                          \
@@ -257,8 +252,7 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
         atomic_check_store_mo_internal(mo);                                    \
         atomic_flag_clear_explicit((ptr), (mo));                               \
     })
-#define atomic_flag_clear_1(ptr)                                               \
-    atomic_flag_clear_checked_internal((ptr), mo_seq_cst)
+#define atomic_flag_clear_1(ptr) atomic_flag_clear_2((ptr), mo_seq_cst)
 #define atomic_flag_clear_2(ptr, mo)                                           \
     atomic_flag_clear_checked_internal((ptr), (mo))
 #define atomic_flag_clear(...)                                                 \
@@ -341,25 +335,21 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
 #define atomic_dec_acq(ptr) atomic_dec((ptr), mo_acquire)
 #define atomic_dec_release(ptr) atomic_dec((ptr), mo_release)
 #define atomic_dec_acq_rel(ptr) atomic_dec((ptr), mo_acq_rel)
-#define atomic_inc_1(ptr)                                                      \
-    atomic_fetch_add_checked_internal((ptr), 1, mo_seq_cst)
+#define atomic_inc_1(ptr) atomic_inc_2((ptr), mo_seq_cst)
 #define atomic_inc_2(ptr, mo) atomic_fetch_add_checked_internal((ptr), 1, (mo))
 #define atomic_inc(...) atomic_call_internal(atomic_inc, __VA_ARGS__)
 
-#define atomic_dec_1(ptr)                                                      \
-    atomic_fetch_sub_checked_internal((ptr), 1, mo_seq_cst)
+#define atomic_dec_1(ptr) atomic_dec_2((ptr), mo_seq_cst)
 #define atomic_dec_2(ptr, mo) atomic_fetch_sub_checked_internal((ptr), 1, (mo))
 #define atomic_dec(...) atomic_call_internal(atomic_dec, __VA_ARGS__)
 
-#define atomic_inc_return_1(ptr)                                               \
-    (atomic_fetch_add_checked_internal((ptr), 1, mo_seq_cst) + 1)
+#define atomic_inc_return_1(ptr) atomic_inc_return_2((ptr), mo_seq_cst)
 #define atomic_inc_return_2(ptr, mo)                                           \
     (atomic_fetch_add_checked_internal((ptr), 1, (mo)) + 1)
 #define atomic_inc_return(...)                                                 \
     atomic_call_internal(atomic_inc_return, __VA_ARGS__)
 
-#define atomic_dec_return_1(ptr)                                               \
-    (atomic_fetch_sub_checked_internal((ptr), 1, mo_seq_cst) - 1)
+#define atomic_dec_return_1(ptr) atomic_dec_return_2((ptr), mo_seq_cst)
 #define atomic_dec_return_2(ptr, mo)                                           \
     (atomic_fetch_sub_checked_internal((ptr), 1, (mo)) - 1)
 #define atomic_dec_return(...)                                                 \
@@ -394,7 +384,7 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
     })
 
 #define atomic_fetch_max_2(ptr, val)                                           \
-    atomic_fetch_max_explicit((ptr), (val), mo_seq_cst, mo_seq_cst)
+    atomic_fetch_max_4((ptr), (val), mo_seq_cst, mo_seq_cst)
 #define atomic_fetch_max_3(ptr, val, mo)                                       \
     ({                                                                         \
         static_assert(0, "3-argument atomic_fetch_max is prohibited");         \
@@ -420,7 +410,7 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
     })
 
 #define atomic_fetch_min_2(ptr, val)                                           \
-    atomic_fetch_min_explicit((ptr), (val), mo_seq_cst, mo_seq_cst)
+    atomic_fetch_min_4((ptr), (val), mo_seq_cst, mo_seq_cst)
 #define atomic_fetch_min_3(ptr, val, mo)                                       \
     ({                                                                         \
         static_assert(0, "3-argument atomic_fetch_min is prohibited");         \
@@ -473,41 +463,39 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
           (ptr), ~(((typeof((void) 0, *(ptr))) 1) << (bit)), (mo)) &           \
       (((typeof((void) 0, *(ptr))) 1) << (bit))) != 0)
 
-#define atomic_set_bit_2(ptr, bit)                                             \
-    atomic_set_bit_explicit((ptr), (bit), mo_seq_cst)
+#define atomic_set_bit_2(ptr, bit) atomic_set_bit_3((ptr), (bit), mo_seq_cst)
 #define atomic_set_bit_3(ptr, bit, mo)                                         \
     atomic_set_bit_explicit((ptr), (bit), (mo))
 #define atomic_set_bit(...) atomic_call_internal(atomic_set_bit, __VA_ARGS__)
 
 #define atomic_clear_bit_2(ptr, bit)                                           \
-    atomic_clear_bit_explicit((ptr), (bit), mo_seq_cst)
+    atomic_clear_bit_3((ptr), (bit), mo_seq_cst)
 #define atomic_clear_bit_3(ptr, bit, mo)                                       \
     atomic_clear_bit_explicit((ptr), (bit), (mo))
 #define atomic_clear_bit(...)                                                  \
     atomic_call_internal(atomic_clear_bit, __VA_ARGS__)
 
 #define atomic_toggle_bit_2(ptr, bit)                                          \
-    atomic_toggle_bit_explicit((ptr), (bit), mo_seq_cst)
+    atomic_toggle_bit_3((ptr), (bit), mo_seq_cst)
 #define atomic_toggle_bit_3(ptr, bit, mo)                                      \
     atomic_toggle_bit_explicit((ptr), (bit), (mo))
 #define atomic_toggle_bit(...)                                                 \
     atomic_call_internal(atomic_toggle_bit, __VA_ARGS__)
 
-#define atomic_test_bit_2(ptr, bit)                                            \
-    atomic_test_bit_explicit((ptr), (bit), mo_seq_cst)
+#define atomic_test_bit_2(ptr, bit) atomic_test_bit_3((ptr), (bit), mo_seq_cst)
 #define atomic_test_bit_3(ptr, bit, mo)                                        \
     atomic_test_bit_explicit((ptr), (bit), (mo))
 #define atomic_test_bit(...) atomic_call_internal(atomic_test_bit, __VA_ARGS__)
 
 #define atomic_test_and_set_bit_2(ptr, bit)                                    \
-    atomic_test_and_set_bit_explicit((ptr), (bit), mo_seq_cst)
+    atomic_test_and_set_bit_3((ptr), (bit), mo_seq_cst)
 #define atomic_test_and_set_bit_3(ptr, bit, mo)                                \
     atomic_test_and_set_bit_explicit((ptr), (bit), (mo))
 #define atomic_test_and_set_bit(...)                                           \
     atomic_call_internal(atomic_test_and_set_bit, __VA_ARGS__)
 
 #define atomic_test_and_clear_bit_2(ptr, bit)                                  \
-    atomic_test_and_clear_bit_explicit((ptr), (bit), mo_seq_cst)
+    atomic_test_and_clear_bit_3((ptr), (bit), mo_seq_cst)
 #define atomic_test_and_clear_bit_3(ptr, bit, mo)                              \
     atomic_test_and_clear_bit_explicit((ptr), (bit), (mo))
 #define atomic_test_and_clear_bit(...)                                         \
