@@ -74,6 +74,8 @@ typedef ptrdiff_t ssize_t;
 typedef __int128_t int128_t;
 typedef __uint128_t uint128_t;
 
+typedef void (*fn_ptr_t)(void);
+
 #define CPU_PERF_MAX INT8_MAX
 #define CPU_PERF_MIN INT8_MIN
 
