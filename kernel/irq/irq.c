@@ -41,6 +41,18 @@ static void irq_execute_vector_handlers(irq_t vector,
     if (!desc->present || list_empty(&irq_table[vector].actions))
         panic("Unhandled ISR vector: %u", vector);
 
+    /* HACK: There is this specific use of smp_enable_all_ticks() in bringup
+     * where a TOCTOU can happen. Basically, CPU 0 will send all the IPIs out,
+     * then everyone will return from the handler, but before they send
+     * the EOI, the chip can get swapped out, meaning they never end up
+     * actually sending the LAPIC EOI. In the future, I will likely
+     * want to use DPCs to handle that initial tick stop operation
+     * or something, since this is not a very good design.
+     *
+     * TODO: Also likely will want to rework IRQ registration
+     * and unregistration atomicity and synchronization too. */
+    struct irq_chip *chip = desc->chip;
+
     bool handled = false;
     struct list_head *lh;
     list_for_each(lh, &desc->actions) {
@@ -53,8 +65,8 @@ static void irq_execute_vector_handlers(irq_t vector,
         }
     }
 
-    if (handled && desc->chip && desc->chip->eoi)
-        desc->chip->eoi(desc);
+    if (handled && chip && chip->eoi)
+        chip->eoi(desc);
 }
 
 /* TODO: Someday we will need to handle nmi_depth > 1 and do a fancy asm
