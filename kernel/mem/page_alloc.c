@@ -30,50 +30,52 @@ void page_alloc_init() {
     page_alloc_vas = vas_bootstrap_from(&ADDRESS_RANGE(page_alloc));
 }
 
+static void page_alloc_vas_release(vaddr_t virt, size_t n_pages,
+                                   size_t nr_mapped) {
+    for (size_t i = 0; i < nr_mapped; i++) {
+        vaddr_t vaddr = virt + i * PAGE_SIZE;
+        paddr_t phys = (paddr_t) vmm_get_phys(vaddr, VMM_FLAG_NONE);
+        vmm_unmap_page(vaddr);
+
+        if (phys != PADDR_MAX)
+            pmm_free_page(phys);
+    }
+
+    vas_free(page_alloc_vas, virt, n_pages * PAGE_SIZE);
+}
+
 static void *page_alloc_vas_mapped_pages(size_t n_pages, enum alloc_flags flags,
                                          bool demand_paged) {
     vaddr_t virt = vas_alloc(page_alloc_vas, n_pages * PAGE_SIZE, PAGE_SIZE);
     if (!virt)
         return NULL;
 
-    uintptr_t phys_pages[n_pages];
-    uint64_t allocated = 0;
-
     page_flags_t page_flags = PAGE_PRESENT | PAGE_WRITE | PAGE_XD;
     bool zero = flags & ALLOC_FLAG_ZERO_ON_ALLOC;
 
-    for (uint64_t i = 0; i < n_pages; i++) {
+    for (size_t i = 0; i < n_pages; i++) {
+        vaddr_t vaddr = virt + i * PAGE_SIZE;
+
         if (!demand_paged || !zero) {
             uintptr_t phys = pmm_alloc_page(flags);
             if (!phys) {
-                for (uint64_t j = 0; j < allocated; j++)
-                    pmm_free_page(phys_pages[j]);
+                page_alloc_vas_release(virt, n_pages, i);
                 return NULL;
             }
 
-            enum err e = vmm_map_page(virt + i * PAGE_SIZE, phys, page_flags);
-            if (e < 0) {
+            if (vmm_map_page(vaddr, phys, page_flags) < 0) {
                 pmm_free_page(phys);
-                for (uint64_t j = 0; j < allocated; j++)
-                    pmm_free_page(phys_pages[j]);
-
+                page_alloc_vas_release(virt, n_pages, i);
                 return NULL;
             }
-
-            phys_pages[allocated++] = phys;
         } else {
-            enum err e = vmm_mark_demand_page(virt + i * PAGE_SIZE,
-                                              DEMAND_PAGE_FLAG_ZERO_MEMORY |
-                                                  DEMAND_PAGE_FLAG_WRITABLE);
+            enum err e =
+                vmm_mark_demand_page(vaddr, DEMAND_PAGE_FLAG_ZERO_MEMORY |
+                                                DEMAND_PAGE_FLAG_WRITABLE);
             if (e < 0) {
-                for (uint64_t j = 0; j < allocated; j++) {
-                    vaddr_t v = virt + j * PAGE_SIZE;
-                    vmm_unmap_page(v);
-                }
-
+                page_alloc_vas_release(virt, n_pages, i);
                 return NULL;
             }
-            allocated++;
         }
     }
 
@@ -126,17 +128,7 @@ void page_free_full(void *ptr, size_t n_pages, enum alloc_behavior b) {
     if (hhdm_ptr_in_range(ptr)) {
         pmm_free_pages(hhdm_ptr_to_paddr(ptr), n_pages);
     } else {
-        vaddr_t virt = (vaddr_t) ptr;
-        for (uint32_t i = 0; i < n_pages; i++) {
-            vaddr_t vaddr = virt + i * PAGE_SIZE;
-            paddr_t phys = (paddr_t) vmm_get_phys(vaddr, VMM_FLAG_NONE);
-            vmm_unmap_page(vaddr);
-
-            if (phys != PADDR_MAX)
-                pmm_free_page(phys);
-        }
-
-        vas_free(page_alloc_vas, virt, n_pages * PAGE_SIZE);
+        page_alloc_vas_release((vaddr_t) ptr, n_pages, n_pages);
     }
 }
 
