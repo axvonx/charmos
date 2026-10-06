@@ -141,10 +141,10 @@ SECTIONS {
         . = ALIGN(64);
     } :data
     
-    .kernel_pernode_desc : ALIGN(64) {
-        __skernel_pernode_desc = .;
-        KEEP(*(.kernel_pernode_desc))
-        __ekernel_pernode_desc = .;
+    .kernel_pertopo_desc : ALIGN(64) {
+        __skernel_pertopo_desc = .;
+        KEEP(*(.kernel_pertopo_desc))
+        __ekernel_pertopo_desc = .;
         . = ALIGN(64);
     } :data
 

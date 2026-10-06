@@ -30,16 +30,8 @@ create_mapping(struct rt_scheduler_static *rts, rt_domain_id_t id) {
     if (!ret)
         return NULL;
 
-    if (!cpu_mask_init(&ret->members, global.core_count)) {
-        kfree(ret);
-        return NULL;
-    }
-
-    if (!cpu_mask_init(&ret->active, global.core_count)) {
-        cpu_mask_deinit(&ret->members);
-        kfree(ret);
-        return NULL;
-    }
+    cpu_mask_init(&ret->members, global.core_count);
+    cpu_mask_init(&ret->active, global.core_count);
 
     ret->id = id;
     ret->static_bptr = rts;
@@ -168,10 +160,7 @@ rt_load_scheduler_static(struct rt_scheduler_static *rts) {
         goto done;
     }
 
-    if (!cpu_mask_init(rts->active_mask_internal, global.core_count)) {
-        err = RT_SCHEDULER_ERR_OOM;
-        goto done;
-    }
+    cpu_mask_init(rts->active_mask_internal, global.core_count);
 
     if ((err = rt_slots_init_for_scheduler(rts)) != RT_SCHEDULER_ERR_OK)
         goto done;

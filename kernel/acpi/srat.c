@@ -77,7 +77,7 @@ void srat_init(void) {
         global.numa_nodes[i].distance =
             must_kmalloc(numa_node_count * sizeof(uint8_t), ALLOC_ZERO);
 
-        must(cpu_mask_init(&global.numa_nodes[i].cpus, global.core_count));
+        cpu_mask_init(&global.numa_nodes[i].cpus, global.core_count);
     }
 
     ptr = (uint8_t *) srat + sizeof(struct acpi_srat);

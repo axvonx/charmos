@@ -275,8 +275,7 @@ static bool parse_cpu_mask_internal(const char *str, struct cpu_mask *out,
         return true;
 
     /* populate mask if requested */
-    if (!cpu_mask_init(out, n_cpus))
-        return false;
+    cpu_mask_init(out, n_cpus);
 
     p = str;
     while (*p) {

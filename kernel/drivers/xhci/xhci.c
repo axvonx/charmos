@@ -750,7 +750,7 @@ static struct usb_controller_ops xhci_ctrl_ops = {
 void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
                struct pci_device *pci) {
     struct cpu_mask cmask;
-    must(cpu_mask_init(&cmask, global.core_count));
+    cpu_mask_init(&cmask, global.core_count);
 
     cpu_mask_set_all(&cmask);
     struct workqueue_attributes attrs = {

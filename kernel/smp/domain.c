@@ -45,7 +45,7 @@ static void construct_domains_from_numa_nodes(void) {
         struct numa_node *nn = &global.numa_nodes[i];
         struct domain *cd = global.domains[i];
         cd->num_cores = cpu_mask_popcount(&nn->cpus);
-        must(cpu_mask_init(&cd->cpu_mask, global.core_count));
+        cpu_mask_init(&cd->cpu_mask, global.core_count);
         cpu_mask_copy(&cd->cpu_mask, &nn->cpus);
         cd->associated_node = nn;
         cd->cores =
@@ -73,7 +73,7 @@ static void construct_domains_from_cores(void) {
             cores_this_domain = remainder; /* last one gets leftovers */
 
         cd->num_cores = cores_this_domain;
-        must(cpu_mask_init(&cd->cpu_mask, global.core_count));
+        cpu_mask_init(&cd->cpu_mask, global.core_count);
 
         for (size_t j = 0; j < cores_this_domain; j++) {
             size_t core_index = i * CORES_PER_DOMAIN + j;
@@ -174,8 +174,7 @@ struct cpu_mask *domain_create_cpu_mask(struct domain *domain) {
     if (!ret)
         goto err;
 
-    if (!cpu_mask_init(ret, global.core_count))
-        goto err;
+    cpu_mask_init(ret, global.core_count);
 
     domain_set_cpu_mask(ret, domain);
 

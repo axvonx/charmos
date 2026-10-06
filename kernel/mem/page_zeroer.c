@@ -22,7 +22,7 @@ static struct daemon_work pz_bg_work =
 static void page_zeroer_perdomain_init(struct page_zeroer *pz,
                                        domain_id_t domain) {
     struct cpu_mask cmask;
-    must(cpu_mask_init(&cmask, global.core_count));
+    cpu_mask_init(&cmask, global.core_count);
     size_t threads = global.domains[domain]->num_cores / 4;
     if (!threads)
         threads = 1;

@@ -32,10 +32,7 @@ struct clock_evdev *clock_evdev_create(const char *name, ...) {
     if (!ced)
         return NULL;
 
-    if (!cpu_mask_init(&ced->cpu_mask, global.core_count)) {
-        kfree(ced);
-        return NULL;
-    }
+    cpu_mask_init(&ced->cpu_mask, global.core_count);
 
     va_list args;
     va_start(args, name);

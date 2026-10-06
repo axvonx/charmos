@@ -42,10 +42,9 @@ struct cpu_mask {
         .bits = {(bitmap_word_t) (e) }                                         \
     }
 
-static inline bool cpu_mask_init(struct cpu_mask *m, size_t nbits) {
+static inline void cpu_mask_init(struct cpu_mask *m, size_t nbits) {
     cc_unused(nbits);
     memset(m->bits, 0, sizeof(m->bits));
-    return true;
 }
 
 static inline void cpu_mask_deinit(struct cpu_mask *m) {

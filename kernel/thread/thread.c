@@ -292,9 +292,7 @@ struct thread *thread_create_full(char *name, thread_entry_fn_t entry,
     if (cc_unlikely(!new_thread->activity_stats))
         goto err;
 
-    if (cc_unlikely(
-            !cpu_mask_init(&new_thread->allowed_cpus, global.core_count)))
-        goto err;
+    cpu_mask_init(&new_thread->allowed_cpus, global.core_count);
 
     cpu_mask_set_all(&new_thread->allowed_cpus);
 

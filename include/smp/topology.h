@@ -105,3 +105,6 @@ struct core **topology_get_smts_under_numa(struct topology_node *numa,
                                            size_t *count);
 const char *topology_level_name(enum topology_level l);
 bool topology_contract_verify(struct topology_contract c);
+
+#define topology_for_each_id(__n, __l)                                         \
+    for (__n = 0; __n < global.topology.count[__l]; __n++)

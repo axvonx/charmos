@@ -300,8 +300,8 @@ static void exception_sync_cbs_init() {
 void irq_init() {
     for (size_t i = 0; i < IDT_ENTRIES; i++) {
         struct irq_desc *desc = &irq_table[i];
-        must(cpu_mask_init(&desc->masked_cpus, global.core_count));
-        must(cpu_mask_init(&desc->affinity, global.core_count));
+        cpu_mask_init(&desc->masked_cpus, global.core_count);
+        cpu_mask_init(&desc->affinity, global.core_count);
 
         desc->vector = i;
         irq_desc_clear(desc);

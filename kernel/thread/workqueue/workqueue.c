@@ -162,8 +162,7 @@ struct workqueue *workqueue_create_internal(struct workqueue_attributes *attrs,
 
 struct workqueue *workqueue_create_default(const char *fmt, ...) {
     struct cpu_mask cmask;
-    if (!cpu_mask_init(&cmask, global.core_count))
-        return NULL;
+    cpu_mask_init(&cmask, global.core_count);
 
     cpu_mask_set_all(&cmask);
     struct workqueue_attributes attrs = {
@@ -265,8 +264,7 @@ void workqueues_permanent_init(void) {
     for (int64_t i = 0; i < num_workqueues; i++) {
 
         struct cpu_mask mask;
-        if (!cpu_mask_init(&mask, global.core_count))
-            panic("Failed to initialize CPU mask");
+        cpu_mask_init(&mask, global.core_count);
 
         cpu_mask_set(&mask, i);
 

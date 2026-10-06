@@ -142,8 +142,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
     spinlock_init(&nvme->finished_requests.lock);
 
     struct cpu_mask mask;
-    if (!cpu_mask_init(&mask, global.core_count))
-        panic("Could not initialize CPU mask");
+    cpu_mask_init(&mask, global.core_count);
 
     cpu_mask_set_all(&mask);
 

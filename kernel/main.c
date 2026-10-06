@@ -44,7 +44,7 @@
 #include <smp/domain.h>
 #include <smp/percpu.h>
 #include <smp/perdomain.h>
-#include <smp/pernode.h>
+#include <smp/pertopo.h>
 #include <smp/smp.h>
 #include <stack_depot.h>
 #include <stdint.h>
@@ -147,11 +147,10 @@ cc_no_asan void k_main(void) TSA_ACQUIRES_IRQS {
     term_probe();
 
     topology_init();
+    pertopo_obj_init();
+    perdomain_obj_init();
     scheduler_domains_init();
     bootstage_advance(BOOTSTAGE_MID_TOPOLOGY);
-
-    perdomain_obj_init();
-    pernode_obj_init();
 
     lapic_clock_evdev_group_init();
     timers_init_bsp();
