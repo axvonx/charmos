@@ -211,14 +211,12 @@ bool e1000_init(struct pci_device *pci, struct e1000_device *dev) {
 
 static enum err e1000_pci_init(struct device *dev) {
     struct pci_device *db  = dev->driver_data;
-    uint8_t            bus = db->bus, d = db->dev, func = db->function;
     uint16_t           did = db->device_id;
     if (did == 0x1000 || did == 0x100E || did == 0x1010 || did == 0x1026 ||
         did == 0x10D3 || did == 0x10F5) {
-        struct pci_device    dev    = {.bus = bus, .dev = d, .function = func};
         struct e1000_device *device = must_kmalloc(sizeof(struct e1000_device));
 
-        e1000_init(&dev, device);
+        e1000_init(db, device);
     }
 
     return ERR_OK;

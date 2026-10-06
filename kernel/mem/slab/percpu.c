@@ -122,8 +122,8 @@ static void slab_cache_bulk_free(struct slab_domain *domain,
 /* NOTE: unused? */
 void slab_percpu_flush(struct slab_domain *dom, struct slab_percpu_cache *pc,
                        size_t class_idx, vaddr_t overflow_obj) {
-    for (int i = 0; i < SLAB_MAGAZINE_TYPE_COUNT; i++) {
-        struct slab_magazine *mag = &pc->mags[i][class_idx];
+    for (int type = 0; type < SLAB_MAGAZINE_TYPE_COUNT; type++) {
+        struct slab_magazine *mag = &pc->mags[type][class_idx];
 
         /* capture how many valid items we have */
         size_t valid = mag->count;

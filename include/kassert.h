@@ -16,22 +16,28 @@
 #define _kassert_msg(x) "Assertion \"" #x "\" failed"
 
 #define _kassert_debug_off_dispatch(first, ...)                                \
+    _kassert_debug_off_as(first, PP_CONCAT(_kassert_res_, __COUNTER__))
+
+#define _kassert_debug_off_as(first, res_)                                     \
     ({                                                                         \
-        ct_decay(first) _kassert_res = (first);                                \
-        if (cc_unlikely(!(_kassert_res)))                                      \
+        ct_decay(first) res_ = (first);                                        \
+        if (cc_unlikely(!(res_)))                                              \
             ci_unreachable();                                                  \
                                                                                \
-        (void) _kassert_res;                                                   \
+        (void) res_;                                                           \
     })
 
 #define _kassert_eval(x, msg_stmt)                                             \
+    _kassert_eval_as(x, msg_stmt, PP_CONCAT(_kassert_res_, __COUNTER__))
+
+#define _kassert_eval_as(x, msg_stmt, res_)                                    \
     ({                                                                         \
-        ct_decay(x) _kassert_res = (x);                                        \
-        if (cc_unlikely(!(_kassert_res))) {                                    \
+        ct_decay(x) res_ = (x);                                                \
+        if (cc_unlikely(!(res_))) {                                            \
             msg_stmt;                                                          \
             ci_unreachable();                                                  \
         }                                                                      \
-        _kassert_res;                                                          \
+        res_;                                                                  \
     })
 /*
  * kassert(x)

@@ -64,10 +64,6 @@ static void derive_timeshare_prio_range(enum thread_activity_class cls,
 
 #define NICE_BASE_FP FX(1.022)
 
-#define SET_MUL(multiplier_)                                                   \
-    class_mul = (multiplier_);                                                 \
-    break;
-
 static enum thread_activity_class
 classify_activity(struct thread_activity_metrics m) {
     if (m.run_ratio > 80 && m.block_ratio < 10)
@@ -192,15 +188,13 @@ static inline int32_t jitter_for_thread(void) {
 }
 
 static int get_class_multiplier(enum thread_activity_class class) {
-    int class_mul;
     switch (class) {
-    case THREAD_ACTIVITY_CLASS_INTERACTIVE: SET_MUL(THREAD_MUL_INTERACTIVE);
-    case THREAD_ACTIVITY_CLASS_IO_BOUND: SET_MUL(THREAD_MUL_IO_BOUND);
-    case THREAD_ACTIVITY_CLASS_CPU_BOUND: SET_MUL(THREAD_MUL_CPU_BOUND);
+    case THREAD_ACTIVITY_CLASS_INTERACTIVE: return THREAD_MUL_INTERACTIVE;
+    case THREAD_ACTIVITY_CLASS_IO_BOUND: return THREAD_MUL_IO_BOUND;
+    case THREAD_ACTIVITY_CLASS_CPU_BOUND: return THREAD_MUL_CPU_BOUND;
     case THREAD_ACTIVITY_CLASS_SLEEPY:
-    default: SET_MUL(0); /* Unclassified thread or sleepy thread */
+    default: return 0; /* Unclassified thread or sleepy thread */
     }
-    return class_mul;
 }
 
 void thread_apply_wake_boost(struct thread *t) {

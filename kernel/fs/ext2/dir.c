@@ -148,9 +148,9 @@ enum err ext2_rmdir(struct ext2_fs *fs, struct ext2_full_inode *parent_dir,
     }
 
     if (dir->node.blocks) {
-        uint32_t block = dir->node.block[0];
-        if (block)
-            ext2_free_block(fs, block);
+        uint32_t first_block = dir->node.block[0];
+        if (first_block)
+            ext2_free_block(fs, first_block);
         dir->node.block[0] = 0;
         dir->node.blocks = 0;
         dir->node.size = 0;

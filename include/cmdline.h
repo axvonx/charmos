@@ -233,16 +233,17 @@ struct cmdline_flag {
 
 #define CMDLINE_EXTRACT_LIST(list, type, out_buf, max_count, parse_fn)         \
     ({                                                                         \
-        size_t __cl_n = 0;                                                     \
-        const struct cmdline_list *__cl_l = (list);                            \
-        const size_t __cl_max = (max_count);                                   \
-        for (size_t __cl_i = 0; __cl_i < __cl_l->count && __cl_n < __cl_max;   \
-             __cl_i++) {                                                       \
-            type __cl_v = (type) {0};                                          \
-            if ((parse_fn) (&__cl_l->items[__cl_i], &__cl_v) == ERR_OK)        \
-                (out_buf)[__cl_n++] = __cl_v;                                  \
+        size_t __cmdl_n = 0;                                                   \
+        const struct cmdline_list *__cmdl_l = (list);                          \
+        const size_t __cmdl_max = (max_count);                                 \
+        for (size_t __cmdl_i = 0;                                              \
+             __cmdl_i < __cmdl_l->count && __cmdl_n < __cmdl_max;              \
+             __cmdl_i++) {                                                     \
+            type __cmdl_v = (type) {0};                                        \
+            if ((parse_fn) (&__cmdl_l->items[__cmdl_i], &__cmdl_v) == ERR_OK)  \
+                (out_buf)[__cmdl_n++] = __cmdl_v;                              \
         }                                                                      \
-        __cl_n;                                                                \
+        __cmdl_n;                                                              \
     })
 
 #define CMDLINE_NODE_1(a) a
@@ -263,9 +264,10 @@ struct cmdline_flag {
 #define CMDLINE_ENTRY_NAME_LEN_MAX 256
 
 #define cmdline_list_for_each(val_, list_)                                     \
-    for (size_t __cl_idx = 0, __cl_count = (list_)->count;                     \
-         __cl_idx < __cl_count && (((val_) = (list_)->items[__cl_idx]), true); \
-         __cl_idx++)
+    for (size_t __cmdl_idx = 0, __cmdl_count = (list_)->count;                 \
+         __cmdl_idx < __cmdl_count &&                                          \
+         (((val_) = (list_)->items[__cmdl_idx]), true);                        \
+         __cmdl_idx++)
 
 /* Schema-Driven Subsystem Definitions */
 struct cmdline_schema_prop {
@@ -336,15 +338,15 @@ struct cmdline_schema {
 
 #define cmdline_read_or(key, target_var, fallback)                             \
     ({                                                                         \
-        bool __cl_overridden = false;                                          \
-        struct cmdline_entry *__cl_e = cmdline_lookup(key);                    \
-        if (__cl_e && __cl_e->status == CMDLINE_ENTRY_FOUND &&                 \
-            CMDLINE_EXTRACT(&__cl_e->value, target_var) == ERR_OK) {           \
-            __cl_overridden = true;                                            \
+        bool __cmdl_overridden = false;                                        \
+        struct cmdline_entry *__cmdl_e = cmdline_lookup(key);                  \
+        if (__cmdl_e && __cmdl_e->status == CMDLINE_ENTRY_FOUND &&             \
+            CMDLINE_EXTRACT(&__cmdl_e->value, target_var) == ERR_OK) {         \
+            __cmdl_overridden = true;                                          \
         } else {                                                               \
             (target_var) = (fallback);                                         \
         }                                                                      \
-        __cl_overridden;                                                       \
+        __cmdl_overridden;                                                     \
     })
 
 void cmdline_parse(const char *input);

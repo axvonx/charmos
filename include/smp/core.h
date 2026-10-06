@@ -157,7 +157,7 @@ void smp_caller_verify(enum topology_caller caller);
 
 #define smp_read(cond, member)                                                 \
     ({                                                                         \
-        if (cond != TOPC_NONE)                                                 \
+        if ((cond) != TOPC_NONE)                                               \
             smp_caller_verify(cond);                                           \
         static_assert(                                                         \
             smp_member_size(member) == 1 || smp_member_size(member) == 2 ||    \
@@ -212,25 +212,25 @@ void smp_caller_verify(enum topology_caller caller);
 
 #define smp_write(cond, member, val)                                           \
     do {                                                                       \
-        if (cond != TOPC_NONE)                                                 \
+        if ((cond) != TOPC_NONE)                                               \
             smp_caller_verify(cond);                                           \
         static_assert(                                                         \
             smp_member_size(member) == 1 || smp_member_size(member) == 2 ||    \
                 smp_member_size(member) == 4 || smp_member_size(member) == 8,  \
             "smp_core_write: unsupported member size");                        \
-        typeof(((struct core *) 0)->member) _val = (val);                      \
-        uint64_t _raw = (uint64_t) (uintptr_t) _val;                           \
+        typeof(((struct core *) 0)->member) __smp_val = (val);                 \
+        uint64_t __smp_raw = (uint64_t) (uintptr_t) __smp_val;                 \
         switch (smp_member_size(member)) {                                     \
         case 1:                                                                \
-            smp_write8(offsetof(struct core, member), (uint8_t) _raw);         \
+            smp_write8(offsetof(struct core, member), (uint8_t) __smp_raw);    \
             break;                                                             \
         case 2:                                                                \
-            smp_write16(offsetof(struct core, member), (uint16_t) _raw);       \
+            smp_write16(offsetof(struct core, member), (uint16_t) __smp_raw);  \
             break;                                                             \
         case 4:                                                                \
-            smp_write32(offsetof(struct core, member), (uint32_t) _raw);       \
+            smp_write32(offsetof(struct core, member), (uint32_t) __smp_raw);  \
             break;                                                             \
-        case 8: smp_write64(offsetof(struct core, member), _raw); break;       \
+        case 8: smp_write64(offsetof(struct core, member), __smp_raw); break;  \
         default: ci_unreachable();                                             \
         }                                                                      \
     } while (0)

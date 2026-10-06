@@ -71,9 +71,8 @@
 
 #define once_token_claim_2(tok, out)                                           \
     ({                                                                         \
-        __auto_type __ot_tok = (tok);                                          \
-        once_token_typecheck_internal_bool(__ot_tok);                          \
-        static_assert(_Generic((__ot_tok->state), bool: 1, default: 0),        \
+        once_token_typecheck_internal_bool(tok);                               \
+        static_assert(_Generic(((tok)->state), bool: 1, default: 0),           \
                       "once_token_claim_1 argument requires a boolean token"); \
         once_token_claim_4(tok, false, true, out);                             \
     })

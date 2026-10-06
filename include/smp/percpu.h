@@ -22,27 +22,27 @@ struct percpu_descriptor {
 
 LINKER_SECTION_EXTERN(struct percpu_descriptor, percpu_desc);
 
-#define PERCPU_DEFINE(__type, __n, __ctor)                                     \
-    static typeof(__type) __percpu_##__n cc_fn_unused;                         \
-    static struct percpu_descriptor __percpu_desc_##__n;                       \
-    static void __percpu_ctor_##__n(void *inst, size_t cpu) {                  \
-        void (*const __typed_ctor)(typeof(__type) *, size_t) = (__ctor);       \
+#define PERCPU_DEFINE(type_, name_, ctor_)                                     \
+    static typeof(type_) __percpu_##name_ cc_fn_unused;                        \
+    static struct percpu_descriptor __percpu_desc_##name_;                     \
+    static void __percpu_ctor_##name_(void *inst, size_t cpu) {                \
+        void (*const __typed_ctor)(typeof(type_) *, size_t) = (ctor_);         \
         if (__typed_ctor != NULL)                                              \
-            __typed_ctor((typeof(__type) *) inst, cpu);                        \
+            __typed_ctor((typeof(type_) *) inst, cpu);                         \
         if (cpu == global.core_count - 1)                                      \
-            atomic_store(&__percpu_desc_##__n.ready, true);                    \
+            atomic_store(&__percpu_desc_##name_.ready, true);                  \
     }                                                                          \
     static LINKER_SECTION_OBJECT(struct percpu_descriptor, percpu_desc)        \
-        __percpu_desc_##__n = {                                                \
-            .name = #__n,                                                      \
-            .size = sizeof(typeof(__type)),                                    \
-            .align = _Alignof(typeof(__type)),                                 \
+        __percpu_desc_##name_ = {                                              \
+            .name = #name_,                                                    \
+            .size = sizeof(typeof(type_)),                                     \
+            .align = _Alignof(typeof(type_)),                                  \
             .percpu_ptrs = NULL,                                               \
-            .constructor = __percpu_ctor_##__n,                                \
+            .constructor = __percpu_ctor_##name_,                              \
             .ready = false,                                                    \
     };                                                                         \
-    static struct percpu_descriptor *const __percpu_desc_ref_##__n             \
-        cc_fn_unused = &__percpu_desc_##__n
+    static struct percpu_descriptor *const __percpu_desc_ref_##name_           \
+        cc_fn_unused = &__percpu_desc_##name_
 
 #define PERCPU_EXPORT_AS(sym_name, name)                                       \
     extern struct percpu_descriptor __percpu_desc_sym_##sym_name               \

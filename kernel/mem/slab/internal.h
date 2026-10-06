@@ -62,9 +62,9 @@ LOG_HANDLE_EXTERN(slab);
 /* Bitmap */
 #define SLAB_BITMAP_BYTES_FOR(x)                                               \
     ({                                                                         \
-        __auto_type __bits = (x);                                              \
+        __auto_type __slab_bits = (x);                                         \
         ct_typecheck_widenable_to((size_t) 0, x);                              \
-        DIV_ROUND_UP((size_t) __bits, sizeof(uint64_t) * 8) *                  \
+        DIV_ROUND_UP((size_t) __slab_bits, sizeof(uint64_t) * 8) *             \
             sizeof(uint64_t);                                                  \
     })
 #define SLAB_BITMAP_SET(bm_, mask_) ((bm_) |= (mask_))

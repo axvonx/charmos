@@ -69,13 +69,12 @@ static inline domain_id_t domain_local_id(enum topology_caller c) {
          __dom_id_idx++)
 
 #define domain_for_each_core(pos_, dom_)                                       \
-    for (domain_id_t __core_idx = 0;                                           \
-         __core_idx < (dom_)->num_cores &&                                     \
-         (((pos_) = (dom_)->cores[__core_idx]), true);                         \
+    for (size_t __core_idx = 0; __core_idx < (dom_)->num_cores &&              \
+                                (((pos_) = (dom_)->cores[__core_idx]), true);  \
          __core_idx++)
 
 #define domain_for_each_core_id(pos_, dom_)                                    \
-    for (domain_id_t __core_id_idx = 0;                                        \
+    for (size_t __core_id_idx = 0;                                             \
          __core_id_idx < (dom_)->num_cores &&                                  \
          (((pos_) = (dom_)->cores[__core_id_idx]->id), true);                  \
          __core_id_idx++)

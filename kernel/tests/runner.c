@@ -736,10 +736,10 @@ static void test_group_run(struct test_group *tg) {
 
                 printf("\n");
 
-                for (size_t i = 0; i < run_times; i++) {
-                    struct test_verdict v = verdicts[i];
+                for (size_t run = 0; run < run_times; run++) {
+                    struct test_verdict v = verdicts[run];
                     if (v.result != TEST_RESULT_OK) {
-                        test_harness_info("  |-> run %zu %s", i,
+                        test_harness_info("  |-> run %zu %s", run,
                                           test_result_to_str(v.result));
                         if (v.result == TEST_RESULT_SKIPPED) {
                             printf(ANSI_GRAY " (%s)" ANSI_RESET,

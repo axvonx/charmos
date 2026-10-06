@@ -36,8 +36,7 @@ static int64_t fuzzy_substr_distance(const char *pattern, const char *text,
 
             int64_t cost = pc == tc ? 0 : 1;
 
-            curr[j] =
-                MIN(MIN(curr[j - 1] + 1, prev[j] + 1), prev[j - 1] + cost);
+            curr[j] = MIN(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
         }
 
         int64_t *tmp = prev;

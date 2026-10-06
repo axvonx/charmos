@@ -23,28 +23,28 @@ struct pertopo_descriptor {
 
 LINKER_SECTION_EXTERN(struct pertopo_descriptor, pertopo_desc);
 
-#define PERTOPO_DEFINE(__type, __n, _l, __ctor)                                \
-    static typeof(__type) __pertopo_##__n cc_fn_unused;                        \
-    static struct pertopo_descriptor __pertopo_desc_##__n;                     \
-    static void __pertopo_ctor_##__n(void *inst, size_t node_id) {             \
-        void (*const __typed_ctor)(typeof(__type) *, size_t) = (__ctor);       \
+#define PERTOPO_DEFINE(type_, name_, level_, ctor_)                            \
+    static typeof(type_) __pertopo_##name_ cc_fn_unused;                       \
+    static struct pertopo_descriptor __pertopo_desc_##name_;                   \
+    static void __pertopo_ctor_##name_(void *inst, size_t node_id) {           \
+        void (*const __typed_ctor)(typeof(type_) *, size_t) = (ctor_);         \
         if (__typed_ctor != NULL)                                              \
-            __typed_ctor((typeof(__type) *) inst, node_id);                    \
-        if (node_id == pertopo_node_count(&__pertopo_desc_##__n) - 1)          \
-            atomic_store(&__pertopo_desc_##__n.ready, true);                   \
+            __typed_ctor((typeof(type_) *) inst, node_id);                     \
+        if (node_id == pertopo_node_count(&__pertopo_desc_##name_) - 1)        \
+            atomic_store(&__pertopo_desc_##name_.ready, true);                 \
     }                                                                          \
     static LINKER_SECTION_OBJECT(struct pertopo_descriptor, pertopo_desc)      \
-        __pertopo_desc_##__n = {                                               \
-            .name = #__n,                                                      \
-            .size = sizeof(typeof(__type)),                                    \
-            .align = _Alignof(typeof(__type)),                                 \
+        __pertopo_desc_##name_ = {                                             \
+            .name = #name_,                                                    \
+            .size = sizeof(typeof(type_)),                                     \
+            .align = _Alignof(typeof(type_)),                                  \
             .pertopo_ptrs = NULL,                                              \
-            .level = _l,                                                       \
-            .constructor = __pertopo_ctor_##__n,                               \
+            .level = level_,                                                   \
+            .constructor = __pertopo_ctor_##name_,                             \
             .ready = false,                                                    \
     };                                                                         \
-    static struct pertopo_descriptor *const __pertopo_desc_ref_##__n           \
-        cc_fn_unused = &__pertopo_desc_##__n
+    static struct pertopo_descriptor *const __pertopo_desc_ref_##name_         \
+        cc_fn_unused = &__pertopo_desc_##name_
 
 #define PERTOPO_EXPORT_AS(sym_name, name)                                      \
     extern struct pertopo_descriptor __pertopo_desc_sym_##sym_name             \

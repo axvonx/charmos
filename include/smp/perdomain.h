@@ -21,27 +21,27 @@ struct perdomain_descriptor {
 
 LINKER_SECTION_EXTERN(struct perdomain_descriptor, perdomain_desc);
 
-#define PERDOMAIN_DEFINE(__type, __n, __ctor)                                  \
-    static typeof(__type) __perdomain_##__n cc_fn_unused;                      \
-    static struct perdomain_descriptor __perdomain_desc_##__n;                 \
-    static void __perdomain_ctor_##__n(void *inst, size_t domain) {            \
-        void (*const __typed_ctor)(typeof(__type) *, size_t) = (__ctor);       \
+#define PERDOMAIN_DEFINE(type_, name_, ctor_)                                  \
+    static typeof(type_) __perdomain_##name_ cc_fn_unused;                     \
+    static struct perdomain_descriptor __perdomain_desc_##name_;               \
+    static void __perdomain_ctor_##name_(void *inst, size_t domain) {          \
+        void (*const __typed_ctor)(typeof(type_) *, size_t) = (ctor_);         \
         if (__typed_ctor != NULL)                                              \
-            __typed_ctor((typeof(__type) *) inst, domain);                     \
+            __typed_ctor((typeof(type_) *) inst, domain);                      \
         if (domain == global.domain_count - 1)                                 \
-            atomic_store(&__perdomain_desc_##__n.ready, true);                 \
+            atomic_store(&__perdomain_desc_##name_.ready, true);               \
     }                                                                          \
     static LINKER_SECTION_OBJECT(struct perdomain_descriptor, perdomain_desc)  \
-        __perdomain_desc_##__n = {                                             \
-            .name = #__n,                                                      \
-            .size = sizeof(typeof(__type)),                                    \
-            .align = _Alignof(typeof(__type)),                                 \
+        __perdomain_desc_##name_ = {                                           \
+            .name = #name_,                                                    \
+            .size = sizeof(typeof(type_)),                                     \
+            .align = _Alignof(typeof(type_)),                                  \
             .perdomain_ptrs = NULL,                                            \
-            .constructor = __perdomain_ctor_##__n,                             \
+            .constructor = __perdomain_ctor_##name_,                           \
             .ready = false,                                                    \
     };                                                                         \
-    static struct perdomain_descriptor *const __perdomain_desc_ref_##__n       \
-        cc_fn_unused = &__perdomain_desc_##__n
+    static struct perdomain_descriptor *const __perdomain_desc_ref_##name_     \
+        cc_fn_unused = &__perdomain_desc_##name_
 
 #define PERDOMAIN_EXPORT_AS(sym_name, name)                                    \
     extern struct perdomain_descriptor __perdomain_desc_sym_##sym_name         \

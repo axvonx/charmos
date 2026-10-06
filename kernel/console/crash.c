@@ -417,14 +417,14 @@ static void crash_cpu_box(struct report_target *tgt, uint64_t id,
 
     for (size_t i = 0; i < nr; i++) {
         uint64_t off = 0;
-        uint32_t line = 0;
+        uint32_t lineno = 0;
         const char *sym = debug_symbolize(entries[i], &off);
-        const char *file = debug_line_for(entries[i] - 1, &line);
+        const char *file = debug_line_for(entries[i] - 1, &lineno);
 
         if (sym && file)
             report_box_printf(&box, "%s#%-2zu%s %s+0x%lx %sat %s:%u%s",
                               term_style(TERM_SEV_DIM), i, term_style_reset(),
-                              sym, off, term_style(TERM_SEV_DIM), file, line,
+                              sym, off, term_style(TERM_SEV_DIM), file, lineno,
                               term_style_reset());
         else if (sym)
             report_box_printf(&box, "%s#%-2zu%s %s+0x%lx",

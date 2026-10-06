@@ -66,8 +66,8 @@ static void *page_alloc_vas_mapped_pages(size_t n_pages, enum alloc_flags flags,
                                               DEMAND_PAGE_FLAG_ZERO_MEMORY |
                                                   DEMAND_PAGE_FLAG_WRITABLE);
             if (e < 0) {
-                for (size_t i = 0; i < allocated; i++) {
-                    vaddr_t v = virt + i * PAGE_SIZE;
+                for (uint64_t j = 0; j < allocated; j++) {
+                    vaddr_t v = virt + j * PAGE_SIZE;
                     vmm_unmap_page(v);
                 }
 
