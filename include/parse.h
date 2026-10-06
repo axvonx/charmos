@@ -30,7 +30,8 @@ bool parse_is_list(const char *str, struct parse_list *out);
 
 void parse_list_free(struct parse_list *list);
 
-#define parse_list_for_each(item_var, list)                                    \
-    for (size_t __i = 0;                                                       \
-         __i < (list)->count && ((item_var = (list)->items[__i]), true);       \
-         __i++)
+#define parse_list_for_each(item_var_, list_)                                  \
+    for (size_t __pl_idx = 0;                                                  \
+         __pl_idx < (list_)->count &&                                          \
+         (((item_var_) = (list_)->items[__pl_idx]), true);                     \
+         __pl_idx++)

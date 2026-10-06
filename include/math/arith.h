@@ -28,22 +28,23 @@ static inline cc_constfn size_t ipow(size_t base, int32_t exp) {
     return result;
 }
 
-#define isqrt(__n)                                                             \
+#define isqrt(n_)                                                              \
     ({                                                                         \
-        typeof(__n) __val = (__n);                                             \
-        typeof(__n) __res = 0;                                                 \
-        if (__val > 0) {                                                       \
-            typeof(__n) __x0 = __val / 2;                                      \
-            if (__x0 == 0) {                                                   \
-                __res = 1;                                                     \
+        typeof(n_) __isqrt_val = (n_);                                         \
+        typeof(n_) __isqrt_res = 0;                                            \
+        if (__isqrt_val > 0) {                                                 \
+            typeof(n_) __isqrt_x0 = __isqrt_val / 2;                           \
+            if (__isqrt_x0 == 0) {                                             \
+                __isqrt_res = 1;                                               \
             } else {                                                           \
-                typeof(__n) __x1 = (__x0 + __val / __x0) / 2;                  \
-                while (__x1 < __x0) {                                          \
-                    __x0 = __x1;                                               \
-                    __x1 = (__x0 + __val / __x0) / 2;                          \
+                typeof(n_) __isqrt_x1 =                                        \
+                    (__isqrt_x0 + __isqrt_val / __isqrt_x0) / 2;               \
+                while (__isqrt_x1 < __isqrt_x0) {                              \
+                    __isqrt_x0 = __isqrt_x1;                                   \
+                    __isqrt_x1 = (__isqrt_x0 + __isqrt_val / __isqrt_x0) / 2;  \
                 }                                                              \
-                __res = __x0;                                                  \
+                __isqrt_res = __isqrt_x0;                                      \
             }                                                                  \
         }                                                                      \
-        __res;                                                                 \
+        __isqrt_res;                                                           \
     })

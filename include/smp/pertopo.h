@@ -89,7 +89,7 @@ LINKER_SECTION_EXTERN(struct pertopo_descriptor, pertopo_desc);
 #define pertopo_for_each_internal_3(name, var, node_id)                        \
     pertopo_for_each_internal(name, var, node_id)
 #define pertopo_for_each_internal_2(name, var)                                 \
-    pertopo_for_each_internal_3(name, var, __node_id)
+    pertopo_for_each_internal_3(name, var, __pertopo_idx)
 
 #define pertopo_for_each(...) PP_CALL(pertopo_for_each_internal, __VA_ARGS__)
 

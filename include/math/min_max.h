@@ -7,27 +7,27 @@
 
 #define abs(N)                                                                 \
     ({                                                                         \
-        __auto_type __n = (N);                                                 \
-        ct_typecheck_signed_as(__n, N);                                        \
-        typeof(__n) __result = __n;                                            \
-        if (__n < 0) {                                                         \
-            bool __overflow =                                                  \
-                ci_sub_overflow((typeof(__n)) 0, __n, &__result);              \
-            (void) kassert(!__overflow);                                       \
+        __auto_type __abs_n = (N);                                             \
+        ct_typecheck_signed_as(__abs_n, N);                                    \
+        typeof(__abs_n) __abs_result = __abs_n;                                \
+        if (__abs_n < 0) {                                                     \
+            bool __abs_overflow =                                              \
+                ci_sub_overflow((typeof(__abs_n)) 0, __abs_n, &__abs_result);  \
+            (void) kassert(!__abs_overflow);                                   \
         }                                                                      \
-        __result;                                                              \
+        __abs_result;                                                          \
     })
 
-#define CLAMP(__var, __min, __max)                                             \
+#define CLAMP(var_, min_, max_)                                                \
     do {                                                                       \
-        __auto_type __cl_p = &(__var);                                         \
-        __auto_type __cl_lo = (__min);                                         \
-        __auto_type __cl_hi = (__max);                                         \
+        __auto_type __cl_p = &(var_);                                          \
+        __auto_type __cl_lo = (min_);                                          \
+        __auto_type __cl_hi = (max_);                                          \
         typedef ct_common_type_2(*__cl_p, __cl_lo) __cl_t1;                    \
         typedef ct_common_type_2((__cl_t1) 0, __cl_hi) __cl_t;                 \
-        ct_typecheck_widenable_to((__cl_t) 0, __var);                          \
-        ct_typecheck_widenable_to((__cl_t) 0, __min);                          \
-        ct_typecheck_widenable_to((__cl_t) 0, __max);                          \
+        ct_typecheck_widenable_to((__cl_t) 0, var_);                           \
+        ct_typecheck_widenable_to((__cl_t) 0, min_);                           \
+        ct_typecheck_widenable_to((__cl_t) 0, max_);                           \
         __cl_t __cl_v = (__cl_t) * __cl_p;                                     \
         __cl_t __cl_l = (__cl_t) __cl_lo;                                      \
         __cl_t __cl_h = (__cl_t) __cl_hi;                                      \

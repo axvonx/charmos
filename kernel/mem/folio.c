@@ -66,9 +66,10 @@ void folio_zero(struct folio *f) {
 
 void folio_copy(const struct folio *src, struct folio *dst) {
     kassert(src->order == dst->order);
-    vaddr_t src_vaddr, dst_vaddr;
-    folio_for_each_page_vaddr(src, src_vaddr) {
-        dst_vaddr = page_get_vaddr(folio_get_page(dst, __i));
+    size_t nr_pages = folio_nr_pages(src);
+    for (size_t i = 0; i < nr_pages; i++) {
+        vaddr_t src_vaddr = folio_get_vaddr_for(src, i);
+        vaddr_t dst_vaddr = folio_get_vaddr_for(dst, i);
         memcpy((void *) dst_vaddr, (void *) src_vaddr, PAGE_SIZE);
     }
 }

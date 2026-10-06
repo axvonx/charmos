@@ -67,9 +67,9 @@ LOG_HANDLE_EXTERN(slab);
         DIV_ROUND_UP((size_t) __bits, sizeof(uint64_t) * 8) *                  \
             sizeof(uint64_t);                                                  \
     })
-#define SLAB_BITMAP_SET(bm, mask) (bm |= mask)
-#define SLAB_BITMAP_TEST(__bitmap, __idx) (__bitmap & __idx)
-#define SLAB_BITMAP_UNSET(bm, mask) (bm &= ~mask)
+#define SLAB_BITMAP_SET(bm_, mask_) ((bm_) |= (mask_))
+#define SLAB_BITMAP_TEST(bm_, mask_) ((bm_) & (mask_))
+#define SLAB_BITMAP_UNSET(bm_, mask_) ((bm_) &= ~(mask_))
 
 #define SLAB_ALIGN_UP(x, a) ALIGN_UP(x, a)
 

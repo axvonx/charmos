@@ -34,32 +34,33 @@
 #define bit_spin_trylock_raw(bit, ptr)                                         \
     ({                                                                         \
         BIT_SPINLOCK_CHECK(bit, ptr);                                          \
-        typeof(*(ptr)) __m = BIT_SPINLOCK_MASK(bit, ptr);                      \
-        typeof(*(ptr)) __old =                                                 \
+        typeof(*(ptr)) __bs_mask = BIT_SPINLOCK_MASK(bit, ptr);                \
+        typeof(*(ptr)) __bs_old =                                              \
             atomic_load_relaxed((atomic(typeof(*(ptr))) *) (ptr));             \
-        bool __acquired = false;                                               \
-        if (!(__old & __m)) {                                                  \
-            __acquired = atomic_cas_weak(                                      \
-                (atomic(typeof(*(ptr))) *) (ptr), &__old,                      \
-                (typeof(*(ptr))) (__old | __m), mo_acquire, mo_relaxed);       \
+        bool __bs_acquired = false;                                            \
+        if (!(__bs_old & __bs_mask)) {                                         \
+            __bs_acquired =                                                    \
+                atomic_cas_weak((atomic(typeof(*(ptr))) *) (ptr), &__bs_old,   \
+                                (typeof(*(ptr))) (__bs_old | __bs_mask),       \
+                                mo_acquire, mo_relaxed);                       \
         }                                                                      \
-        __acquired;                                                            \
+        __bs_acquired;                                                         \
     })
 
 #define bit_spin_lock_raw(bit, ptr)                                            \
     do {                                                                       \
         BIT_SPINLOCK_CHECK(bit, ptr);                                          \
-        typeof(*(ptr)) __m = BIT_SPINLOCK_MASK(bit, ptr);                      \
+        typeof(*(ptr)) __bs_mask = BIT_SPINLOCK_MASK(bit, ptr);                \
         while (true) {                                                         \
-            typeof(*(ptr)) __old =                                             \
+            typeof(*(ptr)) __bs_old =                                          \
                 atomic_load_relaxed((atomic(typeof(*(ptr))) *) (ptr));         \
-            if (__old & __m) {                                                 \
+            if (__bs_old & __bs_mask) {                                        \
                 cpu_pause();                                                   \
                 continue;                                                      \
             }                                                                  \
-            if (atomic_cas_weak((atomic(typeof(*(ptr))) *) (ptr), &__old,      \
-                                (typeof(*(ptr))) (__old | __m), mo_acquire,    \
-                                mo_relaxed))                                   \
+            if (atomic_cas_weak((atomic(typeof(*(ptr))) *) (ptr), &__bs_old,   \
+                                (typeof(*(ptr))) (__bs_old | __bs_mask),       \
+                                mo_acquire, mo_relaxed))                       \
                 break;                                                         \
             cpu_pause();                                                       \
         }                                                                      \
@@ -75,9 +76,9 @@
 
 #define bit_spin_lock(bit, ptr)                                                \
     ({                                                                         \
-        enum irql __old_irql = irql_raise(IRQL_DISPATCH_LEVEL);                \
+        enum irql __bs_old_irql = irql_raise(IRQL_DISPATCH_LEVEL);             \
         bit_spin_lock_raw(bit, ptr);                                           \
-        __old_irql;                                                            \
+        __bs_old_irql;                                                         \
     })
 
 #define bit_spin_unlock(bit, ptr, old_irql)                                    \
@@ -88,9 +89,9 @@
 
 #define bit_spin_lock_high(bit, ptr)                                           \
     ({                                                                         \
-        enum irql __old_irql = irql_raise(IRQL_HIGH_LEVEL);                    \
+        enum irql __bs_old_irql = irql_raise(IRQL_HIGH_LEVEL);                 \
         bit_spin_lock_raw(bit, ptr);                                           \
-        __old_irql;                                                            \
+        __bs_old_irql;                                                         \
     })
 
 #define bit_spin_unlock_irq_restore(bit, ptr, old_irql)                        \
@@ -102,19 +103,19 @@
 #define bit_spin_trylock(bit, ptr, out_irql)                                   \
     ({                                                                         \
         *(out_irql) = irql_raise(IRQL_DISPATCH_LEVEL);                         \
-        bool __ok = bit_spin_trylock_raw(bit, ptr);                            \
-        if (!__ok)                                                             \
+        bool __bs_ok = bit_spin_trylock_raw(bit, ptr);                         \
+        if (!__bs_ok)                                                          \
             irql_lower(*(out_irql));                                           \
-        __ok;                                                                  \
+        __bs_ok;                                                               \
     })
 
 #define bit_spin_trylock_high(bit, ptr, out_irql)                              \
     ({                                                                         \
         *(out_irql) = irql_raise(IRQL_HIGH_LEVEL);                             \
-        bool __ok = bit_spin_trylock_raw(bit, ptr);                            \
-        if (!__ok)                                                             \
+        bool __bs_ok = bit_spin_trylock_raw(bit, ptr);                         \
+        if (!__bs_ok)                                                          \
             irql_lower(*(out_irql));                                           \
-        __ok;                                                                  \
+        __bs_ok;                                                               \
     })
 
 #define BIT_SPIN_LOCK_ASSERT_HELD(bit, ptr)                                    \

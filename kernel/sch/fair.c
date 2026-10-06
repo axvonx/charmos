@@ -64,8 +64,8 @@ static void derive_timeshare_prio_range(enum thread_activity_class cls,
 
 #define NICE_BASE_FP FX(1.022)
 
-#define SET_MUL(__multiplier)                                                  \
-    class_mul = __multiplier;                                                  \
+#define SET_MUL(multiplier_)                                                   \
+    class_mul = (multiplier_);                                                 \
     break;
 
 static enum thread_activity_class

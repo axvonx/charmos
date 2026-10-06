@@ -86,7 +86,7 @@ LINKER_SECTION_EXTERN(struct perdomain_descriptor, perdomain_desc);
 #define perdomain_for_each_internal_3(name, var, domain)                       \
     perdomain_for_each_internal(name, var, domain)
 #define perdomain_for_each_internal_2(name, var)                               \
-    perdomain_for_each_internal_3(name, var, __domain)
+    perdomain_for_each_internal_3(name, var, __perdomain_idx)
 
 #define perdomain_for_each(...)                                                \
     PP_CALL(perdomain_for_each_internal, __VA_ARGS__)

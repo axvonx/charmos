@@ -244,20 +244,23 @@ folio_mapcount_dec(struct folio *f) { /* true if dropped to 0 */
     return refcount_dec_and_test(&f->mapcount);
 }
 
-#define folio_for_each_page_struct(f, p)                                       \
-    for (size_t __i = 0;                                                       \
-         __i < folio_nr_pages(f) && ((p) = folio_get_page((f), __i), true);    \
-         __i++)
+#define folio_for_each_page_struct(f_, p_)                                     \
+    for (size_t __folio_page_idx = 0;                                          \
+         __folio_page_idx < folio_nr_pages(f_) &&                              \
+         (((p_) = folio_get_page((f_), __folio_page_idx)), true);              \
+         __folio_page_idx++)
 
-#define folio_for_each_page_paddr(f, p)                                        \
-    for (size_t __i = 0; __i < folio_nr_pages(f) &&                            \
-                         ((p) = folio_get_paddr_for((f), __i), true);          \
-         __i++)
+#define folio_for_each_page_paddr(f_, p_)                                      \
+    for (size_t __folio_paddr_idx = 0;                                         \
+         __folio_paddr_idx < folio_nr_pages(f_) &&                             \
+         (((p_) = folio_get_paddr_for((f_), __folio_paddr_idx)), true);        \
+         __folio_paddr_idx++)
 
-#define folio_for_each_page_vaddr(f, p)                                        \
-    for (size_t __i = 0; __i < folio_nr_pages(f) &&                            \
-                         ((p) = folio_get_vaddr_for((f), __i), true);          \
-         __i++)
+#define folio_for_each_page_vaddr(f_, p_)                                      \
+    for (size_t __folio_vaddr_idx = 0;                                         \
+         __folio_vaddr_idx < folio_nr_pages(f_) &&                             \
+         (((p_) = folio_get_vaddr_for((f_), __folio_vaddr_idx)), true);        \
+         __folio_vaddr_idx++)
 
 #define folio_alloc(order, ...)                                                \
     folio_alloc_full((order), alloc_params_with_defaults(                      \

@@ -48,9 +48,11 @@ void stat_series_record(struct stat_series *s, size_t value,
 
 void stat_series_advance(struct stat_series *s, time_us_t now_us);
 
-#define stat_series_for_each(series, iter)                                     \
-    for (uint32_t __i = 0;                                                     \
-         (iter = &((series)->buckets[__i]), __i < (series)->nbuckets); __i++)
+#define stat_series_for_each(series_, iter_)                                   \
+    for (uint32_t __stat_idx = 0;                                              \
+         __stat_idx < (series_)->nbuckets &&                                   \
+         (((iter_) = &((series_)->buckets[__stat_idx])), true);                \
+         __stat_idx++)
 
 #define STAT_SERIES_DEFINE(name, n, bucket_us)                                 \
     static struct stat_bucket name##_buckets[(n)] = {0};                       \

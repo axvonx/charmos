@@ -105,9 +105,8 @@ void slab_domain_init_stats(struct slab_domain *domain) {
     if (!domain->stats || !domain->stats->buckets || !domain->buckets)
         panic("Failed to create domain stat series");
 
-    struct stat_bucket *iter;
-    stat_series_for_each(domain->stats, iter) {
-        iter->private = &domain->buckets[__i];
+    for (size_t i = 0; i < domain->stats->nbuckets; i++) {
+        domain->stats->buckets[i].private = &domain->buckets[i];
     }
 }
 

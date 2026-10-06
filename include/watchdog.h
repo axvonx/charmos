@@ -402,5 +402,5 @@ void watchdog_pet(void);
 void watchdog_callback_add(cpu_id_t cpu, struct watchdog_callback *cb);
 void watchdog_callback_remove(cpu_id_t cpu, struct watchdog_callback *cb);
 
-#define watchdog_cpu_for_each(__i, state)                                      \
-    cpu_mask_for_each(__i, watchdog_master.cpu_masks[state])
+#define watchdog_cpu_for_each(iter_, state_)                                   \
+    cpu_mask_for_each(iter_, watchdog_master.cpu_masks[state_])

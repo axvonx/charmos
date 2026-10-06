@@ -56,21 +56,29 @@ static inline domain_id_t domain_local_id(enum topology_caller c) {
     return domain_local(c)->id;
 }
 
-#define domain_for_each_domain(__dom)                                          \
-    for (domain_id_t __i = 0;                                                  \
-         (__dom = global.domains[__i]), (__i < global.domain_count); __i++)
+#define domain_for_each_domain(dom_)                                           \
+    for (domain_id_t __dom_idx = 0;                                            \
+         __dom_idx < global.domain_count &&                                    \
+         (((dom_) = global.domains[__dom_idx]), true);                         \
+         __dom_idx++)
 
-#define domain_for_each_domain_id(__id)                                        \
-    for (domain_id_t __i = 0;                                                  \
-         (__id = global.domains[__i]->id), (__i < global.domain_count); __i++)
+#define domain_for_each_domain_id(id_)                                         \
+    for (domain_id_t __dom_id_idx = 0;                                         \
+         __dom_id_idx < global.domain_count &&                                 \
+         (((id_) = global.domains[__dom_id_idx]->id), true);                   \
+         __dom_id_idx++)
 
-#define domain_for_each_core(__pos, __dom)                                     \
-    for (domain_id_t __i = 0;                                                  \
-         (__pos = __dom->cores[__i]), (__i < __dom->num_cores); __i++)
+#define domain_for_each_core(pos_, dom_)                                       \
+    for (domain_id_t __core_idx = 0;                                           \
+         __core_idx < (dom_)->num_cores &&                                     \
+         (((pos_) = (dom_)->cores[__core_idx]), true);                         \
+         __core_idx++)
 
-#define domain_for_each_core_id(__pos, __dom)                                  \
-    for (domain_id_t __i = 0;                                                  \
-         (__pos = __dom->cores[__i]->id), (__i < __dom->num_cores); __i++)
+#define domain_for_each_core_id(pos_, dom_)                                    \
+    for (domain_id_t __core_id_idx = 0;                                        \
+         __core_id_idx < (dom_)->num_cores &&                                  \
+         (((pos_) = (dom_)->cores[__core_id_idx]->id), true);                  \
+         __core_id_idx++)
 
-#define domain_for_each_core_local(__clr, __pos)                               \
-    domain_for_each_core(__pos, smp_core(__clr)->domain)
+#define domain_for_each_core_local(clr_, pos_)                                 \
+    domain_for_each_core(pos_, smp_core(clr_)->domain)

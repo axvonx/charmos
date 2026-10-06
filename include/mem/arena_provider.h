@@ -474,10 +474,11 @@ size_t arena_seg_count(struct arena *a);
 void arena_dumpster_add_bin(struct arena_dumpster *dumpster,
                             struct arena_bin *bin);
 
-#define arena_for_each_seg(seg, arena)                                         \
-    for (uint16_t __i = 0; (__i < arena_seg_count(arena) &&                    \
-                            (seg = arena_seg_for_idx(arena, __i), true));      \
-         __i++)
+#define arena_for_each_seg(seg_, arena_)                                       \
+    for (uint16_t __seg_idx = 0;                                               \
+         __seg_idx < arena_seg_count(arena_) &&                                \
+         (((seg_) = arena_seg_for_idx((arena_), __seg_idx)), true);            \
+         __seg_idx++)
 
 /* TODO: Figure out dying semantics */
 static inline bool arena_bin_get_rcu(struct arena_bin *bin) {

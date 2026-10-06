@@ -8,8 +8,8 @@ enum mutex_bits : uintptr_t {
 
 #define MUTEX_META_BITS (MUTEX_HELD_BIT)
 
-#define MUTEX_READ_LOCK_WORD(__mtx)                                            \
-    atomic_load_acq(&((struct mutex *) (__mtx))->lock_word)
+#define MUTEX_READ_LOCK_WORD(mtx_)                                             \
+    atomic_load_acq(&((struct mutex *) (mtx_))->lock_word)
 #define MUTEX_BACKOFF_DEFAULT 4
 #define MUTEX_BACKOFF_MAX ((size_t) 32768)
 #define MUTEX_BACKOFF_SHIFT 1

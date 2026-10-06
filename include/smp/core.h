@@ -109,30 +109,42 @@ struct core {
 void smp_caller_verify(enum topology_caller caller);
 #define smp_read8(off)                                                         \
     ({                                                                         \
-        uint8_t __v;                                                           \
-        asm volatile("movb %%gs:%c1, %b0" : "=q"(__v) : "i"(off) : "memory");  \
-        __v;                                                                   \
+        uint8_t __smp_v;                                                       \
+        asm volatile("movb %%gs:%c1, %b0"                                      \
+                     : "=q"(__smp_v)                                           \
+                     : "i"(off)                                                \
+                     : "memory");                                              \
+        __smp_v;                                                               \
     })
 
 #define smp_read16(off)                                                        \
     ({                                                                         \
-        uint16_t __v;                                                          \
-        asm volatile("movw %%gs:%c1, %w0" : "=r"(__v) : "i"(off) : "memory");  \
-        __v;                                                                   \
+        uint16_t __smp_v;                                                      \
+        asm volatile("movw %%gs:%c1, %w0"                                      \
+                     : "=r"(__smp_v)                                           \
+                     : "i"(off)                                                \
+                     : "memory");                                              \
+        __smp_v;                                                               \
     })
 
 #define smp_read32(off)                                                        \
     ({                                                                         \
-        uint32_t __v;                                                          \
-        asm volatile("movl %%gs:%c1, %k0" : "=r"(__v) : "i"(off) : "memory");  \
-        __v;                                                                   \
+        uint32_t __smp_v;                                                      \
+        asm volatile("movl %%gs:%c1, %k0"                                      \
+                     : "=r"(__smp_v)                                           \
+                     : "i"(off)                                                \
+                     : "memory");                                              \
+        __smp_v;                                                               \
     })
 
 #define smp_read64(off)                                                        \
     ({                                                                         \
-        uint64_t __v;                                                          \
-        asm volatile("movq %%gs:%c1, %0" : "=r"(__v) : "i"(off) : "memory");   \
-        __v;                                                                   \
+        uint64_t __smp_v;                                                      \
+        asm volatile("movq %%gs:%c1, %0"                                       \
+                     : "=r"(__smp_v)                                           \
+                     : "i"(off)                                                \
+                     : "memory");                                              \
+        __smp_v;                                                               \
     })
 
 #define smp_member_size(member) sizeof(typeof(((struct core *) 0)->member))
@@ -151,39 +163,51 @@ void smp_caller_verify(enum topology_caller caller);
             smp_member_size(member) == 1 || smp_member_size(member) == 2 ||    \
                 smp_member_size(member) == 4 || smp_member_size(member) == 8,  \
             "smp_core_read: unsupported member size");                         \
-        uint64_t _raw;                                                         \
+        uint64_t __smp_raw;                                                    \
         switch (smp_member_size(member)) {                                     \
-        case 1: _raw = smp_read8(offsetof(struct core, member)); break;        \
-        case 2: _raw = smp_read16(offsetof(struct core, member)); break;       \
-        case 4: _raw = smp_read32(offsetof(struct core, member)); break;       \
-        case 8: _raw = smp_read64(offsetof(struct core, member)); break;       \
+        case 1: __smp_raw = smp_read8(offsetof(struct core, member)); break;   \
+        case 2: __smp_raw = smp_read16(offsetof(struct core, member)); break;  \
+        case 4: __smp_raw = smp_read32(offsetof(struct core, member)); break;  \
+        case 8: __smp_raw = smp_read64(offsetof(struct core, member)); break;  \
         default: ci_unreachable();                                             \
         }                                                                      \
-        _smp_read_type(member)(uintptr_t) _raw;                                \
+        _smp_read_type(member)(uintptr_t) __smp_raw;                           \
     })
 
 #define smp_write8(off, v)                                                     \
     ({                                                                         \
-        uint8_t __v = (v);                                                     \
-        asm volatile("movb %b0, %%gs:%c1" : : "q"(__v), "i"(off) : "memory");  \
+        uint8_t __smp_v = (v);                                                 \
+        asm volatile("movb %b0, %%gs:%c1"                                      \
+                     :                                                         \
+                     : "q"(__smp_v), "i"(off)                                  \
+                     : "memory");                                              \
     })
 
 #define smp_write16(off, v)                                                    \
     ({                                                                         \
-        uint16_t __v = (v);                                                    \
-        asm volatile("movw %w0, %%gs:%c1" : : "r"(__v), "i"(off) : "memory");  \
+        uint16_t __smp_v = (v);                                                \
+        asm volatile("movw %w0, %%gs:%c1"                                      \
+                     :                                                         \
+                     : "r"(__smp_v), "i"(off)                                  \
+                     : "memory");                                              \
     })
 
 #define smp_write32(off, v)                                                    \
     ({                                                                         \
-        uint32_t __v = (v);                                                    \
-        asm volatile("movl %0, %%gs:%c1" : : "r"(__v), "i"(off) : "memory");   \
+        uint32_t __smp_v = (v);                                                \
+        asm volatile("movl %0, %%gs:%c1"                                       \
+                     :                                                         \
+                     : "r"(__smp_v), "i"(off)                                  \
+                     : "memory");                                              \
     })
 
 #define smp_write64(off, v)                                                    \
     ({                                                                         \
-        uint64_t __v = (v);                                                    \
-        asm volatile("movq %0, %%gs:%c1" : : "r"(__v), "i"(off) : "memory");   \
+        uint64_t __smp_v = (v);                                                \
+        asm volatile("movq %0, %%gs:%c1"                                       \
+                     :                                                         \
+                     : "r"(__smp_v), "i"(off)                                  \
+                     : "memory");                                              \
     })
 
 #define smp_write(cond, member, val)                                           \
@@ -297,8 +321,9 @@ static inline uint32_t smp_ctx_sub(enum topology_caller c, uint32_t one,
     return cpu->ctx;
 }
 
-#define for_each_cpu_struct(__iter)                                            \
-    for (size_t __id = 0;                                                      \
-         ((__iter = global.cores[__id]), __id < global.core_count); __id++)
+#define for_each_cpu_struct(iter_)                                             \
+    for (size_t __cpu_idx = 0; __cpu_idx < global.core_count &&                \
+                               (((iter_) = global.cores[__cpu_idx]), true);    \
+         __cpu_idx++)
 
-#define for_each_cpu_id(__id) for (__id = 0; __id < global.core_count; __id++)
+#define for_each_cpu_id(id_) for ((id_) = 0; (id_) < global.core_count; (id_)++)

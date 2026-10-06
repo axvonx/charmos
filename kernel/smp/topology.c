@@ -24,7 +24,7 @@ static struct topology_node *package_nodes;
 static struct topology_node *llc_nodes;
 static struct topology_node machine_node;
 
-#define BOLD_STR(__str) ANSI_BOLD __str ANSI_RESET
+#define BOLD_STR(str) ANSI_BOLD str ANSI_RESET
 
 static void cpu_mask_print(const struct cpu_mask *m) {
 #if CPU_MASK_WORDS == 1
@@ -36,7 +36,7 @@ static void cpu_mask_print(const struct cpu_mask *m) {
 #endif
 }
 
-#define TOPO_MAKE_STR(__color, __str) (__color __str ANSI_RESET)
+#define TOPO_MAKE_STR(color, str) (color str ANSI_RESET)
 
 static const char *topo_node_str[TOPOLOGY_LEVEL_MAX] = {
     [TOPOLOGY_LEVEL_SMT] = TOPO_MAKE_STR(ANSI_MAGENTA, "SMT"),

@@ -84,7 +84,7 @@ LINKER_SECTION_EXTERN(struct percpu_descriptor, percpu_desc);
 #define percpu_for_each_internal_3(name, var, cpu)                             \
     percpu_for_each_internal(name, var, cpu)
 #define percpu_for_each_internal_2(name, var)                                  \
-    percpu_for_each_internal_3(name, var, __cpu)
+    percpu_for_each_internal_3(name, var, __percpu_idx)
 
 #define percpu_for_each(...) PP_CALL(percpu_for_each_internal, __VA_ARGS__)
 

@@ -64,7 +64,7 @@ static void map_cpus_to_groups(void) {
             /* find group for this CPU */
             int found = -1;
             for (size_t g = 0; g < d->ngroups; g++) {
-                if (cpu_mask_test(&d->groups[g].cpus, __id)) {
+                if (cpu_mask_test(&d->groups[g].cpus, c->id)) {
                     found = g;
                     break;
                 }

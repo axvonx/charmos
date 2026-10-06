@@ -250,17 +250,17 @@
     static_assert(sizeof(type_a) == sizeof(type_b),                            \
                   "sizeof(" #type_a ") != sizeof(" #type_b ")")
 
-#define ct_assert_struct_size_eq(__struct, __want)                             \
-    ct_assert_size(struct __struct, __want)
+#define ct_assert_struct_size_eq(struct_, want_)                               \
+    ct_assert_size(struct struct_, want_)
 
-#define ct_assert_struct_align_eq(__struct, __want)                            \
-    ct_assert_align(struct __struct, __want)
+#define ct_assert_struct_align_eq(struct_, want_)                              \
+    ct_assert_align(struct struct_, want_)
 
-#define ct_assert_union_size_eq(__union, __want)                               \
-    ct_assert_size(union __union, __want)
+#define ct_assert_union_size_eq(union_, want_)                                 \
+    ct_assert_size(union union_, want_)
 
-#define ct_assert_union_align_eq(__union, __want)                              \
-    ct_assert_align(union __union, __want)
+#define ct_assert_union_align_eq(union_, want_)                                \
+    ct_assert_align(union union_, want_)
 
 #define ct_assert_power_of_two(n)                                              \
     static_assert(((n) > 0 && (((n) & ((n) - 1)) == 0)),                       \

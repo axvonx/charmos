@@ -7,9 +7,11 @@
 #define MINHEAP_INIT_CAP 32
 #define MINHEAP_INDEX_INVALID ((uint32_t) -1)
 
-#define minheap_for_each(heap, node_ptr)                                       \
-    for (uint32_t __i = 0;                                                     \
-         (node_ptr = ((heap)->nodes[__i]), __i < (heap)->size); __i++)
+#define minheap_for_each(heap_, node_ptr_)                                     \
+    for (uint32_t __mh_idx = 0;                                                \
+         __mh_idx < (heap_)->size &&                                           \
+         (((node_ptr_) = ((heap_)->nodes[__mh_idx])), true);                   \
+         __mh_idx++)
 
 struct minheap_node {
     atomic_uint64_t key;

@@ -121,10 +121,11 @@ void domain_flush_free_queue(struct domain_buddy *domain,
 void domain_flush_thread(void *arg);
 void domain_enqueue_flush_worker(struct domain_flush_worker *worker);
 
-#define domain_for_each_arena(domain, arena_ptr)                               \
-    for (uint32_t __i = 0;                                                     \
-         (arena_ptr = ((domain)->arenas[__i]), __i < (domain)->core_count);    \
-         __i++)
+#define domain_for_each_arena(domain_, arena_ptr_)                             \
+    for (uint32_t __arena_idx = 0;                                             \
+         __arena_idx < (domain_)->core_count &&                                \
+         (((arena_ptr_) = ((domain_)->arenas[__arena_idx])), true);            \
+         __arena_idx++)
 
 static inline struct domain_buddy *domain_buddy_for_addr(paddr_t addr) {
     for (size_t i = 0; i < global.domain_count; i++) {
