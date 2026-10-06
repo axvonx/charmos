@@ -452,11 +452,7 @@ void log_emit_full(struct log_site *site, struct log_handle *handle,
     rec.handle = handle;
     rec.level = level;
 
-    if (site->flags & LOG_SITE_DUP_MESSAGES) {
-        strncpy((char *) rec.fmt, fmt, site->msg_max_len - 1);
-    } else {
-        rec.fmt = fmt;
-    }
+    rec.fmt = fmt;
 
     rec.caller_pc = ip;
     rec.caller_fn = (char *) func;
@@ -612,22 +608,6 @@ struct log_site *log_site_create(struct log_site_options opts) {
         kmalloc(sizeof(struct log_ring_slot) * opts.capacity, ALLOC_ZERO);
     if (!slots)
         goto err;
-
-    if (opts.flags & LOG_SITE_DUP_MESSAGES) {
-        size_t len = kassert(opts.msg_max_len);
-        for (size_t i = 0; i < opts.capacity; i++) {
-            slots[i].shadow_buf = kmalloc(len, ALLOC_ZERO);
-            if (!slots->shadow_buf) {
-                for (size_t j = 0; j < i; j++) {
-                    kfree(slots[j].shadow_buf);
-                }
-
-                goto err;
-            }
-
-            slots[i].rec.fmt = slots[i].shadow_buf;
-        }
-    }
 
     ret->msg_max_len = opts.msg_max_len;
     ret->dump_opts = opts.dump_opts;

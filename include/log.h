@@ -41,13 +41,7 @@ enum log_site_flags : uint32_t {
     LOG_SITE_NO_IRQ = 1 << 2,   /* suppress in IRQ context */
     LOG_SITE_PANIC_VISIBLE = 1 << 3,
 
-    /* All messages are internally copied, so the passed in pointer
-     * is not what ends up getting used, this is for pointer reuse/freeing
-     * after the pointer is passed into log() */
-    LOG_SITE_DUP_MESSAGES = 1 << 4, /* If this is set, we also expect the
-                                     * msg_max_len of log_site_options
-                                     * to be set, else panic */
-    LOG_SITE_NDJSON = 1 << 5,       /* emit records directly to NDJSON wire */
+    LOG_SITE_NDJSON = 1 << 4, /* emit records directly to NDJSON wire */
     LOG_SITE_NONE = 0,
     LOG_SITE_DEFAULT = LOG_SITE_DROP_OLD,
 };
@@ -87,8 +81,8 @@ struct log_record {
 
     uint16_t msg_len;
 
-    const char *fmt; /* Becomes a pointer to the shadow_buf in cases where
-                      * LOG_SITE_DUP_MESSAGES is set */
+    char *fmt; /* Becomes a pointer to the shadow_buf in cases where
+                * LOG_SITE_DUP_MESSAGES is set */
     uint8_t nargs;
     uint64_t args[LOG_NARGS];
 
