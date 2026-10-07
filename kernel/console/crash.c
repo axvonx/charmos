@@ -817,6 +817,8 @@ static void crash_report_raw_serial(const struct crash_context *ctx,
 cc_noreturn void crash_full(const struct crash_context *ctx) TSA_NO_ANALYSIS {
     irq_disable();
 
+    irql_raise(IRQL_HIGH_LEVEL);
+
     uint32_t depth = atomic_fetch_add_relaxed(&crash_depth, 1);
 
     if (depth >= CRASH_MAX_DEPTH) {

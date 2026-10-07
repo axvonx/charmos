@@ -440,6 +440,18 @@ static void climb_apply_budget(struct scheduler *sched,
     }
 }
 
+/* Threads dropped from the tree per period. NOTE: that this can
+ * only happen AFTER the scheduler lock is dropped,
+ * since the last thread_put() can wake the reaper.
+ *
+ * TODO: There's probably a better way */
+#define CLIMB_DROP_BATCH 64
+
+struct climb_drop_batch {
+    struct thread *threads[CLIMB_DROP_BATCH];
+    size_t count;
+};
+
 /* This is our decay policy after a thread is removed from CLIMB.
  *
  * Because the boost is represented in part by an EWMA, it doesn't
@@ -466,7 +478,7 @@ static void climb_apply_budget(struct scheduler *sched,
  *
  */
 static void maybe_remove_node(struct rbt *tree, struct climb_thread_state *cts,
-                              struct list_head *tlh) {
+                              struct climb_drop_batch *drop) {
     struct rbt_node *node = &cts->climb_node;
     bool remove = false;
 
@@ -477,20 +489,23 @@ static void maybe_remove_node(struct rbt *tree, struct climb_thread_state *cts,
         remove = true;
 
     if (remove) {
+        /* Leave it on tree for next period */
+        if (drop->count == CLIMB_DROP_BATCH)
+            return;
+
         climb_info("Removing from tree %p", cts);
         rbt_delete(tree, node);
         cts->pressure_periods = 0;
         cts->on_climb_tree = false;
-        cts->was_pinned =
-            thread_pin(container_of(cts, struct thread, climb_state));
-        list_add_tail(&cts->tmp_list_node, tlh);
+        drop->threads[drop->count++] =
+            container_of(cts, struct thread, climb_state);
     } else {
         cts->pressure_periods--;
     }
 }
 
-static struct climb_summary summarize_and_advance(struct rbt *tree,
-                                                  struct list_head *tlh) {
+static struct climb_summary
+summarize_and_advance(struct rbt *tree, struct climb_drop_batch *drop) {
     struct climb_summary ret = {0};
     struct climb_thread_state *iter;
     struct rbt_node *node, *tmp;
@@ -507,7 +522,7 @@ static struct climb_summary summarize_and_advance(struct rbt *tree,
             ret.total_periods_spent += iter->pressure_periods;
             iter->pressure_periods++;
         } else {
-            maybe_remove_node(tree, iter, tlh);
+            maybe_remove_node(tree, iter, drop);
         }
     }
 
@@ -523,24 +538,17 @@ void climb_per_period_hook() {
         return;
     }
 
-    LIST_HEAD(threads_to_drop);
+    struct climb_drop_batch drop = {.count = 0};
 
     struct climb_summary summary =
-        summarize_and_advance(climb_tree_local(), &threads_to_drop);
+        summarize_and_advance(climb_tree_local(), &drop);
     struct climb_budget budget = climb_budget_from_summary(&summary);
     climb_apply_budget(smp_core_scheduler(), &budget);
 
     spin_unlock(&sched->lock, irql);
 
-    struct thread *tmp, *iter;
-    list_for_each_entry_safe(iter, tmp, &threads_to_drop,
-                             climb_state.tmp_list_node) {
-        list_del_init(&iter->climb_state.tmp_list_node);
-        if (!iter->climb_state.was_pinned)
-            thread_unpin(iter);
-
-        thread_put(iter);
-    }
+    for (size_t i = 0; i < drop.count; i++)
+        thread_put(drop.threads[i]);
 }
 
 void climb_thread_init(struct thread *t) {
