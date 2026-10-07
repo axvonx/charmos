@@ -256,6 +256,7 @@ static void timer_recalc_next_expiration(struct timer_base *base) {
         /* Find the next set bit in pending_map for level */
         int32_t pos =
             timer_next_pending(base, offset, clock & TIMER_LEVEL_MASK);
+        time_us_t clock_lvl = clock & TIMER_CLOCK_MASK;
 
         if (pos >= 0) {
             /* Absolute minimum this bucket represents */
@@ -267,14 +268,15 @@ static void timer_recalc_next_expiration(struct timer_base *base) {
 
             /* If the bucket is within the current level's wraparound cycle,
              * it's guaranteed to expire before any timer in higher levels */
-            time_us_t clock_lvl = clock & TIMER_CLOCK_MASK;
             if ((time_us_t) pos <=
                 ((TIMER_CLOCK_FACTOR - clock_lvl) & TIMER_CLOCK_MASK))
                 break;
         }
 
-        /* Check next level, shift down to its granularity */
-        clock >>= TIMER_CLOCK_SHIFT;
+        /* Check next level, shift down to its granularity.
+         * If this level's clock bits are nonzero, the next level's
+         * slot is behind us, so we need to start a slot ahead. */
+        clock = (clock >> TIMER_CLOCK_SHIFT) + (clock_lvl ? 1 : 0);
     }
 
     base->next_expiration_us = next;
