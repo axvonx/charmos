@@ -17,11 +17,11 @@ enum topology_level {
     TOPOLOGY_LEVEL_MACHINE, /* All processors in a machine */
     TOPOLOGY_LEVEL_MAX,     /* count */
 
-    TOPOLOGY_LEVEL_DOMAIN, /* This exists solely because the topology_contract
-                            * has a domain granularity that does not
-                            * necessarily correspond to one of the others,
-                            * thus, it is outside of MAX and is its
-                            * own layer just for that API */
+    TOPOLOGY_LEVEL_EX_DOMAIN, /* This exists solely because the topology_contract
+                               * has a domain granularity that does not
+                               * necessarily correspond to one of the others,
+                               * thus, it is outside of MAX and is its
+                               * own layer just for that API */
 };
 
 /* This enum is used to verify topology contracts to guarantee a caller

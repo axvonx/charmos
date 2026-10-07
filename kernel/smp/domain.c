@@ -228,7 +228,7 @@ MOVEALLOC_REGISTER_CALL(domain_move, domains_move, /* a = */ NULL,
 void domain_caller_verify(enum topology_caller caller) {
     struct topology_contract tct = {
         .caller = caller,
-        .scope = TOPOLOGY_LEVEL_DOMAIN,
+        .scope = TOPOLOGY_LEVEL_EX_DOMAIN,
     };
 
     bool valid = topology_contract_verify(tct);

@@ -5,9 +5,11 @@
 #include <global.h>
 #include <linker/symbols.h>
 #include <smp/core.h>
+#include <smp/topology.h>
 #include <stddef.h>
 #include <stdint.h>
 
+/* Core per-topology macros */
 struct pertopo_descriptor;
 typedef void (*pertopo_descriptor_constructor)(void *, size_t);
 
@@ -30,7 +32,7 @@ LINKER_SECTION_EXTERN(struct pertopo_descriptor, pertopo_desc);
         void (*const __typed_ctor)(typeof(type_) *, size_t) = (ctor_);         \
         if (__typed_ctor != NULL)                                              \
             __typed_ctor((typeof(type_) *) inst, node_id);                     \
-        if (node_id == pertopo_node_count(&__pertopo_desc_##name_) - 1)        \
+        if (node_id == (size_t) (global.topology.count[level_] - 1))           \
             atomic_store(&__pertopo_desc_##name_.ready, true);                 \
     }                                                                          \
     static LINKER_SECTION_OBJECT(struct pertopo_descriptor, pertopo_desc)      \
@@ -74,23 +76,29 @@ LINKER_SECTION_EXTERN(struct pertopo_descriptor, pertopo_desc);
     (*((typeof(__pertopo_##name) *) PERTOPO_PTR_FOR_TOPO_NODE(name, node)))
 
 #define PERTOPO_PTR(clr, name)                                                 \
-    PERTOPO_PTR_FOR_TOPO_NODE(name, pertopo_node(&__pertopo_desc_##name, clr))
+    PERTOPO_PTR_FOR_TOPO_NODE(name,                                            \
+                              pertopo_node_local(&__pertopo_desc_##name, clr))
 #define PERTOPO_READ(clr, name)                                                \
     (*((typeof(__pertopo_##name) *) PERTOPO_PTR(clr, name)))
 
 #define PERTOPO_WRITE(clr, name, val) (PERTOPO_READ(clr, name) = (val))
 
-#define pertopo_for_each_internal(name, var, node_id)                          \
-    for (size_t node_id = 0;                                                   \
-         node_id < pertopo_node_count(&__pertopo_desc_##name); node_id++)      \
+#define pertopo_for_each_internal_3(name, var, node_id)                        \
+    for (node_id = 0;                                                          \
+         node_id < global.topology.count[__pertopo_desc_##name.level];         \
+         node_id++)                                                            \
         for (var = PERTOPO_PTR_FOR_TOPO_NODE(name, node_id); var != NULL;      \
              var = NULL)
 
-#define pertopo_for_each_internal_3(name, var, node_id)                        \
-    pertopo_for_each_internal(name, var, node_id)
 #define pertopo_for_each_internal_2(name, var)                                 \
-    pertopo_for_each_internal_3(name, var, __pertopo_idx)
+    for (size_t __pertopo_idx = 0;                                             \
+         __pertopo_idx < global.topology.count[__pertopo_desc_##name.level];   \
+         __pertopo_idx++)                                                      \
+        for (var = PERTOPO_PTR_FOR_TOPO_NODE(name, __pertopo_idx);             \
+             var != NULL; var = NULL)
 
 #define pertopo_for_each(...) PP_CALL(pertopo_for_each_internal, __VA_ARGS__)
 
+size_t pertopo_node_local(struct pertopo_descriptor *desc,
+                          enum topology_caller c);
 void pertopo_obj_init(void);

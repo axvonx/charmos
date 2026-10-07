@@ -78,15 +78,15 @@ LINKER_SECTION_EXTERN(struct perdomain_descriptor, perdomain_desc);
 
 #define PERDOMAIN_WRITE(clr, name, val) (PERDOMAIN_READ(clr, name) = (val))
 
-#define perdomain_for_each_internal(name, var, domain)                         \
-    for (domain_id_t domain = 0; domain < global.domain_count; domain++)       \
-        for (var = PERDOMAIN_PTR_FOR_DOMAIN(name, domain); var != NULL;        \
-             var = NULL)
-
 #define perdomain_for_each_internal_3(name, var, domain)                       \
-    perdomain_for_each_internal(name, var, domain)
+    for (domain = 0; domain < global.domain_count; domain++)                   \
+        for (var = PERCPU_PTR_FOR_CPU(name, domain); var != NULL; var = NULL)
+
 #define perdomain_for_each_internal_2(name, var)                               \
-    perdomain_for_each_internal_3(name, var, __perdomain_idx)
+    for (domain_id_t __perdomain_idx = 0;                                      \
+         __perdomain_idx < global.domain_count; __perdomain_idx++)             \
+        for (var = PERCPU_PTR_FOR_CPU(name, __perdomain_idx); var != NULL;     \
+             var = NULL)
 
 #define perdomain_for_each(...)                                                \
     PP_CALL(perdomain_for_each_internal, __VA_ARGS__)
