@@ -1,4 +1,5 @@
 #include <cmdline.h>
+#include <irq/ipi.h>
 #include <irq/irq.h>
 #include <math/min_max.h>
 #include <mem/alloc.h>

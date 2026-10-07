@@ -243,6 +243,15 @@ static inline cpu_id_t smp_id_raw(void) {
     return smp_read(TOPC_NONE, id);
 }
 
+/* NOTE: we map our software CPU ID's 1:1, this might change later */
+static inline uint32_t smp_apic_id(cpu_id_t cpu) {
+    return (uint32_t) cpu;
+}
+
+static inline cpu_id_t smp_cpu_from_apic_id(uint32_t apic_id) {
+    return (cpu_id_t) apic_id;
+}
+
 static inline struct core *smp_core(enum topology_caller cond) {
     return smp_read(cond, self);
 }

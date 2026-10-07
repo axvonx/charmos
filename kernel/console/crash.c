@@ -1,5 +1,4 @@
 /* @title: Kernel Crash Engine */
-#include <acpi/lapic.h>
 #include <asm.h>
 #include <bootstage.h>
 #include <compiler/core.h>
@@ -12,6 +11,7 @@
 #include <console/term.h>
 #include <dbg.h>
 #include <global.h>
+#include <irq/ipi.h>
 #include <irq/irq.h>
 #include <linker/symbols.h>
 #include <log.h>
@@ -90,7 +90,7 @@ void crash_nmi_handoff(void *p, struct irq_registers *irqc) {
 }
 
 void crash_broadcast_nmi(void) {
-    panic_broadcast(smp_id(TOPC_NONE));
+    nmi_send_others(smp_id(TOPC_NONE));
 }
 
 /* called from panic.asm, returns with interrupts disabled */

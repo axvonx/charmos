@@ -187,9 +187,6 @@ static inline bool irq_vector_is_exception(uint8_t vector) {
     return vector < IRQ_EXCEPTION_COUNT;
 }
 
-void ipi_send(uint32_t apic_id, uint8_t vector);
-void nmi_send(uint32_t apic_id);
-
 void irq_set_alloc(int32_t entry, bool used);
 int32_t irq_alloc_entry(void);
 void irq_free_entry(int32_t entry);

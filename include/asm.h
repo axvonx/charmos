@@ -255,3 +255,7 @@ static inline int bit_clz8(uint8_t a) {
 static inline void cpu_memory_barrier(void) {
     asm volatile("mfence" ::: "memory");
 }
+
+static inline void cpu_full_fence(void) {
+    asm volatile("mfence; lfence" ::: "memory");
+}

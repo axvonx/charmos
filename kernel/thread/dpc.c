@@ -1,4 +1,3 @@
-#include <acpi/lapic.h>
 #include <atomic.h>
 #include <kassert.h>
 #include <mem/alloc.h>

@@ -47,10 +47,6 @@ static inline void cpu_mask_init(struct cpu_mask *m, size_t nbits) {
     memset(m->bits, 0, sizeof(m->bits));
 }
 
-static inline void cpu_mask_deinit(struct cpu_mask *m) {
-    cc_unused(m);
-}
-
 struct cpu_mask *cpu_mask_create(void);
 void cpu_mask_free(struct cpu_mask *m);
 

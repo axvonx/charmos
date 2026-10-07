@@ -1,9 +1,9 @@
-#include <acpi/lapic.h>
 #include <asm.h>
 #include <block/bio.h>
 #include <block/block.h>
 #include <drivers/ahci.h>
 #include <drivers/ata.h>
+#include <drivers/mmio.h>
 #include <irq/idt.h>
 #include <math/align.h>
 #include <math/bit.h>

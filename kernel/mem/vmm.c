@@ -1,4 +1,3 @@
-#include <acpi/lapic.h>
 #include <cmdline.h>
 #include <compiler/core.h>
 #include <compiler/intrinsic.h>

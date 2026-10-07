@@ -2,6 +2,7 @@
 #include <boot/gdt.h>
 #include <crypto/prng.h>
 #include <irq/idt.h>
+#include <irq/ipi.h>
 #include <limine.h>
 #include <math/bit.h>
 #include <mem/alloc.h>
@@ -17,6 +18,7 @@
 #include <sync/spinlock.h>
 #include <thread/dpc.h>
 #include <thread/thread.h>
+#include <time/lapic_timer.h>
 #include <time/time.h>
 #include <time/tsc.h>
 
@@ -272,7 +274,7 @@ void smp_wakeup(struct limine_mp_info *info) TSA_ACQUIRES_IRQS {
     asm volatile("mov %0, %%cr3" ::"r"(cr3));
 
     x2apic_init();
-    uint64_t cpu = cpu_get_this_id();
+    cpu_id_t cpu = smp_cpu_from_apic_id(lapic_this_id());
     setup_cpu(cpu);
 
     gdt_load();

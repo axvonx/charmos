@@ -40,7 +40,6 @@ struct clock_evdev *clock_evdev_create(const char *name, ...) {
     va_end(args);
 
     if (ret == ERR_NO_MEM) {
-        cpu_mask_deinit(&ced->cpu_mask);
         kfree(ced);
         return NULL;
     }

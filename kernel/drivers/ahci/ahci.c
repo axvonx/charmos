@@ -1,4 +1,5 @@
 #include <acpi/ioapic.h>
+#include <acpi/lapic.h>
 #include <drivers/ahci.h>
 #include <drivers/mmio.h>
 #include <drivers/pci.h>

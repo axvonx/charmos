@@ -1,4 +1,3 @@
-#include <acpi/lapic.h>
 #include <asm.h>
 #include <block/bio.h>
 #include <block/block.h>

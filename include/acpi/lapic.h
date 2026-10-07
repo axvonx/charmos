@@ -9,6 +9,27 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define IA32_APIC_BASE 0x1B
+#define IA32_APIC_BASE_MSR 0x1B
+#define IA32_APIC_BASE_MASK 0xFFFFF000UL
+#define IA32_APIC_BASE_ENABLE BIT(11)
+#define APIC_X2APIC_ENABLE BIT(10)
+
+#define LAPIC_REG_ID 0x020
+#define LAPIC_REG_EOI 0x0B0
+#define LAPIC_REG_SVR 0x0F0
+
+#define LAPIC_REG_LVT_TIMER 0x320
+#define LAPIC_REG_TIMER_INIT 0x380
+#define LAPIC_REG_TIMER_CUR 0x390
+#define LAPIC_REG_TIMER_DIV 0x3E0
+#define LAPIC_LVT_MASK BIT(16)
+#define LAPIC_ENABLE 0x100
+#define LAPIC_SPURIOUS_REGISTER 0xF0
+
+#define TIMER_MODE_PERIODIC BIT(17)
+#define TIMER_MODE_ONESHOT (0 << 17)
+
 #define LAPIC_ICR_LOW 0x300
 #define LAPIC_ICR_HIGH 0x310
 
@@ -26,24 +47,25 @@
 #define LAPIC_DEST_PHYSICAL (0 << 11)
 #define LAPIC_DEST_LOGICAL BIT(11)
 
+#define LAPIC_DEST_SHORTHAND_NONE (0x0 << 18)
+#define LAPIC_DEST_SHORTHAND_SELF (0x1 << 18)
+#define LAPIC_DEST_SHORTHAND_ALL (0x2 << 18)
+#define LAPIC_DEST_SHORTHAND_OTHERS (0x3 << 18)
+
 #define LAPIC_DEST_SHIFT 24
 
-#define LAPIC_REG_ID 0x020
-#define LAPIC_REG_EOI 0x0B0
-#define LAPIC_REG_SVR 0x0F0
-
-#define LAPIC_REG_LVT_TIMER 0x320
-#define LAPIC_REG_TIMER_INIT 0x380
-#define LAPIC_REG_TIMER_CUR 0x390
-#define LAPIC_REG_TIMER_DIV 0x3E0
-#define LAPIC_LVT_MASK BIT(16)
-#define LAPIC_ENABLE 0x100
-#define LAPIC_SPURIOUS_REGISTER 0xF0
+/* LDR is read-only and derived from the ID.
+ * Cluster (ID[19:4]) in bits 31:16, one-hot ID[3:0] in bits 15:0 */
+#define X2APIC_CLUSTER_SHIFT 4
+#define X2APIC_CLUSTER_SIZE BIT(X2APIC_CLUSTER_SHIFT)
+#define X2APIC_CLUSTER_ID_MASK 0xFFFF
+#define X2APIC_LDR_CLUSTER_SHIFT 16
 
 #define IA32_X2APIC_BASE 0x800
 #define IA32_X2APIC_ID (IA32_X2APIC_BASE + 0x02)
 #define IA32_X2APIC_EOI (IA32_X2APIC_BASE + 0x0B)
 #define IA32_X2APIC_SVR (IA32_X2APIC_BASE + 0x0F)
+#define IA32_X2APIC_ICR (IA32_X2APIC_BASE + 0x30)
 #define IA32_X2APIC_LVT_TIMER (IA32_X2APIC_BASE + 0x32)
 
 #define IA32_X2APIC_TIMER_INIT (IA32_X2APIC_BASE + 0x38)
@@ -87,32 +109,14 @@ static inline uint32_t lapic_read(uint32_t reg) {
     }
 }
 
-#define TIMER_MODE_PERIODIC BIT(17)
-#define TIMER_MODE_ONESHOT (0 << 17)
-#define IA32_APIC_BASE 0x1B
-#define APIC_X2APIC_ENABLE BIT(10)
-
-#define IA32_X2APIC_ICR 0x830
-#define LAPIC_LEVEL_ASSERT BIT(14)
-
 void lapic_init();
-void lapic_timer_init(cpu_id_t core_id);
-void lapic_timer_init_bsp(void);
-uint64_t lapic_get_id(void);
-uint32_t cpu_get_this_id(void);
-void lapic_timer_disable();
-bool lapic_timer_is_enabled();
-void lapic_timer_enable();
-void lapic_timer_set_ms(uint32_t ms);
-void panic_broadcast(size_t exclude_core);
 void x2apic_init();
-
-void ipi_send(uint32_t apic_id, uint8_t vector);
-
-bool ipi_send_try(uint32_t apic_id, uint8_t vector);
-void nmi_send(uint32_t apic_id);
-void lapic_clock_evdev_group_init(void);
+uint64_t lapic_get_id(void);
+uint32_t x2apic_get_id(void);
+uint32_t lapic_this_id(void);
 struct irq_chip *lapic_get_chip();
-#define IA32_APIC_BASE_MSR 0x1B
-#define IA32_APIC_BASE_MASK 0xFFFFF000UL
-#define IA32_APIC_BASE_ENABLE BIT(11)
+
+void lapic_icr_write(uint32_t dest, uint32_t lo);
+
+/* Same as above, just the try version */
+bool lapic_icr_try_write(uint32_t dest, uint32_t lo);

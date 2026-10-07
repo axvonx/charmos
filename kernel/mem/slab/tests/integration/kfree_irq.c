@@ -1,5 +1,6 @@
 #include "mem/slab/tests/test_internal.h"
 #include <acpi/lapic.h>
+#include <irq/ipi.h>
 #include <irq/irq.h>
 
 #define KFREE_IRQ_TEST_SPIN_MASK 0x3f

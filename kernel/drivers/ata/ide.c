@@ -1,4 +1,5 @@
 #include <acpi/ioapic.h>
+#include <acpi/lapic.h>
 #include <asm.h>
 #include <block/bcache.h>
 #include <block/block.h>

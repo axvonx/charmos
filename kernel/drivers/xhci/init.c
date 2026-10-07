@@ -1,3 +1,4 @@
+#include <acpi/lapic.h>
 #include <asm.h>
 #include <compiler/core.h>
 #include <drivers/mmio.h>

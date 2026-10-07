@@ -21,11 +21,11 @@
  * to get more information about what sleeping readers are doing
  */
 
-#include <acpi/lapic.h>
 #include <atomic.h>
 #include <compiler/atomic.h>
 #include <console/printf.h>
 #include <global.h>
+#include <irq/ipi.h>
 #include <irq/irq.h>
 #include <kassert.h>
 #include <log.h>

@@ -59,6 +59,7 @@
 #include <thread/thread.h>
 #include <thread/workqueue.h>
 #include <time/clock.h>
+#include <time/lapic_timer.h>
 #include <time/timekeeper.h>
 #include <time/timer.h>
 #include <watchdog.h>

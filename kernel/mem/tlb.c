@@ -1,5 +1,5 @@
-#include <acpi/lapic.h>
 #include <atomic.h>
+#include <irq/ipi.h>
 #include <mem/alloc.h>
 #include <mem/page.h>
 #include <mem/tlb.h>

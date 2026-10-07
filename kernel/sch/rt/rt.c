@@ -213,7 +213,6 @@ static void rt_scheduler_destroy_internal(struct rt_scheduler_static *rts) {
     list_del_init(&rts->list_internal);
     rt_global.static_list.num_elems--;
     rt_slots_dealloc_for_scheduler(rts);
-    cpu_mask_deinit(rts->active_mask_internal);
     cpu_mask_free(rts->active_mask_internal);
     rts->active_mask_internal = NULL;
     destroy_rt_mappings(rts);
