@@ -7,7 +7,7 @@
 #define MINHEAP_INIT_CAP 32
 #define MINHEAP_INDEX_INVALID ((uint32_t) -1)
 
-#define minheap_for_each(heap_, node_ptr_)                                     \
+#define minheap_for_each(node_ptr_, heap_)                                     \
     for (uint32_t __mh_idx = 0;                                                \
          __mh_idx < (heap_)->size &&                                           \
          (((node_ptr_) = ((heap_)->nodes[__mh_idx])), true);                   \

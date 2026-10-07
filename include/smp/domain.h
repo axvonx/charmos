@@ -79,5 +79,5 @@ static inline domain_id_t domain_local_id(enum topology_caller c) {
          (((pos_) = (dom_)->cores[__core_id_idx]->id), true);                  \
          __core_id_idx++)
 
-#define domain_for_each_core_local(clr_, pos_)                                 \
+#define domain_for_each_core_local(pos_, clr_)                                 \
     domain_for_each_core(pos_, smp_core(clr_)->domain)

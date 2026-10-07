@@ -26,7 +26,7 @@ static struct workqueue *find_optimal_domain_wq(void) {
 
     size_t least_loaded = WORKQUEUE_NUM_WORKS(optimal);
 
-    domain_for_each_core_local(TOPC_NONE, pos) {
+    domain_for_each_core_local(pos, TOPC_NONE) {
         struct workqueue *queue = global.workqueues[pos->id];
         size_t load = WORKQUEUE_NUM_WORKS(queue);
 

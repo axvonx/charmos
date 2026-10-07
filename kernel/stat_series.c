@@ -47,7 +47,7 @@ void stat_series_reset(struct stat_series *s) {
 
     struct stat_bucket *bucket;
 
-    stat_series_for_each(s, bucket) {
+    stat_series_for_each(bucket, s) {
         atomic_store(&bucket->count, 0);
         atomic_store(&bucket->sum, 0);
         s->bucket_reset(bucket);

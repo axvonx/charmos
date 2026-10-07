@@ -48,7 +48,7 @@ void stat_series_record(struct stat_series *s, size_t value,
 
 void stat_series_advance(struct stat_series *s, time_us_t now_us);
 
-#define stat_series_for_each(series_, iter_)                                   \
+#define stat_series_for_each(iter_, series_)                                   \
     for (uint32_t __stat_idx = 0;                                              \
          __stat_idx < (series_)->nbuckets &&                                   \
          (((iter_) = &((series_)->buckets[__stat_idx])), true);                \

@@ -45,7 +45,7 @@ struct topo_gen_descriptor {
             [TOPOLOGY_LEVEL_MACHINE] = &__pertopo_desc_##name_##_MACHINE,      \
         }};
 
-#define topo_gen_for_each_internal_2(name, var)                                \
+#define topo_gen_for_each_internal_2(var, name)                                \
     for (enum topology_level __topo_gen_level = 0;                             \
          __topo_gen_level < TOPOLOGY_LEVEL_MAX; __topo_gen_level++)            \
         for (size_t __topo_gen_idx = 0;                                        \
@@ -56,7 +56,7 @@ struct topo_gen_descriptor {
                            ->pertopo_ptrs[__topo_gen_idx];                     \
                  var != NULL; var = NULL)
 
-#define topo_gen_for_each_internal_3(name, var, level)                         \
+#define topo_gen_for_each_internal_3(var, level, name)                         \
     for (level = 0; level < TOPOLOGY_LEVEL_MAX; level++)                       \
         for (size_t __topo_gen_idx = 0;                                        \
              __topo_gen_idx < global.topology.count[level]; __topo_gen_idx++)  \
@@ -64,7 +64,7 @@ struct topo_gen_descriptor {
                            ->pertopo_ptrs[__topo_gen_idx];                     \
                  var != NULL; var = NULL)
 
-#define topo_gen_for_each_internal_4(name, var, level, node_id)                \
+#define topo_gen_for_each_internal_4(var, level, node_id, name)                \
     for (level = 0; level < TOPOLOGY_LEVEL_MAX; level++)                       \
         for (node_id = 0; node_id < global.topology.count[level]; node_id++)   \
             for (var = (typeof(var)) __topo_gen_desc_##name.descs[level]       \

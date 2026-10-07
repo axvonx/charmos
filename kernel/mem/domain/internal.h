@@ -121,7 +121,7 @@ void domain_flush_free_queue(struct domain_buddy *domain,
 void domain_flush_thread(void *arg);
 void domain_enqueue_flush_worker(struct domain_flush_worker *worker);
 
-#define domain_for_each_arena(domain_, arena_ptr_)                             \
+#define domain_for_each_arena(arena_ptr_, domain_)                             \
     for (uint32_t __arena_idx = 0;                                             \
          __arena_idx < (domain_)->core_count &&                                \
          (((arena_ptr_) = ((domain_)->arenas[__arena_idx])), true);            \

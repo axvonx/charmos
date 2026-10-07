@@ -71,7 +71,7 @@ static paddr_t try_alloc_from_remote_arenas(struct domain_buddy *owner,
         return 0x0; /* Arenas only cache single pages */
 
     struct domain_arena *try_from;
-    domain_for_each_arena(owner, try_from) {
+    domain_for_each_arena(try_from, owner) {
         struct buddy_page *bp = domain_arena_pop(try_from);
         if (bp) {
             struct domain_buddy *local = domain_buddy_on_this_core();

@@ -59,7 +59,7 @@ struct folio *folio_alloc_full(uint8_t order, struct alloc_params params) {
 
 void folio_zero(struct folio *f) {
     vaddr_t vaddr;
-    folio_for_each_page_vaddr(f, vaddr) {
+    folio_for_each_page_vaddr(vaddr, f) {
         memset((void *) vaddr, 0, PAGE_SIZE);
     }
 }
@@ -76,14 +76,14 @@ void folio_copy(const struct folio *src, struct folio *dst) {
 
 void folio_bind_pages(struct folio *f) {
     struct page *page;
-    folio_for_each_page_struct(f, page) {
+    folio_for_each_page_struct(page, f) {
         page_set_folio(page, f);
     }
 }
 
 void folio_unbind_pages(struct folio *f) {
     struct page *page;
-    folio_for_each_page_struct(f, page) {
+    folio_for_each_page_struct(page, f) {
         page_clear_folio(page);
     }
 }

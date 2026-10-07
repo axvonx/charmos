@@ -13,7 +13,7 @@ PERCPU_EXPORT_AS(test_progress, test_progress_store);
 uint64_t test_conc_progress_sum(void) {
     uint64_t sum = 0;
     struct test_progress_counter *counter;
-    percpu_for_each(test_progress, counter) {
+    percpu_for_each(counter, test_progress) {
         sum += atomic_load_relaxed(&counter->count);
     }
 

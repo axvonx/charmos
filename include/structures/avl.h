@@ -61,18 +61,20 @@ static inline void avl_init_node(struct avl_tree_node *n) {
         (n) = (pos) ? avl_tree_next(pos) : NULL;                               \
          (pos); (pos) = (n), (n) = (pos) ? avl_tree_next(pos) : NULL)
 
-#define avl_tree_for_each_entry(pos, type, member, tree)                       \
-    for (pos = avl_entry(avl_tree_first(tree), type, member);                  \
-         (pos) != NULL && &pos->member != NULL;                                \
-         pos = avl_entry(avl_tree_next(&pos->member), type, member))
+#define avl_tree_for_each_entry(pos, tree, member)                             \
+    for (typeof(avl_tree_first(tree)) __n = avl_tree_first(tree);              \
+         __n != NULL &&                                                        \
+         (((pos) = avl_entry(__n, typeof(*(pos)), member)), true);             \
+         __n = avl_tree_next(__n))
 
-#define avl_tree_for_each_entry_safe(pos, tmp, type, member, tree)             \
-    for (pos = avl_entry(avl_tree_first(tree), type, member),                  \
-        tmp = (pos) ? avl_entry(avl_tree_next(&pos->member), type, member)     \
-                    : NULL;                                                    \
-         (pos) != NULL && &pos->member != NULL; pos = tmp,                     \
-        tmp = (pos) ? avl_entry(avl_tree_next(&pos->member), type, member)     \
-                    : NULL)
+#define avl_tree_for_each_entry_safe(pos, tmp, tree, member)                   \
+    for (typeof(avl_tree_first(tree)) __n = avl_tree_first(tree), __nx = NULL; \
+         __n != NULL &&                                                        \
+         (((pos) = avl_entry(__n, typeof(*(pos)), member)),                    \
+          (__nx = avl_tree_next(__n)),                                         \
+          ((tmp) = __nx ? avl_entry(__nx, typeof(*(tmp)), member) : NULL),     \
+          true);                                                               \
+         __n = __nx)
 
 #define avl_tree_for_each_reverse(pos, tree)                                   \
     for ((pos) = avl_tree_last(tree); (pos); (pos) = avl_tree_prev(pos))
@@ -81,15 +83,17 @@ static inline void avl_init_node(struct avl_tree_node *n) {
     for ((pos) = avl_tree_last(tree), (n) = (pos) ? avl_tree_prev(pos) : NULL; \
          (pos); (pos) = (n), (n) = (pos) ? avl_tree_prev(pos) : NULL)
 
-#define avl_tree_for_each_entry_reverse(pos, type, member, tree)               \
-    for (pos = avl_entry(avl_tree_last(tree), type, member);                   \
-         (pos) != NULL && &pos->member != NULL;                                \
-         pos = avl_entry(avl_tree_prev(&pos->member), type, member))
+#define avl_tree_for_each_entry_reverse(pos, tree, member)                     \
+    for (typeof(avl_tree_last(tree)) __n = avl_tree_last(tree);                \
+         __n != NULL &&                                                        \
+         (((pos) = avl_entry(__n, typeof(*(pos)), member)), true);             \
+         __n = avl_tree_prev(__n))
 
-#define avl_tree_for_each_entry_safe_reverse(pos, tmp, type, member, tree)     \
-    for (pos = avl_entry(avl_tree_last(tree), type, member),                   \
-        tmp = (pos) ? avl_entry(avl_tree_prev(&pos->member), type, member)     \
-                    : NULL;                                                    \
-         (pos) != NULL && &pos->member != NULL; pos = tmp,                     \
-        tmp = (pos) ? avl_entry(avl_tree_prev(&pos->member), type, member)     \
-                    : NULL)
+#define avl_tree_for_each_entry_safe_reverse(pos, tmp, tree, member)           \
+    for (typeof(avl_tree_last(tree)) __n = avl_tree_last(tree), __nx = NULL;   \
+         __n != NULL &&                                                        \
+         (((pos) = avl_entry(__n, typeof(*(pos)), member)),                    \
+          (__nx = avl_tree_prev(__n)),                                         \
+          ((tmp) = __nx ? avl_entry(__nx, typeof(*(tmp)), member) : NULL),     \
+          true);                                                               \
+         __n = __nx)

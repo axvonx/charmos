@@ -10,35 +10,44 @@
          pos = tmp, tmp = rbit_next(pos))
 
 #define rbit_for_each_entry_safe(pos, tmp, tree, member)                       \
-    for (pos = rbit_entry(rbit_first(tree), typeof(*pos), member),             \
-        tmp = rbit_entry(rbit_next(&pos->member), typeof(*pos), member);       \
-         pos != NULL; pos = tmp,                                               \
-        tmp = rbit_entry(rbit_next(&tmp->member), typeof(*tmp), member))
+    for (typeof(rbit_first(tree)) __n = rbit_first(tree), __nx = NULL;         \
+         __n != NULL &&                                                        \
+         (((pos) = rbit_entry(__n, typeof(*(pos)), member)),                   \
+          (__nx = rbit_next(__n)),                                             \
+          ((tmp) = __nx ? rbit_entry(__nx, typeof(*(tmp)), member) : NULL),    \
+          true);                                                               \
+         __n = __nx)
 
 #define rbit_for_each_safe_reverse(pos, tmp, tree)                             \
     for (pos = rbit_last(tree), tmp = rbit_prev(pos); pos != NULL;             \
          pos = tmp, tmp = rbit_prev(pos))
 
 #define rbit_for_each_entry_safe_reverse(pos, tmp, tree, member)               \
-    for (pos = rbit_entry(rbit_last(tree), typeof(*pos), member),              \
-        tmp = rbit_entry(rbit_prev(&pos->member), typeof(*pos), member);       \
-         pos != NULL; pos = tmp,                                               \
-        tmp = rbit_entry(rbit_prev(&tmp->member), typeof(*tmp), member))
+    for (typeof(rbit_last(tree)) __n = rbit_last(tree), __nx = NULL;           \
+         __n != NULL &&                                                        \
+         (((pos) = rbit_entry(__n, typeof(*(pos)), member)),                   \
+          (__nx = rbit_prev(__n)),                                             \
+          ((tmp) = __nx ? rbit_entry(__nx, typeof(*(tmp)), member) : NULL),    \
+          true);                                                               \
+         __n = __nx)
 
 #define rbit_for_each(pos, tree)                                               \
     for (pos = rbit_first(tree); pos != NULL; pos = rbit_next(pos))
 
 #define rbit_for_each_entry(pos, tree, member)                                 \
-    for (pos = rbit_entry(rbit_first(tree), typeof(*pos), member);             \
-         pos != NULL;                                                          \
-         pos = rbit_entry(rbit_next(&pos->member), typeof(*pos), member))
+    for (typeof(rbit_first(tree)) __n = rbit_first(tree);                      \
+         __n != NULL &&                                                        \
+         (((pos) = rbit_entry(__n, typeof(*(pos)), member)), true);            \
+         __n = rbit_next(__n))
 
 #define rbit_for_each_reverse(pos, tree)                                       \
     for (pos = rbit_last(tree); pos != NULL; pos = rbit_prev(pos))
 
 #define rbit_for_each_entry_reverse(pos, tree, member)                         \
-    for (pos = rbit_entry(rbit_last(tree), typeof(*pos), member); pos != NULL; \
-         pos = rbit_entry(rbit_prev(&pos->member), typeof(*pos), member))
+    for (typeof(rbit_last(tree)) __n = rbit_last(tree);                        \
+         __n != NULL &&                                                        \
+         (((pos) = rbit_entry(__n, typeof(*(pos)), member)), true);            \
+         __n = rbit_prev(__n))
 
 #define rbit_entry(ptr, type, member) container_of(ptr, type, member)
 #define rbit_parent(n) ((n)->parent)

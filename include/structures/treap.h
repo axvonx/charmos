@@ -58,18 +58,20 @@ struct treap_node *treap_prev(const struct treap_node *node);
     for ((pos) = treap_first(tree), (n) = (pos) ? treap_next(pos) : NULL;      \
          (pos); (pos) = (n), (n) = (pos) ? treap_next(pos) : NULL)
 
-#define treap_for_each_entry(pos, type, member, tree)                          \
-    for (pos = treap_entry(treap_first(tree), type, member);                   \
-         (pos) != NULL && &pos->member != NULL;                                \
-         pos = treap_entry(treap_next(&pos->member), type, member))
+#define treap_for_each_entry(pos, tree, member)                                \
+    for (typeof(treap_first(tree)) __n = treap_first(tree);                    \
+         __n != NULL &&                                                        \
+         (((pos) = treap_entry(__n, typeof(*(pos)), member)), true);           \
+         __n = treap_next(__n))
 
-#define treap_for_each_entry_safe(pos, tmp, type, member, tree)                \
-    for (pos = treap_entry(treap_first(tree), type, member),                   \
-        tmp = (pos) ? treap_entry(treap_next(&pos->member), type, member)      \
-                    : NULL;                                                    \
-         (pos) != NULL && &pos->member != NULL; pos = tmp,                     \
-        tmp = (pos) ? treap_entry(treap_next(&pos->member), type, member)      \
-                    : NULL)
+#define treap_for_each_entry_safe(pos, tmp, tree, member)                      \
+    for (typeof(treap_first(tree)) __n = treap_first(tree), __nx = NULL;       \
+         __n != NULL &&                                                        \
+         (((pos) = treap_entry(__n, typeof(*(pos)), member)),                  \
+          (__nx = treap_next(__n)),                                            \
+          ((tmp) = __nx ? treap_entry(__nx, typeof(*(tmp)), member) : NULL),   \
+          true);                                                               \
+         __n = __nx)
 
 #define treap_for_each_reverse(pos, tree)                                      \
     for ((pos) = treap_last(tree); (pos); (pos) = treap_prev(pos))
@@ -78,15 +80,17 @@ struct treap_node *treap_prev(const struct treap_node *node);
     for ((pos) = treap_last(tree), (n) = (pos) ? treap_prev(pos) : NULL;       \
          (pos); (pos) = (n), (n) = (pos) ? treap_prev(pos) : NULL)
 
-#define treap_for_each_entry_reverse(pos, type, member, tree)                  \
-    for (pos = treap_entry(treap_last(tree), type, member);                    \
-         (pos) != NULL && &pos->member != NULL;                                \
-         pos = treap_entry(treap_prev(&pos->member), type, member))
+#define treap_for_each_entry_reverse(pos, tree, member)                        \
+    for (typeof(treap_last(tree)) __n = treap_last(tree);                      \
+         __n != NULL &&                                                        \
+         (((pos) = treap_entry(__n, typeof(*(pos)), member)), true);           \
+         __n = treap_prev(__n))
 
-#define treap_for_each_entry_safe_reverse(pos, tmp, type, member, tree)        \
-    for (pos = treap_entry(treap_last(tree), type, member),                    \
-        tmp = (pos) ? treap_entry(treap_prev(&pos->member), type, member)      \
-                    : NULL;                                                    \
-         (pos) != NULL && &pos->member != NULL; pos = tmp,                     \
-        tmp = (pos) ? treap_entry(treap_prev(&pos->member), type, member)      \
-                    : NULL)
+#define treap_for_each_entry_safe_reverse(pos, tmp, tree, member)              \
+    for (typeof(treap_last(tree)) __n = treap_last(tree), __nx = NULL;         \
+         __n != NULL &&                                                        \
+         (((pos) = treap_entry(__n, typeof(*(pos)), member)),                  \
+          (__nx = treap_prev(__n)),                                            \
+          ((tmp) = __nx ? treap_entry(__nx, typeof(*(tmp)), member) : NULL),   \
+          true);                                                               \
+         __n = __nx)

@@ -15,7 +15,7 @@ static bool try_push_page_onto_domain_arenas(struct domain_buddy *domain,
     struct domain_arena *arena;
     struct buddy_page *this_page = buddy_page_for_addr(address);
 
-    domain_for_each_arena(domain, arena) {
+    domain_for_each_arena(arena, domain) {
         if (domain_arena_push(arena, this_page))
             return true;
     }
@@ -102,7 +102,7 @@ static size_t compute_min_elements_to_free(struct domain_buddy *domain,
     size_t total_slots_available = 0;
     struct domain_arena *curr;
 
-    domain_for_each_arena(domain, curr) {
+    domain_for_each_arena(curr, domain) {
         total_slots_available += curr->capacity - atomic_load(&curr->num_pages);
     }
 

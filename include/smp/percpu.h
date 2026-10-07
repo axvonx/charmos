@@ -77,11 +77,11 @@ LINKER_SECTION_EXTERN(struct percpu_descriptor, percpu_desc);
 
 #define PERCPU_WRITE(clr, name, val) (PERCPU_READ(clr, name) = (val))
 
-#define percpu_for_each_internal_3(name, var, cpu)                             \
+#define percpu_for_each_internal_3(var, cpu, name)                             \
     for (cpu = 0; cpu < global.core_count; cpu++)                              \
         for (var = PERCPU_PTR_FOR_CPU(name, cpu); var != NULL; var = NULL)
 
-#define percpu_for_each_internal_2(name, var)                                  \
+#define percpu_for_each_internal_2(var, name)                                  \
     for (cpu_id_t __percpu_idx = 0; __percpu_idx < global.core_count;          \
          __percpu_idx++)                                                       \
         for (var = PERCPU_PTR_FOR_CPU(name, __percpu_idx); var != NULL;        \

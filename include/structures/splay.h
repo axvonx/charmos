@@ -58,18 +58,20 @@ struct splay_node *splay_prev(const struct splay_node *node);
     for ((pos) = splay_first(tree), (n) = (pos) ? splay_next(pos) : NULL;      \
          (pos); (pos) = (n), (n) = (pos) ? splay_next(pos) : NULL)
 
-#define splay_for_each_entry(pos, type, member, tree)                          \
-    for (pos = splay_entry(splay_first(tree), type, member);                   \
-         (pos) != NULL && &pos->member != NULL;                                \
-         pos = splay_entry(splay_next(&pos->member), type, member))
+#define splay_for_each_entry(pos, tree, member)                                \
+    for (typeof(splay_first(tree)) __n = splay_first(tree);                    \
+         __n != NULL &&                                                        \
+         (((pos) = splay_entry(__n, typeof(*(pos)), member)), true);           \
+         __n = splay_next(__n))
 
-#define splay_for_each_entry_safe(pos, tmp, type, member, tree)                \
-    for (pos = splay_entry(splay_first(tree), type, member),                   \
-        tmp = (pos) ? splay_entry(splay_next(&pos->member), type, member)      \
-                    : NULL;                                                    \
-         (pos) != NULL && &pos->member != NULL; pos = tmp,                     \
-        tmp = (pos) ? splay_entry(splay_next(&pos->member), type, member)      \
-                    : NULL)
+#define splay_for_each_entry_safe(pos, tmp, tree, member)                      \
+    for (typeof(splay_first(tree)) __n = splay_first(tree), __nx = NULL;       \
+         __n != NULL &&                                                        \
+         (((pos) = splay_entry(__n, typeof(*(pos)), member)),                  \
+          (__nx = splay_next(__n)),                                            \
+          ((tmp) = __nx ? splay_entry(__nx, typeof(*(tmp)), member) : NULL),   \
+          true);                                                               \
+         __n = __nx)
 
 #define splay_for_each_reverse(pos, tree)                                      \
     for ((pos) = splay_last(tree); (pos); (pos) = splay_prev(pos))
@@ -78,15 +80,17 @@ struct splay_node *splay_prev(const struct splay_node *node);
     for ((pos) = splay_last(tree), (n) = (pos) ? splay_prev(pos) : NULL;       \
          (pos); (pos) = (n), (n) = (pos) ? splay_prev(pos) : NULL)
 
-#define splay_for_each_entry_reverse(pos, type, member, tree)                  \
-    for (pos = splay_entry(splay_last(tree), type, member);                    \
-         (pos) != NULL && &pos->member != NULL;                                \
-         pos = splay_entry(splay_prev(&pos->member), type, member))
+#define splay_for_each_entry_reverse(pos, tree, member)                        \
+    for (typeof(splay_last(tree)) __n = splay_last(tree);                      \
+         __n != NULL &&                                                        \
+         (((pos) = splay_entry(__n, typeof(*(pos)), member)), true);           \
+         __n = splay_prev(__n))
 
-#define splay_for_each_entry_safe_reverse(pos, tmp, type, member, tree)        \
-    for (pos = splay_entry(splay_last(tree), type, member),                    \
-        tmp = (pos) ? splay_entry(splay_prev(&pos->member), type, member)      \
-                    : NULL;                                                    \
-         (pos) != NULL && &pos->member != NULL; pos = tmp,                     \
-        tmp = (pos) ? splay_entry(splay_prev(&pos->member), type, member)      \
-                    : NULL)
+#define splay_for_each_entry_safe_reverse(pos, tmp, tree, member)              \
+    for (typeof(splay_last(tree)) __n = splay_last(tree), __nx = NULL;         \
+         __n != NULL &&                                                        \
+         (((pos) = splay_entry(__n, typeof(*(pos)), member)),                  \
+          (__nx = splay_prev(__n)),                                            \
+          ((tmp) = __nx ? splay_entry(__nx, typeof(*(tmp)), member) : NULL),   \
+          true);                                                               \
+         __n = __nx)

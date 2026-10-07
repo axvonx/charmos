@@ -83,14 +83,14 @@ LINKER_SECTION_EXTERN(struct pertopo_descriptor, pertopo_desc);
 
 #define PERTOPO_WRITE(clr, name, val) (PERTOPO_READ(clr, name) = (val))
 
-#define pertopo_for_each_internal_3(name, var, node_id)                        \
+#define pertopo_for_each_internal_3(var, node_id, name)                        \
     for (node_id = 0;                                                          \
          node_id < global.topology.count[__pertopo_desc_##name.level];         \
          node_id++)                                                            \
         for (var = PERTOPO_PTR_FOR_TOPO_NODE(name, node_id); var != NULL;      \
              var = NULL)
 
-#define pertopo_for_each_internal_2(name, var)                                 \
+#define pertopo_for_each_internal_2(var, name)                                 \
     for (size_t __pertopo_idx = 0;                                             \
          __pertopo_idx < global.topology.count[__pertopo_desc_##name.level];   \
          __pertopo_idx++)                                                      \
