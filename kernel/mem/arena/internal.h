@@ -30,6 +30,18 @@ arena_get_inmem_descs(struct arena *a) {
     return (struct arena_seg_inmem_desc *) &a->payload;
 }
 
+LOG_SITE_EXTERN(arena);
+LOG_HANDLE_EXTERN(arena);
+
+#define arena_log(lvl, fmt, ...)                                               \
+    log(LOG_SITE(arena), LOG_HANDLE(arena), lvl, fmt, ##__VA_ARGS__)
+
+#define arena_err(fmt, ...) arena_log(LOG_ERROR, fmt, ##__VA_ARGS__)
+#define arena_warn(fmt, ...) arena_log(LOG_WARN, fmt, ##__VA_ARGS__)
+#define arena_info(fmt, ...) arena_log(LOG_INFO, fmt, ##__VA_ARGS__)
+#define arena_debug(fmt, ...) arena_log(LOG_DEBUG, fmt, ##__VA_ARGS__)
+#define arena_trace(fmt, ...) arena_log(LOG_TRACE, fmt, ##__VA_ARGS__)
+
 #ifdef TEST_ARENA
 #include "tests/import.h"
 #endif

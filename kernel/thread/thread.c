@@ -49,9 +49,6 @@ static void thread_lock_chk_exit(struct thread *thread) {
 
 SLAB_SIZE_REGISTER_FOR_STRUCT(thread, /*alignment*/ 32);
 
-#define THREAD_STACKS_HEAP_START 0xFFFFF10000000000ULL
-#define THREAD_STACKS_HEAP_END 0xFFFFF20000000000ULL
-
 ADDRESS_RANGE_DEFINE(thread_stacks, .name = "thread stacks",
                      .base = THREAD_STACKS_HEAP_START,
                      .size = THREAD_STACKS_HEAP_END - THREAD_STACKS_HEAP_START,

@@ -26,6 +26,9 @@ typedef uint8_t thread_act_reason_t; /* Polymorphic type:
 #define THREAD_STACK_SIZE (PAGE_SIZE * 4)
 #endif
 
+#define THREAD_STACKS_HEAP_START 0xFFFFF10000000000ULL
+#define THREAD_STACKS_HEAP_END 0xFFFFF20000000000ULL
+
 enum thread_state : uint8_t {
     THREAD_STATE_IDLE_THREAD, /* Specifically the idle thread */
     THREAD_STATE_READY,   /* Thread is ready to run but not currently running */

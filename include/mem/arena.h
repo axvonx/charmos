@@ -129,13 +129,4 @@ struct arena_result {
 };
 
 extern struct err_facility arena_err_facility;
-void *arena_alloc_full(struct arena *arena, size_t size,
-                       struct alloc_params params) cw_alloc(2);
-
-enum err arena_free_full(struct arena *arena, void *ptr, enum alloc_behavior bh)
-    cc_warn_unused_result;
-
-void *arena_alloc_special_full(struct arena *arena, struct arena_params *params,
-                               struct alloc_params alloc_params) cw_alloc();
-
 void arena_global_init(void);
