@@ -178,11 +178,8 @@
         __auto_type __cw_sa_b = (b);                                           \
         typeof(__cw_sa_a) __cw_sa_res;                                         \
         if (ci_add_overflow(__cw_sa_a, __cw_sa_b, &__cw_sa_res)) {             \
-            __cw_sa_res =                                                      \
-                ct_type_is_signed(__cw_sa_a)                                   \
-                    ? ((__cw_sa_b > 0) ? ct_max_val(typeof(__cw_sa_a))         \
-                                       : ct_min_val(typeof(__cw_sa_a)))        \
-                    : ct_max_val(typeof(__cw_sa_a));                           \
+            __cw_sa_res = (__cw_sa_b > 0) ? ct_max_val(typeof(__cw_sa_a))      \
+                                          : ct_min_val(typeof(__cw_sa_a));     \
         }                                                                      \
         __cw_sa_res;                                                           \
     })
@@ -193,11 +190,8 @@
         __auto_type __cw_ss_b = (b);                                           \
         typeof(__cw_ss_a) __cw_ss_res;                                         \
         if (ci_sub_overflow(__cw_ss_a, __cw_ss_b, &__cw_ss_res)) {             \
-            __cw_ss_res =                                                      \
-                ct_type_is_signed(__cw_ss_a)                                   \
-                    ? ((__cw_ss_b > 0) ? ct_min_val(typeof(__cw_ss_a))         \
-                                       : ct_max_val(typeof(__cw_ss_a)))        \
-                    : ct_min_val(typeof(__cw_ss_a));                           \
+            __cw_ss_res = (__cw_ss_b > 0) ? ct_min_val(typeof(__cw_ss_a))      \
+                                          : ct_max_val(typeof(__cw_ss_a));     \
         }                                                                      \
         __cw_ss_res;                                                           \
     })

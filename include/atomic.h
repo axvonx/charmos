@@ -558,11 +558,14 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
 #define ca_cache_aligned cc_cache_aligned
 #endif
 
-#ifndef ca_cacheline_pad
-#define ca_cacheline_pad(member_type)                                          \
-    uint8_t PP_CONCAT(ca_pad_internal_,                                        \
-                      __COUNTER__)[64 - (sizeof(member_type) % 64)]
-#endif
+#define CA_CACHELINE_SIZE 64
+
+#define ca_cacheline_member(T, name)                                           \
+    union {                                                                    \
+        T name;                                                                \
+        uint8_t __ca_line_##name[(sizeof(T) + CA_CACHELINE_SIZE - 1) /         \
+                                 CA_CACHELINE_SIZE * CA_CACHELINE_SIZE];       \
+    }
 
 #ifndef TSA_LOCKLESS
 #define TSA_LOCKLESS

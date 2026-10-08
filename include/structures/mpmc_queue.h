@@ -1,47 +1,111 @@
 /* @title: Multi-Producer Multi-Consumer Queue */
 #pragma once
 #include <atomic.h>
+#include <compiler/core.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-struct mpmc_slot {
-    atomic_uint64_t seq;
-    uintptr_t data;
-};
+/* Bounded Vyukov MPMC queue, like
+ *
+ *   MPMC_QUEUE_DECLARE(foo_queue, struct foo);
+ *
+ * emits `struct foo_queue` and foo_queue_{init,destroy,enqueue,dequeue,
+ * empty,capacity} */
 
-struct mpmc_queue {
-    size_t capacity;
-    size_t mask;
-    atomic_uint64_t head;
+struct mpmc_hdr {
+    ca_cacheline_member(size_t, mask); /* capacity - 1, a power of two */
+    ca_cacheline_member(atomic_uint64_t, head);
     atomic_uint64_t tail;
-    struct mpmc_slot *slots;
 };
 
-#define MPMC_QUEUE_INIT                                                        \
-    (struct mpmc_queue) {                                                      \
-        .capacity = 0, .mask = 0, .head = 0, .tail = 0, .slots = NULL          \
+/* `cap` rounds up to next_pow2 */
+void *mpmc_slots_alloc(struct mpmc_hdr *h, size_t cap, size_t stride);
+void mpmc_slots_free(struct mpmc_hdr *h, void *slots);
+
+static inline cc_always_inline bool mpmc_claim(atomic_uint64_t *cursor,
+                                               size_t mask, void *slots,
+                                               size_t stride, uint64_t lag,
+                                               uint64_t *pos_out) {
+    while (true) {
+        uint64_t pos = atomic_load_relaxed(cursor);
+        atomic_uint64_t *seq =
+            (atomic_uint64_t *) ((uint8_t *) slots + (pos & mask) * stride);
+        int64_t diff = (int64_t) atomic_load_acq(seq) - (int64_t) (pos + lag);
+
+        if (diff == 0) {
+            if (atomic_cas_weak(cursor, &pos, pos + 1, mo_acq_rel,
+                                mo_relaxed)) {
+                *pos_out = pos;
+                return true;
+            }
+        } else if (diff < 0) {
+            return false;
+        }
     }
-
-bool mpmc_queue_init(struct mpmc_queue *q, size_t capacity);
-
-void mpmc_queue_init_static(struct mpmc_queue *q, struct mpmc_slot *slots,
-                            size_t capacity);
-
-void mpmc_queue_destroy(struct mpmc_queue *q);
-
-bool mpmc_queue_enqueue(struct mpmc_queue *q, void *ptr);
-bool mpmc_queue_enqueue_uintptr(struct mpmc_queue *q, uintptr_t val);
-
-bool mpmc_queue_dequeue(struct mpmc_queue *q, void **out_ptr);
-bool mpmc_queue_dequeue_uintptr(struct mpmc_queue *q, uintptr_t *out_val);
-
-static inline bool mpmc_queue_empty(const struct mpmc_queue *q) {
-    uint64_t h = atomic_load_relaxed(&q->head);
-    uint64_t t = atomic_load_relaxed(&q->tail);
-    return h == t;
 }
 
-static inline size_t mpmc_queue_capacity(const struct mpmc_queue *q) {
-    return q->capacity;
+static inline bool mpmc_hdr_empty(const struct mpmc_hdr *h) {
+    uint64_t hd = atomic_load_relaxed(&h->head);
+    uint64_t tl = atomic_load_relaxed(&h->tail);
+    return hd == tl;
 }
+
+#define MPMC_QUEUE_DECLARE(name, T)                                            \
+    struct name##_slot {                                                       \
+        atomic_uint64_t seq;                                                   \
+        T val;                                                                 \
+    };                                                                         \
+                                                                               \
+    struct name {                                                              \
+        struct name##_slot *slots;                                             \
+        struct mpmc_hdr hdr;                                                   \
+    };                                                                         \
+                                                                               \
+    static inline bool name##_init(struct name *q, size_t cap) {               \
+        q->slots = mpmc_slots_alloc(&q->hdr, cap, sizeof(*q->slots));          \
+        return q->slots != NULL;                                               \
+    }                                                                          \
+                                                                               \
+    static inline void name##_destroy(struct name *q) {                        \
+        mpmc_slots_free(&q->hdr, q->slots);                                    \
+        q->slots = NULL;                                                       \
+    }                                                                          \
+                                                                               \
+    static inline bool name##_enqueue(struct name *q, T v) {                   \
+        uint64_t pos;                                                          \
+        if (!mpmc_claim(&q->hdr.head, q->hdr.mask, q->slots,                   \
+                        sizeof(*q->slots), 0, &pos))                           \
+            return false;                                                      \
+                                                                               \
+        struct name##_slot *s = &q->slots[pos & q->hdr.mask];                  \
+        s->val = v;                                                            \
+        atomic_store_release(&s->seq, pos + 1);                                \
+        return true;                                                           \
+    }                                                                          \
+                                                                               \
+    static inline bool name##_dequeue(struct name *q, T *out) {                \
+        uint64_t pos;                                                          \
+        if (!mpmc_claim(&q->hdr.tail, q->hdr.mask, q->slots,                   \
+                        sizeof(*q->slots), 1, &pos))                           \
+            return false;                                                      \
+                                                                               \
+        struct name##_slot *s = &q->slots[pos & q->hdr.mask];                  \
+        if (out)                                                               \
+            *out = s->val;                                                     \
+                                                                               \
+        s->val = (T) {0};                                                      \
+        atomic_store_release(&s->seq, pos + q->hdr.mask + 1);                  \
+        return true;                                                           \
+    }                                                                          \
+                                                                               \
+    static inline bool name##_empty(const struct name *q) {                    \
+        return mpmc_hdr_empty(&q->hdr);                                        \
+    }                                                                          \
+                                                                               \
+    static inline size_t name##_capacity(const struct name *q) {               \
+        return q->hdr.mask + 1;                                                \
+    }                                                                          \
+                                                                               \
+    static_assert(ct_field_offset(struct name##_slot, seq) == 0,               \
+                  #name ": seq must lead the slot")

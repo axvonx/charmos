@@ -1,7 +1,9 @@
 /* @title: TLB */
+#pragma once
 #include <atomic.h>
 #include <mem/page.h>
 #include <stdint.h>
+#include <structures/mpmc_queue.h>
 #include <types/types.h>
 
 /* per-cpu */
@@ -17,29 +19,13 @@
  * which allow us to shard the shootdowns by having a domain
  * shootdown queue and a per-CPU one.
  *
- * Because TLB invalidations
- * are idempotent, it is fine to execute more, but executing
- * less leads to an invalid view of the page tables.
- *
- * However, there is also a consideration with domain-level
- * shootdowns: if domain 1 has cpu_mask 0000 0000 1111 1111,
- * and there is a shootdown with a cpu_mask of 0000 0000 1110 1111,
- * there is a case to be made that bothering CPU 11 with an IPI (or not,
- * in the case of a lazy shootdown), is fine.
- *
- * Of course, there is also the counter-case of how issuing many
- * shootdowns to a CPU that doesn't need it (e.g. CPU 11 in this example)
- * could cause more contention and latency.
- *
- * To solve this, we simply perform a check: if a given CPU mask
- * has
+ * The idea here is that we scope at the IPI cluster scope.
  */
 
 /* A type describes what an actual operation is */
 enum tlb_op_type {
     TLB_OP_PAGE,  /* Invalidate just this one page */
     TLB_OP_RANGE, /* Invalidate this range */
-    TLB_OP_BATCH, /* Invalidate this scattered list */
     TLB_OP_FLUSH  /* Completely flush everything */
 };
 
@@ -68,13 +54,12 @@ struct tlb_request {
 
 struct tlb_queue_entry {
     struct tlb_payload payload;
-    atomic_uint64_t seq;
 };
 
-struct tlb_queue {};
+MPMC_QUEUE_DECLARE(tlb_queue, struct tlb_queue_entry);
 
 struct tlb_node {
-    struct domain *domain;
+    struct topology_node *topo_node;
     struct tlb_queue eager_queue;
     struct tlb_queue lazy_queue;
 };

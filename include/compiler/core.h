@@ -21,11 +21,6 @@
 #define cc_aligned(x) __attribute__((aligned(x)))
 #define cc_cache_aligned __attribute__((aligned(64)))
 #define cc_used __attribute__((used))
-#if cn_has_attribute(retain)
-#define cc_retain __attribute__((retain))
-#else
-#define cc_retain
-#endif
 #define cc_section(x) __attribute__((section(x)))
 #define cc_hidden __attribute__((visibility("hidden")))
 #define cc_export __attribute__((visibility("default")))
@@ -35,6 +30,8 @@
 #define cc_unreachable() __builtin_unreachable()
 #if defined(cn_id_clang)
 #define cc_assume(expr) __builtin_assume(expr)
+#elif cn_has_attribute(assume)
+#define cc_assume(expr) __attribute__((assume(expr)))
 #else
 #define cc_assume(expr)                                                        \
     do {                                                                       \
@@ -46,13 +43,25 @@
 #define cc_cold __attribute__((cold))
 #define cc_hot __attribute__((hot))
 #define cc_flatten __attribute__((flatten))
+#if cn_has_attribute(nodebug)
 #define cc_nodebug __attribute__((nodebug))
+#else
+#define cc_nodebug
+#endif
 
 #define cc_no_asan __attribute__((no_sanitize("address")))
 #define cc_no_ubsan __attribute__((no_sanitize("undefined")))
 #define cc_no_tsan __attribute__((no_sanitize("thread")))
+#if defined(cn_id_clang)
 #define cc_no_msan __attribute__((no_sanitize("memory")))
 #define cc_no_csan __attribute__((no_sanitize("coverage")))
+#elif cn_has_attribute(no_sanitize_coverage)
+#define cc_no_msan /* GCC has no MSan */
+#define cc_no_csan __attribute__((no_sanitize_coverage))
+#else
+#define cc_no_msan
+#define cc_no_csan
+#endif
 #define cc_no_sanitize(...) __attribute__((no_sanitize(__VA_ARGS__)))
 #define cc_no_stack_protector __attribute__((no_stack_protector))
 #define cc_no_instrument __attribute__((no_instrument_function))

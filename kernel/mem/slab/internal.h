@@ -281,8 +281,10 @@ struct slab_percpu_cache {
                                                 * stack allocations */
 };
 
+MPMC_QUEUE_DECLARE(slab_free_ring, vaddr_t);
+
 struct slab_free_queue {
-    struct mpmc_queue mpmc;
+    struct slab_free_ring mpmc;
     atomic_size_t count;
     struct slab_domain *parent;
 };

@@ -11,7 +11,7 @@
 
 void slab_free_queue_init(struct slab_domain *domain, struct slab_free_queue *q,
                           size_t capacity) {
-    if (!mpmc_queue_init(&q->mpmc, capacity)) {
+    if (!slab_free_ring_init(&q->mpmc, capacity)) {
         panic("Could not allocate slab free queue slots!");
     }
 
@@ -21,7 +21,7 @@ void slab_free_queue_init(struct slab_domain *domain, struct slab_free_queue *q,
 
 bool slab_free_queue_ringbuffer_enqueue(struct slab_free_queue *q,
                                         vaddr_t addr) {
-    if (mpmc_queue_enqueue_uintptr(&q->mpmc, addr)) {
+    if (slab_free_ring_enqueue(&q->mpmc, addr)) {
         SLAB_FREE_QUEUE_INC_COUNT(q);
         return true;
     }
@@ -29,10 +29,10 @@ bool slab_free_queue_ringbuffer_enqueue(struct slab_free_queue *q,
 }
 
 vaddr_t slab_free_queue_ringbuffer_dequeue(struct slab_free_queue *q) {
-    uintptr_t addr = 0;
-    if (mpmc_queue_dequeue_uintptr(&q->mpmc, &addr)) {
+    vaddr_t addr = 0;
+    if (slab_free_ring_dequeue(&q->mpmc, &addr)) {
         SLAB_FREE_QUEUE_DEC_COUNT(q);
-        return (vaddr_t) addr;
+        return addr;
     }
     return 0x0;
 }
