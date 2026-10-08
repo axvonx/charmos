@@ -52,7 +52,6 @@ struct rcu_node {
     cpu_id_t cpu_base;
     struct cpu_mask full_cpus; /* every CPU we own */
     struct cpu_mask qs_cpus;   /* CPUs that still owe a QS */
-    struct cpu_mask idle_cpus; /* CPUs RCU sees are idle, i.e. quiescent */
     uint32_t blocked_count;    /* registered readers counted against gp_seq */
     struct list_head blocked;  /* threads preempted in a read section */
 };
@@ -63,6 +62,7 @@ struct rcu_cpu {
     struct spinlock lock;
     struct list_head list;
     atomic_uint64_t reported_seq;
+    atomic_bool idle;
 } cc_cache_aligned;
 
 struct rcu_state {

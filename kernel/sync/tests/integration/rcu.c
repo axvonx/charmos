@@ -1,4 +1,7 @@
 #include "sync/tests/test_internal.h"
+#include <acpi/lapic.h>
+#include <irq/ipi.h>
+#include <irq/irq.h>
 
 TEST_GROUP_DEFINE(rcu, .intensity_desc = {
                            .curve = SCALE_PIECEWISE_LOG,
@@ -293,6 +296,136 @@ TEST_DEFINE_INTEGRATION(rcu, mt_stress, TEST_INTENSITY(200, 2000, 10000)) {
         kfree(last);
         atomic_inc(&stress_deferred_freed);
     }
+
+    return TEST_SUCCESS;
+}
+
+#define RCU_IRQ_HOLD_MS 20
+#define RCU_IRQ_WAIT_MS 1000
+#define RCU_IRQ_NODE_LIVE 0x5a5a
+#define RCU_IRQ_NODE_DEAD 0xdead
+
+struct rcu_irq_node {
+    atomic_int value;
+    struct rcu_cb rcu;
+};
+
+static struct rcu_irq_node rcu_irq_nodes[2];
+static atomic(struct rcu_irq_node *) rcu_irq_shared = NULL;
+static atomic_bool rcu_irq_in_section = false;
+static atomic_bool rcu_irq_done = false;
+static atomic_bool rcu_irq_freed = false;
+static atomic_bool rcu_irq_failed = false;
+static irq_t rcu_irq_vector;
+static bool rcu_irq_registered = false;
+
+static void rcu_irq_free_cb(struct rcu_cb *cb) {
+    struct rcu_irq_node *n = container_of(cb, struct rcu_irq_node, rcu);
+    atomic_store_release(&n->value, RCU_IRQ_NODE_DEAD);
+    atomic_store_release(&rcu_irq_freed, true);
+}
+
+static enum irq_result rcu_irq_reader(void *ctx, uint8_t vector,
+                                      struct irq_context *ictx) {
+    cc_unused(ctx, vector, ictx);
+
+    rcu_read_lock();
+    struct rcu_irq_node *p = rcu_dereference(rcu_irq_shared);
+    atomic_store_release(&rcu_irq_in_section, true);
+
+    /* Long enough for the writer to swap, defer, and a GP to complete if
+     * this CPU is (wrongly) considered quiescent */
+    time_ms_t end = time_get_ms() + RCU_IRQ_HOLD_MS;
+    while (time_get_ms() < end) {
+        if (atomic_load_acq(&p->value) != RCU_IRQ_NODE_LIVE) {
+            atomic_store(&rcu_irq_failed, true);
+            break;
+        }
+        cpu_pause();
+    }
+
+    rcu_read_unlock();
+    atomic_store_release(&rcu_irq_done, true);
+    return IRQ_HANDLED;
+}
+
+static bool rcu_irq_wait_for(atomic_bool *flag) {
+    time_ms_t end = time_get_ms() + RCU_IRQ_WAIT_MS;
+    while (!atomic_load_acq(flag)) {
+        if (time_get_ms() >= end)
+            return false;
+
+        scheduler_yield();
+    }
+
+    return true;
+}
+
+TEST_DEFINE_INTEGRATION(rcu, irq_reader_on_idle_cpu, TEST_INTENSITY(5, 10, 100),
+                        .min_cores = 4) {
+    size_t rounds = ctx->intensity_val ? ctx->intensity_val : 10;
+
+    if (!rcu_irq_registered) {
+        rcu_irq_vector = irq_alloc_entry();
+        irq_register("rcu_irq_reader_test", rcu_irq_vector, rcu_irq_reader,
+                     NULL, IRQ_FLAG_NONE);
+        irq_set_chip(rcu_irq_vector, lapic_get_chip(), NULL);
+        rcu_irq_registered = true;
+    }
+
+    struct thread *self_thread = thread_get_current();
+    bool was_pinned = thread_pin(self_thread);
+    cpu_id_t self = smp_id(TOPC_PINNED);
+    cpu_id_t target = (self + global.core_count / 2) % global.core_count;
+
+    atomic_store(&rcu_irq_failed, false);
+
+    size_t cur = 0;
+    atomic_store(&rcu_irq_nodes[cur].value, RCU_IRQ_NODE_LIVE);
+    rcu_assign_pointer(rcu_irq_shared, &rcu_irq_nodes[cur]);
+
+    bool timed_out = false;
+    for (size_t r = 0; r < rounds && !timed_out; r++) {
+        size_t next = cur ^ 1;
+        atomic_store(&rcu_irq_nodes[next].value, RCU_IRQ_NODE_LIVE);
+
+        atomic_store(&rcu_irq_in_section, false);
+        atomic_store(&rcu_irq_done, false);
+        atomic_store(&rcu_irq_freed, false);
+
+        /* Let the target settle back into its idle loop */
+        sleep_spin_ms(1);
+        ipi_send(target, rcu_irq_vector);
+
+        if (!rcu_irq_wait_for(&rcu_irq_in_section)) {
+            timed_out = true;
+            break;
+        }
+
+        rcu_assign_pointer(rcu_irq_shared, &rcu_irq_nodes[next]);
+        rcu_defer(&rcu_irq_nodes[cur].rcu, rcu_irq_free_cb);
+
+        if (!rcu_irq_wait_for(&rcu_irq_done)) {
+            timed_out = true;
+            break;
+        }
+
+        rcu_synchronize();
+        if (!rcu_irq_wait_for(&rcu_irq_freed)) {
+            timed_out = true;
+            break;
+        }
+
+        cur = next;
+        if (atomic_load(&rcu_irq_failed))
+            break;
+    }
+
+    if (!was_pinned)
+        thread_unpin(self_thread);
+
+    TEST_ASSERT(!timed_out);
+    TEST_ASSERT(!atomic_load(&rcu_irq_failed));
 
     return TEST_SUCCESS;
 }

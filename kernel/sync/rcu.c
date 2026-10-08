@@ -187,8 +187,7 @@ void rcu_read_unlock(void) TSA_NO_ANALYSIS {
     crash_unwind_exit_rcu();
 }
 
-void rcu_note_context_switch(struct thread *outgoing,
-                             struct thread *incoming) TSA_NO_ANALYSIS {
+void rcu_note_context_switch(struct thread *outgoing) TSA_NO_ANALYSIS {
     if (!cc_unlikely(rcu.ready))
         return;
 
@@ -199,12 +198,6 @@ void rcu_note_context_switch(struct thread *outgoing,
     uint64_t gp_seq_seen = atomic_load_acq(&rcu.gp_seq);
 
     enum irql irql = spin_lock_high(&leaf->lock);
-
-    if (atomic_load_relaxed(&incoming->state) == THREAD_STATE_IDLE_THREAD) {
-        cpu_mask_set(&leaf->idle_cpus, cpu);
-    } else {
-        cpu_mask_clear(&leaf->idle_cpus, cpu);
-    }
 
     /* Registration uses the leaf's tracked seq, NOT gp_seq_seen
      *
@@ -265,6 +258,26 @@ void rcu_note_irq_exit(void) TSA_NO_ANALYSIS {
     rcu_report_cpu_locked(leaf, cpu, gp_seq_seen, irql);
 
     irql_lower(outer);
+}
+
+void rcu_idle_enter(void) {
+    if (!rcu.ready)
+        return;
+
+    kassert(!irqs_enabled());
+
+    atomic_store_release(&rcu.cpus[smp_id(TOPC_IFLAG)].idle, true);
+}
+
+void rcu_idle_exit(void) {
+    if (!rcu.ready)
+        return;
+
+    struct rcu_cpu *me = &rcu.cpus[smp_id(TOPC_IFLAG)];
+    if (cc_likely(!atomic_load_relaxed(&me->idle)))
+        return;
+
+    atomic_xchg_acq_rel(&me->idle, false);
 }
 
 void rcu_defer(struct rcu_cb *cb, rcu_fn func) {
@@ -349,21 +362,41 @@ static void rcu_run_batch(struct list_head *batch, uint64_t seq) {
     }
 }
 
-/* Bother everyone who's not quiesced, skip idlers */
-static void rcu_kick_pending(uint64_t seq) {
+/* Bother everyone who's not quiesced
+ *
+ * CPUs that went to hlt after rcu_gp_start sampled them still need
+ * a QS. Instead of IPI'ing just for them to say they're idle,
+ * we check the percpu flag */
+static void rcu_kick_pending(uint64_t seq) TSA_NO_ANALYSIS {
+    /* Pairs with xchg in rcu_idle_exit */
+    cpu_memory_barrier();
+
     for (size_t l = 0; l < rcu.leaf_count; l++) {
         struct rcu_node *leaf = &rcu.leaves[l];
 
-        struct cpu_mask pending = CPU_MASK_INIT;
-
         enum irql irql = spin_lock_high(&leaf->lock);
 
-        if (leaf->gp_seq == seq)
-            cpu_mask_copy(&pending, &leaf->qs_cpus);
+        if (leaf->gp_seq != seq) {
+            spin_unlock(&leaf->lock, irql);
+            continue;
+        }
 
-        spin_unlock(&leaf->lock, irql);
+        struct cpu_mask owing;
+        cpu_mask_copy(&owing, &leaf->qs_cpus);
 
         cpu_id_t cpu;
+        for_each_cpu(cpu, &owing) {
+            if (!atomic_load_acq(&rcu.cpus[cpu].idle))
+                continue;
+
+            cpu_mask_clear(&leaf->qs_cpus, cpu);
+            atomic_store_relaxed(&rcu.cpus[cpu].reported_seq, seq);
+        }
+
+        struct cpu_mask pending;
+        cpu_mask_copy(&pending, &leaf->qs_cpus);
+        rcu_propagate_done(leaf, seq, irql);
+
         for_each_cpu(cpu, &pending) {
             ipi_send((uint32_t) cpu, IRQ_NOP);
         }
@@ -464,6 +497,9 @@ static uint64_t rcu_gp_start(struct list_head *batch) TSA_NO_ANALYSIS {
 
     atomic_store_release(&rcu.gp_seq, seq);
 
+    /* Pairs with the xchg in rcu_idle_exit */
+    cpu_memory_barrier();
+
     /* Retire quiescent and poke everyone else */
     cpu_id_t self = smp_id(TOPC_IRQL);
 
@@ -476,7 +512,14 @@ static uint64_t rcu_gp_start(struct list_head *batch) TSA_NO_ANALYSIS {
             continue;
         }
 
-        cpu_mask_andnot(&leaf->qs_cpus, &leaf->qs_cpus, &leaf->idle_cpus);
+        /* Idle CPUs can't be in an RCU read section,
+         * and they'd clear the flag before they enter one */
+        cpu_id_t cpu;
+        for_each_cpu(cpu, &leaf->full_cpus) {
+            if (atomic_load_acq(&rcu.cpus[cpu].idle))
+                cpu_mask_clear(&leaf->qs_cpus, cpu);
+        }
+
         if (leaf == rcu_leaf_for_cpu(self))
             cpu_mask_clear(&leaf->qs_cpus, self);
 
@@ -484,7 +527,6 @@ static uint64_t rcu_gp_start(struct list_head *batch) TSA_NO_ANALYSIS {
         cpu_mask_copy(&pending, &leaf->qs_cpus);
         rcu_propagate_done(leaf, seq, irql);
 
-        cpu_id_t cpu;
         for_each_cpu(cpu, &pending)
             ipi_send((uint32_t) cpu, IRQ_NOP);
     }

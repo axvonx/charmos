@@ -84,6 +84,9 @@ void isr_nmi_entry(struct irq_registers *irq_regs) {
 void isr_standard_entry(irq_t vector, struct irq_registers *irq_regs) {
     irq_mark_self_in_interrupt(true);
 
+    /* before anyone can enter a read section */
+    rcu_idle_exit();
+
     enum irql old = irql_raise(IRQL_HIGH_LEVEL);
 
     bool is_exception = irq_vector_is_exception(vector);

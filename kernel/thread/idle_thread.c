@@ -13,6 +13,9 @@ void scheduler_idle_main(void *nop) {
 
     while (true) {
         irq_disable();
+
+        rcu_idle_exit(); /* For potential NMI events */
+
         if (scheduler_mark_self_needs_resched(false) ||
             sched->total_thread_count > 0 ||
             sched->completed_rbt.root != NULL) {
@@ -21,6 +24,7 @@ void scheduler_idle_main(void *nop) {
             continue;
         }
 
+        rcu_idle_enter();
         cpu_idle();
     }
 }

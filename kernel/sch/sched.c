@@ -380,7 +380,7 @@ void schedule(void) TSA_NO_ANALYSIS {
      *
      * Threads still in a read-side critical section
      * are registered here */
-    rcu_note_context_switch(curr, next);
+    rcu_note_context_switch(curr);
 
     load_thread(sched, next, time);
 

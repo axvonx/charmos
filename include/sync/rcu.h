@@ -40,8 +40,11 @@ void rcu_synchronize(void);
 
 void rcu_defer(struct rcu_cb *cb, rcu_fn func);
 
-void rcu_note_context_switch(struct thread *outgoing, struct thread *incoming);
+void rcu_note_context_switch(struct thread *outgoing);
 void rcu_note_irq_exit(void);
+
+void rcu_idle_enter(void);
+void rcu_idle_exit(void);
 
 #define rcu_plain_t(p) __typeof_unqual__(*(p)) *
 
