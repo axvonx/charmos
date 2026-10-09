@@ -561,12 +561,13 @@ typedef _Atomic ptrdiff_t atomic_ptrdiff_t;
 #define CA_CACHELINE_SIZE 64
 
 #define ca_cacheline_member(T, name)                                           \
-    union {                                                                    \
-        T name;                                                                \
-        uint8_t __ca_line_##name[(sizeof(T) + CA_CACHELINE_SIZE - 1) /         \
-                                 CA_CACHELINE_SIZE * CA_CACHELINE_SIZE];       \
+    struct {                                                                   \
+        uint8_t ca_pre_##name[CA_CACHELINE_SIZE - _Alignof(T)];                \
+        union {                                                                \
+            T name;                                                            \
+            uint8_t ca_post_##name[CA_CACHELINE_SIZE];                         \
+        };                                                                     \
     }
-
 #ifndef TSA_LOCKLESS
 #define TSA_LOCKLESS
 #endif

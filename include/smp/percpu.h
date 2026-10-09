@@ -1,6 +1,5 @@
 /* @title: Per-CPU dynamic objects */
 #pragma once
-#include <atomic.h>
 #include <compiler/core.h>
 #include <global.h>
 #include <linker/symbols.h>
@@ -66,7 +65,7 @@ LINKER_SECTION_EXTERN(struct percpu_descriptor, percpu_desc);
 
 #define PERCPU_PTR_FOR(name, cpu)                                              \
     ({                                                                         \
-        (void) kassert(PERCPU_READY(name));                                    \
+        (void) kassert_debug(PERCPU_READY(name));                              \
         ((typeof(__percpu_##name) *) (__percpu_desc_ref_##name)                \
              ->percpu_ptrs[cpu]);                                              \
     })
