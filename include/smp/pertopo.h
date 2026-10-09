@@ -69,19 +69,18 @@ LINKER_SECTION_EXTERN(struct pertopo_descriptor, pertopo_desc);
 #define PERTOPO(name) &(__pertopo_##name)
 #define PERTOPO_READY(name) (atomic_load(&(__pertopo_desc_ref_##name)->ready))
 
-#define PERTOPO_PTR_FOR_TOPO_NODE(name, node)                                  \
+#define PERTOPO_PTR_FOR(name, node)                                            \
     ({                                                                         \
         (void) kassert(PERTOPO_READY(name));                                   \
         ((typeof(__pertopo_##name) *) (__pertopo_desc_ref_##name)              \
              ->pertopo_ptrs[node]);                                            \
     })
 
-#define PERTOPO_READ_FOR_TOPO_NODE(name, node)                                 \
-    (*((typeof(__pertopo_##name) *) PERTOPO_PTR_FOR_TOPO_NODE(name, node)))
+#define PERTOPO_READ_FOR(name, node)                                           \
+    (*((typeof(__pertopo_##name) *) PERTOPO_PTR_FOR(name, node)))
 
 #define PERTOPO_PTR(clr, name)                                                 \
-    PERTOPO_PTR_FOR_TOPO_NODE(name,                                            \
-                              pertopo_node_local(&__pertopo_desc_##name, clr))
+    PERTOPO_PTR_FOR(name, pertopo_node_local(&__pertopo_desc_##name, clr))
 #define PERTOPO_READ(clr, name)                                                \
     (*((typeof(__pertopo_##name) *) PERTOPO_PTR(clr, name)))
 
@@ -91,15 +90,14 @@ LINKER_SECTION_EXTERN(struct pertopo_descriptor, pertopo_desc);
     for (node_id = 0;                                                          \
          node_id < global.topology.count[__pertopo_desc_##name.level];         \
          node_id++)                                                            \
-        for (var = PERTOPO_PTR_FOR_TOPO_NODE(name, node_id); var != NULL;      \
-             var = NULL)
+        for (var = PERTOPO_PTR_FOR(name, node_id); var != NULL; var = NULL)
 
 #define pertopo_for_each_internal_2(var, name)                                 \
     for (size_t __pertopo_idx = 0;                                             \
          __pertopo_idx < global.topology.count[__pertopo_desc_##name.level];   \
          __pertopo_idx++)                                                      \
-        for (var = PERTOPO_PTR_FOR_TOPO_NODE(name, __pertopo_idx);             \
-             var != NULL; var = NULL)
+        for (var = PERTOPO_PTR_FOR(name, __pertopo_idx); var != NULL;          \
+             var = NULL)
 
 #define pertopo_for_each(...) PP_CALL(pertopo_for_each_internal, __VA_ARGS__)
 

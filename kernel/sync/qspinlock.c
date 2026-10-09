@@ -70,7 +70,7 @@ void qspin_lock_slowpath(struct qspinlock *lock, uint32_t val) {
     }
 
     enum qspinlock_level lvl = qspinlock_get_level();
-    struct qnode *nodes = PERCPU_READ_FOR_CPU(qnodes, cpu);
+    struct qnode *nodes = PERCPU_READ_FOR(qnodes, cpu);
 
     struct qnode *node = &nodes[lvl];
     atomic_store_relaxed(&node->locked, 0);
@@ -91,7 +91,7 @@ void qspin_lock_slowpath(struct qspinlock *lock, uint32_t val) {
         uint32_t prev_idx =
             (old_tail & Q_SPIN_TAIL_LVL_MASK) >> Q_SPIN_TAIL_LVL_OFFSET;
 
-        struct qnode *prev_nodes = PERCPU_READ_FOR_CPU(qnodes, prev_cpu);
+        struct qnode *prev_nodes = PERCPU_READ_FOR(qnodes, prev_cpu);
         struct qnode *prev_node = &prev_nodes[prev_idx];
 
         /* Chain us up */

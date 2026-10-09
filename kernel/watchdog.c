@@ -308,7 +308,7 @@ static void watchdog_worker_timer_func(struct timer *t) {
 }
 
 static void watchdog_start_petting(cpu_id_t cpu) {
-    struct watchdog_percpu *pcpu = PERCPU_PTR_FOR_CPU(watchdog_percpu, cpu);
+    struct watchdog_percpu *pcpu = PERCPU_PTR_FOR(watchdog_percpu, cpu);
     if (cpu == 0) {
         pcpu->pets_enabled = true;
         atomic_store_relaxed(&pcpu->anti_pets, 0);
@@ -322,7 +322,7 @@ static void watchdog_start_petting(cpu_id_t cpu) {
 
 static void watchdog_read_pets_for(cpu_id_t cpu, size_t *out_pets,
                                    size_t *out_anti_pets) {
-    struct watchdog_percpu *pcpu = PERCPU_PTR_FOR_CPU(watchdog_percpu, cpu);
+    struct watchdog_percpu *pcpu = PERCPU_PTR_FOR(watchdog_percpu, cpu);
     *out_pets = atomic_load_relaxed(&pcpu->pets);
     *out_anti_pets = atomic_load_relaxed(&pcpu->anti_pets);
 }
@@ -579,7 +579,7 @@ static void watchdog_master_process_suspect(time_ms_t now) {
          * or above warn_score, and if it lingers for
          * long enough in SUSPECT limbo, we emit warnings
          */
-        struct watchdog_percpu *pcpu = PERCPU_PTR_FOR_CPU(watchdog_percpu, i);
+        struct watchdog_percpu *pcpu = PERCPU_PTR_FOR(watchdog_percpu, i);
         struct watchdog_master_cpu *mcpu = &watchdog_master.cpus[i];
 
         fx32_32_t new;
@@ -604,7 +604,7 @@ static void watchdog_master_process_suspect(time_ms_t now) {
 static void watchdog_master_process_normal(void) {
     cpu_id_t i;
     watchdog_cpu_for_each(i, WATCHDOG_STATE_NORMAL) {
-        struct watchdog_percpu *pcpu = PERCPU_PTR_FOR_CPU(watchdog_percpu, i);
+        struct watchdog_percpu *pcpu = PERCPU_PTR_FOR(watchdog_percpu, i);
         fx32_32_t score;
         if (!watchdog_count_heartbeats_at(
                 &pcpu->buckets, WATCHDOG_WINDOW_BUCKETS, time_get_ms(),
@@ -642,7 +642,7 @@ static void watchdog_master_process_stall(void) {
 
     for (cpu_id_t i = 0; i < global.core_count; i++) {
         struct watchdog_master_cpu *mcpu = &watchdog_master.cpus[i];
-        struct watchdog_percpu *pcpu = PERCPU_PTR_FOR_CPU(watchdog_percpu, i);
+        struct watchdog_percpu *pcpu = PERCPU_PTR_FOR(watchdog_percpu, i);
 
         uint64_t seen = atomic_load_relaxed(&pcpu->heartbeat_seq);
 
@@ -755,8 +755,8 @@ void watchdog_init(void) {
         watchdog_master.cpus[i].state = WATCHDOG_STATE_NORMAL;
         ewma_init(&watchdog_master.cpus[i].lockup_ewma, WATCHDOG_EWMA_ALPHA);
         watchdog_master.cpus[i].lockup_score = FX(0.0);
-        watchdog_master.cpus[i].pcpu = PERCPU_PTR_FOR_CPU(watchdog_percpu, i);
-        locked_list_init(&PERCPU_PTR_FOR_CPU(watchdog_percpu, i)->callback_list,
+        watchdog_master.cpus[i].pcpu = PERCPU_PTR_FOR(watchdog_percpu, i);
+        locked_list_init(&PERCPU_PTR_FOR(watchdog_percpu, i)->callback_list,
                          LOCKED_LIST_INIT_IRQ_DISABLE);
     }
 }
@@ -819,11 +819,11 @@ void watchdog_anti_pet(void) {
 }
 
 void watchdog_callback_add(cpu_id_t id, struct watchdog_callback *cb) {
-    struct watchdog_percpu *percpu = PERCPU_PTR_FOR_CPU(watchdog_percpu, id);
+    struct watchdog_percpu *percpu = PERCPU_PTR_FOR(watchdog_percpu, id);
     locked_list_add(&percpu->callback_list, &cb->list);
 }
 
 void watchdog_callback_remove(cpu_id_t id, struct watchdog_callback *cb) {
-    struct watchdog_percpu *percpu = PERCPU_PTR_FOR_CPU(watchdog_percpu, id);
+    struct watchdog_percpu *percpu = PERCPU_PTR_FOR(watchdog_percpu, id);
     locked_list_del(&percpu->callback_list, &cb->list);
 }

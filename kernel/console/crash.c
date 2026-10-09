@@ -377,8 +377,8 @@ static uint32_t crash_cpu_panes(void) {
 
 static void crash_cpu_box(struct report_target *tgt, uint64_t id,
                           uint16_t inner) {
-    const struct crash_regs *r = PERCPU_PTR_FOR_CPU(crash_regs, id);
-    atomic_uint32_t *quiesced = PERCPU_PTR_FOR_CPU(crash_quiesced, id);
+    const struct crash_regs *r = PERCPU_PTR_FOR(crash_regs, id);
+    atomic_uint32_t *quiesced = PERCPU_PTR_FOR(crash_quiesced, id);
     time_us_t end = time_get_us() + CRASH_WAIT_US;
     uint64_t entries[6];
     char line[REPORT_PANE_LINE_MAX];

@@ -121,7 +121,7 @@ static inline struct timer_base *timer_base_for_cpu(enum timer_flags flags,
     if (flags & TIMER_FLAG_DEFERRABLE)
         type = TIMER_BASE_DEFERRED;
 
-    return &(PERCPU_PTR_FOR_CPU(timer_percpu, cpu)->bases[type]);
+    return &(PERCPU_PTR_FOR(timer_percpu, cpu)->bases[type]);
 }
 
 static inline struct timer_base *timer_base_for_flags(enum timer_flags flags) {
@@ -556,7 +556,7 @@ void timer_base_reprogram_hardware(cpu_id_t cpu) {
         return;
     }
 
-    struct timer_percpu *pcpu = PERCPU_PTR_FOR_CPU(timer_percpu, cpu);
+    struct timer_percpu *pcpu = PERCPU_PTR_FOR(timer_percpu, cpu);
     struct clock_evdev *ced = pcpu->active_evdev;
 
     if (!ced || ced->state != CLOCK_EVDEV_STATE_ONESHOT) {
@@ -611,7 +611,7 @@ static void timers_init(cpu_id_t cpu) {
         kassert(clock_evdev_group_search_for(clock_global.timer_clock_evdev));
 
     /* Called in early boot */
-    struct timer_percpu *this = PERCPU_PTR_FOR_CPU(timer_percpu, cpu);
+    struct timer_percpu *this = PERCPU_PTR_FOR(timer_percpu, cpu);
     struct clock_evdev *ced = clock_evdev_for_cpu(cedg, cpu);
     this->active_evdev = ced;
     if (ced->change_state)

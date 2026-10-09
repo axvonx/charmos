@@ -60,7 +60,7 @@ attach_work_to_cpus(struct scheduler_periodic_work_linker_record *spwlo) {
         pairing_node_init(&w->pnode);
         linker_object_work_to_work(spwlo, w);
         struct scheduler_periodic_work_percpu *pcpu =
-            &PERCPU_READ_FOR_CPU(periodic_percpu, i);
+            &PERCPU_READ_FOR(periodic_percpu, i);
 
         if (w->type == PERIODIC_WORK_TIME_BASED) {
             pairing_heap_insert(&pcpu->time_based_works[w->prio], &w->pnode);

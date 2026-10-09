@@ -64,17 +64,17 @@ LINKER_SECTION_EXTERN(struct percpu_descriptor, percpu_desc);
 #define PERCPU(name) &(__percpu_##name)
 #define PERCPU_READY(name) (atomic_load(&(__percpu_desc_ref_##name)->ready))
 
-#define PERCPU_PTR_FOR_CPU(name, cpu)                                          \
+#define PERCPU_PTR_FOR(name, cpu)                                              \
     ({                                                                         \
         (void) kassert(PERCPU_READY(name));                                    \
         ((typeof(__percpu_##name) *) (__percpu_desc_ref_##name)                \
              ->percpu_ptrs[cpu]);                                              \
     })
 
-#define PERCPU_READ_FOR_CPU(name, cpu)                                         \
-    (*((typeof(__percpu_##name) *) PERCPU_PTR_FOR_CPU(name, cpu)))
+#define PERCPU_READ_FOR(name, cpu)                                             \
+    (*((typeof(__percpu_##name) *) PERCPU_PTR_FOR(name, cpu)))
 
-#define PERCPU_PTR(clr, name) PERCPU_PTR_FOR_CPU(name, smp_id(clr))
+#define PERCPU_PTR(clr, name) PERCPU_PTR_FOR(name, smp_id(clr))
 #define PERCPU_READ(clr, name)                                                 \
     (*((typeof(__percpu_##name) *) PERCPU_PTR(clr, name)))
 
@@ -82,13 +82,12 @@ LINKER_SECTION_EXTERN(struct percpu_descriptor, percpu_desc);
 
 #define percpu_for_each_internal_3(var, cpu, name)                             \
     for (cpu = 0; cpu < global.core_count; cpu++)                              \
-        for (var = PERCPU_PTR_FOR_CPU(name, cpu); var != NULL; var = NULL)
+        for (var = PERCPU_PTR_FOR(name, cpu); var != NULL; var = NULL)
 
 #define percpu_for_each_internal_2(var, name)                                  \
     for (cpu_id_t __percpu_idx = 0; __percpu_idx < global.core_count;          \
          __percpu_idx++)                                                       \
-        for (var = PERCPU_PTR_FOR_CPU(name, __percpu_idx); var != NULL;        \
-             var = NULL)
+        for (var = PERCPU_PTR_FOR(name, __percpu_idx); var != NULL; var = NULL)
 
 #define percpu_for_each(...) PP_CALL(percpu_for_each_internal, __VA_ARGS__)
 
