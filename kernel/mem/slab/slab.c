@@ -351,11 +351,11 @@ void slab_cache_init(size_t order, struct slab_cache *cache,
     slab_chunks_init(&cache->chunks, cache);
 }
 
-static void slab_zero_out(struct slab *slab, size_t n_pages) {
+static void slab_zero_out(struct slab *slab, size_t page_count) {
     void *start = (void *) slab->mem;
     size_t non_data = slab->mem - (vaddr_t) slab;
-    kassert(n_pages);
-    size_t len = n_pages * PAGE_SIZE - non_data;
+    kassert(page_count);
+    size_t len = page_count * PAGE_SIZE - non_data;
     memset(start, 0, len);
 }
 
@@ -854,14 +854,14 @@ static void *kmalloc_old(size_t size, enum alloc_flags flags) {
     return ptr;
 }
 
-void *kmalloc_pages(size_t n_pages, enum alloc_flags flags) {
+void *kmalloc_pages(size_t page_count, enum alloc_flags flags) {
     void *ptr = kmalloc_pages_raw(
-        NULL, NULL, n_pages * PAGE_SIZE,
+        NULL, NULL, page_count * PAGE_SIZE,
         (struct alloc_params){.flags = ALLOC_FLAGS_DEFAULT,
                               .behavior = ALLOC_BEHAVIOR_NORMAL});
 
     if ((flags & ALLOC_FLAG_ZERO_ON_ALLOC) && ptr)
-        memset(ptr, 0, n_pages * PAGE_SIZE);
+        memset(ptr, 0, page_count * PAGE_SIZE);
 
     return ptr;
 }

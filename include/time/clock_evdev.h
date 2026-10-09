@@ -65,8 +65,8 @@ struct clock_evdev {
 struct clock_evdev_group {
     char *name;
     struct list_head clock_evdevs;
-    size_t n_clock_evdevs; /* This is not synchronized because this happens
-                            * once at group initialization */
+    size_t clock_evdev_count; /* This is not synchronized because this happens
+                               * once at group initialization */
     struct clock_evdev *(*evdev_for_cpu)(struct clock_evdev_group *,
                                          cpu_id_t cpu);
 
@@ -87,7 +87,7 @@ static inline void clock_evdev_group_add(struct clock_evdev_group *cedg,
         clock_evdev_register(ced);
 
     list_add_tail(&ced->group_list, &cedg->clock_evdevs);
-    cedg->n_clock_evdevs++;
+    cedg->clock_evdev_count++;
 }
 
 static inline struct clock_evdev *

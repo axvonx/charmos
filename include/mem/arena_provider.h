@@ -273,7 +273,7 @@ struct arena_dumpster {
     struct arena_landfill *landfill;
 
     refcount_t refcount;
-    size_t n_buckets; /* Stays constant after init */
+    size_t bucket_count; /* Stays constant after init */
     struct arena_bucket *buckets;
 };
 
@@ -407,7 +407,7 @@ struct arena {
 #ifdef DEBUG_ARENA
     struct alloc_capabilities alloc_caps;
     enum arena_flags flags;
-    uint16_t n_segs;
+    uint16_t seg_count;
     size_t total_size;
     ONCE_TOKEN_DEFINE(struct thread *,
                       entered); /* Debug single threaded arenas */
@@ -481,7 +481,7 @@ arena_budget_prio_scale(sz_b_t used, int scale,
 
 /* Arena strategies call into this with their fully formed descriptors */
 struct arena *arena_create_full(struct arena_seg_desc *seg_descs,
-                                size_t n_segs);
+                                size_t seg_count);
 struct arena_seg arena_seg_lookup(struct arena *a, uint16_t seg_id);
 struct arena_seg arena_seg_for_idx(struct arena *a, uint16_t idx);
 err_checked arena_desc_register(struct arena_desc *d);

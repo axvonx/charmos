@@ -54,22 +54,22 @@ static void construct_domains_from_numa_nodes(void) {
 }
 
 static void construct_domains_from_cores(void) {
-    size_t n_domains = global.core_count / CORES_PER_DOMAIN;
+    size_t domain_count = global.core_count / CORES_PER_DOMAIN;
     size_t remainder = global.core_count % CORES_PER_DOMAIN;
 
     if (remainder > 0)
-        n_domains++; /* one extra for leftover cores */
+        domain_count++; /* one extra for leftover cores */
 
-    init_global_domain(n_domains);
+    init_global_domain(domain_count);
 
-    for (size_t i = 0; i < n_domains; i++) {
+    for (size_t i = 0; i < domain_count; i++) {
         struct domain *cd = global.domains[i];
 
         cd->associated_node = NULL;
 
         /* Decide how many cores this domain should get */
         size_t cores_this_domain = CORES_PER_DOMAIN;
-        if (i == n_domains - 1 && remainder > 0)
+        if (i == domain_count - 1 && remainder > 0)
             cores_this_domain = remainder; /* last one gets leftovers */
 
         cd->num_cores = cores_this_domain;

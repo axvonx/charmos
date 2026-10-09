@@ -1126,7 +1126,7 @@ void report_panes_top(struct report_panes *panes) {
     struct report_target con = report_console();
     const char *h = glyph_hbar();
     uint16_t open_at[REPORT_PANES_MAX];
-    uint32_t n_open = 0;
+    uint32_t open_count = 0;
     uint32_t oi = 0, ci = 0;
 
     if (!panes->n) {
@@ -1143,7 +1143,7 @@ void report_panes_top(struct report_panes *panes) {
 
     if (!panes->undivided) {
         for (uint32_t i = 1; i < panes->n; i++)
-            open_at[n_open++] = (uint16_t) panes_divider_at(panes, i);
+            open_at[open_count++] = (uint16_t) panes_divider_at(panes, i);
     }
 
     REPORT_LINE(l, report_target_width(&con));
@@ -1152,10 +1152,10 @@ void report_panes_top(struct report_panes *panes) {
 
     /* Two ascending lists of divider columns merged so a position
      * in both gets a crossing instead of two rules a line apart */
-    while (oi < n_open || ci < panes_pending.n) {
+    while (oi < open_count || ci < panes_pending.n) {
         size_t at;
 
-        if (oi >= n_open)
+        if (oi >= open_count)
             at = panes_pending.at[ci];
         else if (ci >= panes_pending.n)
             at = open_at[oi];
@@ -1163,7 +1163,7 @@ void report_panes_top(struct report_panes *panes) {
             at = open_at[oi] < panes_pending.at[ci] ? open_at[oi]
                                                     : panes_pending.at[ci];
 
-        bool below = oi < n_open && open_at[oi] == at;
+        bool below = oi < open_count && open_at[oi] == at;
         bool above = ci < panes_pending.n && panes_pending.at[ci] == at;
         uint32_t pane = oi + 1;
 

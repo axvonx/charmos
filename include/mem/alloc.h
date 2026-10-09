@@ -56,8 +56,9 @@ void *kmalloc_aligned_full(size_t size, size_t align,
 void kfree_aligned_full(void *ptr, enum alloc_behavior behavior);
 void kfree_defer_irq(void *ptr);
 
-void *kmalloc_pages(size_t n_pages, enum alloc_flags flags) cw_alloc()
+void *kmalloc_pages(size_t page_count, enum alloc_flags flags) cw_alloc()
     cc_warn_unused_result cc_diagnose_if(!ALLOC_FLAGS_VALID(flags),
                                          "alloc flags set unavailable bits",
-                                         "error") ALLOC_SIZE_CONTRACT(n_pages);
+                                         "error")
+        ALLOC_SIZE_CONTRACT(page_count);
 bool kmalloc_ptr_in_slab_validate(void *ptr);

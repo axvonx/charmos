@@ -44,8 +44,8 @@ enum err arena_desc_register(struct arena_desc *desc) {
     struct arena_desc_table *old_tbl = rcu_dereference(arena_global.desc_table);
     kassert(old_tbl);
 
-    size_t old_n_descs = old_tbl->n_descs;
-    size_t n_descs = old_n_descs + 1;
+    size_t old_desc_count = old_tbl->desc_count;
+    size_t desc_count = old_desc_count + 1;
     struct arena_desc_table *new_tbl =
         kmalloc(sizeof(struct arena_desc_table), ALLOC_ZERO);
     if (!new_tbl) {
@@ -54,20 +54,21 @@ enum err arena_desc_register(struct arena_desc *desc) {
     }
 
     struct arena_desc **new_descs =
-        kmalloc(sizeof(struct arena_desc *) * n_descs, ALLOC_ZERO);
+        kmalloc(sizeof(struct arena_desc *) * desc_count, ALLOC_ZERO);
     if (!new_descs) {
         err = ERR_NO_MEM;
         kfree(new_tbl);
         goto out;
     }
 
-    if (old_n_descs && old_tbl->descs)
+    if (old_desc_count && old_tbl->descs)
         memcpy(new_descs, old_tbl->descs,
-               old_n_descs * sizeof(struct arena_desc *));
+               old_desc_count * sizeof(struct arena_desc *));
 
-    new_descs[old_n_descs] = desc;
-    new_tbl->n_descs = n_descs;
-    heapsort(new_descs, sizeof(struct arena_desc *), n_descs, arena_desc_cmp);
+    new_descs[old_desc_count] = desc;
+    new_tbl->desc_count = desc_count;
+    heapsort(new_descs, sizeof(struct arena_desc *), desc_count,
+             arena_desc_cmp);
 
     rcu_assign_pointer(arena_global.desc_table, new_tbl);
     rcu_defer(&old_tbl->rcu_cb, arena_desc_table_free_cb);
@@ -83,7 +84,7 @@ struct arena_desc *arena_desc_lookup(enum arena_strategy strat) {
     struct arena_desc_table *tbl = rcu_dereference(arena_global.desc_table);
 
     struct arena_desc *found = bsearch(&strat, tbl, sizeof(struct arena_desc *),
-                                       tbl->n_descs, arena_desc_cmp);
+                                       tbl->desc_count, arena_desc_cmp);
 
     rcu_read_unlock();
 
@@ -98,9 +99,9 @@ void arena_global_init(void) {
     rcu_assign_pointer(arena_global.desc_table, tbl);
 }
 
-static uint16_t size_for_id(struct arena_seg_desc *seg_descs, size_t n_segs,
+static uint16_t size_for_id(struct arena_seg_desc *seg_descs, size_t seg_count,
                             uint16_t id) {
-    for (size_t i = 0; i < n_segs; i++) {
+    for (size_t i = 0; i < seg_count; i++) {
         if (seg_descs[i].id == id)
             return seg_descs[i].size;
     }
@@ -110,11 +111,11 @@ static uint16_t size_for_id(struct arena_seg_desc *seg_descs, size_t n_segs,
 
 /* Errors panic because the provider calls this */
 struct arena *arena_create_full(struct arena_seg_desc *seg_descs,
-                                size_t n_segs) {
+                                size_t seg_count) {
     size_t seg_data_size_total = 0;
     struct arena_seg_desc *large_desc = NULL;
     BITMAP_DECLARE(seen_id_bitmap, ARENA_MAX_SEG) = {0};
-    for (size_t i = 0; i < n_segs; i++) {
+    for (size_t i = 0; i < seg_count; i++) {
         kassert(seg_descs[i].size);
 
         /* It's fine if a large segment is smaller than ARENA_SEG_MAX_SIZE */
@@ -133,7 +134,7 @@ struct arena *arena_create_full(struct arena_seg_desc *seg_descs,
         seg_data_size_total += ALIGN_UP(seg_descs[i].size, ARENA_SEG_ALIGN);
     }
 
-    size_t inmem_size_raw = n_segs * sizeof(struct arena_seg_inmem_desc);
+    size_t inmem_size_raw = seg_count * sizeof(struct arena_seg_inmem_desc);
     size_t inmem_size = ALIGN_UP(inmem_size_raw, ARENA_SEG_ALIGN);
     size_t seg_size_total = inmem_size + seg_data_size_total;
     size_t size_total = sizeof(struct arena) + seg_size_total;
@@ -143,24 +144,24 @@ struct arena *arena_create_full(struct arena_seg_desc *seg_descs,
         return NULL;
 
 #ifdef DEBUG_ARENA
-    arena->n_segs = n_segs;
+    arena->seg_count = seg_count;
     arena->total_size = size_total;
 #endif
 
     struct arena_seg_inmem_desc *inmem_descs = arena_get_inmem_descs(arena);
 
     if (large_desc) {
-        inmem_descs[n_segs - 1].id = large_desc->id;
+        inmem_descs[seg_count - 1].id = large_desc->id;
 
 #ifdef DEBUG_ARENA
-        inmem_descs[n_segs - 1].present = true;
-        inmem_descs[n_segs - 1].type = large_desc->type;
-        inmem_descs[n_segs - 1].size = large_desc->size;
+        inmem_descs[seg_count - 1].present = true;
+        inmem_descs[seg_count - 1].type = large_desc->type;
+        inmem_descs[seg_count - 1].size = large_desc->size;
 #endif
     }
 
     size_t cursor = 0;
-    for (size_t i = 0; i < n_segs; i++) {
+    for (size_t i = 0; i < seg_count; i++) {
         if (!seg_descs[i].large) {
 
 #ifdef DEBUG_ARENA
@@ -175,15 +176,15 @@ struct arena *arena_create_full(struct arena_seg_desc *seg_descs,
     }
 
     size_t cc_maybe_unused cursor_offset = 0;
-    for (uint16_t i = 0; i < n_segs; i++) {
+    for (uint16_t i = 0; i < seg_count; i++) {
         uint16_t size;
 
         if (i == 0) {
             size = inmem_size;
         } else {
             uint16_t id = inmem_descs[i - 1].id;
-            size =
-                ALIGN_UP(size_for_id(seg_descs, n_segs, id), ARENA_SEG_ALIGN);
+            size = ALIGN_UP(size_for_id(seg_descs, seg_count, id),
+                            ARENA_SEG_ALIGN);
         }
 
         cursor_offset += size;
@@ -204,7 +205,8 @@ size_t arena_seg_count(struct arena *a) {
     struct arena_seg_inmem_desc *descs = arena_get_inmem_descs(a);
 
 #ifdef DEBUG_ARENA
-    kassert(a->n_segs, "attempted to count segments of arena with no segments");
+    kassert(a->seg_count,
+            "attempted to count segments of arena with no segments");
 #endif
 
     size_t count = 0;
@@ -223,7 +225,7 @@ struct arena_seg arena_seg_lookup(struct arena *a, uint16_t seg_id) {
 
 #ifdef DEBUG_ARENA
     bool found = false;
-    for (uint16_t i = 0; i < a->n_segs; i++) {
+    for (uint16_t i = 0; i < a->seg_count; i++) {
         if (inmem_descs[i].id == seg_id)
             found = true;
     }
@@ -246,7 +248,8 @@ struct arena_seg arena_seg_lookup(struct arena *a, uint16_t seg_id) {
 
 struct arena_seg arena_seg_for_idx(struct arena *a, uint16_t idx) {
 #ifdef DEBUG_ARENA
-    kassert(idx < a->n_segs, "index %u out of bounds of %u", idx, a->n_segs);
+    kassert(idx < a->seg_count, "index %u out of bounds of %u", idx,
+            a->seg_count);
 #endif
 
     struct arena_seg_inmem_desc *inmem_descs = arena_get_inmem_descs(a);
@@ -267,7 +270,7 @@ struct arena_seg arena_seg_for_idx(struct arena *a, uint16_t idx) {
 static struct arena_bucket *get_bucket(struct arena_dumpster *ad,
                                        arena_identity_t id) {
     uint32_t hash = hash_jenkins_qword(id, /* TODO: seed = */ 12345);
-    size_t idx = hash % ad->n_buckets;
+    size_t idx = hash % ad->bucket_count;
 
     struct arena_bucket *bkt = &ad->buckets[idx];
     return kassert(bkt);

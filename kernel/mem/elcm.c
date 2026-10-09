@@ -269,7 +269,7 @@ enum err elcm(struct elcm_params *params) {
     if (!candidates)
         return ERR_NO_MEM;
 
-    size_t n_cands = 0, max_pages_seen = 0, min_pages_seen = SIZE_MAX;
+    size_t cand_count = 0, max_pages_seen = 0, min_pages_seen = SIZE_MAX;
     fx32_32_t max_wastage = fx_div(fx_from_int(max_wastage_pct), FX(100.0));
     size_t aligned_obj_size = get_aligned_obj_size(obj_size, obj_alignment);
 
@@ -318,28 +318,28 @@ enum err elcm(struct elcm_params *params) {
 
             kassert(candidate_valid(&cand));
             kassert(used_bytes <= total_bytes);
-            candidates[n_cands++] = cand;
+            candidates[cand_count++] = cand;
         }
     }
 
-    if (n_cands == 0) {
+    if (cand_count == 0) {
         params->free_fn ? params->free_fn(candidates, size) : kfree(candidates);
         params->out = create_candidate_for_pages(params, best_possible);
         return ERR_OK;
     }
 
-    if (n_cands == 1) {
+    if (cand_count == 1) {
         struct elcm_candidate single = candidates[0];
         params->free_fn ? params->free_fn(candidates, size) : kfree(candidates);
         params->out = single;
         return ERR_OK;
     }
 
-    heapsort(candidates, n_cands, sizeof(struct elcm_candidate),
+    heapsort(candidates, cand_count, sizeof(struct elcm_candidate),
              cmp_wastage_desc);
 
     size_t max_distance = 0, min_distance = SIZE_MAX;
-    for (size_t i = 0; i < n_cands; i++) {
+    for (size_t i = 0; i < cand_count; i++) {
         struct elcm_candidate *cand = &candidates[i];
         size_t d_from_perfect = best_possible - cand->pages;
         size_t d_from_highest = max_pages_seen - cand->pages;
@@ -354,7 +354,7 @@ enum err elcm(struct elcm_params *params) {
             min_distance = dist;
     }
 
-    for (size_t i = 0; i < n_cands; i++) {
+    for (size_t i = 0; i < cand_count; i++) {
         fx32_32_t s = candidate_score(&candidates[i], min_distance,
                                       max_distance, max_wastage);
         if (bias_towards_pow2) {
@@ -369,12 +369,13 @@ enum err elcm(struct elcm_params *params) {
         }
     }
 
-    heapsort(candidates, n_cands, sizeof(struct elcm_candidate), cmp_score_asc);
+    heapsort(candidates, cand_count, sizeof(struct elcm_candidate),
+             cmp_score_asc);
 
-    fx32_32_t best_score = candidates[n_cands - 1].score_value;
-    struct elcm_candidate best = candidates[n_cands - 1];
+    fx32_32_t best_score = candidates[cand_count - 1].score_value;
+    struct elcm_candidate best = candidates[cand_count - 1];
 
-    for (size_t i = 0; i < n_cands; i++) {
+    for (size_t i = 0; i < cand_count; i++) {
         if (candidates[i].score_value == best_score &&
             candidates[i].wasted < best.wasted) {
             best = candidates[i];

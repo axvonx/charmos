@@ -11,7 +11,7 @@ struct arena_layout_desc {
 
 struct arena_desc_table {
     struct arena_desc **descs;
-    size_t n_descs;
+    size_t desc_count;
     struct rcu_cb rcu_cb;
 };
 

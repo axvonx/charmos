@@ -221,8 +221,8 @@ static bool parse_duration_internal(const char *str, time_ns_t *out) {
 }
 
 static bool parse_cpu_mask_internal(const char *str, struct cpu_mask *out,
-                                    size_t n_cpus) {
-    if (!str || *str == '\0' || n_cpus == 0)
+                                    size_t cpu_count) {
+    if (!str || *str == '\0' || cpu_count == 0)
         return false;
 
     /* validate syntax and range */
@@ -258,7 +258,7 @@ static bool parse_cpu_mask_internal(const char *str, struct cpu_mask *out,
             }
         }
 
-        if (start > end || end >= n_cpus)
+        if (start > end || end >= cpu_count)
             return false;
 
         if (*p == ',') {
@@ -275,7 +275,7 @@ static bool parse_cpu_mask_internal(const char *str, struct cpu_mask *out,
         return true;
 
     /* populate mask if requested */
-    cpu_mask_init(out, n_cpus);
+    cpu_mask_init(out, cpu_count);
 
     p = str;
     while (*p) {
@@ -617,8 +617,9 @@ bool parse_is_duration(const char *str, time_ns_t *out) {
     return parse_duration_internal(str, out);
 }
 
-bool parse_is_cpu_mask(const char *str, struct cpu_mask *out, size_t n_cpus) {
-    return parse_cpu_mask_internal(str, out, n_cpus);
+bool parse_is_cpu_mask(const char *str, struct cpu_mask *out,
+                       size_t cpu_count) {
+    return parse_cpu_mask_internal(str, out, cpu_count);
 }
 
 bool parse_is_range(const char *str, uint64_t *start, uint64_t *end) {

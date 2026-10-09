@@ -22,10 +22,10 @@ TEST_DEFINE_UNIT(arena, create_lookup_basic) {
 #ifdef DEBUG_ARENA
 
     struct arena_seg_inmem_desc *imds = arena_get_inmem_descs(a);
-    for (uint16_t i = 0; i < a->n_segs; i++)
+    for (uint16_t i = 0; i < a->seg_count; i++)
         test_info("desc %u id %u sz %zu", i, imds[i].id, imds[i].size);
 
-    for (uint16_t i = 0; i < a->n_segs; i++) {
+    for (uint16_t i = 0; i < a->seg_count; i++) {
         if (imds[i].id == 3)
             TEST_ASSERT_EQ(imds[i].seg, seg.storage);
     }

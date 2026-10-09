@@ -20,7 +20,7 @@ struct parse_list {
 bool parse_is_bool(const char *str, bool *out);
 bool parse_is_data_size(const char *str, uint64_t *out);
 bool parse_is_duration(const char *str, time_ns_t *out);
-bool parse_is_cpu_mask(const char *str, struct cpu_mask *out, size_t n_cpus);
+bool parse_is_cpu_mask(const char *str, struct cpu_mask *out, size_t cpu_count);
 bool parse_is_mac(const char *str, uint64_t *out);
 bool parse_is_fx(const char *str, fx32_32_t *out);
 bool parse_is_int(const char *str, int64_t *out);

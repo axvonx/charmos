@@ -34,9 +34,9 @@ void gdt_set_gate(struct gdt_entry *gdt, int num, uint64_t base, uint32_t limit,
     gdt[num].base_high = (base >> 24) & 0xFF;
 }
 
-static void gdt_lgdt(struct gdt_entry *gdt, uint64_t n_entries) {
+static void gdt_lgdt(struct gdt_entry *gdt, uint64_t entry_count) {
     struct gdt_ptr gp = {
-        .limit = (sizeof(struct gdt_entry) * n_entries) - 1,
+        .limit = (sizeof(struct gdt_entry) * entry_count) - 1,
         .base = (uint64_t) gdt,
     };
     asm volatile("lgdt %0" : : "m"(gp));

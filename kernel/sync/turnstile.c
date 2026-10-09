@@ -21,7 +21,7 @@ SLAB_SIZE_REGISTER_FOR_STRUCT(turnstile, SLAB_OBJ_ALIGN_DEFAULT);
  *
  * Each thread is born with a turnstile (technically, this is still
  * *slightly* overkill because you need to have a thread to block on to even
- * use your turnstile, so it ideally would be n_threads/2 turnstiles on the
+ * use your turnstile, so it ideally would be thread_count/2 turnstiles on the
  * whole system, but that introduces a non-negligible amount of overhead for the
  * extra bookkeeping, so we just give each thread one turnstile and call it a
  * day).
