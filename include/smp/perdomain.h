@@ -21,7 +21,7 @@ struct perdomain_descriptor {
 
 LINKER_SECTION_EXTERN(struct perdomain_descriptor, perdomain_desc);
 
-#define PERDOMAIN_DEFINE(type_, name_, ctor_)                                  \
+#define PERDOMAIN_DEFINE_3(type_, name_, ctor_)                                \
     static typeof(type_) __perdomain_##name_ cc_fn_unused;                     \
     static struct perdomain_descriptor __perdomain_desc_##name_;               \
     static void __perdomain_ctor_##name_(void *inst, size_t domain) {          \
@@ -42,6 +42,9 @@ LINKER_SECTION_EXTERN(struct perdomain_descriptor, perdomain_desc);
     };                                                                         \
     static struct perdomain_descriptor *const __perdomain_desc_ref_##name_     \
         cc_fn_unused = &__perdomain_desc_##name_
+
+#define PERDOMAIN_DEFINE_2(type_, name_) PERDOMAIN_DEFINE_3(type_, name_, NULL)
+#define PERDOMAIN_DEFINE(...) PP_CALL(PERDOMAIN_DEFINE, __VA_ARGS__)
 
 #define PERDOMAIN_EXPORT_AS(sym_name, name)                                    \
     extern struct perdomain_descriptor __perdomain_desc_sym_##sym_name         \

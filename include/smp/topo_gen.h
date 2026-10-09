@@ -15,7 +15,7 @@ struct topo_gen_descriptor {
             __typed_ctor((typeof(type_) *) inst, level_, node_id);             \
     }
 
-#define TOPO_DEFINE(type_, name_, ctor_)                                       \
+#define TOPO_DEFINE_3(type_, name_, ctor_)                                     \
     TOPO_GEN_CTOR(type_, name_, TOPOLOGY_LEVEL_SMT, ctor_);                    \
     TOPO_GEN_CTOR(type_, name_, TOPOLOGY_LEVEL_CORE, ctor_);                   \
     TOPO_GEN_CTOR(type_, name_, TOPOLOGY_LEVEL_NUMA, ctor_);                   \
@@ -44,6 +44,9 @@ struct topo_gen_descriptor {
             [TOPOLOGY_LEVEL_PACKAGE] = &__pertopo_desc_##name_##_PACKAGE,      \
             [TOPOLOGY_LEVEL_MACHINE] = &__pertopo_desc_##name_##_MACHINE,      \
         }};
+
+#define TOPO_DEFINE_2(type_, name_) TOPO_DEFINE_3(type_, name_, NULL)
+#define TOPO_DEFINE(...) PP_CALL(TOPO_DEFINE, __VA_ARGS__)
 
 #define topo_gen_for_each_internal_2(var, name)                                \
     for (enum topology_level __topo_gen_level = 0;                             \

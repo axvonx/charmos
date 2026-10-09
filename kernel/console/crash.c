@@ -38,8 +38,8 @@ static atomic_int64_t crash_owner = -1;
 static atomic_uint32_t crash_depth = 0;
 static struct raw_spinlock crash_lock = RAW_SPINLOCK_INIT;
 
-PERCPU_DEFINE(atomic_uint32_t, crash_quiesced, NULL);
-PERCPU_DEFINE(struct crash_regs, crash_regs, NULL);
+PERCPU_DEFINE(atomic_uint32_t, crash_quiesced);
+PERCPU_DEFINE(struct crash_regs, crash_regs);
 static cc_fn_unused struct crash_regs boot_crash_regs = {0};
 
 NDJSON_DEFINE(panic_at, NDJSON_SECTION_PANIC, NDJSON_KIND_AT, 1,
