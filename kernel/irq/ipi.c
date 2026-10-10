@@ -233,11 +233,24 @@ static bool ipi_mask_should_broadcast(const struct ipi_mask_plan *p,
     return (p->sends - 1) * 256 >= bystanders * IPI_BCAST_RATIO_Q8;
 }
 
+size_t ipi_send_cost(const struct cpu_mask *targets) {
+    enum irql irql = irql_raise(IRQL_HIGH_LEVEL);
+
+    cpu_id_t this_cpu = smp_id(TOPC_IRQL);
+
+    enum ipi_mask_backend backend = ipi_backend_get();
+    struct ipi_mask_plan plan = ipi_mask_plan(targets, backend, this_cpu);
+
+    irql_lower(irql);
+
+    return plan.sends;
+}
+
 void ipi_send_mask(const struct cpu_mask *targets, uint8_t vector,
                    enum ipi_mask_flags flags) {
     enum irql irql = irql_raise(IRQL_HIGH_LEVEL);
 
-    size_t this_cpu = smp_id(TOPC_IRQL);
+    cpu_id_t this_cpu = smp_id(TOPC_IRQL);
     size_t online = global.core_count;
     enum ipi_mask_backend backend = ipi_backend_get();
     struct ipi_mask_plan plan = ipi_mask_plan(targets, backend, this_cpu);

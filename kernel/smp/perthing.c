@@ -9,6 +9,7 @@
 #include <smp/perdomain.h>
 #include <smp/pertopo.h>
 
+/* TODO: memory locality with kmalloc_from_domain aligned */
 void percpu_obj_init(void) {
     struct percpu_descriptor *d;
     linker_section_for_each_object(d, percpu_desc) {
@@ -70,4 +71,22 @@ size_t pertopo_node_local(struct pertopo_descriptor *desc,
     }
 
     return SIZE_MAX;
+}
+
+void **percpu_alloc_array(size_t size) {
+    size_t count = global.core_count;
+    void **ret = must_kmalloc(sizeof(void *) * count, ALLOC_ZERO);
+    for (size_t i = 0; i < count; i++)
+        ret[i] = must(kmalloc_from_domain(domain_for_cpu(i), size));
+
+    return ret;
+}
+
+void **perdomain_alloc_array(size_t size) {
+    size_t count = global.domain_count;
+    void **ret = must_kmalloc(sizeof(void *) * count, ALLOC_ZERO);
+    for (size_t i = 0; i < count; i++)
+        ret[i] = must(kmalloc_from_domain(i, size));
+
+    return ret;
 }

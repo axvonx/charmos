@@ -34,7 +34,6 @@ struct globals {
     atomic_size_t idle_core_count;
     size_t core_count;
     struct core **cores;
-    struct tlb_shootdown_cpu *shootdown_data;
     struct scheduler **schedulers;
     struct dpc_cpu *dpc_data;
 

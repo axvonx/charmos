@@ -9,6 +9,8 @@
 #include <log.h>
 #include <math/range.h>
 #include <mem/page.h>
+#include <mem/tlb.h> /* TODO: This header has little business being in here,
+                      * we should consider moving it out of this */
 #include <sch/climb.h>
 #include <sch/rt_sched_types.h>
 #include <stdarg.h>
@@ -359,6 +361,9 @@ struct thread {
     struct lock_chk_thread_data lock_chk;
 
 #endif
+
+    /* ========== Memory management data ========== */
+    tlb_stamp_t lazy_tlb_gen;
 
     /* ========== APC data ========== */
     /* Standard APC queues */

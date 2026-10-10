@@ -91,3 +91,5 @@ LINKER_SECTION_EXTERN(struct percpu_descriptor, percpu_desc);
 #define percpu_for_each(...) PP_CALL(percpu_for_each_internal, __VA_ARGS__)
 
 void percpu_obj_init(void);
+
+void **percpu_alloc_array(size_t size);

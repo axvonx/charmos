@@ -1,6 +1,7 @@
 /* @title: TLB */
 #pragma once
 #include <atomic.h>
+#include <math/range.h>
 #include <mem/page.h>
 #include <stdint.h>
 #include <structures/mpmc_queue.h>
@@ -15,12 +16,26 @@
  * (1) Eager
  * (2) Lazy
  *
- * We build TLB queues that correspond to the processor struct domains,
- * which allow us to shard the shootdowns by having a domain
- * shootdown queue and a per-CPU one.
+ * We group by domains, which are NUMA nodes when available, or grouped by
+ * LLC/arbitrary when on UMA. On x86 (currently the only supported architecture),
+ * we use x2APIC cluster IPI batching to reduce IPI costs, and precompute
+ * the IPI costs for a given domain to determine whether a domain IPI
+ * should be chosen, or individual per-CPU IPIs.
  *
- * The idea here is that we scope at the IPI cluster scope.
+ * An issue with lazy TLB invalidations, however, is that thread migrations can
+ * affect coherency. For instance, if thread A is running on CPU 0, and it
+ * invalidates all relevant lazy queues, and uses that premise to then
+ * read some virtual memory, if it gets migrated to CPU 1, the
+ * TLB could end up stale.
+ *
+ * To mitigate this, we introduce an idea of "timestamping" TLB invalidations.
+ * This is done via the TSC on x86, and the idea is that upon an invalidation
+ * of the lazy queue, you record a timestamp for when that happened, on the
+ * current thread.
+ *
  */
+
+typedef uint64_t tlb_stamp_t;
 
 /* A type describes what an actual operation is */
 enum tlb_op_type {
@@ -39,9 +54,10 @@ enum tlb_request_mode {
 struct tlb_payload {
     enum tlb_op_type type;
     union {
-        vaddr_t vaddr;
+        vaddr_t addr;
         struct {
-            vaddr_t hi, lo;
+            RANGE_DEFINE(vaddr_t, range);
+            size_t stride;
         };
     };
 };
@@ -52,29 +68,8 @@ struct tlb_request {
     struct tlb_payload payload;
 };
 
-struct tlb_queue_entry {
-    struct tlb_payload payload;
-};
-
-MPMC_QUEUE_DECLARE(tlb_queue, struct tlb_queue_entry);
-
-struct tlb_node {
-    struct topology_node *topo_node;
-    struct tlb_queue eager_queue;
-    struct tlb_queue lazy_queue;
-};
-
-struct tlb_shootdown_cpu {
-    atomic_uintptr_t queue[TLB_QUEUE_SIZE];
-    atomic_uint32_t head;
-    atomic_uint32_t tail;
-    atomic_bool in_tlb_shootdown;
-    atomic_uint8_t flush_all;
-    atomic_uint64_t req_gen;  /* last requested generation */
-    atomic_uint64_t done_gen; /* last completed generation */
-};
-
 void tlb_init(void);
 enum irq_result tlb_shootdown_isr(void *ctx, irq_t irq,
                                   struct irq_context *rsp);
 void tlb_shootdown(uintptr_t addr, bool synchronous);
+void tlb_invalidate_lazy(void);

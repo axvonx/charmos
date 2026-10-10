@@ -3,36 +3,40 @@
 #include <atomic.h>
 #include <log.h>
 #include <math/bit.h>
+#include <mem/alloc.h>
 #include <mem/must.h>
+#include <smp/percpu.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <time/clock.h>
 #include <time/names.h>
+#include <time/tsc.h>
 #include <types/freq.h>
 #include <types/types.h>
 
 #include "internal.h"
-#include <mem/alloc.h>
 
 struct tsc_sync_mailbox {
     atomic_uint32_t stage;
     atomic_uint64_t ap_tsc;
 };
 
-static struct tsc_sync_mailbox *mailboxes;
-static bool tsc_use_tsc_for_timekeeping = false;
+struct tsc_globals tsc_global = {
+    .use_tsc = false, .max_warp = 0, .min_rtt = UINT64_MAX};
+
+PERCPU_DEFINE(struct tsc_sync_mailbox, mailboxes);
 
 #define TSC_SYNC_ROUNDS 100
 #define TSC_MAX_ALLOWED_WARP_CYCLES 200
 
 static struct clock *tsc_clock_inst = NULL;
 
-static uint64_t tsc_clock_read(struct clock *clk) {
+uint64_t tsc_clock_read(struct clock *clk) {
     cc_unused(clk);
     return rdtsc_ordered();
 }
 
-static bool tsc_has_invariant(void) {
+bool tsc_has_invariant(void) {
     uint32_t eax, ebx, ecx, edx;
     cpuid_count(0x80000000, 0, &eax, &ebx, &ecx, &edx);
     if (eax < 0x80000007)
@@ -64,24 +68,24 @@ freq_hz_t tsc_calibrate_hpet(void) {
 
 /* TODO: a state machine with explicit values would be better */
 bool tsc_sync_check_bsp(cpu_id_t ap_cpu) {
-    int64_t max_warp = 0;
-    uint64_t min_rtt = UINT64_MAX;
     int64_t best_offset = 0;
 
+    struct tsc_sync_mailbox *mbox = PERCPU_PTR_FOR(mailboxes, ap_cpu);
     for (int i = 0; i < TSC_SYNC_ROUNDS; i++) {
-        atomic_store_release(&mailboxes[ap_cpu].stage, 1);
-        while (atomic_load_acq(&mailboxes[ap_cpu].stage) != 2)
+
+        atomic_store_release(&mbox->stage, 1);
+        while (atomic_load_acq(&mbox->stage) != 2)
             cpu_pause();
 
         /* Sample T0, signal AP to sample its TSC */
         uint64_t t0 = rdtsc_ordered();
-        atomic_store_release(&mailboxes[ap_cpu].stage, 3);
+        atomic_store_release(&mbox->stage, 3);
 
-        while (atomic_load_acq(&mailboxes[ap_cpu].stage) != 4)
+        while (atomic_load_acq(&mbox->stage) != 4)
             cpu_pause();
 
         uint64_t t1 = rdtsc_ordered();
-        uint64_t t_ap = atomic_load_relaxed(&mailboxes[ap_cpu].ap_tsc);
+        uint64_t t_ap = atomic_load_relaxed(&mbox->ap_tsc);
 
         uint64_t rtt = t1 - t0;
         int64_t warp = 0;
@@ -92,22 +96,22 @@ bool tsc_sync_check_bsp(cpu_id_t ap_cpu) {
             warp = (int64_t) (t_ap - t1);
         }
 
-        if (warp > max_warp)
-            max_warp = warp;
+        if (warp > tsc_global.max_warp)
+            tsc_global.max_warp = warp;
 
-        if (rtt < min_rtt) {
-            min_rtt = rtt;
+        if (rtt < tsc_global.min_rtt) {
+            tsc_global.min_rtt = rtt;
             best_offset = (int64_t) t_ap - (int64_t) (t0 + rtt / 2);
         }
     }
 
-    atomic_store_release(&mailboxes[ap_cpu].stage, 0);
+    atomic_store_release(&mbox->stage, 0);
 
-    if (max_warp > TSC_MAX_ALLOWED_WARP_CYCLES) {
+    if (tsc_global.max_warp > TSC_MAX_ALLOWED_WARP_CYCLES) {
         log_msg(LOG_WARN,
                 "TSC sync check failed for CPU %zu (max warp: %ld cycles, min "
                 "RTT: %lu cycles)",
-                ap_cpu, max_warp, min_rtt);
+                ap_cpu, tsc_global.max_warp, tsc_global.min_rtt);
         if (tsc_clock_inst) {
             tsc_clock_inst->flags |= CLOCK_FLAG_UNSTABLE;
             tsc_clock_inst->rating = CLOCK_RATING_UNSUITABLE;
@@ -118,29 +122,25 @@ bool tsc_sync_check_bsp(cpu_id_t ap_cpu) {
     log_msg(LOG_INFO,
             "TSC sync check OK for CPU %zu (warp: %ld cycles, offset: %ld "
             "cycles, min RTT: %lu cycles)",
-            ap_cpu, max_warp, best_offset, min_rtt);
+            ap_cpu, tsc_global.max_warp, best_offset, tsc_global.min_rtt);
     return true;
 }
 
 void tsc_sync_check_ap(cpu_id_t self) {
+    struct tsc_sync_mailbox *mbox = PERCPU_PTR_FOR(mailboxes, self);
     for (int i = 0; i < TSC_SYNC_ROUNDS; i++) {
-        while (atomic_load_acq(&mailboxes[self].stage) != 1)
+        while (atomic_load_acq(&mbox->stage) != 1)
             cpu_pause();
 
-        atomic_store_release(&mailboxes[self].stage, 2);
+        atomic_store_release(&mbox->stage, 2);
 
-        while (atomic_load_acq(&mailboxes[self].stage) != 3)
+        while (atomic_load_acq(&mbox->stage) != 3)
             cpu_pause();
 
         uint64_t ap = rdtsc_ordered();
-        atomic_store_relaxed(&mailboxes[self].ap_tsc, ap);
-        atomic_store_release(&mailboxes[self].stage, 4);
+        atomic_store_relaxed(&mbox->ap_tsc, ap);
+        atomic_store_release(&mbox->stage, 4);
     }
-}
-
-void tsc_mailboxes_init(void) {
-    mailboxes =
-        must_kmalloc(sizeof(struct tsc_sync_mailbox) * global.core_count);
 }
 
 void tsc_sync_check_all_aps(void) {
@@ -149,11 +149,11 @@ void tsc_sync_check_all_aps(void) {
         ok += tsc_sync_check_bsp(i);
 
     if (ok == global.core_count - 1)
-        tsc_use_tsc_for_timekeeping = true;
+        tsc_global.use_tsc = true;
 }
 
 bool tsc_should_use_tsc(void) {
-    return tsc_use_tsc_for_timekeeping;
+    return tsc_global.use_tsc;
 }
 
 struct clock *tsc_clock_init(freq_hz_t freq_hz) {

@@ -22,11 +22,13 @@
 #include <time/time.h>
 #include <time/tsc.h>
 
+#include "mem/tlb_internal.h" /* for tlb_shootdown_cpu */
+
 /* TODO: This file is one that I had thought would stay small back when
  * I first got SMP working, but day by day it grows and grows. Might
  * want to refactor and clean this up into state machines */
 
-static volatile uint64_t cr3 = 0;
+static atomic_uint64_t cr3 = 0;
 static atomic_uint32_t cores_awake = 0;
 
 /* NOTE: this is used because it is contiguous in memory,
@@ -267,11 +269,11 @@ static inline void set_core_awake(void) {
 }
 
 /* returns with interrupts disabled; the scheduler takes it from here */
-void smp_wakeup(struct limine_mp_info *info) TSA_ACQUIRES_IRQS {
+void smp_ap_wakeup(struct limine_mp_info *info) TSA_ACQUIRES_IRQS {
     cc_unused(info);
     irq_disable();
 
-    asm volatile("mov %0, %%cr3" ::"r"(cr3));
+    cr3_write(atomic_load_acq(&cr3));
 
     x2apic_init();
     cpu_id_t cpu = smp_cpu_from_apic_id(lapic_this_id());
@@ -320,9 +322,9 @@ void smp_wait_for_others_to_idle(void) {
 }
 
 void smp_wake(struct limine_mp_response *mpr) {
-    asm volatile("mov %%cr3, %0" : "=r"(cr3));
+    atomic_store_release(&cr3, cr3_read());
     for (uint64_t i = 1; i < mpr->cpu_count; i++)
-        mpr->cpus[i]->goto_address = smp_wakeup;
+        mpr->cpus[i]->goto_address = smp_ap_wakeup;
 
     smp_core(TOPC_NONE)->tsc_hz = tsc_calibrate();
     if (global.core_count == 1)
@@ -337,40 +339,29 @@ void smp_wake(struct limine_mp_response *mpr) {
 }
 
 void smp_setup_bsp(void) {
-    struct core *c = kmalloc(sizeof(struct core), ALLOC_ZERO);
-    if (!c)
-        panic("Could not allocate space for core structure on BSP");
+    struct core *c = must_kmalloc(sizeof(struct core), ALLOC_ZERO);
 
     c->id = 0;
     c->self = c;
     c->current_irql = IRQL_PASSIVE_LEVEL;
     wrmsr(MSR_GS_BASE, (uint64_t) c);
     global.cores =
-        kmalloc(sizeof(struct core *) * global.core_count, ALLOC_ZERO);
-
-    if (cc_unlikely(!global.cores))
-        panic("Could not allocate space for global core structures");
-
-    global.shootdown_data = kmalloc(
-        sizeof(struct tlb_shootdown_cpu) * global.core_count, ALLOC_ZERO);
-    if (!global.shootdown_data)
-        panic("Could not allocate global shootdown data");
+        must_kmalloc(sizeof(struct core *) * global.core_count, ALLOC_ZERO);
 
     global.cores[0] = c;
     init_smt_info(c);
     detect_llc(&c->llc);
     detect_cpu_capability(c);
-    tsc_mailboxes_init();
 }
 
 static atomic_uint32_t tick_change_state = 0;
-static bool enable = false;
+static atomic_bool enable = false;
 static uint8_t entry = 0;
 
 static enum irq_result tick_op_isr(void *ctx, uint8_t vector,
                                    struct irq_context *rsp) {
     cc_unused(ctx, vector, rsp);
-    if (enable) {
+    if (atomic_load_acq(&enable)) {
         scheduler_tick_enable();
     } else {
         scheduler_tick_disable();
@@ -381,7 +372,7 @@ static enum irq_result tick_op_isr(void *ctx, uint8_t vector,
 }
 
 static void send_em_all_out(bool e) {
-    enable = e;
+    atomic_store_release(&enable, e);
 
     atomic_store(&tick_change_state, 0);
     size_t i;

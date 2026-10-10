@@ -71,10 +71,6 @@ void thread_migrate(struct thread *t, size_t dest_core) TSA_NO_ANALYSIS {
         return;
     }
 
-    /* now that we have acquired both scheduler locks,
-     * we have control over the thread and can
-     * unmark it as NO_STEAL */
-
     bool ok;
     tirql = thread_acquire(t, &ok);
     if (!ok) {

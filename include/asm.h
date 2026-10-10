@@ -259,3 +259,15 @@ static inline void cpu_memory_barrier(void) {
 static inline void cpu_full_fence(void) {
     asm volatile("mfence; lfence" ::: "memory");
 }
+
+static inline uint64_t rdtsc_after_stores(void) {
+    uint32_t lo, hi;
+    asm volatile("mfence; lfence; rdtsc" : "=a"(lo), "=d"(hi)::"memory");
+    return ((uint64_t) hi << 32) | lo;
+}
+
+static inline uint64_t rdtsc_before_loads(void) {
+    uint32_t lo, hi;
+    asm volatile("rdtsc; lfence" : "=a"(lo), "=d"(hi)::"memory");
+    return ((uint64_t) hi << 32) | lo;
+}

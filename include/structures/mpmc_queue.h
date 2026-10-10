@@ -45,6 +45,38 @@ static inline cc_always_inline bool mpmc_claim(atomic_uint64_t *cursor,
     }
 }
 
+static inline cc_always_inline bool mpmc_claim_range(struct mpmc_hdr *h,
+                                                     void *slots, size_t stride,
+                                                     uint64_t *first_out,
+                                                     uint64_t *count_out) {
+    while (true) {
+        uint64_t t = atomic_load_relaxed(&h->tail);
+        uint64_t end = atomic_load_acq(&h->head);
+
+        uint64_t p = t;
+        while (p != end) {
+            atomic_uint64_t *seq = (atomic_uint64_t *) ((uint8_t *) slots +
+                                                        (p & h->mask) * stride);
+            if (atomic_load_acq(seq) != p + 1)
+                break;
+            p++;
+        }
+
+        if (p == t) {
+            if (atomic_load_relaxed(&h->tail) != t)
+                continue;
+            return false;
+        }
+
+        uint64_t expected = t;
+        if (atomic_cas_weak(&h->tail, &expected, p, mo_acq_rel, mo_relaxed)) {
+            *first_out = t;
+            *count_out = p - t;
+            return true;
+        }
+    }
+}
+
 static inline bool mpmc_hdr_empty(const struct mpmc_hdr *h) {
     uint64_t hd = atomic_load_relaxed(&h->head);
     uint64_t tl = atomic_load_relaxed(&h->tail);
@@ -97,6 +129,21 @@ static inline bool mpmc_hdr_empty(const struct mpmc_hdr *h) {
         s->val = (T) {0};                                                      \
         atomic_store_release(&s->seq, pos + q->hdr.mask + 1);                  \
         return true;                                                           \
+    }                                                                          \
+                                                                               \
+    /* Drain and return how many were drained */                               \
+    static inline size_t name##_drain(struct name *q) {                        \
+        uint64_t first, count;                                                 \
+        if (!mpmc_claim_range(&q->hdr, q->slots, sizeof(*q->slots), &first,    \
+                              &count))                                         \
+            return 0;                                                          \
+                                                                               \
+        for (uint64_t pos = first; pos != first + count; pos++) {              \
+            struct name##_slot *s = &q->slots[pos & q->hdr.mask];              \
+            s->val = (T) {0};                                                  \
+            atomic_store_release(&s->seq, pos + q->hdr.mask + 1);              \
+        }                                                                      \
+        return count;                                                          \
     }                                                                          \
                                                                                \
     static inline bool name##_empty(const struct name *q) {                    \

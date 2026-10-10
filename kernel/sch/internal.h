@@ -236,6 +236,9 @@ scheduler_release_two_raw_locks(struct scheduler *a,
 
 /* Internal use only */
 void scheduler_switch_in();
+
+/* NOTE: This is merely a place to hook things into.
+ * The actual CPU that calls this is undefined */
 void thread_post_migrate(struct thread *t, size_t old_cpu, size_t new_cpu);
 
 /* Called with wait_lock held after every object link is removed */

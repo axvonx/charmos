@@ -47,3 +47,32 @@ TEST_DEFINE_UNIT(mpmc_queue, fifo_capacity_and_wrap) {
     test_mpmc_word_destroy(&q);
     return TEST_SUCCESS;
 }
+
+TEST_DEFINE_UNIT(mpmc_queue, drain_empty_partial_full) {
+    struct test_mpmc_word q;
+    TEST_ASSERT(test_mpmc_word_init(&q, 8));
+
+    TEST_ASSERT_EQ(test_mpmc_word_drain(&q), 0);
+
+    for (uintptr_t i = 1; i <= 3; i++)
+        TEST_ASSERT(test_mpmc_word_enqueue(&q, i));
+    TEST_ASSERT_EQ(test_mpmc_word_drain(&q), 3);
+    TEST_ASSERT(test_mpmc_word_empty(&q));
+
+    for (int round = 0; round < 3; round++) {
+        for (uintptr_t i = 1; i <= 8; i++)
+            TEST_ASSERT(test_mpmc_word_enqueue(&q, i));
+        TEST_ASSERT(!test_mpmc_word_enqueue(&q, 999));
+        TEST_ASSERT_EQ(test_mpmc_word_drain(&q), 8);
+        TEST_ASSERT(test_mpmc_word_empty(&q));
+
+        uintptr_t v = 0;
+        TEST_ASSERT(!test_mpmc_word_dequeue(&q, &v));
+        TEST_ASSERT(test_mpmc_word_enqueue(&q, 42));
+        TEST_ASSERT(test_mpmc_word_dequeue(&q, &v));
+        TEST_ASSERT_EQ(v, 42);
+    }
+
+    test_mpmc_word_destroy(&q);
+    return TEST_SUCCESS;
+}

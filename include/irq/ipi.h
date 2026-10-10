@@ -21,6 +21,9 @@ void ipi_send(cpu_id_t cpu, uint8_t vector);
 /* Fails instead of waiting if a send is still in flight */
 bool ipi_send_try(cpu_id_t cpu, uint8_t vector);
 
+/* How many IPIs does it take to bother targets? */
+size_t ipi_send_cost(const struct cpu_mask *targets);
+
 /* Picks shorthand / KVM PV / x2APIC cluster / physical per call */
 void ipi_send_mask(const struct cpu_mask *targets, uint8_t vector,
                    enum ipi_mask_flags flags);

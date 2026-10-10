@@ -94,3 +94,4 @@ LINKER_SECTION_EXTERN(struct perdomain_descriptor, perdomain_desc);
     PP_CALL(perdomain_for_each_internal, __VA_ARGS__)
 
 void perdomain_obj_init(void);
+void **perdomain_alloc_array(size_t size);

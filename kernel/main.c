@@ -129,6 +129,7 @@ cc_no_asan void k_main(void) TSA_ACQUIRES_IRQS {
     percpu_obj_init();
     watchdog_init();
     smp_init();
+    tlb_init();
 
     domain_init_after_smp();
     domain_buddies_init_after_smp();
@@ -151,6 +152,7 @@ cc_no_asan void k_main(void) TSA_ACQUIRES_IRQS {
     pertopo_obj_init();
     perdomain_obj_init();
     scheduler_domains_init();
+    tlb_init();
     bootstage_advance(BOOTSTAGE_MID_TOPOLOGY);
 
     lapic_clock_evdev_group_init();

@@ -55,7 +55,7 @@ enum thread_wait_status : uint8_t {
  *
  *      ┌───────────────────────────────────────────────────────────┐
  * Bits │ 31..28  27..24  23..20  19..16  15..12  11..8  7..4  3..0 │
- * Use  │  AAAA    ****    ****    ****    ****    ***J  jRWY  DEFP │
+ * Use  │  AAAA    ****    ****    ****    ****    *adJ  jRWY  DEFP │
  *      └───────────────────────────────────────────────────────────┘
  * P - Pinned - Thread is pinned to current CPU
  * F - Flexible RT - realtime scheduler related stuff
@@ -66,6 +66,9 @@ enum thread_wait_status : uint8_t {
  * r - Realtime fault tolerance
  * j - Joinable - someone holds a join reference on this thread
  * J - Joined - a join is in progress or consumed the join reference
+ * d - Diagnostic - Diagnostics enabled for this thread in debug
+ * a - Delivering APCs - In the APC delivery code
+ *
  * A - Unused (Available)
  * * - Unused (Unavailable)
  *
@@ -85,6 +88,7 @@ enum thread_flags : uint32_t {
     /* This is for when inside the APC subsystem, whereas
      * THREAD_FLAG_EXECUTING_APC is for an actual APC callback */
     THREAD_FLAG_DELIVERING_APCS = 1 << 10,
+
 };
 
 enum thread_prio_class : uint8_t {
