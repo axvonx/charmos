@@ -56,9 +56,6 @@ struct globals {
 
     struct movealloc_callback_chain movealloc_chain;
 
-    /* TODO: no more of this */
-    atomic_uint64_t next_tlb_gen;
-
     /* Per core workqueues */
     struct workqueue **workqueues;
 

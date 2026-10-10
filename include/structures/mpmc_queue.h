@@ -154,5 +154,13 @@ static inline bool mpmc_hdr_empty(const struct mpmc_hdr *h) {
         return q->hdr.mask + 1;                                                \
     }                                                                          \
                                                                                \
+    static inline cc_maybe_unused uint64_t name##_produced(struct name *q) {   \
+        return atomic_load_acq(&q->hdr.head);                                  \
+    }                                                                          \
+                                                                               \
+    static inline cc_maybe_unused uint64_t name##_consumed(struct name *q) {   \
+        return atomic_load_acq(&q->hdr.tail);                                  \
+    }                                                                          \
+                                                                               \
     static_assert(ct_field_offset(struct name##_slot, seq) == 0,               \
                   #name ": seq must lead the slot")

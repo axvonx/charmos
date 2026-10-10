@@ -15,7 +15,10 @@ MPMC_QUEUE_DECLARE(tlb_queue, struct tlb_queue_entry);
 struct tlb_ring {
     struct tlb_queue queue;
     tlb_stamp_t stamp_latest;
-    atomic_bool need_flush;
+
+    atomic_uint64_t done_pos; /* every queue slot < this has been invalidated */
+    atomic_uint64_t flush_req;  /* bumped when the queue full */
+    atomic_uint64_t flush_done; /* last flush_req covered by a full flush */
 };
 
 struct tlb_domain {
@@ -25,8 +28,6 @@ struct tlb_domain {
 };
 
 struct tlb_cpu {
-    atomic_uint64_t req_gen;  /* last requested generation */
-    atomic_uint64_t done_gen; /* last completed generation */
     struct tlb_ring eager_ring;
     struct tlb_ring lazy_ring;
     tlb_stamp_t flush_stamp;
