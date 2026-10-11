@@ -63,7 +63,7 @@ void *uacpi_kernel_map(uacpi_phys_addr addr, uacpi_size len) {
 
 void uacpi_kernel_unmap(void *addr, uacpi_size len) {
     return;
-    vmm_unmap_virt(addr, len, VMM_FLAG_NONE);
+    vmm_unmap(addr, len);
 }
 
 void uacpi_kernel_log(uacpi_log_level level, const uacpi_char *data) {

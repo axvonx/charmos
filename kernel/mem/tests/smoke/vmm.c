@@ -4,7 +4,7 @@ TEST_DEFINE_SMOKE(mem, vmm_map_bump) {
     paddr_t p = pmm_alloc_page();
     TEST_ASSERT(p);
 
-    void *va = vmm_map_bump(p, PAGE_SIZE, 0);
+    void *va = vmm_map_bump(p, PAGE_SIZE);
     TEST_ASSERT_NONNULL(va);
 
     *(volatile uint64_t *) va = 0xdeadbeef;

@@ -32,14 +32,13 @@ TEST_DEFINE_SMOKE(vas, map_unaligned_physical_address) {
     TEST_ASSERT_NONNULL(vas);
     paddr_t phys = pmm_alloc_pages(2);
     TEST_ASSERT_NE(phys, 0);
-    void *mapped =
-        vas_map(vas, phys + 37, PAGE_SIZE, PAGE_WRITE, VMM_FLAG_NONE);
+    void *mapped = vas_map(vas, phys + 37, PAGE_SIZE, .page_flags = PAGE_WRITE);
 
     TEST_ASSERT_NONNULL(mapped);
     vaddr_t base = (vaddr_t) mapped - 37;
 
     TEST_ASSERT_EQ(base & (PAGE_SIZE - 1), 0);
-    TEST_ASSERT_EQ(vmm_get_phys((vaddr_t) mapped, VMM_FLAG_NONE), phys + 37);
+    TEST_ASSERT_EQ(vmm_get_phys((vaddr_t) mapped), phys + 37);
     TEST_ASSERT(vas_vaddr_is_allocated(vas, base + 2 * PAGE_SIZE - 1));
 
     ((uint8_t *) mapped)[PAGE_SIZE - 1] = 0x57;
@@ -50,8 +49,8 @@ TEST_DEFINE_SMOKE(vas, map_unaligned_physical_address) {
     vas_unmap(vas, mapped, PAGE_SIZE);
 
     TEST_ASSERT_FALSE(vas_vaddr_is_allocated(vas, base));
-    TEST_ASSERT_EQ(vmm_get_phys(base, VMM_FLAG_NONE), PADDR_MAX);
-    TEST_ASSERT_EQ(vmm_get_phys(base + PAGE_SIZE, VMM_FLAG_NONE), PADDR_MAX);
+    TEST_ASSERT_EQ(vmm_get_phys(base), PADDR_MAX);
+    TEST_ASSERT_EQ(vmm_get_phys(base + PAGE_SIZE), PADDR_MAX);
     vas_free(vas, next, PAGE_SIZE);
     pmm_free_pages(phys, 2);
     TEST_ASSERT(vas_destroy(vas));

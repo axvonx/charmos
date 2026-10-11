@@ -221,11 +221,12 @@ static void *slab_map_new(struct slab_cache *cache,
         vaddr_t virt = virt_base + pages_mapped * PAGE_SIZE;
         if (cache->type != SLAB_TYPE_PAGEABLE_ZERO) {
             paddr_t phys = phys_out[pages_mapped];
-            if (cc_unlikely(vmm_map_page(virt, phys, pflags) < 0))
+            if (cc_unlikely(vmm_map_page(virt, phys, .page_flags = pflags) < 0))
                 goto err;
         } else {
             if (pages_mapped == 0) {
-                if (cc_unlikely(vmm_map_page(virt, phys_out[0], pflags) < 0))
+                if (cc_unlikely(vmm_map_page(virt, phys_out[0],
+                                             .page_flags = pflags) < 0))
                     goto err;
             } else {
                 if (cc_unlikely(vmm_mark_demand_page(

@@ -3,8 +3,8 @@
 #include <atomic.h>
 #include <compiler/diagnostic.h>
 #include <math/range.h>
-#include <mem/page.h>
 #include <stdint.h>
+#include <structures/cpu_mask.h>
 #include <structures/mpmc_queue.h>
 #include <types/types.h>
 
@@ -39,21 +39,22 @@
 typedef uint64_t tlb_stamp_t;
 
 /* A type describes what an actual operation is */
-enum tlb_op_type {
-    TLB_OP_PAGE,  /* Invalidate just this one page */
-    TLB_OP_RANGE, /* Invalidate this range */
-    TLB_OP_FLUSH  /* Completely flush everything */
+enum tlb_payload_type {
+    TLB_PAYLOAD_PAGE,  /* Invalidate just this one page */
+    TLB_PAYLOAD_RANGE, /* Invalidate this range */
+    TLB_PAYLOAD_FLUSH  /* Completely flush everything */
 };
 
 /* Modes specify how to deliver. SYNC and ASYNC are eager */
-enum tlb_request_mode {
-    TLB_REQUEST_SYNC,  /* Send the IPI out, wait for responses */
-    TLB_REQUEST_ASYNC, /* Fire and forget */
-    TLB_REQUEST_LAZY   /* Tell the other CPUs about it, but no enqueues */
+enum tlb_mode {
+    TLB_MODE_SYNC,  /* Send the IPI out, wait for responses */
+    TLB_MODE_ASYNC, /* Fire and forget */
+    TLB_MODE_LAZY,  /* Tell the other CPUs about it, but no enqueues */
+    TLB_MODE_NONE   /* Local only: no remote CPUs are told (caller batches) */
 };
 
 struct tlb_payload {
-    enum tlb_op_type type;
+    enum tlb_payload_type type;
     union {
         vaddr_t addr;
         struct {
@@ -64,7 +65,7 @@ struct tlb_payload {
 };
 
 struct tlb_request {
-    enum tlb_request_mode mode;
+    enum tlb_mode mode;
     struct cpu_mask targets;
     struct tlb_payload payload;
 };
@@ -78,7 +79,7 @@ void tlb_invalidate_lazy(void);
 #define tlb_shootdown(...)                                                     \
     tlb_shootdown_full(cc_wno_override_init_expr(                              \
         struct tlb_request,                                                    \
-        ((struct tlb_request) {.mode = TLB_REQUEST_SYNC,                       \
+        ((struct tlb_request) {.mode = TLB_MODE_SYNC,                          \
                                .targets = CPU_MASK_INIT_ALL,                   \
-                               .payload.type = TLB_OP_PAGE,                    \
+                               .payload.type = TLB_PAYLOAD_PAGE,               \
                                ##__VA_ARGS__})))

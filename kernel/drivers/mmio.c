@@ -17,8 +17,8 @@ static inline cc_always_inline void *mmio_map_raw(paddr_t phys, size_t size,
                                                   bool cacheable) {
     kassert(mmio_vas_space);
     return vas_map(mmio_vas_space, phys, size,
-                   PAGE_WRITE | (cacheable ? PAGE_UNCACHABLE : 0),
-                   VMM_FLAG_NONE);
+                   .page_flags =
+                       PAGE_WRITE | (cacheable ? PAGE_UNCACHABLE : 0));
 }
 
 void cc_mem_io *mmio_map(paddr_t phys, size_t size) {

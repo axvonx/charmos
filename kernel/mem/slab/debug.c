@@ -131,8 +131,7 @@ cc_no_asan void slab_dump_corruption(void *obj,
         }
         /* Dump 8 words around the target if it looks like a kernel pointer. */
         if ((vaddr_t) val >= SLAB_HEAP_START &&
-            vmm_get_phys(PAGE_ALIGN_DOWN((vaddr_t) val), VMM_FLAG_NONE) !=
-                (paddr_t) -1) {
+            vmm_get_phys(PAGE_ALIGN_DOWN((vaddr_t) val)) != (paddr_t) -1) {
             uint64_t *t = (uint64_t *) (vaddr_t) val;
             for (int j = 0; j < 6; j++)
                 slab_err("      [%p +%d] = %#lx", t, j * 8, t[j]);

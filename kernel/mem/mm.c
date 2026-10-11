@@ -76,7 +76,7 @@ enum err mm_pgtable_init(struct mm *mm) {
 }
 
 void mm_pgtable_free(struct mm *mm) {
-    vmm_unmap_all_user_pages(vmm_phys_to_pml4(mm->pml4), VMM_FLAG_NONE);
+    vmm_unmap_all_user_pages(vmm_phys_to_pml4(mm->pml4));
 }
 
 void mm_activate(struct mm *mm) {
@@ -84,8 +84,8 @@ void mm_activate(struct mm *mm) {
 }
 
 enum err mm_map_page(struct mm *mm, vaddr_t va, paddr_t pa, uint64_t pflags) {
-    vmm_map_page_user(vmm_phys_to_pml4(mm->pml4), va, pa, pflags,
-                      VMM_FLAG_USER);
+    vmm_map_page_user(vmm_phys_to_pml4(mm->pml4), va, pa, .page_flags = pflags,
+                      .vmm_flags = VMM_FLAG_USER);
     return ERR_OK;
 }
 

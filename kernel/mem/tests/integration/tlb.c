@@ -32,7 +32,7 @@ TEST_DEFINE_INTEGRATION(mem, tlb_shootdown_sync,
     paddr_t p2 = pmm_alloc_page();
     TEST_ASSERT(p1 && p2);
 
-    void *va = vmm_map_bump(p1, PAGE_SIZE, 0);
+    void *va = vmm_map_bump(p1, PAGE_SIZE);
     *(volatile uint64_t *) va = 0xAAAAAAAAAAAAAAAA;
 
     struct thread *threads[TLB_MAX_TEST_THREADS];
@@ -47,8 +47,8 @@ TEST_DEFINE_INTEGRATION(mem, tlb_shootdown_sync,
         scheduler_yield();
 
     /* Remap under them */
-    vmm_unmap_virt(va, PAGE_SIZE, VMM_FLAG_NONE);
-    vmm_map_page((vaddr_t) va, p2, PAGE_PRESENT | PAGE_WRITE);
+    vmm_unmap(va, PAGE_SIZE);
+    vmm_map_page((vaddr_t) va, p2, .page_flags = PAGE_PRESENT | PAGE_WRITE);
     *(volatile uint64_t *) va = 0xBBBBBBBBBBBBBBBB;
 
     /* Sync shootdown -- must complete on all cores before returning */
@@ -73,14 +73,14 @@ TEST_DEFINE_INTEGRATION(mem, tlb_shootdown_async, .min_ram_mib = 8) {
     paddr_t p2 = pmm_alloc_page();
     TEST_ASSERT(p1 && p2);
 
-    void *va = vmm_map_bump(p1, PAGE_SIZE, 0);
+    void *va = vmm_map_bump(p1, PAGE_SIZE);
     *(volatile uint64_t *) va = 0x1234;
 
-    vmm_unmap_virt(va, PAGE_SIZE, VMM_FLAG_NONE);
-    va = vmm_map_bump(p2, PAGE_SIZE, 0);
+    vmm_unmap(va, PAGE_SIZE);
+    va = vmm_map_bump(p2, PAGE_SIZE);
     *(volatile uint64_t *) va = 0x5678;
 
-    tlb_shootdown(.mode = TLB_REQUEST_ASYNC, .payload.addr = (uintptr_t) va);
+    tlb_shootdown(.mode = TLB_MODE_ASYNC, .payload.addr = (uintptr_t) va);
 
     /* Wait for IPIs to land */
     time_ms_t start = time_get_ms();
@@ -102,18 +102,17 @@ TEST_DEFINE_INTEGRATION(mem, tlb_shootdown_flush_all,
     paddr_t p = pmm_alloc_page();
     TEST_ASSERT(p);
 
-    void *va = vmm_map_bump(p, PAGE_SIZE, 0);
+    void *va = vmm_map_bump(p, PAGE_SIZE);
 
     /* Flood shootdown queue */
     for (size_t i = 0; i < iters; i++) {
-        tlb_shootdown(.mode = TLB_REQUEST_ASYNC,
-                      .payload.addr = (uintptr_t) va);
+        tlb_shootdown(.mode = TLB_MODE_ASYNC, .payload.addr = (uintptr_t) va);
     }
 
     /* Now do remap */
     paddr_t p2 = pmm_alloc_page();
-    vmm_unmap_virt(va, PAGE_SIZE, VMM_FLAG_NONE);
-    va = vmm_map_bump(p2, PAGE_SIZE, 0);
+    vmm_unmap(va, PAGE_SIZE);
+    va = vmm_map_bump(p2, PAGE_SIZE);
     *(volatile uint64_t *) va = 0xDEADBEEF;
 
     tlb_shootdown(.payload.addr = (uintptr_t) va, );
@@ -127,11 +126,10 @@ TEST_DEFINE_INTEGRATION(mem, tlb_shootdown_flush_all,
 static void tlb_spammer(void *arg) {
     cc_unused(arg);
     paddr_t p = pmm_alloc_page();
-    void *va = vmm_map_bump(p, PAGE_SIZE, 0);
+    void *va = vmm_map_bump(p, PAGE_SIZE);
 
     for (int i = 0; i < 1000; i++) {
-        tlb_shootdown(.mode = TLB_REQUEST_ASYNC,
-                      .payload.addr = (uintptr_t) va);
+        tlb_shootdown(.mode = TLB_MODE_ASYNC, .payload.addr = (uintptr_t) va);
     }
 }
 

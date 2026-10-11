@@ -638,7 +638,7 @@ err:
 }
 
 static bool stack_addr_readable(uint64_t addr) {
-    return vmm_get_phys(PAGE_ALIGN_DOWN(addr), VMM_FLAG_NONE) != (uintptr_t) -1;
+    return vmm_get_phys(PAGE_ALIGN_DOWN(addr)) != (uintptr_t) -1;
 }
 
 /* Frame holds caller's saved rbp at [0] and ret addr at [1], so both
@@ -768,8 +768,7 @@ void debug_print_stack_from(uint64_t *start, size_t max_scan) {
         uint8_t *page_base = (uint8_t *) PAGE_ALIGN_DOWN(addr);
 
         if (page_base != last_checked_page) {
-            if (vmm_get_phys((vaddr_t) page_base, VMM_FLAG_NONE) ==
-                (uintptr_t) -1)
+            if (vmm_get_phys((vaddr_t) page_base) == (uintptr_t) -1)
                 break;
             last_checked_page = page_base;
         }

@@ -166,8 +166,7 @@ enum err asan_shadow_install(vaddr_t base, size_t len) {
 
         /* Per page rather than once up front, so a range of any length works:
          * the walk is cheap and only happens for a page we are about to back */
-        enum err err =
-            vmm_unshare_path(v, VMM_MAP_PAGE_SIZE_4KB, VMM_FLAG_NONE);
+        enum err err = vmm_unshare_path(v);
         if (err < 0)
             return err;
 
@@ -175,9 +174,9 @@ enum err asan_shadow_install(vaddr_t base, size_t len) {
         if (!phys)
             return ERR_NO_MEM;
 
-        err =
-            vmm_map_page_internal(v, phys, PAGE_PRESENT | PAGE_WRITE | PAGE_XD,
-                                  VMM_FLAG_MODIFY_LEAF, VMM_MAP_PAGE_SIZE_4KB);
+        err = vmm_map_page(v, phys,
+                           .page_flags = PAGE_PRESENT | PAGE_WRITE | PAGE_XD,
+                           .vmm_flags = VMM_FLAG_MODIFY_LEAF);
         if (err < 0) {
             pmm_free_page(phys);
             return err;
@@ -207,9 +206,9 @@ void asan_shadow_release(vaddr_t base, size_t len) {
 
         paddr_t phys = vmm_get_phys(v);
 
-        if (vmm_map_page_internal(v, asan_freed_shadow_phys,
-                                  PAGE_PRESENT | PAGE_XD, VMM_FLAG_MODIFY_LEAF,
-                                  VMM_MAP_PAGE_SIZE_4KB) < 0)
+        if (vmm_map_page(v, asan_freed_shadow_phys,
+                         .page_flags = PAGE_PRESENT | PAGE_XD,
+                         .vmm_flags = VMM_FLAG_MODIFY_LEAF) < 0)
             continue;
 
         pmm_free_page(phys);
@@ -235,7 +234,7 @@ static void asan_map_early_shadow(void) {
 
     /* Deliberately RO and aliased */
     enum err err = vmm_map_aliased(start, end - start, asan_zero_shadow_phys,
-                                   PAGE_PRESENT | PAGE_XD, VMM_FLAG_NONE);
+                                   .page_flags = PAGE_PRESENT | PAGE_XD);
     if (err < 0)
         kasan_panic("could not map the shared shadow window",
                     (const void *) start, end - start, false);

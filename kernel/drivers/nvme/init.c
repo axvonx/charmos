@@ -110,15 +110,13 @@ void nvme_alloc_io_queues(struct nvme_device *nvme, uint32_t qid) {
     uint64_t sq_phys = pmm_alloc_pages(sq_pages);
     nvme_check_dma_addr(sq_phys, "IO submission queue");
 
-    this_queue->sq =
-        vmm_map_bump(sq_phys, sq_pages * nvme->page_size, PAGE_NO_FLAGS);
+    this_queue->sq = vmm_map_bump(sq_phys, sq_pages * nvme->page_size);
     memset(this_queue->sq, 0, sq_pages * nvme->page_size);
 
     uint64_t cq_phys = pmm_alloc_pages(cq_pages);
     nvme_check_dma_addr(cq_phys, "IO completion queue");
 
-    this_queue->cq =
-        vmm_map_bump(cq_phys, cq_pages * nvme->page_size, PAGE_NO_FLAGS);
+    this_queue->cq = vmm_map_bump(cq_phys, cq_pages * nvme->page_size);
     memset(this_queue->cq, 0, cq_pages * nvme->page_size);
 
     this_queue->sq_phys  = sq_phys;

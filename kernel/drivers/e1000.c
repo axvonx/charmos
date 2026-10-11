@@ -34,8 +34,7 @@ static void e1000_setup_tx_ring(struct e1000_device *dev) {
     for (int i = 0; i < E1000_NUM_TX_DESC; i++) {
         dev->tx_buffers[i] = must_kmalloc(2048);
 
-        dev->tx_descs[i].addr =
-            vmm_get_phys((uintptr_t) dev->tx_buffers[i], VMM_FLAG_NONE);
+        dev->tx_descs[i].addr   = vmm_get_phys((uintptr_t) dev->tx_buffers[i]);
         dev->tx_descs[i].status = E1000_TXD_STAT_DD;
     }
 
@@ -64,8 +63,7 @@ static void e1000_setup_rx_ring(struct e1000_device *dev) {
     for (int i = 0; i < E1000_NUM_RX_DESC; i++) {
         dev->rx_buffers[i] = must_kmalloc(E1000_RX_BUF_SIZE);
 
-        dev->rx_descs[i].addr =
-            vmm_get_phys((uintptr_t) dev->rx_buffers[i], VMM_FLAG_NONE);
+        dev->rx_descs[i].addr   = vmm_get_phys((uintptr_t) dev->rx_buffers[i]);
         dev->rx_descs[i].status = 0;
     }
 

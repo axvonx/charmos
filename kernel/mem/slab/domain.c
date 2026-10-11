@@ -111,8 +111,7 @@ void slab_domain_init_stats(struct slab_domain *domain) {
 }
 
 static struct slab_cache *slab_domain_cache_for_slab(struct slab *slab) {
-    struct domain *d =
-        domain_for_addr(vmm_get_phys((vaddr_t) slab, VMM_FLAG_NONE));
+    struct domain *d = domain_for_addr(vmm_get_phys((vaddr_t) slab));
     d = d ? d : global.domains[0];
 
     size_t o = slab->parent_cache->order;

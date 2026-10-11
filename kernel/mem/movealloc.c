@@ -38,7 +38,7 @@ static void change_slab_backing_page(void *ptr) {
         panic("Moved allocations cannot come from slab");
 }
 
-void movealloc_full(domain_id_t new_domain, void *ptr, enum vmm_flags flags) {
+void movealloc_full(domain_id_t new_domain, void *ptr, struct vmm_request rq) {
     if (global.current_bootstage >= BOOTSTAGE_COMPLETE)
         panic("movealloc cannot be called after boot completes");
 
@@ -48,9 +48,14 @@ void movealloc_full(domain_id_t new_domain, void *ptr, enum vmm_flags flags) {
     vaddr_t aligned_down = PAGE_ALIGN_DOWN(ptr);
     paddr_t phys_addrs[pages];
 
+    struct vmm_request remap_rq = rq;
+    remap_rq.page_flags = PAGE_WRITE | PAGE_PRESENT;
+    remap_rq.page_size = VMM_MAP_PAGE_SIZE_4KB;
+    remap_rq.vmm_flags |= VMM_FLAG_MODIFY_LEAF;
+
     for (size_t i = 0; i < pages; i++) {
         vaddr_t vaddr = aligned_down + i * PAGE_SIZE;
-        paddr_t paddr = vmm_get_phys(vaddr, flags);
+        paddr_t paddr = vmm_get_phys_full(vaddr, rq);
         paddr_t new_phys = domain_alloc_from_domain(d, 1);
         if (!new_phys)
             panic("movealloc failed!");
@@ -59,9 +64,8 @@ void movealloc_full(domain_id_t new_domain, void *ptr, enum vmm_flags flags) {
         void *pvaddr = (void *) vaddr;
         void *pnew_virt = (void *) new_virt;
         memcpy(pnew_virt, pvaddr, PAGE_SIZE);
-        vmm_map_page(vaddr, new_phys, PAGE_WRITE | PAGE_PRESENT,
-                     flags | VMM_FLAG_MODIFY_LEAF);
-        kassert(vmm_get_phys(vaddr, flags) == new_phys);
+        vmm_map_page_full(vaddr, new_phys, remap_rq);
+        kassert(vmm_get_phys_full(vaddr, rq) == new_phys);
 
         phys_addrs[i] = paddr;
     }

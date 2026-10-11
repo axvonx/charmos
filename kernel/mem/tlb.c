@@ -35,9 +35,9 @@ static void tlb_domain_init(struct tlb_domain *d, domain_id_t id) {
 
 static void payload_invalidate(struct tlb_payload *pl) {
     switch (pl->type) {
-    case TLB_OP_FLUSH: tlb_flush(); break;
-    case TLB_OP_PAGE: tlb_invlpg(pl->addr); break;
-    case TLB_OP_RANGE:
+    case TLB_PAYLOAD_FLUSH: tlb_flush(); break;
+    case TLB_PAYLOAD_PAGE: tlb_invlpg(pl->addr); break;
+    case TLB_PAYLOAD_RANGE:
         for (vaddr_t start = pl->range.low; start < pl->range.hi;
              start += pl->stride) {
             tlb_invlpg(start);
@@ -92,6 +92,9 @@ enum irq_result tlb_shootdown_isr(void *ctx, irq_t irq,
 }
 
 void tlb_shootdown_full(struct tlb_request rq) {
+    if (rq.mode == TLB_MODE_NONE)
+        return;
+
     if (global.current_bootstage < BOOTSTAGE_MID_MP)
         return;
 
@@ -112,7 +115,7 @@ void tlb_shootdown_full(struct tlb_request rq) {
         ipi_send(i, IRQ_TLB_SHOOTDOWN);
     }
 
-    if (rq.mode == TLB_REQUEST_SYNC) {
+    if (rq.mode == TLB_MODE_SYNC) {
         cpu_mask_for_each(i, rq.targets) {
             if (i == this_cpu)
                 continue;

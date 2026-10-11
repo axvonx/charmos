@@ -87,7 +87,7 @@ enum usb_error xhci_submit_interrupt_transfer(struct usb_request *req) {
         goto out;
     }
 
-    uint64_t parameter = vmm_get_phys((vaddr_t) req->buffer, VMM_FLAG_NONE);
+    uint64_t parameter = vmm_get_phys((vaddr_t) req->buffer);
     uint32_t status    = req->length;
     status |= TRB_SET_INTERRUPTER_TARGET(0);
 
@@ -208,10 +208,9 @@ enum usb_error xhci_send_control_transfer(struct xhci_device *dev,
         return fail_control_transfer(USB_ERR_OOM);
     }
 
-    emit->setup  = req->setup;
-    emit->length = req->setup->length;
-    emit->buffer_phys =
-        emit->length ? vmm_get_phys((vaddr_t) req->buffer, VMM_FLAG_NONE) : 0;
+    emit->setup       = req->setup;
+    emit->length      = req->setup->length;
+    emit->buffer_phys = emit->length ? vmm_get_phys((vaddr_t) req->buffer) : 0;
 
     xhci_request_init(xreq, cmd, req, XHCI_CMD_TYPE_CONTROL_TRANSFER);
 

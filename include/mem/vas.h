@@ -28,8 +28,10 @@ vaddr_t vas_alloc(struct vas *vas, size_t size, size_t align);
  * we can update the APIs for that later on */
 void vas_free(struct vas *vas, vaddr_t addr, size_t size);
 
-void *vas_map(struct vas *vas, paddr_t paddr, size_t len, uint64_t flags,
-              enum vmm_flags vflags);
+void *vas_map_full(struct vas *vas, paddr_t paddr, size_t len,
+                   struct vmm_request rq);
+#define vas_map(vas, paddr, len, ...)                                          \
+    vas_map_full((vas), (paddr), (len), vmm_request_with_defaults(__VA_ARGS__))
 void vas_unmap(struct vas *vas, void *vaddr, size_t len);
 
 /* Drain cached reservations */

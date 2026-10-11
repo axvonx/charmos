@@ -84,7 +84,7 @@ static struct pt_deferred_free *pt_free_list;
 static struct spinlock pt_free_lock = SPINLOCK_INIT;
 static struct page_table *kernel_pml4 = NULL;
 static atomic_uintptr_t vmm_map_top = VMM_MAP_BASE;
-static void vmm_unmap_aliased(vaddr_t virt, size_t len, enum vmm_flags vflags);
+static void vmm_unmap_aliased(vaddr_t virt, size_t len, enum tlb_mode mode);
 
 static inline struct page_table *alloc_pt(void) {
     paddr_t phys = pmm_alloc_page();
@@ -114,12 +114,12 @@ void pte_unlock(pte_t *pt, enum irql irql) TSA_NO_ANALYSIS {
     pte_unlock_irql((void *) pt, irql);
 }
 
-static void barrier_and_shootdown(enum vmm_flags flags, vaddr_t virt) {
+static void barrier_and_shootdown(enum tlb_mode mode, vaddr_t virt) {
     cpu_memory_barrier();
     tlb_invlpg(virt);
 
-    if (!(flags & VMM_FLAG_NO_TLB_SHOOTDOWN))
-        tlb_shootdown(.payload.addr = virt);
+    if (mode != TLB_MODE_NONE)
+        tlb_shootdown(.mode = mode, .payload.addr = virt);
 }
 
 static inline uint64_t pt_index(uintptr_t virt, int level) {
@@ -248,8 +248,9 @@ static void vmm_free_user_subtree(struct page_table *pdpt) {
     }
 }
 
-void vmm_unmap_all_user_pages(struct page_table *pml4, enum vmm_flags vflags) {
-    cc_unused(vflags);
+void vmm_unmap_all_user_pages_full(struct page_table *pml4,
+                                   struct vmm_request rq) {
+    cc_unused(rq);
 
     for (int i4 = 0; i4 < KERNEL_PML4_START_INDEX; i4++) {
         pte_t e4 = pml4->entries[i4];
@@ -295,7 +296,7 @@ void vmm_init(struct limine_memmap_response *memmap,
         if (virt < text_start || virt >= text_end)
             flags |= PAGE_WRITE;
 
-        e = vmm_map_page(virt, kernel_phys_start + i, flags, VMM_FLAG_NONE);
+        e = vmm_map_page(virt, kernel_phys_start + i, .page_flags = flags);
         if (e < 0)
             panic("Error %s whilst mapping kernel", errno_to_str(e));
     }
@@ -305,8 +306,9 @@ void vmm_init(struct limine_memmap_response *memmap,
          addr += PAGE_SIZE) {
         uint64_t shadow_addr = ASAN_SHADOW_OFFSET + (addr >> ASAN_SHADOW_SCALE);
         shadow_addr = PAGE_ALIGN_DOWN(shadow_addr);
-        vmm_map_page(shadow_addr, dummy_phys, PAGE_PRESENT | PAGE_WRITE,
-                     VMM_FLAG_MODIFY_LEAF);
+        vmm_map_page(shadow_addr, dummy_phys,
+                     .page_flags = PAGE_PRESENT | PAGE_WRITE,
+                     .vmm_flags = VMM_FLAG_MODIFY_LEAF);
     }
 #endif
 
@@ -339,8 +341,8 @@ void vmm_init(struct limine_memmap_response *memmap,
                                ((end - phys) >= PAGE_2MB) && !overlaps_text;
 
             if (can_use_2mb) {
-                e = vmm_map_page(virt, phys, flags, VMM_FLAG_NONE,
-                                 VMM_MAP_PAGE_SIZE_2MB);
+                e = vmm_map_page(virt, phys, .page_flags = flags,
+                                 .page_size = VMM_MAP_PAGE_SIZE_2MB);
                 phys += PAGE_2MB;
             } else {
                 uint64_t page_flags = flags;
@@ -348,7 +350,7 @@ void vmm_init(struct limine_memmap_response *memmap,
                 if (phys >= text_phys_start && phys < text_phys_end)
                     page_flags &= ~PAGE_WRITE;
 
-                e = vmm_map_page(virt, phys, page_flags);
+                e = vmm_map_page(virt, phys, .page_flags = page_flags);
                 phys += PAGE_SIZE;
             }
             if (e < 0)
@@ -404,8 +406,8 @@ static enum err vmm_pt_apply(struct vmm_map_request *rq) {
         panic("CANNOT MAP PAGE 0x0!!!");
 
     struct page_table *pml4 = rq->pml4 ? rq->pml4 : kernel_pml4;
-    enum vmm_flags vflags = rq->vmm_flags;
-    enum vmm_map_page_size sz = rq->page_size;
+    enum vmm_flags vflags = rq->rq.vmm_flags;
+    enum vmm_map_page_size sz = rq->rq.page_size;
     int leaf_level = map_leaf_level(sz);
     bool want_huge = sz != VMM_MAP_PAGE_SIZE_4KB;
 
@@ -415,7 +417,7 @@ static enum err vmm_pt_apply(struct vmm_map_request *rq) {
 
     uint64_t user_flag =
         ((vflags & VMM_FLAG_USER) && !modify) ? PAGE_USER_ALLOWED : 0;
-    uint64_t flags = rq->page_flags | user_flag;
+    uint64_t flags = rq->rq.page_flags | user_flag;
 
     size_t bytes = map_page_bytes(sz);
     if (!IS_ALIGNED(virt, bytes) || (!clear && !IS_ALIGNED(rq->phys, bytes)))
@@ -540,7 +542,7 @@ out:
 
     /* Shootdown after all locks dropped, ASAN causes issues otherwise */
     if (shootdown)
-        barrier_and_shootdown(vflags, virt);
+        barrier_and_shootdown(rq->rq.tlb_mode, virt);
 
     for (int i = 0; i < free_count; i++)
         enqueue_pt_free(to_free[i]);
@@ -620,8 +622,9 @@ out:
 }
 
 /* Use shared subtrees to map every page in the len to one physical page */
-enum err vmm_map_aliased(vaddr_t virt, size_t len, paddr_t phys,
-                         page_flags_t leaf_flags, enum vmm_flags vflags) {
+enum err vmm_map_aliased_full(vaddr_t virt, size_t len, paddr_t phys,
+                              struct vmm_request rq) {
+    page_flags_t leaf_flags = rq.page_flags;
     if (!len)
         return ERR_OK;
 
@@ -685,7 +688,7 @@ enum err vmm_map_aliased(vaddr_t virt, size_t len, paddr_t phys,
 
     if (err < 0) {
         for (vaddr_t u = virt; u < v; u += granule)
-            vmm_unmap_aliased(u, granule, vflags);
+            vmm_unmap_aliased(u, granule, rq.tlb_mode);
 
         for (int i = 0; i < built_count; i++)
             pmm_free_page(hhdm_ptr_to_paddr(built[i]));
@@ -699,17 +702,12 @@ enum err vmm_map_aliased(vaddr_t virt, size_t len, paddr_t phys,
     /* Fresh mappings over non-present entries, so no stale translation can
      * exist, although previously speculative walks may have cached */
     cpu_memory_barrier();
-    if (!(vflags & VMM_FLAG_NO_TLB_SHOOTDOWN))
-        tlb_shootdown(.payload.addr = virt);
+    tlb_shootdown(.mode = rq.tlb_mode, .payload.addr = virt);
 
     return ERR_OK;
 }
 
-/* Drop aliased entries without modifying the shared subtree they point at
- *
- * Tables are leaked to caller's bookkeeping, they may still be referenced
- * by other ranges, and this layer can't know */
-static void vmm_unmap_aliased(vaddr_t virt, size_t len, enum vmm_flags vflags) {
+static void vmm_unmap_aliased(vaddr_t virt, size_t len, enum tlb_mode mode) {
     if (!len)
         return;
 
@@ -736,7 +734,7 @@ static void vmm_unmap_aliased(vaddr_t virt, size_t len, enum vmm_flags vflags) {
                 *entry = PTE_LOCK_BIT;
                 pte_unlock(entry, irql);
                 granule = pt_level_granule(level);
-                barrier_and_shootdown(vflags, v);
+                barrier_and_shootdown(mode, v);
                 goto next;
             }
 
@@ -780,9 +778,8 @@ static struct page_table *pt_clone_shared(struct page_table *src) {
  * Every SHARED entry on the path is replaced by a private copy of its child,
  * so the other 511 entries in the copy still point into the alias,
  * meaning unrelated addresses resolve through the shared tables */
-enum err vmm_unshare_path(vaddr_t virt, enum vmm_map_page_size leaf_size,
-                          enum vmm_flags vflags) {
-    int leaf_level = map_leaf_level(leaf_size);
+enum err vmm_unshare_path_full(vaddr_t virt, struct vmm_request rq) {
+    int leaf_level = map_leaf_level(rq.page_size);
 
     struct page_table *tables[PT_LEVELS];
     pte_t *entries[PT_LEVELS - 1];
@@ -842,7 +839,7 @@ out:
     /* After locks, IPI cores that may be spinning, since they can't answer
      * until we let go */
     if (unshared)
-        barrier_and_shootdown(vflags, virt);
+        barrier_and_shootdown(rq.tlb_mode, virt);
 
     pt_walk_exit();
 
@@ -851,78 +848,73 @@ out:
     return err;
 }
 
-enum err vmm_map_page_full(struct vmm_map_request *rq) {
-    if (cc_unlikely(text_phys_end && (rq->page_flags & PAGE_WRITE) &&
+static enum err vmm_map_page_apply(struct vmm_map_request *rq) {
+    if (cc_unlikely(text_phys_end && (rq->rq.page_flags & PAGE_WRITE) &&
                     rq->phys < text_phys_end &&
-                    rq->phys + map_page_bytes(rq->page_size) > text_phys_start))
+                    rq->phys + map_page_bytes(rq->rq.page_size) >
+                        text_phys_start))
         panic(
             "writable alias of kernel text: virt 0x%lx phys 0x%lx flags 0x%lx",
             (uint64_t) rq->virt, (uint64_t) rq->phys,
-            (uint64_t) rq->page_flags);
+            (uint64_t) rq->rq.page_flags);
 
     return vmm_pt_apply(rq);
 }
 
 /* Tear down a single leaf and reclaim every page table it leaves empty. */
-void vmm_unmap_page_full(struct vmm_map_request *rq) {
-    struct vmm_map_request req = *rq;
-    req.vmm_flags |= VMM_FLAG_CLEAR_LEAF;
-    req.is_unmap_internal = true;
+void vmm_unmap_page_full(vaddr_t virt, struct vmm_request rq) {
+    struct vmm_map_request req = {
+        .virt = virt,
+        .rq = rq,
+        .is_unmap_internal = true,
+    };
+    req.rq.vmm_flags |= VMM_FLAG_CLEAR_LEAF;
     (void) vmm_pt_apply(&req);
 }
 
-enum err vmm_map_page_internal(vaddr_t virt, paddr_t phys, page_flags_t flags,
-                               enum vmm_flags vflags,
-                               enum vmm_map_page_size size) {
-    struct vmm_map_request rq = {
+enum err vmm_map_page_full(vaddr_t virt, paddr_t phys, struct vmm_request rq) {
+    struct vmm_map_request req = {
         .virt = virt,
         .phys = phys,
-        .page_flags = flags,
-        .vmm_flags = vflags,
-        .page_size = size,
+        .rq = rq,
     };
-    return vmm_map_page_full(&rq);
+    return vmm_map_page_apply(&req);
 }
 
 enum err vmm_map_page_user_full(struct page_table *pml4, vaddr_t virt,
-                                paddr_t phys, page_flags_t flags,
-                                enum vmm_flags vflags,
-                                enum vmm_map_page_size size) {
-    struct vmm_map_request rq = {
+                                paddr_t phys, struct vmm_request rq) {
+    struct vmm_map_request req = {
         .pml4 = pml4,
         .virt = virt,
         .phys = phys,
-        .page_flags = flags,
-        .vmm_flags = vflags | VMM_FLAG_USER,
-        .page_size = size,
+        .rq = rq,
     };
-    return vmm_map_page_full(&rq);
+    req.rq.vmm_flags |= VMM_FLAG_USER;
+    return vmm_map_page_apply(&req);
 }
 
 enum err vmm_mark_demand_page_full(vaddr_t virt, enum demand_page_flags flags,
-                                   enum vmm_map_page_size size) {
+                                   struct vmm_request rq) {
     struct pte_tagged ptag = {
         .type = PTE_TAG_TYPE_DEMAND_PAGED,
         .payload = flags,
     };
 
-    uint64_t packed = pte_tagged_pack(&ptag);
-
-    struct vmm_map_request rq = {
+    struct vmm_map_request req = {
         .pml4 = kernel_pml4,
         .virt = virt,
         .phys = 0,
-        .page_flags = packed,
-        .vmm_flags = VMM_FLAG_MODIFY_LEAF,
-        .page_size = size,
+        .rq = rq,
     };
+    req.rq.page_flags = pte_tagged_pack(&ptag);
+    req.rq.vmm_flags |= VMM_FLAG_MODIFY_LEAF;
 
-    return vmm_map_page_full(&rq);
+    return vmm_map_page_apply(&req);
 }
 
 enum err vmm_map_demand_page_full(vaddr_t virt, paddr_t phys,
                                   enum demand_page_flags flags,
-                                  enum vmm_map_page_size size) {
+                                  struct vmm_request rq) {
     uint64_t pflags = PAGE_PRESENT;
     if (flags & DEMAND_PAGE_FLAG_WRITABLE)
         pflags |= PAGE_WRITE;
@@ -930,51 +922,38 @@ enum err vmm_map_demand_page_full(vaddr_t virt, paddr_t phys,
     if (flags & DEMAND_PAGE_FLAG_XD)
         pflags |= PAGE_XD;
 
-    struct vmm_map_request rq = {
+    struct vmm_map_request req = {
         .pml4 = kernel_pml4,
         .virt = virt,
         .phys = phys,
-        .page_flags = pflags,
-        .vmm_flags = VMM_FLAG_MODIFY_LEAF | VMM_FLAG_HANDLE_PTE_EXISTING |
-                     VMM_FLAG_NO_TLB_SHOOTDOWN,
-        .page_size = size,
+        .rq = rq,
     };
+    req.rq.page_flags = pflags;
+    req.rq.vmm_flags |= VMM_FLAG_MODIFY_LEAF | VMM_FLAG_HANDLE_PTE_EXISTING;
 
-    return vmm_map_page_full(&rq);
+    return vmm_map_page_apply(&req);
 }
 
 enum err vmm_mark_demand_page_user_full(struct page_table *pml4, vaddr_t virt,
                                         enum demand_page_flags flags,
-                                        enum vmm_map_page_size size) {
+                                        struct vmm_request rq) {
     struct pte_tagged ptag = {
         .type = PTE_TAG_TYPE_DEMAND_PAGED,
         .payload = flags,
     };
 
-    uint64_t packed = pte_tagged_pack(&ptag);
-
-    struct vmm_map_request rq = {
+    struct vmm_map_request req = {
         .pml4 = pml4,
         .virt = virt,
         .phys = 0,
-        .page_flags = packed,
-
-        /* USER here is merely nominal, map_page_full ignores it */
-        .vmm_flags = VMM_FLAG_USER | VMM_FLAG_MODIFY_LEAF,
-        .page_size = size,
+        .rq = rq,
     };
+    req.rq.page_flags = pte_tagged_pack(&ptag);
 
-    return vmm_map_page_full(&rq);
-}
+    /* USER here is merely nominal, map_page_apply ignores it */
+    req.rq.vmm_flags |= VMM_FLAG_USER | VMM_FLAG_MODIFY_LEAF;
 
-void vmm_unmap_page_internal(vaddr_t virt, enum vmm_flags vflags,
-                             enum vmm_map_page_size size) {
-    struct vmm_map_request rq = {
-        .virt = virt,
-        .vmm_flags = vflags,
-        .page_size = size,
-    };
-    vmm_unmap_page_full(&rq);
+    return vmm_map_page_apply(&req);
 }
 
 static pte_t vmm_walk_leaf(struct page_table *root, vaddr_t virt,
@@ -1029,8 +1008,8 @@ out:
     return snap;
 }
 
-paddr_t vmm_get_phys_full(vaddr_t virt, enum vmm_flags vflags) {
-    cc_unused(vflags);
+paddr_t vmm_get_phys_full(vaddr_t virt, struct vmm_request rq) {
+    cc_unused(rq);
 
     int level;
     uint64_t snap = vmm_walk_leaf(kernel_pml4, virt, &level);
@@ -1047,43 +1026,44 @@ paddr_t vmm_get_phys_full(vaddr_t virt, enum vmm_flags vflags) {
     return (snap & PAGE_PHYS_MASK) + (virt & 0xFFF);
 }
 
-pte_t vmm_get_leaf_pte_full(vaddr_t virt, enum vmm_flags vflags) {
-    cc_unused(vflags);
+pte_t vmm_get_leaf_pte_full(vaddr_t virt, struct vmm_request rq) {
+    cc_unused(rq);
     return vmm_walk_leaf(kernel_pml4, virt, NULL);
 }
 
-void *vmm_map(paddr_t paddr, vaddr_t vaddr, uint64_t len, uint64_t flags,
-              enum vmm_flags vflags) {
+static enum err vmm_map_pages(vaddr_t virt, paddr_t phys, uint64_t pages,
+                              struct vmm_request rq) {
+    struct vmm_request page_rq = rq;
+    page_rq.page_flags |= PAGE_PRESENT | PAGE_WRITE;
+
+    for (uint64_t i = 0; i < pages; i++) {
+        enum err e = vmm_map_page_full(virt + i * PAGE_SIZE,
+                                       phys + i * PAGE_SIZE, page_rq);
+        if (e < 0) {
+            for (uint64_t j = 0; j < i; j++)
+                vmm_unmap_page_full(virt + j * PAGE_SIZE, rq);
+            return e;
+        }
+    }
+    return ERR_OK;
+}
+
+void *vmm_map_full(paddr_t paddr, vaddr_t vaddr, uint64_t len,
+                   struct vmm_request rq) {
     if (len == 0)
         return NULL;
 
     uintptr_t phys_start = PAGE_ALIGN_DOWN(paddr);
     uintptr_t offset = paddr - phys_start;
+    uint64_t total_pages = PAGES_NEEDED_FOR(len + offset);
 
-    uint64_t total_len = len + offset;
-    uint64_t total_pages = PAGES_NEEDED_FOR(total_len);
-
-    enum err e = ERR_OK;
-    uint64_t mapped = 0;
-
-    for (; mapped < total_pages; mapped++) {
-        e = vmm_map_page(vaddr + mapped * PAGE_SIZE,
-                         phys_start + mapped * PAGE_SIZE,
-                         PAGE_PRESENT | PAGE_WRITE | flags, vflags);
-        if (e < 0)
-            goto unwind;
-    }
+    if (vmm_map_pages(vaddr, phys_start, total_pages, rq) < 0)
+        return NULL;
 
     return (void *) (vaddr + offset);
-
-unwind:
-    for (uint64_t i = 0; i < mapped; i++)
-        vmm_unmap_page(vaddr + i * PAGE_SIZE, vflags);
-
-    return NULL;
 }
 
-void vmm_unmap(void *addr, uint64_t len, enum vmm_flags vflags) {
+void vmm_unmap_full(void *addr, uint64_t len, struct vmm_request rq) {
     uintptr_t virt_addr = (uintptr_t) addr;
     uintptr_t page_offset = virt_addr & (PAGE_SIZE - 1);
     uintptr_t aligned_virt = PAGE_ALIGN_DOWN(virt_addr);
@@ -1092,12 +1072,11 @@ void vmm_unmap(void *addr, uint64_t len, enum vmm_flags vflags) {
     uint64_t total_pages = PAGES_NEEDED_FOR(total_len);
 
     for (uint64_t i = 0; i < total_pages; i++) {
-        vmm_unmap_page(aligned_virt + i * PAGE_SIZE, vflags);
+        vmm_unmap_page_full(aligned_virt + i * PAGE_SIZE, rq);
     }
 }
 
-void *vmm_map_bump_full(uintptr_t addr, uint64_t len, uint64_t flags,
-                        enum vmm_flags vflags) {
+void *vmm_map_bump_full(uintptr_t addr, uint64_t len, struct vmm_request rq) {
     if (global.current_bootstage >= BOOTSTAGE_LATE)
         log_msg_once(LOG_WARN, "vmm_map_bump called after BOOTSTAGE_LATE...");
 
@@ -1121,41 +1100,14 @@ void *vmm_map_bump_full(uintptr_t addr, uint64_t len, uint64_t flags,
     } while (!atomic_cas_weak(&vmm_map_top, &virt_start, virt_start + span,
                               mo_acq_rel, mo_relaxed));
 
-    enum err e = ERR_OK;
-    uint64_t mapped = 0;
-
-    for (; mapped < total_pages; mapped++) {
-        e = vmm_map_page(virt_start + mapped * PAGE_SIZE,
-                         phys_start + mapped * PAGE_SIZE,
-                         PAGE_PRESENT | PAGE_WRITE | flags, vflags);
-        if (e < 0)
-            goto unwind;
+    if (vmm_map_pages(virt_start, phys_start, total_pages, rq) < 0) {
+        uintptr_t expected = virt_start + span;
+        atomic_cas_strong(&vmm_map_top, &expected, virt_start, mo_acq_rel,
+                          mo_relaxed);
+        return NULL;
     }
 
     return (void *) (virt_start + offset);
-
-unwind:
-    for (uint64_t i = 0; i < mapped; i++)
-        vmm_unmap_page(virt_start + i * PAGE_SIZE, vflags);
-
-    uintptr_t expected = virt_start + span;
-    atomic_cas_strong(&vmm_map_top, &expected, virt_start, mo_acq_rel,
-                      mo_relaxed);
-
-    return NULL;
-}
-
-void vmm_unmap_virt(void *addr, uint64_t len, enum vmm_flags vflags) {
-    uintptr_t virt_addr = (uintptr_t) addr;
-    uintptr_t page_offset = virt_addr & (PAGE_SIZE - 1);
-    uintptr_t aligned_virt = PAGE_ALIGN_DOWN(virt_addr);
-
-    uint64_t total_len = len + page_offset;
-    uint64_t total_pages = PAGES_NEEDED_FOR(total_len);
-
-    for (uint64_t i = 0; i < total_pages; i++) {
-        vmm_unmap_page(aligned_virt + i * PAGE_SIZE, vflags);
-    }
 }
 
 struct page_table *vmm_phys_to_pml4(paddr_t paddr) {

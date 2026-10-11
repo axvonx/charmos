@@ -51,7 +51,7 @@ static bool nvme_bio_fill_prps(struct nvme_bio_data *data, const void *buffer,
     vaddr_t vaddr = (vaddr_t) buffer;
 
     for (size_t i = 0; i < num_pages; i++) {
-        data->prps[i] = vmm_get_phys(vaddr, VMM_FLAG_NONE);
+        data->prps[i] = vmm_get_phys(vaddr);
         nvme_check_dma_addr(data->prps[i], "PRP entry");
         vaddr = PAGE_ALIGN_DOWN(vaddr) + PAGE_SIZE;
     }

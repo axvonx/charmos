@@ -763,8 +763,8 @@ static size_t mapped_extent_size(uintptr_t addr, size_t len) {
     return ALIGN_UP(len + offset, PAGE_SIZE);
 }
 
-void *vas_map(struct vas *vas, paddr_t paddr, size_t len, uint64_t flags,
-              enum vmm_flags vflags) {
+void *vas_map_full(struct vas *vas, paddr_t paddr, size_t len,
+                   struct vmm_request rq) {
     size_t size = mapped_extent_size(paddr, len);
     if (!size)
         return NULL;
@@ -773,7 +773,7 @@ void *vas_map(struct vas *vas, paddr_t paddr, size_t len, uint64_t flags,
     if (!vaddr)
         return NULL;
 
-    void *ret = vmm_map(paddr, vaddr, len, flags, vflags);
+    void *ret = vmm_map_full(paddr, vaddr, len, rq);
     if (!ret)
         vas_free(vas, vaddr, size);
     return ret;
@@ -785,7 +785,7 @@ void vas_unmap(struct vas *vas, void *vaddr, size_t len) {
         panic("vas_unmap: invalid length %zu", len);
 
     vaddr_t base = PAGE_ALIGN_DOWN(vaddr);
-    vmm_unmap((void *) base, size, VMM_FLAG_NONE);
+    vmm_unmap((void *) base, size);
     vas_free(vas, base, size);
 }
 

@@ -142,8 +142,7 @@ crash:
 }
 
 static bool addr_is_mapped(uint64_t addr) {
-    return vmm_get_phys((vaddr_t) PAGE_ALIGN_DOWN(addr), VMM_FLAG_NONE) !=
-           (uintptr_t) -1;
+    return vmm_get_phys((vaddr_t) PAGE_ALIGN_DOWN(addr)) != (uintptr_t) -1;
 }
 
 static void dump_slab_exec_fault(struct thread *curr, struct irq_context *ctx) {
@@ -266,14 +265,13 @@ static cc_noreturn void page_fault_report_crash(vaddr_t fault_addr,
         printf("Likely stack overflow!! Fault in protector page!!!\n");
 
     vaddr_t code = PAGE_ALIGN_DOWN(irqc->rip);
-    if (vmm_get_phys(code, VMM_FLAG_NONE) != (paddr_t) -1) {
+    if (vmm_get_phys(code) != (paddr_t) -1) {
         printf("\n--- Bytes at RIP %p ---\n", (void *) irqc->rip);
 
         for (int64_t i = -16; i < 16; i++) {
             vaddr_t at = irqc->rip + i;
 
-            if (PAGE_ALIGN_DOWN(at) != code &&
-                vmm_get_phys(at, VMM_FLAG_NONE) == (paddr_t) -1)
+            if (PAGE_ALIGN_DOWN(at) != code && vmm_get_phys(at) == (paddr_t) -1)
                 continue;
 
             printf("%02x ", *(const uint8_t *) at);

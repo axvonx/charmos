@@ -5,13 +5,13 @@ TEST_DEFINE_UNIT(mem, tlb_shootdown_single_cpu, .min_ram_mib = 8) {
     paddr_t p2 = pmm_alloc_page();
     TEST_ASSERT(p1 && p2);
 
-    void *va = vmm_map_bump(p1, PAGE_SIZE, 0);
+    void *va = vmm_map_bump(p1, PAGE_SIZE);
     TEST_ASSERT_NONNULL(va);
 
     *(volatile uint64_t *) va = 0x11111111;
 
-    vmm_unmap_virt(va, PAGE_SIZE, VMM_FLAG_NONE);
-    va = vmm_map_bump(p2, PAGE_SIZE, 0);
+    vmm_unmap(va, PAGE_SIZE);
+    va = vmm_map_bump(p2, PAGE_SIZE);
 
     tlb_shootdown(.payload.addr = (uintptr_t) va);
 

@@ -1,72 +1,66 @@
 /* @title: VMM Mapping Macros */
 #pragma once
-#include <compiler/core.h>
-/* Domain-first overloads for the page mapping API.
- *
- * Each "domain" whose signature genuinely differs (kernel, user, demand, ...)
- * is its own first-class _internal function. The two trailing knobs, by
- * contrast, are defaulted: vmm_flags defaults to VMM_FLAG_NONE and page size
- * to 4KB, so the common case stays terse and a caller appends one or both only
- * when it needs to (mirroring alloc_api_internal.h's flags/behavior tail). The
- * order is (..., vflags, size): supply vflags to reach size. */
+#include <compiler/diagnostic.h>
 
-/* vmm_map_page(virt, phys, flags[, vflags[, size]]) */
-#define vmm_map_page_3(v, p, f) vmm_map_page_4((v), (p), (f), VMM_FLAG_NONE)
-#define vmm_map_page_4(v, p, f, vf)                                            \
-    vmm_map_page_5((v), (p), (f), (vf), VMM_MAP_PAGE_SIZE_4KB)
-#define vmm_map_page_5(v, p, f, vf, sz)                                        \
-    vmm_map_page_internal((v), (p), (f), (vf), (sz))
-#define vmm_map_page(...) PP_CALL(vmm_map_page, __VA_ARGS__)
+/* Every API is (positional operands..., .designated = overrides...) */
+#define vmm_request_with_defaults(...)                                         \
+    cc_wno_override_init_expr(                                                 \
+        struct vmm_request,                                                    \
+        ((struct vmm_request) {.page_flags = PAGE_NO_FLAGS,                    \
+                               .vmm_flags = VMM_FLAG_NONE,                     \
+                               .page_size = VMM_MAP_PAGE_SIZE_4KB,             \
+                               .tlb_mode = TLB_MODE_SYNC,                      \
+                               ##__VA_ARGS__}))
 
-/* vmm_map_page_user(pml4, virt, phys, flags[, vflags[, size]]) */
-#define vmm_map_page_user_4(pml4, v, p, f)                                     \
-    vmm_map_page_user_5((pml4), (v), (p), (f), VMM_FLAG_NONE)
-#define vmm_map_page_user_5(pml4, v, p, f, vf)                                 \
-    vmm_map_page_user_6((pml4), (v), (p), (f), (vf), VMM_MAP_PAGE_SIZE_4KB)
-#define vmm_map_page_user_6(pml4, v, p, f, vf, sz)                             \
-    vmm_map_page_user_full((pml4), (v), (p), (f), (vf), (sz))
-#define vmm_map_page_user(...) PP_CALL(vmm_map_page_user, __VA_ARGS__)
+/* vmm_map_page(virt, phys[, .page_flags, .vmm_flags, .page_size, .tlb_mode]) */
+#define vmm_map_page(v, p, ...)                                                \
+    vmm_map_page_full((v), (p), vmm_request_with_defaults(__VA_ARGS__))
 
-/* vmm_unmap_page(virt[, vflags[, size]]) */
-#define vmm_unmap_page_1(v) vmm_unmap_page_2((v), VMM_FLAG_NONE)
-#define vmm_unmap_page_2(v, vf)                                                \
-    vmm_unmap_page_3((v), (vf), VMM_MAP_PAGE_SIZE_4KB)
-#define vmm_unmap_page_3(v, vf, sz) vmm_unmap_page_internal((v), (vf), (sz))
-#define vmm_unmap_page(...) PP_CALL(vmm_unmap_page, __VA_ARGS__)
+#define vmm_map_page_user(pml4, v, p, ...)                                     \
+    vmm_map_page_user_full((pml4), (v), (p),                                   \
+                           vmm_request_with_defaults(__VA_ARGS__))
 
-/* vmm_get_phys(virt[, vflags]) - vflags defaults to VMM_FLAG_NONE */
-#define vmm_get_phys_1(v) vmm_get_phys_2((v), VMM_FLAG_NONE)
-#define vmm_get_phys_2(v, vf) vmm_get_phys_full((v), (vf))
-#define vmm_get_phys(...) PP_CALL(vmm_get_phys, __VA_ARGS__)
+#define vmm_unmap_page(v, ...)                                                 \
+    vmm_unmap_page_full((v), vmm_request_with_defaults(__VA_ARGS__))
 
-/* vmm_get_leaf_pte(virt[, vflags]) - vflags defaults to VMM_FLAG_NONE */
-#define vmm_get_leaf_pte_1(v) vmm_get_leaf_pte_2((v), VMM_FLAG_NONE)
-#define vmm_get_leaf_pte_2(v, vf) vmm_get_leaf_pte_full((v), (vf))
-#define vmm_get_leaf_pte(...) PP_CALL(vmm_get_leaf_pte, __VA_ARGS__)
+#define vmm_get_phys(v, ...)                                                   \
+    vmm_get_phys_full((v), vmm_request_with_defaults(__VA_ARGS__))
 
-/* vmm_map_bump(addr, len, flags[, vflags]) */
-#define vmm_map_bump_3(a, l, f) vmm_map_bump_4((a), (l), (f), VMM_FLAG_NONE)
-#define vmm_map_bump_4(a, l, f, vf) vmm_map_bump_full((a), (l), (f), (vf))
-#define vmm_map_bump(...) PP_CALL(vmm_map_bump, __VA_ARGS__)
+#define vmm_get_leaf_pte(v, ...)                                               \
+    vmm_get_leaf_pte_full((v), vmm_request_with_defaults(__VA_ARGS__))
 
-/* vmm_mark_demand_page(virt, flags[, size]) */
-#define vmm_mark_demand_page_2(v, f)                                           \
-    vmm_mark_demand_page_3((v), (f), VMM_MAP_PAGE_SIZE_4KB)
-#define vmm_mark_demand_page_3(v, f, sz)                                       \
-    vmm_mark_demand_page_full((v), (f), (sz))
-#define vmm_mark_demand_page(...) PP_CALL(vmm_mark_demand_page, __VA_ARGS__)
+/* Multi-page helpers: .page_flags are OR'd onto PRESENT | WRITE */
+#define vmm_map(paddr, vaddr, len, ...)                                        \
+    vmm_map_full((paddr), (vaddr), (len),                                      \
+                 vmm_request_with_defaults(__VA_ARGS__))
 
-/* vmm_mark_demand_page_user(pml4, virt, flags[, size]) */
-#define vmm_mark_demand_page_user_3(pml4, v, f)                                \
-    vmm_mark_demand_page_user_4((pml4), (v), (f), VMM_MAP_PAGE_SIZE_4KB)
-#define vmm_mark_demand_page_user_4(pml4, v, f, sz)                            \
-    vmm_mark_demand_page_user_full((pml4), (v), (f), (sz))
-#define vmm_mark_demand_page_user(...)                                         \
-    PP_CALL(vmm_mark_demand_page_user, __VA_ARGS__)
+#define vmm_unmap(addr, len, ...)                                              \
+    vmm_unmap_full((addr), (len), vmm_request_with_defaults(__VA_ARGS__))
 
-/* vmm_map_demand_page(virt, phys, flags[, size]) */
-#define vmm_map_demand_page_3(v, p, f)                                         \
-    vmm_map_demand_page_4((v), (p), (f), VMM_MAP_PAGE_SIZE_4KB)
-#define vmm_map_demand_page_4(v, p, f, sz)                                     \
-    vmm_map_demand_page_full((v), (p), (f), (sz))
-#define vmm_map_demand_page(...) PP_CALL(vmm_map_demand_page, __VA_ARGS__)
+#define vmm_map_bump(addr, len, ...)                                           \
+    vmm_map_bump_full((addr), (len), vmm_request_with_defaults(__VA_ARGS__))
+
+#define vmm_unmap_all_user_pages(pml4, ...)                                    \
+    vmm_unmap_all_user_pages_full((pml4),                                      \
+                                  vmm_request_with_defaults(__VA_ARGS__))
+
+#define vmm_map_aliased(v, len, p, ...)                                        \
+    vmm_map_aliased_full((v), (len), (p),                                      \
+                         vmm_request_with_defaults(__VA_ARGS__))
+
+/* leaf size to unshare down to is .page_size */
+#define vmm_unshare_path(v, ...)                                               \
+    vmm_unshare_path_full((v), vmm_request_with_defaults(__VA_ARGS__))
+
+/* Demand pages take demand_page_flags positionally */
+#define vmm_mark_demand_page(v, dflags, ...)                                   \
+    vmm_mark_demand_page_full((v), (dflags),                                   \
+                              vmm_request_with_defaults(__VA_ARGS__))
+
+#define vmm_mark_demand_page_user(pml4, v, dflags, ...)                        \
+    vmm_mark_demand_page_user_full((pml4), (v), (dflags),                      \
+                                   vmm_request_with_defaults(__VA_ARGS__))
+
+#define vmm_map_demand_page(v, p, dflags, ...)                                 \
+    vmm_map_demand_page_full((v), (p), (dflags),                               \
+                             vmm_request_with_defaults(__VA_ARGS__))

@@ -148,8 +148,8 @@ void *thread_allocate_stack(size_t pages) {
     for (size_t i = 0; i < pages; i++) {
         vaddr_t virt = virt_base + (i * PAGE_SIZE);
         paddr_t phys = kassert(pmm_alloc_page());
-        vmm_map_page(virt, phys, PAGE_PRESENT | PAGE_WRITE | PAGE_XD,
-                     VMM_FLAG_NONE);
+        vmm_map_page(virt, phys,
+                     .page_flags = PAGE_PRESENT | PAGE_WRITE | PAGE_XD);
     }
     return (void *) virt_base;
 }
@@ -159,7 +159,7 @@ void thread_free_stack(struct thread *thread) {
     size_t pages = thread->stack_size / PAGE_SIZE;
     for (size_t i = 0; i < pages; i++) {
         vaddr_t virt = (vaddr_t) thread->stack + i * PAGE_SIZE;
-        paddr_t phys = vmm_get_phys(virt, VMM_FLAG_NONE);
+        paddr_t phys = vmm_get_phys(virt);
         kassert(phys != (paddr_t) -1);
         vmm_unmap_page(virt);
         pmm_free_page(phys);

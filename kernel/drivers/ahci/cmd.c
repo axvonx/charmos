@@ -134,8 +134,7 @@ void ahci_prepare_command(struct ahci_full_port *port, uint32_t slot,
 
     uint64_t remaining = size;
     uint64_t offset    = 0;
-    uint64_t phys_base =
-        PAGE_ALIGN_DOWN(vmm_get_phys((uint64_t) buf, VMM_FLAG_NONE));
+    uint64_t phys_base = PAGE_ALIGN_DOWN(vmm_get_phys((uint64_t) buf));
 
     for (uint32_t i = 0; i < prdt_count; i++) {
         uint64_t chunk = MIN(remaining, MAX_PRDT_ENTRY_SIZE);

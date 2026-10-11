@@ -38,8 +38,8 @@ uint64_t elf_load(const void *elf_data) {
         for (uint64_t va = va_start; va < va_end; va += 0x1000) {
             uint64_t phys = pmm_alloc_page();
             vmm_map_page(va, phys,
-                         PAGE_PRESENT | PAGE_USER_ALLOWED | PAGE_WRITE,
-                         VMM_FLAG_NONE);
+                         .page_flags =
+                             PAGE_PRESENT | PAGE_USER_ALLOWED | PAGE_WRITE);
         }
     }
 
@@ -74,7 +74,7 @@ void elf_map(uintptr_t user_pml4_phys, void *elf_data) {
             if (!phys)
                 panic("Failed to allocate page for user ELF segment");
 
-            void *phys_mapped = vmm_map_bump(phys, PAGE_SIZE, 0);
+            void *phys_mapped = vmm_map_bump(phys, PAGE_SIZE);
             memset(phys_mapped, 0, PAGE_SIZE);
 
             uintptr_t offset_in_seg = vaddr - seg_vaddr_start;
@@ -98,7 +98,7 @@ void elf_map(uintptr_t user_pml4_phys, void *elf_data) {
             }
 
             vmm_map_page_user(vmm_phys_to_pml4(user_pml4_phys), vaddr, phys,
-                              flags, VMM_FLAG_USER);
+                              .page_flags = flags, .vmm_flags = VMM_FLAG_USER);
         }
     }
 }
@@ -112,8 +112,9 @@ uintptr_t map_user_stack(uintptr_t user_pml4_phys) {
             panic("Failed to alloc user stack");
 
         vmm_map_page_user(vmm_phys_to_pml4(user_pml4_phys), v, phys,
-                          PAGE_WRITE | PAGE_USER_ALLOWED | PAGE_PRESENT,
-                          VMM_FLAG_USER);
+                          .page_flags =
+                              PAGE_WRITE | PAGE_USER_ALLOWED | PAGE_PRESENT,
+                          .vmm_flags = VMM_FLAG_USER);
     }
 
     return USER_STACK_TOP - 0x2000;

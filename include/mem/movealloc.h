@@ -14,12 +14,10 @@
 #include <structures/list.h>
 
 /* this will always panic upon alloc failure - only to be used in init code! */
-void movealloc_full(domain_id_t domain, void *ptr, enum vmm_flags vf);
+void movealloc_full(domain_id_t domain, void *ptr, struct vmm_request rq);
 
-/* movealloc(domain, ptr[, vf]) - vf defaults to VMM_FLAG_NONE */
-#define movealloc_2(d, p) movealloc_3((d), (p), VMM_FLAG_NONE)
-#define movealloc_3(d, p, vf) movealloc_full((d), (p), (vf))
-#define movealloc(...) PP_CALL(movealloc, __VA_ARGS__)
+#define movealloc(d, p, ...)                                                   \
+    movealloc_full((d), (p), vmm_request_with_defaults(__VA_ARGS__))
 
 typedef void (*movealloc_callback)(void *a, void *b);
 

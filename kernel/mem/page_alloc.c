@@ -34,7 +34,7 @@ static void page_alloc_vas_release(vaddr_t virt, size_t page_count,
                                    size_t nr_mapped) {
     for (size_t i = 0; i < nr_mapped; i++) {
         vaddr_t vaddr = virt + i * PAGE_SIZE;
-        paddr_t phys = (paddr_t) vmm_get_phys(vaddr, VMM_FLAG_NONE);
+        paddr_t phys = (paddr_t) vmm_get_phys(vaddr);
         vmm_unmap_page(vaddr);
 
         if (phys != PADDR_MAX)
@@ -64,7 +64,7 @@ static void *page_alloc_vas_mapped_pages(size_t page_count,
                 return NULL;
             }
 
-            if (vmm_map_page(vaddr, phys, page_flags) < 0) {
+            if (vmm_map_page(vaddr, phys, .page_flags = page_flags) < 0) {
                 pmm_free_page(phys);
                 page_alloc_vas_release(virt, page_count, i);
                 return NULL;

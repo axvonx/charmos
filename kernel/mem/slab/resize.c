@@ -70,7 +70,8 @@ bool slab_resize(struct slab *slab, size_t new_size_pages) {
                     goto grow_err;
 
                 uint64_t flags = slab_page_flags(slab->type);
-                if (cc_unlikely(vmm_map_page(virt, phys, flags) < 0)) {
+                if (cc_unlikely(vmm_map_page(virt, phys, .page_flags = flags) <
+                                0)) {
                     pmm_free_page(phys); /* not yet recorded, free directly */
                     goto grow_err;
                 }

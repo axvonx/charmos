@@ -17,7 +17,7 @@ void xhci_setup_event_ring(struct xhci_device *dev) {
     struct xhci_erst_entry *erst =
         kmalloc_aligned(PAGE_SIZE, PAGE_SIZE, ALLOC_ZERO);
 
-    paddr_t erst_phys = vmm_get_phys((vaddr_t) erst, VMM_FLAG_NONE);
+    paddr_t erst_phys = vmm_get_phys((vaddr_t) erst);
 
     dev->event_ring           = xhci_allocate_event_ring();
     erst[0].ring_segment_base = dev->event_ring->phys;
@@ -39,7 +39,7 @@ void xhci_setup_command_ring(struct xhci_device *dev) {
 
     struct xhci_dcbaa *dcbaa_virt =
         kmalloc_aligned(PAGE_SIZE, PAGE_SIZE, ALLOC_ZERO);
-    uintptr_t dcbaa_phys = vmm_get_phys((uintptr_t) dcbaa_virt, VMM_FLAG_NONE);
+    uintptr_t dcbaa_phys = vmm_get_phys((uintptr_t) dcbaa_virt);
 
     dev->dcbaa = dcbaa_virt;
     mmio_write_64(&op->crcr, trb_phys | 1);

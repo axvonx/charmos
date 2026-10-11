@@ -37,8 +37,7 @@ enum usb_error xhci_address_device(struct xhci_port *p, uint8_t slot_id,
     if (!input_ctx)
         return USB_ERR_OOM;
 
-    uintptr_t input_ctx_phys =
-        vmm_get_phys((uintptr_t) input_ctx, VMM_FLAG_NONE);
+    uintptr_t input_ctx_phys = vmm_get_phys((uintptr_t) input_ctx);
 
     struct xhci_ring *ring = xhci_allocate_ring();
     if (!ring) {
@@ -54,7 +53,7 @@ enum usb_error xhci_address_device(struct xhci_port *p, uint8_t slot_id,
         return USB_ERR_OOM;
     }
 
-    uintptr_t dev_ctx_phys = vmm_get_phys((uintptr_t) dev_ctx, VMM_FLAG_NONE);
+    uintptr_t dev_ctx_phys = vmm_get_phys((uintptr_t) dev_ctx);
 
     enum irql irql                 = spin_lock_high(&xhci->lock);
     input_ctx->ctrl_ctx.add_flags  = XHCI_INPUT_CTX_ADD_FLAGS;
@@ -136,8 +135,7 @@ enum usb_error xhci_configure_device_endpoints(struct usb_device *usb) {
     struct xhci_input_ctx *input_ctx =
         kmalloc_aligned(PAGE_SIZE, PAGE_SIZE, ALLOC_ZERO);
 
-    uintptr_t input_ctx_phys =
-        vmm_get_phys((uintptr_t) input_ctx, VMM_FLAG_NONE);
+    uintptr_t input_ctx_phys = vmm_get_phys((uintptr_t) input_ctx);
 
     input_ctx->ctrl_ctx.add_flags = 1;
     uint8_t max_ep_index          = 0;
