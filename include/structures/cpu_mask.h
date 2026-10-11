@@ -1,5 +1,6 @@
 /* @title: CPU Mask */
 #pragma once
+#include <compiler/diagnostic.h>
 #include <math/align.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -15,7 +16,7 @@
 #define CPU_MASK_WORDS BITMAP_WORDS_CONST(CPU_MASK_BITS)
 
 struct cpu_mask {
-    bitmap_word_t bits[CPU_MASK_WORDS];
+    BITMAP_DECLARE(bits, CPU_MASK_BITS);
 };
 
 #define CPU_MASK_INIT                                                          \
@@ -26,15 +27,16 @@ struct cpu_mask {
 #define CPU_MASK_LAST_WORD_BITS ((CPU_MASK_BITS) % CPU_MASK_WORD_BITS)
 
 #define CPU_MASK_INIT_ALL                                                      \
-    (struct cpu_mask) {                                                        \
-        .bits = {                                                              \
-            [0 ...(CPU_MASK_WORDS - 1)] = ~(bitmap_word_t) 0,                  \
-            [CPU_MASK_WORDS - 1] =                                             \
-                (CPU_MASK_LAST_WORD_BITS == 0)                                 \
-                    ? ~(bitmap_word_t) 0                                       \
-                    : (((bitmap_word_t) 1 << CPU_MASK_LAST_WORD_BITS) - 1)     \
-        }                                                                      \
-    }
+    cc_wno_override_init_expr(                                                 \
+        struct cpu_mask,                                                       \
+        ((struct cpu_mask) {                                                   \
+            .bits = {                                                          \
+                [0 ...(CPU_MASK_WORDS - 1)] = ~(bitmap_word_t) 0,              \
+                [CPU_MASK_WORDS - 1] =                                         \
+                    (CPU_MASK_LAST_WORD_BITS == 0)                             \
+                        ? ~(bitmap_word_t) 0                                   \
+                        : (((bitmap_word_t) 1 << CPU_MASK_LAST_WORD_BITS) -    \
+                           1)}}))
 
 /* Used to overload cpu_mask to carry an error at times */
 #define CPU_MASK_ERR(e)                                                        \

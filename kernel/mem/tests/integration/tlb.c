@@ -52,7 +52,7 @@ TEST_DEFINE_INTEGRATION(mem, tlb_shootdown_sync,
     *(volatile uint64_t *) va = 0xBBBBBBBBBBBBBBBB;
 
     /* Sync shootdown -- must complete on all cores before returning */
-    tlb_shootdown((uintptr_t) va, true);
+    tlb_shootdown(.payload.addr = (uintptr_t) va);
 
     /* Release workers to read */
     atomic_store(&tlb_go, true);
@@ -80,7 +80,7 @@ TEST_DEFINE_INTEGRATION(mem, tlb_shootdown_async, .min_ram_mib = 8) {
     va = vmm_map_bump(p2, PAGE_SIZE, 0);
     *(volatile uint64_t *) va = 0x5678;
 
-    tlb_shootdown((uintptr_t) va, false);
+    tlb_shootdown(.mode = TLB_REQUEST_ASYNC, .payload.addr = (uintptr_t) va);
 
     /* Wait for IPIs to land */
     time_ms_t start = time_get_ms();
@@ -106,7 +106,8 @@ TEST_DEFINE_INTEGRATION(mem, tlb_shootdown_flush_all,
 
     /* Flood shootdown queue */
     for (size_t i = 0; i < iters; i++) {
-        tlb_shootdown((uintptr_t) va, false);
+        tlb_shootdown(.mode = TLB_REQUEST_ASYNC,
+                      .payload.addr = (uintptr_t) va);
     }
 
     /* Now do remap */
@@ -115,7 +116,7 @@ TEST_DEFINE_INTEGRATION(mem, tlb_shootdown_flush_all,
     va = vmm_map_bump(p2, PAGE_SIZE, 0);
     *(volatile uint64_t *) va = 0xDEADBEEF;
 
-    tlb_shootdown((uintptr_t) va, true);
+    tlb_shootdown(.payload.addr = (uintptr_t) va, );
 
     TEST_ASSERT_EQ(*(volatile uint64_t *) va, 0xDEADBEEF);
     return TEST_SUCCESS;
@@ -129,7 +130,8 @@ static void tlb_spammer(void *arg) {
     void *va = vmm_map_bump(p, PAGE_SIZE, 0);
 
     for (int i = 0; i < 1000; i++) {
-        tlb_shootdown((uintptr_t) va, false);
+        tlb_shootdown(.mode = TLB_REQUEST_ASYNC,
+                      .payload.addr = (uintptr_t) va);
     }
 }
 

@@ -119,7 +119,7 @@ static void barrier_and_shootdown(enum vmm_flags flags, vaddr_t virt) {
     tlb_invlpg(virt);
 
     if (!(flags & VMM_FLAG_NO_TLB_SHOOTDOWN))
-        tlb_shootdown(virt, true);
+        tlb_shootdown(.payload.addr = virt);
 }
 
 static inline uint64_t pt_index(uintptr_t virt, int level) {
@@ -700,7 +700,7 @@ enum err vmm_map_aliased(vaddr_t virt, size_t len, paddr_t phys,
      * exist, although previously speculative walks may have cached */
     cpu_memory_barrier();
     if (!(vflags & VMM_FLAG_NO_TLB_SHOOTDOWN))
-        tlb_shootdown(virt, true);
+        tlb_shootdown(.payload.addr = virt);
 
     return ERR_OK;
 }

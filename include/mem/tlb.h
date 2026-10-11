@@ -1,6 +1,7 @@
 /* @title: TLB */
 #pragma once
 #include <atomic.h>
+#include <compiler/diagnostic.h>
 #include <math/range.h>
 #include <mem/page.h>
 #include <stdint.h>
@@ -71,5 +72,13 @@ struct tlb_request {
 void tlb_init(void);
 enum irq_result tlb_shootdown_isr(void *ctx, irq_t irq,
                                   struct irq_context *rsp);
-void tlb_shootdown(uintptr_t addr, bool synchronous);
+void tlb_shootdown_full(struct tlb_request rq);
 void tlb_invalidate_lazy(void);
+
+#define tlb_shootdown(...)                                                     \
+    tlb_shootdown_full(cc_wno_override_init_expr(                              \
+        struct tlb_request,                                                    \
+        ((struct tlb_request) {.mode = TLB_REQUEST_SYNC,                       \
+                               .targets = CPU_MASK_INIT_ALL,                   \
+                               .payload.type = TLB_OP_PAGE,                    \
+                               ##__VA_ARGS__})))

@@ -13,7 +13,7 @@ TEST_DEFINE_UNIT(mem, tlb_shootdown_single_cpu, .min_ram_mib = 8) {
     vmm_unmap_virt(va, PAGE_SIZE, VMM_FLAG_NONE);
     va = vmm_map_bump(p2, PAGE_SIZE, 0);
 
-    tlb_shootdown((uintptr_t) va, true);
+    tlb_shootdown(.payload.addr = (uintptr_t) va);
 
     *(volatile uint64_t *) va = 0x22222222;
     TEST_ASSERT_EQ(*(volatile uint64_t *) va, 0x22222222);

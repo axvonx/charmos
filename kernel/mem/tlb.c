@@ -91,7 +91,7 @@ enum irq_result tlb_shootdown_isr(void *ctx, irq_t irq,
     return IRQ_HANDLED;
 }
 
-void tlb_shootdown(uintptr_t addr, bool synchronous) {
+void tlb_shootdown_full(struct tlb_request rq) {
     if (global.current_bootstage < BOOTSTAGE_MID_MP)
         return;
 
@@ -99,21 +99,21 @@ void tlb_shootdown(uintptr_t addr, bool synchronous) {
 
     size_t this_cpu = smp_id(TOPC_IRQL);
 
+    /* TODO: lazy */
     size_t i;
-    for_each_cpu_id(i) {
+    cpu_mask_for_each(i, rq.targets) {
         if (i == this_cpu) {
-            tlb_invlpg(addr);
+            payload_invalidate(&rq.payload);
             continue;
         }
 
-        struct tlb_payload pl = {.addr = addr, .type = TLB_OP_PAGE};
-        ring_enqueue(&PERCPU_PTR_FOR(tlb_cpus, i)->eager_ring, &pl);
+        ring_enqueue(&PERCPU_PTR_FOR(tlb_cpus, i)->eager_ring, &rq.payload);
 
         ipi_send(i, IRQ_TLB_SHOOTDOWN);
     }
 
-    if (synchronous) {
-        for_each_cpu_id(i) {
+    if (rq.mode == TLB_REQUEST_SYNC) {
+        cpu_mask_for_each(i, rq.targets) {
             if (i == this_cpu)
                 continue;
 
