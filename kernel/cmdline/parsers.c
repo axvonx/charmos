@@ -348,18 +348,20 @@ void cmdline_assign_all_args(void) {
         if (ent->arg != NULL)
             continue;
 
-        if (ent->value.mode == CMDLINE_MODE_TYPED) {
-            enum cmdline_type cmd_t =
-                cmdline_type_enum_to_cmdline_type(ent->value.c_type);
-            if (cmd_t != CMDLINE_TYPE_NONE)
-                ent->arg = CMDLINE_EXPR_TYPE_TO_STR(cmd_t);
-        } else if (ent->value.mode == CMDLINE_MODE_CUSTOM) {
+        /* TYPED and CUSTOM are both CMDLINE_MODE_VAR, a CMDLINE_PARSER()
+         * override is what makes an entry custom */
+        if (ent->value.mode == CMDLINE_MODE_CUSTOM && ent->value.parse) {
             for (size_t i = 0; i < cmdline_parsers_count; i++) {
                 if (cmdline_parsers[i].parse == ent->value.parse) {
                     ent->arg = cmdline_parsers[i].arg_hint;
                     break;
                 }
             }
+        } else if (ent->value.mode == CMDLINE_MODE_TYPED) {
+            enum cmdline_type cmd_t =
+                cmdline_type_enum_to_cmdline_type(ent->value.c_type);
+            if (cmd_t != CMDLINE_TYPE_NONE)
+                ent->arg = CMDLINE_EXPR_TYPE_TO_STR(cmd_t);
         } else if (ent->value.mode == CMDLINE_MODE_POLYMORPHIC) {
             uint64_t mask = cmdline_entry_get_accepted_mask(ent);
             if (mask == UINT64_MAX || mask == 0)

@@ -103,7 +103,7 @@ void thread_exit_with_status(int status) {
     ci_unreachable();
 }
 
-void thread_entry_wrapper(void) TSA_NO_ANALYSIS {
+static void thread_entry_wrapper(void) TSA_NO_ANALYSIS {
     /* TODO: We might want to consider refactoring
      * the switch_in so as to not gradually bloat up
      * both places where the "gopher pops out of the ground",
@@ -135,7 +135,7 @@ void thread_entry_wrapper(void) TSA_NO_ANALYSIS {
     thread_exit();
 }
 
-void *thread_allocate_stack(size_t pages) {
+static void *thread_allocate_stack(size_t pages) {
     size_t needed = (pages + 1) * PAGE_SIZE;
     vaddr_t virt_base = vas_alloc(stacks_space, needed, PAGE_SIZE);
     if (!virt_base)
@@ -152,7 +152,7 @@ void *thread_allocate_stack(size_t pages) {
     return (void *) virt_base;
 }
 
-void thread_free_stack(struct thread *thread) {
+static void thread_free_stack(struct thread *thread) {
     vaddr_t stack_real_virt = (vaddr_t) thread->stack - PAGE_SIZE;
     size_t pages = thread->stack_size / PAGE_SIZE;
     for (size_t i = 0; i < pages; i++) {

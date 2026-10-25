@@ -134,7 +134,7 @@ static void xhci_free_new_rings(struct xhci_slot *orig,
             xhci_free_ring(copy->ep_rings[i]);
 }
 
-enum usb_error xhci_configure_device_endpoints(struct usb_device *usb) {
+static enum usb_error xhci_configure_device_endpoints(struct usb_device *usb) {
     struct xhci_slot *xslot = usb->slot;
     if (!xhci_slot_getref(xslot))
         return USB_ERR_NO_DEVICE;
@@ -546,7 +546,7 @@ static void xhci_catch_stragglers(struct xhci_device *dev) {
     catch_stragglers_on_list(dev, XHCI_REQ_LIST_WAITING);
 }
 
-enum xhci_request_status
+static enum xhci_request_status
 xhci_make_request_status(struct xhci_device  *dev,
                          struct xhci_request *request) {
     if (request->port) {
@@ -708,7 +708,7 @@ static void xhci_process_event(struct xhci_device *dev, struct xhci_trb *trb) {
     }
 }
 
-void xhci_process_event_ring(struct xhci_device *xhci) {
+static void xhci_process_event_ring(struct xhci_device *xhci) {
     struct xhci_ring *ring = xhci->event_ring;
 
     enum irql irql = spin_lock_high(&xhci->lock);
@@ -865,7 +865,7 @@ void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
 static enum err xhci_pci_init(struct device *d) {
     struct pci_device *dev = d->driver_data;
     switch (dev->prog_if) {
-    case 0x30: xhci_init(dev->bus, dev->dev, dev->function, dev);
+    case 0x30: xhci_init(dev->bus, dev->dev, dev->function, dev); break;
     default: break;
     }
 

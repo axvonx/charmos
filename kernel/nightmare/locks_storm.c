@@ -136,7 +136,8 @@ struct locks_storm_state {
     uint64_t corrupt_after_ops;
     time_ms_t worker_stall_ms;
 
-    struct locks_storm_worker_state workers[];
+    size_t worker_count;
+    struct locks_storm_worker_state workers[] cc_counted_by(worker_count);
 };
 
 LOCK_CHK_CLASS_DEFINE_LOCAL(locks_storm_mutex);
@@ -705,6 +706,7 @@ static struct nightmare_verdict locks_storm_prepare(struct nightmare_ctx *ctx) {
     struct locks_storm_state *state = valloc(bytes, ALLOC_ZERO);
     if (!state)
         return NIGHTMARE_FAIL("state_alloc", "could not allocate lock state");
+    state->worker_count = ctx->worker_count; /* before any workers[] access */
 
     mutex_init_chk(&state->mutex, LOCK_CHK_CLASS(locks_storm_mutex),
                    LOCK_CHKD_FULL);

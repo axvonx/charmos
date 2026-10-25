@@ -347,11 +347,11 @@ void apc_rundown_thread(struct thread *t) {
     }
 }
 
-void apc_disable_special() {
+void apc_disable_special(void) {
     thread_get_current()->special_apc_disable++;
 }
 
-void apc_enable_special() {
+void apc_enable_special(void) {
     struct thread *t = thread_get_current();
     enforce(t->special_apc_disable > 0);
 
@@ -359,11 +359,11 @@ void apc_enable_special() {
         apc_check_and_deliver(t);
 }
 
-void apc_disable_kernel() {
+void apc_disable_kernel(void) {
     thread_get_current()->kernel_apc_disable++;
 }
 
-void apc_enable_kernel() {
+void apc_enable_kernel(void) {
     struct thread *t = thread_get_current();
     enforce(t->kernel_apc_disable > 0);
 
@@ -375,7 +375,7 @@ static inline bool thread_can_exec_any_apcs(struct thread *t) {
     return thread_can_exec_special_apcs(t) || thread_can_exec_kernel_apcs(t);
 }
 
-void thread_exec_apcs(struct thread *t) {
+static void thread_exec_apcs(struct thread *t) {
     if (thread_can_exec_special_apcs(t))
         deliver_apc_type(t, APC_TYPE_SPECIAL_KERNEL);
 

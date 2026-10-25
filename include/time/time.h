@@ -80,19 +80,19 @@
 #define DAYS_TO_HOURS(d) ((uint64_t) ((d) * HOURS_PER_DAY))
 
 void time_print_unix(time_s_t timestamp);
-void time_print_current();
-uint32_t time_get_unix();
-uint8_t time_get_second();
-uint8_t time_get_minute();
-uint8_t time_get_hour();
-uint8_t time_get_day();
-uint8_t time_get_month();
-uint8_t time_get_year();
-uint8_t time_get_century();
+void time_print_current(void);
+uint32_t time_get_unix(void);
+uint8_t time_get_second(void);
+uint8_t time_get_minute(void);
+uint8_t time_get_hour(void);
+uint8_t time_get_day(void);
+uint8_t time_get_month(void);
+uint8_t time_get_year(void);
+uint8_t time_get_century(void);
 time_ms_t time_get_ms(void);
 
 /* Non-blocking variant when spinning on the timekeeper is disallowed */
 bool time_try_get_ms(time_ms_t *out);
-time_ns_t time_get_ns();
+time_ns_t time_get_ns(void);
 time_us_t time_get_us(void);
 freq_hz_t tsc_calibrate(void);

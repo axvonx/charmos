@@ -3,6 +3,8 @@
 #include <math/align.h>
 #include <mem/alloc.h>
 
+#include "internal.h"
+
 static inline int bit_is_used(const uint8_t *bitmap, size_t bit_index) {
     return (bitmap[bit_index / 8] >> (bit_index % 8)) & 1u;
 }
@@ -15,7 +17,7 @@ static inline void bit_clear_used(uint8_t *bitmap, size_t bit_index) {
     bitmap[bit_index / 8] &= (uint8_t) ~(1u << (bit_index % 8));
 }
 
-ssize_t bitmap_alloc_first_free(uint8_t *bitmap, size_t total_bits) {
+static ssize_t bitmap_alloc_first_free(uint8_t *bitmap, size_t total_bits) {
     if (!bitmap)
         return -1;
 
@@ -30,7 +32,8 @@ ssize_t bitmap_alloc_first_free(uint8_t *bitmap, size_t total_bits) {
 }
 
 /* TODO: Move this out */
-ssize_t bitmap_free(uint8_t *bitmap, size_t total_bits, size_t bit_index) {
+static ssize_t bitmap_free(uint8_t *bitmap, size_t total_bits,
+                           size_t bit_index) {
     if (!bitmap)
         return -1;
 

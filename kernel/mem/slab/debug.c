@@ -2,7 +2,7 @@
 #include <mem/address_range.h>
 
 #ifdef DEBUG_SLAB_DEEP
-const char *slab_addr_region(vaddr_t a) {
+static const char *slab_addr_region(vaddr_t a) {
     if (address_range_for_addr(a))
         return address_range_for_addr(a)->name;
 

@@ -17,4 +17,4 @@ LOG_SITE_EXTERN(dmar);
 #define dmar_debug(fmt, ...) dmar_log(LOG_DEBUG, fmt, ##__VA_ARGS__)
 #define dmar_trace(fmt, ...) dmar_log(LOG_TRACE, fmt, ##__VA_ARGS__)
 
-bool dmar_init();
+bool dmar_init(void);

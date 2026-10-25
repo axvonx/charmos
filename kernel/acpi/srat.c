@@ -1,3 +1,4 @@
+#include <acpi/acpi.h>
 #include <asm.h>
 #include <console/panic.h>
 #include <console/printf.h>

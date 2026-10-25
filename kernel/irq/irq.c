@@ -72,7 +72,7 @@ static void irq_execute_vector_handlers(irq_t vector,
 
 /* TODO: Someday we will need to handle nmi_depth > 1 and do a fancy asm
  * trampoline to handle cases where IRQs fire in NMIs due to the IRET issue */
-void isr_nmi_entry(struct irq_registers *irq_regs) {
+static void isr_nmi_entry(struct irq_registers *irq_regs) {
     /* vector == IRQ_NMI, of course */
     enforce(!irq_mark_self_in_nmi(true));
     uint32_t icr_high = lapic_icr_nmi_save();
@@ -84,7 +84,7 @@ void isr_nmi_entry(struct irq_registers *irq_regs) {
     enforce(irq_mark_self_in_nmi(false) == 1);
 }
 
-void isr_standard_entry(irq_t vector, struct irq_registers *irq_regs) {
+static void isr_standard_entry(irq_t vector, struct irq_registers *irq_regs) {
     irq_mark_self_in_interrupt(true);
 
     /* before anyone can enter a read section */
@@ -165,6 +165,8 @@ void isr_standard_entry(irq_t vector, struct irq_registers *irq_regs) {
     }
 }
 
+/* Only called from isrs.asm */
+void isr_common_entry(irq_t vector, struct irq_registers *irq_regs);
 void isr_common_entry(irq_t vector, struct irq_registers *irq_regs) {
     if (vector != IRQ_NMI) {
         isr_standard_entry(vector, irq_regs);
@@ -240,7 +242,7 @@ void idt_load(void) {
     asm volatile("lidt %0" : : "m"(idtps));
 }
 
-int32_t irq_alloc_entry() {
+int32_t irq_alloc_entry(void) {
     enum irql irql = spin_lock(&irq_table_lock);
     for (int32_t i = 32; i < IDT_ENTRIES; i++) {
         if (!irq_table[i].allocated) {
@@ -299,7 +301,7 @@ void irq_vector_enable(irq_t irq) {
         desc->chip->unmask(desc);
 }
 
-static void exception_sync_cbs_init() {
+static void exception_sync_cbs_init(void) {
     struct exception_sync_cb *esc;
     linker_section_for_each_object(esc, exception_sync_cbs) {
         enforce(exception_cbs[esc->vector].vector == 0);
@@ -307,7 +309,7 @@ static void exception_sync_cbs_init() {
     }
 }
 
-void irq_init() {
+void irq_init(void) {
     for (size_t i = 0; i < IDT_ENTRIES; i++) {
         struct irq_desc *desc = &irq_table[i];
         cpu_mask_init(&desc->masked_cpus, global.core_count);

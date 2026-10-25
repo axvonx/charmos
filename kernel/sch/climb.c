@@ -8,7 +8,7 @@
 
 #include "internal.h"
 
-void climb_per_period_hook();
+void climb_per_period_hook(void);
 SCHEDULER_PERIODIC_WORK_REGISTER_PER_PERIOD(climb_per_period_hook,
                                             PERIODIC_WORK_MID);
 
@@ -48,7 +48,7 @@ struct climb_budget {
     (fx_mul(CLIMB_BOOST_EWMA_ALPHA, val) +                                     \
      fx_mul(FX_ONE - CLIMB_BOOST_EWMA_ALPHA, fx_from_int(target)))
 
-static inline struct rbt *climb_tree_local() {
+static inline struct rbt *climb_tree_local(void) {
     return &smp_core_scheduler()->climb_threads;
 }
 
@@ -533,7 +533,7 @@ summarize_and_advance(struct rbt *tree, struct climb_drop_batch *drop) {
     return ret;
 }
 
-void climb_per_period_hook() {
+void climb_per_period_hook(void) {
     struct scheduler *sched = smp_core_scheduler();
     enum irql irql = spin_lock_high(&sched->lock);
 

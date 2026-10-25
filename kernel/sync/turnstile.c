@@ -239,13 +239,14 @@ enum irql turnstile_lookup(void *obj, struct turnstile **out_ts) {
     return irql;
 }
 
-void turnstile_pi_remove(struct turnstile *ts) {
+static void turnstile_pi_remove(struct turnstile *ts) {
     SPINLOCK_ASSERT_HELD(&turnstile_chain_for(ts->lock_obj)->lock);
 
     thread_uninherit_priority(&ts->pi);
 }
 
-struct thread *turnstile_dequeue_first(struct turnstile *ts, size_t queue) {
+static struct thread *turnstile_dequeue_first(struct turnstile *ts,
+                                              size_t queue) {
     void *obj = ts->lock_obj;
     struct turnstile_hash_chain *chain = turnstile_chain_for(obj);
 

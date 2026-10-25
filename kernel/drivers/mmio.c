@@ -9,7 +9,7 @@ static struct vas *mmio_vas_space = NULL;
 ADDRESS_RANGE_DEFINE(mmio, .align = PAGE_1GB, .flags = ADDRESS_RANGE_DYNAMIC,
                      .size = MMIO_RANGE_SIZE);
 
-void mmio_init() {
+void mmio_init(void) {
     mmio_vas_space = nofail(vas_from(&ADDRESS_RANGE(mmio)));
 }
 

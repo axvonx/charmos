@@ -169,7 +169,7 @@ static inline void begin_steal(struct scheduler *sched) {
     atomic_store(&sched->stealing_work, true);
 }
 
-static inline bool try_begin_steal() {
+static inline bool try_begin_steal(void) {
     uint32_t current = atomic_load_rlx(&scheduler_data.active_stealers);
     while (current < scheduler_data.max_concurrent_stealers) {
         if (atomic_cas_weak(&scheduler_data.active_stealers, &current,
@@ -213,7 +213,7 @@ struct thread *scheduler_try_do_steal(struct scheduler *sched) {
     return stolen;
 }
 
-uint64_t scheduler_compute_steal_threshold() {
+uint64_t scheduler_compute_steal_threshold(void) {
     uint64_t threads = atomic_load(&scheduler_data.total_threads);
     uint64_t threads_per_core = threads / global.core_count;
 

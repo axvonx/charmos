@@ -10,7 +10,7 @@
     } while (0)
 
 #ifdef DEBUG_SLAB_DEEP
-bool slab_check_traces(struct slab *s) {
+static bool slab_check_traces(struct slab *s) {
     /* Verify that it begins at the end of the page array */
     slab_check_assert_return_false(
         s->bitmap == ((uint8_t *) s->traces +
@@ -19,20 +19,20 @@ bool slab_check_traces(struct slab *s) {
     return true;
 }
 #else
-bool slab_check_traces(struct slab *s) {
+static bool slab_check_traces(struct slab *s) {
     cc_ignore(s);
     return true;
 }
 #endif
 
-bool slab_check_reset_slab(struct slab *slab) {
+static bool slab_check_reset_slab(struct slab *slab) {
     slab_check_assert_return_false(slab->state == SLAB_FREE);
     slab_check_assert_return_false(slab->bitmap == NULL);
     slab_check_assert_return_false(slab->used == 0);
     return true;
 }
 
-bool slab_check_bitmap(struct slab *slab) {
+static bool slab_check_bitmap(struct slab *slab) {
     slab_check_assert_return_false(slab->bitmap != NULL);
     struct slab_cache *cache = slab->parent_cache;
     size_t bitmap_bytes = SLAB_BITMAP_BYTES_FOR(cache->objs_per_slab);
@@ -51,7 +51,7 @@ bool slab_check_bitmap(struct slab *slab) {
     return true;
 }
 
-bool slab_check_meta(struct slab *slab) {
+static bool slab_check_meta(struct slab *slab) {
     slab_check_assert_return_false(slab->mem);
     slab_check_assert_return_false(slab->parent_cache->pages_per_slab > 0);
     return true;

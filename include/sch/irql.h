@@ -169,7 +169,7 @@ void irql_lower(enum irql old_level) TSA_RELEASES(IRQL_RAISED);
 /* Similar to irql_lower() but with no reschedule check,
  * preventing recursing into the scheduler in scheduler_yield() */
 void irql_lower_no_resched(enum irql old_level) TSA_RELEASES(IRQL_RAISED);
-enum irql irql_get();
+enum irql irql_get(void);
 
 static inline cc_always_inline cc_unused void irql_guard_exit(enum irql *saved)
     TSA_RELEASES(IRQL_RAISED) TSA_NO_ANALYSIS {

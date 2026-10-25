@@ -144,15 +144,15 @@ bool ahci_write_sector_async(struct block_device *disk, uint64_t lba,
     return rw_async(disk, lba, in_buf, count, req, true);
 }
 
-bool ahci_read_sector_blocking(struct block_device *disk, uint64_t lba,
-                               uint8_t *buf, uint16_t count,
-                               struct io_wait_token *tok) {
+static bool ahci_read_sector_blocking(struct block_device *disk, uint64_t lba,
+                                      uint8_t *buf, uint16_t count,
+                                      struct io_wait_token *tok) {
     return rw_sync(disk, lba, buf, count, ahci_read_sector_async, tok);
 }
 
-bool ahci_write_sector_blocking(struct block_device *disk, uint64_t lba,
-                                uint8_t *buf, uint16_t count,
-                                struct io_wait_token *tok) {
+static bool ahci_write_sector_blocking(struct block_device *disk, uint64_t lba,
+                                       uint8_t *buf, uint16_t count,
+                                       struct io_wait_token *tok) {
     return rw_sync(disk, lba, buf, count, ahci_write_sector_async, tok);
 }
 

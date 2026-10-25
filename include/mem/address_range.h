@@ -37,8 +37,8 @@ struct address_range {
 
 LINKER_SECTION_EXTERN(struct address_range, address_ranges);
 
-void address_ranges_init();
-void address_ranges_print();
+void address_ranges_init(void);
+void address_ranges_print(void);
 struct address_range *address_range_for_addr(vaddr_t vaddr);
 
 static inline bool address_range_addr_in_range(struct address_range *ar,

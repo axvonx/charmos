@@ -2,6 +2,8 @@
 #include <console/panic.h>
 #include <types/types.h>
 
+#pragma GCC diagnostic ignored "-Wmissing-prototypes"
+
 typedef union {
     uint128_t all;
     struct {

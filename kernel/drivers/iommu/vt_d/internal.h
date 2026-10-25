@@ -105,7 +105,7 @@ void vtd_iotlb_flush_range(struct vtd_unit *u, uint16_t domain_id, iova_t iova,
 void vtd_iotlb_flush_range_batched(struct vtd_unit *u, uint16_t domain_id,
                                    iova_t iova, size_t size);
 
-size_t vtd_domain_alloc(struct vtd_unit *unit);
-size_t vtd_domain_free(struct vtd_unit *unit, size_t domain);
+ssize_t vtd_domain_alloc(struct vtd_unit *unit);
+ssize_t vtd_domain_free(struct vtd_unit *unit, size_t domain);
 bool vtd_domain_init(struct vtd_unit *unit);
 extern const struct iommu_ops vtd_iommu_ops;

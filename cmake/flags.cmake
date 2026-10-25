@@ -27,7 +27,106 @@ set(KERNEL_WARNINGS
     -Werror=format
     -Werror=format-extra-args
     -Werror=format-security
-    -Wno-format-zero-length)
+    -Wno-format-zero-length
+    -Werror=return-type
+    -Werror=implicit-function-declaration
+    -Werror=implicit-int
+    -Werror=uninitialized
+    -Werror=array-bounds
+    -Werror=array-parameter
+    -Werror=nonnull
+    -Werror=sizeof-pointer-memaccess
+    -Werror=sizeof-array-argument
+    -Werror=sizeof-pointer-div
+    -Werror=cast-function-type
+    -Werror=int-to-pointer-cast
+    -Werror=pointer-to-int-cast
+    -Werror=address-of-packed-member
+    -Werror=varargs
+    -Werror=infinite-recursion
+    # logic slips
+    -Werror=misleading-indentation
+    -Werror=logical-not-parentheses
+    -Werror=bool-operation
+    -Werror=int-in-bool-context
+    -Werror=implicit-fallthrough
+    -Werror=undef
+    -Werror=strict-prototypes
+    -Werror=missing-prototypes
+    # dead code and dropped results
+    -Werror=unused-result
+    -Werror=unused-function
+    -Werror=unused-variable
+    -Werror=unused-but-set-variable)
+
+if (DEBUG_ASAN)
+    set(KERNEL_FRAME_LIMIT 16384)
+else ()
+    set(KERNEL_FRAME_LIMIT 4096)
+endif ()
+
+if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
+    list(APPEND KERNEL_WARNINGS -Wframe-larger-than=${KERNEL_FRAME_LIMIT} -Werror=frame-larger-than)
+    list(
+        APPEND
+        KERNEL_WARNINGS
+        -Werror=sometimes-uninitialized
+        -Werror=array-bounds-pointer-arithmetic
+        -Werror=fortify-source
+        -Werror=tautological-pointer-compare
+        -Werror=null-pointer-arithmetic
+        -Werror=null-pointer-subtraction
+        -Werror=return-stack-address
+        -Werror=dangling
+        -Werror=unsequenced
+        -Werror=integer-overflow
+        -Werror=shift-overflow
+        -Werror=division-by-zero
+        -Werror=incompatible-function-pointer-types
+        -Werror=cast-function-type-strict
+        -Werror=incompatible-library-redeclaration
+        -Werror=deprecated-non-prototype
+        -Werror=compare-distinct-pointer-types
+        -Werror=self-assign
+        -Werror=pointer-bool-conversion
+        -Werror=string-compare
+        -Werror=constant-conversion
+        -Werror=bitfield-constant-conversion
+        -Werror=visibility)
+endif ()
+
+if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    list(APPEND KERNEL_WARNINGS -Werror=frame-larger-than=${KERNEL_FRAME_LIMIT})
+    # most of these are flow-based and only fire with optimization on
+    list(
+        APPEND
+        KERNEL_WARNINGS
+        -Werror=return-mismatch
+        -Werror=maybe-uninitialized
+        -Werror=stringop-overflow
+        -Werror=stringop-overread
+        -Werror=stringop-truncation
+        -Werror=restrict
+        -Werror=vla-parameter
+        -Werror=alloc-zero
+        -Werror=format-overflow
+        -Werror=format-truncation
+        -Werror=nonnull-compare
+        -Werror=dangling-pointer
+        -Werror=return-local-addr
+        -Werror=free-nonheap-object
+        -Werror=sequence-point
+        -Werror=overflow
+        -Werror=shift-overflow=2
+        -Werror=div-by-zero
+        -Werror=sizeof-array-div
+        -Werror=zero-length-bounds
+        -Werror=aggressive-loop-optimizations
+        -Werror=builtin-declaration-mismatch
+        -Werror=enum-int-mismatch
+        -Werror=duplicated-cond
+        -Werror=logical-op)
+endif ()
 
 if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
     list(APPEND KERNEL_WARNINGS -Wthread-safety -Werror=thread-safety -Watomic-implicit-seq-cst)
@@ -38,6 +137,9 @@ if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
     list(APPEND KERNEL_WARNINGS -fexperimental-late-parse-attributes)
     list(APPEND KERNEL_WARNINGS -Werror=excess-initializers)
     list(APPEND KERNEL_WARNINGS -Wno-nullability-completeness)
+    # assume() is an unevaluated assumption without DEBUG_ASSUME, side effects
+    # in its condition would silently vanish
+    list(APPEND KERNEL_WARNINGS -Werror=assume)
 endif ()
 
 # for double free / use-after-free / wrong-free comptime detection
@@ -45,7 +147,7 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     list(APPEND KERNEL_WARNINGS -Werror=use-after-free -Werror=mismatched-dealloc)
 endif ()
 
-set(KERNEL_WARNINGS_RELEASE -Wunused -Wvla -Wnull-dereference)
+set(KERNEL_WARNINGS_RELEASE -Wunused -Wvla)
 
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     list(APPEND KERNEL_WARNINGS_RELEASE -Wshadow=local -Wlogical-op -Wduplicated-cond -Wduplicated-branches)
@@ -68,7 +170,7 @@ set(KERNEL_FREESTANDING
     -fno-optimize-sibling-calls
     -ffunction-sections
     -fdata-sections
-    -fno-inline-functions)
+    -fstrict-flex-arrays=3)
 
 set(KERNEL_TARGET_ARCH
     -m64
@@ -205,6 +307,19 @@ if (DEBUG_ASAN)
         -asan-mapping-offset=0xDFFFFE0000000000)
     string(REPLACE ";" " " KERNEL_KASAN_FLAGS_STR "${KERNEL_KASAN_FLAGS}")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${KERNEL_KASAN_FLAGS_STR}")
+endif ()
+
+if (DEBUG_UBSAN)
+    message(STATUS "charmOS: UBSan enabled (DEBUG_UBSAN)")
+    add_compile_definitions(DEBUG_UBSAN)
+    set(DEBUG_UBSAN_CHECKS
+        "bounds;object-size;shift;signed-integer-overflow;integer-divide-by-zero;pointer-overflow;vla-bound;bool;enum;builtin;return;nonnull-attribute;returns-nonnull-attribute"
+        CACHE STRING "UBSan checks for DEBUG_UBSAN, as a ;-list")
+    string(REPLACE ";" "," KERNEL_UBSAN_CHECKS_STR "${DEBUG_UBSAN_CHECKS}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=${KERNEL_UBSAN_CHECKS_STR}")
+    if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-format-overflow")
+    endif ()
 endif ()
 
 option(KERNEL_RANDCONFIG "Append a random subset of codegen flags (build fuzz)" OFF)

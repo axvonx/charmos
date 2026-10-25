@@ -36,7 +36,7 @@ void ata_soft_reset(struct ata_drive *ata_drive) {
     }
 }
 
-bool ata_identify(struct ata_drive *ata_drive) {
+static bool ata_identify(struct ata_drive *ata_drive) {
     ata_select_drive(ata_drive);
     io_port_wait();
 

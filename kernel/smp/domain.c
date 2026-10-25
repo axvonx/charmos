@@ -123,7 +123,7 @@ void domain_init(void) {
     global.cores[0]->domain = global.domains[0];
 }
 
-static void construct_domains_after_smp() {
+static void construct_domains_after_smp(void) {
     if (global.numa_node_count > 1) {
         for (size_t i = 0; i < global.domain_count; i++) {
             struct domain *cd = global.domains[i];
@@ -148,7 +148,7 @@ static void construct_domains_after_smp() {
     }
 }
 
-void domain_init_after_smp() {
+void domain_init_after_smp(void) {
     construct_domains_after_smp();
     for (size_t i = 0; i < global.domain_count; i++) {
         struct domain *domain = global.domains[i];

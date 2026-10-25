@@ -13,6 +13,10 @@
 #include "flanterm/src/flanterm.h"
 #include <flanterm/src/flanterm_backends/fb.h>
 
+/* the definitions below need the real names, not the fortify wrappers */
+#undef snprintf
+#undef vsnprintf
+
 void vprintf(struct printf_cursor *csr, const char *format, va_list args);
 struct flanterm_context;
 
@@ -26,7 +30,7 @@ struct printf_cursor {
     int cursor;
 };
 
-void serial_init() {
+void serial_init(void) {
     outb(0x3F8 + 1, 0x00);
     outb(0x3F8 + 3, 0x80);
     outb(0x3F8 + 0, 0x03);
@@ -38,7 +42,7 @@ void serial_init() {
         cpu_pause();
 }
 
-static int serial_is_transmit_empty() {
+static int serial_is_transmit_empty(void) {
     return inb(0x3F8 + 5) & 0x20;
 }
 
@@ -61,7 +65,7 @@ bool serial_try_getc(char *out) {
     return true;
 }
 
-void serial_puts(struct printf_cursor *csr, const char *str, int len) {
+static void serial_puts(struct printf_cursor *csr, const char *str, int len) {
     for (int i = 0; i < len; i++) {
         if (!csr)
             serial_putc(str[i]);
@@ -73,8 +77,8 @@ void serial_puts(struct printf_cursor *csr, const char *str, int len) {
     }
 }
 
-void double_print(struct flanterm_context *f, struct printf_cursor *csr,
-                  const char *str, int len) {
+static void double_print(struct flanterm_context *f, struct printf_cursor *csr,
+                         const char *str, int len) {
     serial_puts(csr, str, len);
 
     if (!csr && global.current_bootstage >= BOOTSTAGE_EARLY_FB)
@@ -485,7 +489,7 @@ void vprintf(struct printf_cursor *csr, const char *format, va_list args) {
     }
 }
 
-enum irql printf_lock() TSA_ACQUIRES_SPIN(&k_printf_lock) {
+enum irql printf_lock(void) TSA_ACQUIRES_SPIN(&k_printf_lock) {
     return spin_lock_high(&k_printf_lock);
 }
 

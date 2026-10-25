@@ -92,7 +92,7 @@ static inline size_t rwlock_get_wait_queue(enum rwlock_acquire_type t) {
     return TURNSTILE_WRITER_QUEUE;
 }
 
-size_t rwlock_get_backoff(size_t current_backoff) {
+static size_t rwlock_get_backoff(size_t current_backoff) {
     if (!current_backoff)
         return RWLOCK_BACKOFF_DEFAULT;
 
@@ -172,8 +172,9 @@ void rwlock_init_chk_full(struct rwlock *lock, enum thread_prio_class ceiling,
  * from going through the dance of hunting down CPUs to IPI
  *
  * TODO: use this */
-static bool rwlock_has_lower_readers_than(struct rwlock *lock,
-                                          enum thread_prio_class prio) {
+static cc_maybe_unused bool
+rwlock_has_lower_readers_than(struct rwlock *lock,
+                              enum thread_prio_class prio) {
     /* This is called from the writer's context, once the
      * RWLOCK_WRITER_WANT_BIT is set. No more readers
      * can get the lock after this point, so it is
@@ -342,7 +343,8 @@ out:
  * grant the lock to readers with the same or higher priority than the highest
  * priority writer...
  */
-uintptr_t rwlock_get_readers_to_wake(struct turnstile *ts, size_t *raw_count) {
+static uintptr_t rwlock_get_readers_to_wake(struct turnstile *ts,
+                                            size_t *raw_count) {
     struct rbt_node *wnode, *rnode, *iter;
     struct thread *writer = NULL;
 

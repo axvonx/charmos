@@ -48,7 +48,7 @@ static void init_scheduler_boot(struct scheduler *sched) {
     rts->mapping_source = NULL;
 }
 
-void rt_scheduler_boot_init() {
+void rt_scheduler_boot_init(void) {
     rt_wq = nofail(workqueue_create_default("rt_wq"));
 
     locked_list_init(&rt_global.static_list, LOCKED_LIST_INIT_IRQ_DISABLE);

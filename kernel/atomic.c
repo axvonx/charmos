@@ -1,6 +1,8 @@
 #include <atomic.h>
 #include <types/types.h>
 
+#pragma GCC diagnostic ignored "-Wmissing-prototypes"
+
 /* GCC references these when expecting libatomic, and we don't
  * bother with the memory ordering constraint since cmpxchg16b is
  * a full barrier anyways */

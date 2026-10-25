@@ -128,7 +128,7 @@ static void daemon_wait(struct daemon *daemon, struct daemon_thread *self) {
         daemon_thread_exit(daemon, self);
 }
 
-void daemon_main(void *a) {
+static void daemon_main(void *a) {
     cc_ignore(a);
 
     struct daemon_thread *self = current_daemon_thread();
@@ -156,7 +156,7 @@ void daemon_main(void *a) {
     panic("Daemon thread should not be able to exit the loop");
 }
 
-struct daemon_thread *daemon_thread_create(struct daemon *daemon) {
+static struct daemon_thread *daemon_thread_create(struct daemon *daemon) {
     struct daemon_thread *thread = vnew(thread, ALLOC_ZERO);
     if (!thread)
         return NULL;
@@ -206,7 +206,7 @@ daemon_thread_spawn(struct daemon *daemon,
     return t;
 }
 
-void daemon_thread_destroy_unsafe(struct daemon_thread *dt) {
+static void daemon_thread_destroy_unsafe(struct daemon_thread *dt) {
     thread_free(dt->thread);
     vfree(dt);
 }

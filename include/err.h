@@ -105,7 +105,7 @@ struct err_facility {
 LINKER_SECTION_EXTERN(struct err_facility, err_facilities);
 
 const char *err_facility_to_str(enum err err);
-void err_facilities_init();
+void err_facilities_init(void);
 
 STRINGIFY_DECLARE(errno_to_str, enum err) {
     switch (stringify_in) {

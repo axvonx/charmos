@@ -1,5 +1,6 @@
 /* @title: Hash Functions */
 #pragma once
+#include <compiler/core.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -156,8 +157,8 @@ static inline uint32_t hash_murmur3_32(const void *key, size_t len,
     const uint8_t *tail = (const uint8_t *) (data + nblocks * 4);
     uint32_t k1 = 0;
     switch (len & 3) {
-    case 3: k1 ^= tail[2] << 16; /* fallthrough */
-    case 2: k1 ^= tail[1] << 8;  /* fallthrough */
+    case 3: k1 ^= tail[2] << 16; cc_fallthrough;
+    case 2: k1 ^= tail[1] << 8; cc_fallthrough;
     case 1:
         k1 ^= tail[0];
         k1 *= c1;

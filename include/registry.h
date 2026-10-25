@@ -9,7 +9,7 @@ void registry_unregister(struct block_device *disk);
 struct block_device *registry_get_by_name(const char *name);
 struct block_device *registry_get_by_index(uint64_t index);
 uint64_t registry_get_disk_cnt(void);
-void registry_setup();
+void registry_setup(void);
 void registry_mkname(struct block_device *disk, const char *prefix,
                      uint64_t counter);
 

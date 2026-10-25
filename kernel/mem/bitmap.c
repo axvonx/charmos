@@ -13,7 +13,7 @@ uint64_t bitmap_size = BOOT_BITMAP_SIZE;
 uint8_t *bitmap;
 static uint64_t last_allocated_index = 0;
 
-paddr_t bitmap_alloc_page() {
+paddr_t bitmap_alloc_page(void) {
     return bitmap_alloc_pages(1, 0);
 }
 

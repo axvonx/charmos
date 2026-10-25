@@ -62,7 +62,7 @@ struct folio {
 uint32_t page_get_folio_index(struct page *p);
 bool page_is_folio_head(struct page *p);
 
-struct folio *folio_alloc_folio_struct() cw_alloc();
+struct folio *folio_alloc_folio_struct(void) cw_alloc();
 void folio_free_folio_struct(struct folio *f);
 
 struct folio *folio_alloc_full(uint8_t order, struct alloc_params params)

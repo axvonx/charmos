@@ -1,3 +1,4 @@
+#include <crypto/prng.h>
 #include <smp/core.h>
 #include <smp/percpu.h>
 #include <stdint.h>

@@ -1,3 +1,4 @@
+#include <console/panic.h>
 #include <err.h>
 #include <limits.h>
 #include <mem/alloc.h>
@@ -11,6 +12,19 @@
 #undef memcpy
 #undef memmove
 #undef memcmp
+#undef strcpy
+#undef stpcpy
+#undef strcat
+#undef strncpy
+#undef stpncpy
+#undef strlcpy
+#undef strlcat
+#undef snprintf
+#undef vsnprintf
+
+cc_noreturn void fortify_panic(const char *fn, size_t want, size_t have) {
+    panic("fortify: %s of %zu bytes on a %zu byte object", fn, want, have);
+}
 
 void *memcpy(void *dest, const void *src, size_t n) {
     return __memcpy_inline(dest, src, n);

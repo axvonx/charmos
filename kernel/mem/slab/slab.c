@@ -550,7 +550,7 @@ static void slab_bitmap_free(struct slab *slab, void *obj) {
     slab->used -= 1;
 }
 
-void slab_free_old(struct slab *slab, void *obj) {
+static void slab_free_old(struct slab *slab, void *obj) {
     struct slab_cache *cache = slab->parent_cache;
 
     enum irql slab_cache_irql = spin_lock(&cache->lock);
@@ -685,7 +685,7 @@ static void log_dupes(const char *keep, const char *discard, size_t size) {
               discard, keep, size, discard, keep);
 }
 
-void slab_allocator_init() {
+void slab_allocator_init(void) {
     /* bootstrap VAS */
     slab_global.vas = vas_bootstrap(SLAB_HEAP_START, SLAB_HEAP_END);
     if (!slab_global.vas)
@@ -802,8 +802,8 @@ size_t slab_allocation_size(vaddr_t addr) {
     return vsize((void *) addr);
 }
 
-void *valloc_pages_raw(struct slab_domain *parent, stack_handle_t handle,
-                       size_t size, struct alloc_params params) {
+static void *valloc_pages_raw(struct slab_domain *parent, stack_handle_t handle,
+                              size_t size, struct alloc_params params) {
     enum alloc_flags flags = params.flags;
     uint64_t total_size = size + sizeof(struct slab_page_hdr);
     uint64_t pages = PAGES_NEEDED_FOR(total_size);
@@ -888,7 +888,7 @@ void slab_free_addr_to_cache(void *addr, enum alloc_behavior bh) {
     slab_free_old(slab, addr);
 }
 
-void vfree_old(void *ptr) {
+static void vfree_old(void *ptr) {
     slab_free_addr_to_cache(ptr, ALLOC_BEHAVIOR_NORMAL);
 }
 
@@ -922,10 +922,10 @@ size_t slab_allocation_index(struct slab *slab, void *ptr) {
     return delta / slab->parent_cache->obj_stride;
 }
 
-void *valloc_try_from_magazine(struct slab_domain *domain,
-                               struct slab_percpu_cache *pcpu,
-                               stack_handle_t handle, size_t size,
-                               enum alloc_flags flags) {
+static void *valloc_try_from_magazine(struct slab_domain *domain,
+                                      struct slab_percpu_cache *pcpu,
+                                      stack_handle_t handle, size_t size,
+                                      enum alloc_flags flags) {
 #ifndef DEBUG_SLAB_DEEP
     cc_ignore(handle);
 #endif
@@ -1013,8 +1013,9 @@ static int32_t slab_score_cache(struct slab_cache_ref *ref,
     return dist_part - usable;
 }
 
-struct slab_cache *slab_search_for_cache(struct slab_domain *dom,
-                                         enum alloc_flags flags, size_t size) {
+static struct slab_cache *slab_search_for_cache(struct slab_domain *dom,
+                                                enum alloc_flags flags,
+                                                size_t size) {
     size_t idx = slab_size_to_index(size);
     uint8_t locality = ALLOC_LOCALITY_FROM_FLAGS(flags);
 
@@ -1084,7 +1085,7 @@ struct slab_cache *slab_search_for_cache(struct slab_domain *dom,
     return ret;
 }
 
-void slab_stat_alloc_from_cache(struct slab_cache *cache) {
+static void slab_stat_alloc_from_cache(struct slab_cache *cache) {
     struct slab_domain *local = slab_domain_local();
     if (cache->parent_domain == local) {
         slab_stat_alloc_local_hit(local);
@@ -1127,7 +1128,7 @@ void *slab_alloc(struct slab_cache *cache, stack_handle_t handle,
 out:
     spin_unlock(&cache->lock, irql);
 
-#if DEBUG_SLAB
+#ifdef DEBUG_SLAB
     if (ret && (cache->type == SLAB_TYPE_NONPAGEABLE_ZERO ||
                 cache->type == SLAB_TYPE_PAGEABLE_ZERO)) {
         if (!is_buffer_uniform(ret, cache->obj_size, 0)) {
@@ -1187,8 +1188,8 @@ out:
     return ret;
 }
 
-void *slab_alloc_retry(struct slab_domain *domain, stack_handle_t handle,
-                       size_t size, struct alloc_params params) {
+static void *slab_alloc_retry(struct slab_domain *domain, stack_handle_t handle,
+                              size_t size, struct alloc_params params) {
     enum alloc_flags flags = params.flags;
     enum alloc_behavior behavior = params.behavior;
     /* here we run emergency GC to try and reclaim a little memory */
@@ -1364,7 +1365,7 @@ bool slab_domain_busy(struct slab_domain *domain) {
     return recent_call && !idle;
 }
 
-bool vfree_free_queue_enqueue(struct slab_domain *domain, void *ptr) {
+static bool vfree_free_queue_enqueue(struct slab_domain *domain, void *ptr) {
     struct slab_domain *local = slab_domain_local();
     vaddr_t vptr = (vaddr_t) ptr;
 
@@ -1377,7 +1378,7 @@ bool vfree_free_queue_enqueue(struct slab_domain *domain, void *ptr) {
     return false;
 }
 
-void vfree_pages(void *ptr, enum alloc_behavior behavior) {
+static void vfree_pages(void *ptr, enum alloc_behavior behavior) {
     struct slab_page_hdr *header = slab_page_hdr_for_addr(ptr);
 
     /* early allocations do not have topology data and set their
@@ -1531,6 +1532,10 @@ done:
     irql_lower(outer);
 }
 
+/* Named by STATIC_CALL_DEFINE's asm below, so these must stay external */
+void *valloc_init(size_t size, struct alloc_params params);
+void vfree_init(void *p, enum alloc_behavior b);
+
 void *valloc_init(size_t size, struct alloc_params params) {
     return valloc_old(size, params.flags);
 }
@@ -1562,6 +1567,9 @@ void *valloc_full(size_t size, struct alloc_params params) {
      * get changed so as to not make the code be slower than a memset 0 */
     if (p && (params.flags & ALLOC_FLAG_ZERO_ON_ALLOC))
         enforce(is_buffer_uniform(p, size, 0));
+
+    if (p && !(params.flags & ALLOC_FLAG_ZERO_ON_ALLOC))
+        memset(p, SLAB_ALLOC_NONZERO_POISON_BYTE, size);
 #endif
 
 #ifdef DEBUG_SLAB_DEEP

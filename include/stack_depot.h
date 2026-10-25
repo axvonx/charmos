@@ -48,15 +48,15 @@ static inline uint32_t stack_depot_hash(uintptr_t *entries,
     return hash_murmur3_32(entries, len, stack_depot_global.starting_seed);
 }
 
-void stack_depot_init();
+void stack_depot_init(void);
 stack_handle_t stack_depot_save(uintptr_t *entries, size_t num_entries,
                                 enum alloc_flags flags);
 struct stack_depot_record *stack_depot_get_record(stack_handle_t key);
 size_t stack_depot_read(stack_handle_t key, uintptr_t *entries);
 void stack_depot_print(stack_handle_t key);
 void stack_depot_putref(stack_handle_t key);
-stack_handle_t stack_depot_save_current();
+stack_handle_t stack_depot_save_current(void);
 
-static inline size_t stack_depot_get_record_count() {
+static inline size_t stack_depot_get_record_count(void) {
     return atomic_load(&stack_depot_global.num_records);
 }

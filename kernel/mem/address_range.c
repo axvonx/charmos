@@ -174,7 +174,7 @@ static void add_dynamic_address_range(struct address_range *ar) {
  *
  * 2. Find a spot to allocate it, and provide it with that base and size
  */
-void address_ranges_init() {
+void address_ranges_init(void) {
     rbt_init(&ar_tree, ar_get_data, ar_cmp);
 
     for (struct address_range *ar = __skernel_address_ranges;
@@ -236,7 +236,7 @@ static void ar_print_gap(vaddr_t gap_size, vaddr_t end) {
     printf("                   │ O │\n");
 }
 
-void address_ranges_print() {
+void address_ranges_print(void) {
     size_t count = __ekernel_address_ranges - __skernel_address_ranges;
     ar_info("%zu address ranges:", count);
 

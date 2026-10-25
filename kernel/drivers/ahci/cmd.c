@@ -22,7 +22,7 @@
 #define MAX_PRDT_ENTRY_SIZE MIB(4)
 
 /* TODO: horrible code - bit-op spam */
-void ahci_process_completions(struct ahci_device *dev, uint32_t port) {
+static void ahci_process_completions(struct ahci_device *dev, uint32_t port) {
     struct ahci_full_port      *fp = &dev->regs[port];
     struct ahci_port cc_mem_io *p  = fp->port;
 

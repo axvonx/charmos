@@ -97,3 +97,5 @@ static inline void avl_init_node(struct avl_tree_node *n) {
           ((tmp) = __nx ? avl_entry(__nx, typeof(*(tmp)), member) : NULL),     \
           true);                                                               \
          __n = __nx)
+
+int avl_tree_validate(const struct avl_tree *tree);

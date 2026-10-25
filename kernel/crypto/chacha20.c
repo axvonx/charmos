@@ -1,3 +1,4 @@
+#include <crypto/chacha20.h>
 #include <math/min_max.h>
 #include <stdint.h>
 #include <string.h>

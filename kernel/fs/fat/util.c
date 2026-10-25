@@ -48,14 +48,14 @@ uint32_t fat_get_dir_cluster(struct fat_dirent *d) {
     return ((uint32_t) d->high_cluster << 16) | d->low_cluster;
 }
 
-struct fat_time fat_get_current_time() {
+struct fat_time fat_get_current_time(void) {
     struct fat_time time = {.hour = time_get_hour(),
                             .minute = time_get_minute(),
                             .second = time_get_second() / 2};
     return time;
 }
 
-struct fat_date fat_get_current_date() {
+struct fat_date fat_get_current_date(void) {
     struct fat_date date = {
         .day = time_get_day(),
         .month = time_get_month(),

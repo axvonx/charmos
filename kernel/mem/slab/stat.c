@@ -1,6 +1,8 @@
+#include <mem/slab.h>
+
 #include "internal.h"
 
-void slab_domain_bucket_print(const struct slab_domain_bucket *bucket) {
+static void slab_domain_bucket_print(const struct slab_domain_bucket *bucket) {
     printf("slab_domain_bucket {\n");
     printf("    alloc_calls: %zu,\n", atomic_load_rlx(&bucket->alloc_calls));
     printf("    alloc_magazine_hits: %zu,\n",
@@ -40,7 +42,7 @@ void slab_domain_bucket_print(const struct slab_domain_bucket *bucket) {
     printf("}\n");
 }
 
-void slab_domains_print() {
+void slab_domains_print(void) {
     for (size_t i = 0; i < global.domain_count; i++)
         slab_domain_bucket_print(&global.domains[i]->slab_domain->aggregate);
 }

@@ -105,7 +105,7 @@ struct scheduler {
 #endif
 };
 
-void scheduler_init();
+void scheduler_init(void);
 
 #ifdef DEBUG_SCHED
 void scheduler_debug_start(void);
@@ -136,7 +136,7 @@ void save_context(struct cpu_context *new);
 
 bool scheduler_can_steal_work(struct scheduler *sched);
 bool scheduler_can_take_thread(size_t core, struct thread *target);
-uint64_t scheduler_compute_steal_threshold();
+uint64_t scheduler_compute_steal_threshold(void);
 struct thread *scheduler_try_do_steal(struct scheduler *sched);
 
 struct scheduler *scheduler_pick_victim(struct scheduler *self);
@@ -145,8 +145,8 @@ struct thread *scheduler_steal_work(struct scheduler *new,
 
 size_t scheduler_try_push_to_idle_core(struct scheduler *sched);
 
-void scheduler_tick_enable();
-void scheduler_tick_disable();
+void scheduler_tick_enable(void);
+void scheduler_tick_disable(void);
 enum irq_result scheduler_reschedule_isr(struct irq_context *rsp, void *ctx);
 
 /* For a global structure containing central scheduler data */
@@ -159,7 +159,7 @@ struct scheduler_data {
 
 extern struct scheduler_data scheduler_data;
 
-static inline bool scheduler_self_in_resched() {
+static inline bool scheduler_self_in_resched(void) {
     return smp_read(TOPC_NONE, in_resched);
 }
 
@@ -260,3 +260,5 @@ static inline void scheduler_force_run_dpcs(cpu_id_t cpu) {
 static inline bool scheduler_preemption_disabled(enum topology_caller c) {
     return (smp_ctx(c) & SMP_CTX_PREEMPT_MASK) != 0;
 }
+
+void scheduler_change_tick_duration(uint64_t new_duration);

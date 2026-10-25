@@ -62,7 +62,7 @@ struct turnstile_hash_table {
     struct turnstile_hash_chain heads[TURNSTILE_HASH_SIZE];
 };
 
-void turnstiles_init();
+void turnstiles_init(void);
 struct turnstile *turnstile_create(void);
 void turnstile_destroy(struct turnstile *ts);
 struct turnstile *turnstile_init(struct turnstile *ts);

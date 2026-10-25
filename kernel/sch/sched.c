@@ -51,7 +51,7 @@ static inline void tick_disable(void) {
     }
 }
 
-static inline void tick_enable() {
+static inline void tick_enable(void) {
     struct scheduler *self = smp_core_scheduler();
     if (!scheduler_tick_enabled(self)) {
         timer_modify(&self->tick,
@@ -60,11 +60,11 @@ static inline void tick_enable() {
     }
 }
 
-void scheduler_tick_enable() {
+void scheduler_tick_enable(void) {
     tick_enable();
 }
 
-void scheduler_tick_disable() {
+void scheduler_tick_disable(void) {
     tick_disable();
 }
 

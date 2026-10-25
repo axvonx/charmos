@@ -126,3 +126,5 @@ bcache_ent_release(struct bcache_entry *ent) TSA_NO_ANALYSIS {
     bcache_ent_unpin(ent);
     bcache_ent_unlock(ent);
 }
+
+void bcache_destroy(struct bcache *cache);

@@ -262,7 +262,7 @@ void scheduler_switch_in(void);
 
 /* NOTE: This is merely a place to hook things into.
  * The actual CPU that calls this is undefined */
-void thread_post_migrate(struct thread *t, size_t old_cpu, size_t new_cpu);
+void thread_post_migrate(struct thread *t, cpu_id_t old_cpu, cpu_id_t new_cpu);
 
 /* Called with wait_lock held after every object link is removed */
 void scheduler_complete_object_wait(struct thread *t,

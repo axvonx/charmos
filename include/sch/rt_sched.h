@@ -445,7 +445,7 @@ struct rt_scheduler_static {
                                * we should *actually* go through and fill */
     struct rt_slot_request slot_requests[RT_SCHEDULER_SLOTS_PER_THREAD];
     size_t num_ext_fns;
-    struct rt_ext_fn ext_fns[];
+    struct rt_ext_fn ext_fns[] cc_counted_by(num_ext_fns);
 };
 
 /* This is a structure that is allocated per-CPU at boot time.
@@ -529,4 +529,16 @@ struct rt_global {
 extern struct workqueue *rt_wq;
 extern struct rt_global rt_global;
 
-void rt_scheduler_boot_init();
+void rt_scheduler_boot_init(void);
+
+enum rt_scheduler_error rt_ext_fn_exec(struct rt_scheduler_static *rts,
+                                       char *name, uint32_t id, uintptr_t a,
+                                       uintptr_t b);
+enum rt_scheduler_error
+rt_load_scheduler_static(struct rt_scheduler_static *rts);
+enum rt_scheduler_error
+rt_unload_scheduler_static(struct rt_scheduler_static *rts);
+void rt_scheduler_switch(void);
+enum rt_scheduler_error
+rt_scheduler_switch_cpu(size_t cpu, struct rt_scheduler_static *into);
+void rt_slot_init(size_t num_slots);

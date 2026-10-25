@@ -92,7 +92,7 @@ struct wake_storm_state {
     uint32_t deepest_nesting;
     uint64_t total_observed;
 
-    struct wake_storm_sleeper sleepers[];
+    struct wake_storm_sleeper sleepers[] cc_counted_by(sleeper_count);
 };
 
 LOCK_CHK_CLASS_DEFINE_LOCAL(wake_storm_mtx);

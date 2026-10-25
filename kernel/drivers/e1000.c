@@ -81,8 +81,8 @@ static void e1000_setup_rx_ring(struct e1000_device *dev) {
                   E1000_RCTL_EN | E1000_RCTL_BAM | E1000_RCTL_SECRC);
 }
 
-int e1000_send_packet(struct e1000_device *dev, const void *data,
-                      uint64_t len) {
+static int e1000_send_packet(struct e1000_device *dev, const void *data,
+                             uint64_t len) {
     if (len > E1000_MAX_TX_PACKET_SIZE) {
         return -1;
     }
@@ -129,7 +129,7 @@ static uint16_t checksum(void *data, int len) {
     return (uint16_t) (~sum);
 }
 
-void send_hardcoded_ping(struct e1000_device *dev) {
+static void send_hardcoded_ping(struct e1000_device *dev) {
     uint8_t packet[14 + 20 + 8 + 32];
     memset(packet, 0, sizeof(packet));
 

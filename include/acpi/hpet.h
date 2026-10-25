@@ -76,3 +76,5 @@ static inline void hpet_write64(uint64_t offset, uint64_t value) {
 static inline uint64_t hpet_read64(uint64_t offset) {
     return mmio_read_64((void cc_mem_io *) ((uintptr_t) hpet_base + offset));
 }
+
+void hpet_setup_periodic_interrupt_us(uint64_t microseconds_period);

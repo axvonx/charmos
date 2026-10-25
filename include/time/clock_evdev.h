@@ -109,3 +109,5 @@ clock_evdev_for_cpu(struct clock_evdev_group *cedg, cpu_id_t cpu) {
 
     return enforce(found);
 }
+
+void clock_evdev_group_unregister(struct clock_evdev_group *cedg);

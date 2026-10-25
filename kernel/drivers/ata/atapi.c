@@ -37,8 +37,8 @@ bool atapi_identify(struct ata_drive *ide) {
     return true;
 }
 
-bool atapi_read_sector(struct block_device *disk, uint64_t lba, uint8_t *buffer,
-                       uint64_t sector_count) {
+static bool atapi_read_sector(struct block_device *disk, uint64_t lba,
+                              uint8_t *buffer, uint64_t sector_count) {
     if (sector_count != 1)
         return false;
 
@@ -108,15 +108,16 @@ bool atapi_read_sector(struct block_device *disk, uint64_t lba, uint8_t *buffer,
     return true;
 }
 
-bool atapi_write_sector(struct block_device *disk, uint64_t lba,
-                        const uint8_t *buffer, uint64_t sector_count) {
+static bool atapi_write_sector(struct block_device *disk, uint64_t lba,
+                               const uint8_t *buffer, uint64_t sector_count) {
     cc_ignore(disk, lba, buffer, sector_count);
     return false; // no can write to cd
     // TODO: newer CDs support write :boom:
 }
 
-bool atapi_read_sector_wrapper(struct block_device *disk, uint64_t start_lba,
-                               uint8_t *buffer, uint64_t sector_count) {
+static bool atapi_read_sector_wrapper(struct block_device *disk,
+                                      uint64_t start_lba, uint8_t *buffer,
+                                      uint64_t sector_count) {
     uint8_t *buf_ptr = buffer;
     for (uint64_t i = 0; i < sector_count; i++) {
         if (!atapi_read_sector(disk, start_lba + i, buf_ptr, 1)) {

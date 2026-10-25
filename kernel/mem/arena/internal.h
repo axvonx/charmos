@@ -42,6 +42,8 @@ LOG_HANDLE_EXTERN(arena);
 #define arena_debug(fmt, ...) arena_log(LOG_DEBUG, fmt, ##__VA_ARGS__)
 #define arena_trace(fmt, ...) arena_log(LOG_TRACE, fmt, ##__VA_ARGS__)
 
+void arena_dumpster_delete_bin(struct arena_dumpster *ad, struct arena_bin *ab);
+
 #ifdef TEST_ARENA
 #include "tests/import.h"
 #endif

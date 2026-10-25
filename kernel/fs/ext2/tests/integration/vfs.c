@@ -7,7 +7,7 @@ TEST_GROUP_DEFINE(ext2, .intensity_desc = {
 
 #define EXT2_ROOT struct vfs_node *root = global.root_node
 
-static void flush() {
+static void flush(void) {
     struct ext2_fs *fs = global.root_node->fs_data;
     struct block_device *d = fs->drive;
 

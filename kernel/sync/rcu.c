@@ -121,7 +121,7 @@ void rcu_read_lock(void) TSA_NO_ANALYSIS {
     if (cc_unlikely(!t))
         return;
 
-    debug_enforce(!irq_in_nmi(), "RCU read section in NMI context");
+    assume(!irq_in_nmi(), "RCU read section in NMI context");
 
     uint32_t nesting = ca_read_once(t->rcu_nesting);
     enforce(nesting != UINT32_MAX, "RCU nesting overflow");

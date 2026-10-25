@@ -66,12 +66,18 @@ LINKER_SECTION_EXTERN(struct pertopo_descriptor, pertopo_desc);
 
 #define PERTOPO_EXTERN(type, name) PERTOPO_EXTERN_AS(type, name, name)
 
+/* cc_pure so assume() accepts it, ready only ever goes false -> true */
+static inline cc_pure bool
+pertopo_desc_ready(const struct pertopo_descriptor *desc) {
+    return atomic_load(&desc->ready);
+}
+
 #define PERTOPO(name) &(__pertopo_##name)
 #define PERTOPO_READY(name) (atomic_load(&(__pertopo_desc_ref_##name)->ready))
 
 #define PERTOPO_PTR_FOR(name, node)                                            \
     ({                                                                         \
-        (void) debug_enforce(PERTOPO_READY(name));                             \
+        assume(pertopo_desc_ready(__pertopo_desc_ref_##name));                 \
         ((typeof(__pertopo_##name) *) (__pertopo_desc_ref_##name)              \
              ->pertopo_ptrs[node]);                                            \
     })

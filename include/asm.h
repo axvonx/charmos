@@ -141,7 +141,7 @@ static inline void cr4_write(uint64_t cr4) {
     asm volatile("mov %0, %%cr4" : : "r"(cr4));
 }
 
-static inline bool irqs_enabled() {
+static inline bool irqs_enabled(void) {
     unsigned long flags;
     asm volatile("pushf\n\t"
                  "pop %0\n\t"

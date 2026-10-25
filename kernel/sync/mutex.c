@@ -156,7 +156,7 @@ static struct thread *mutex_getref_owner(struct mutex *mutex) {
     return owner;
 }
 
-size_t mutex_lock_get_backoff(size_t current_backoff) {
+static size_t mutex_lock_get_backoff(size_t current_backoff) {
     if (!current_backoff)
         return MUTEX_BACKOFF_DEFAULT;
 

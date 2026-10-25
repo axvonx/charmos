@@ -75,7 +75,7 @@ static void map_cpus_to_groups(void) {
     }
 }
 
-void cpu_mask_print(const struct cpu_mask *m, char *buf, size_t buflen) {
+static void cpu_mask_print(const struct cpu_mask *m, char *buf, size_t buflen) {
     size_t pos = 0;
     pos += snprintf(buf + pos, buflen - pos, "{");
 
@@ -96,7 +96,7 @@ void cpu_mask_print(const struct cpu_mask *m, char *buf, size_t buflen) {
     snprintf(buf + pos, buflen - pos, "}");
 }
 
-void scheduler_domains_dump(void) {
+static void scheduler_domains_dump(void) {
     for (size_t lvl = 0; lvl < TOPOLOGY_LEVEL_MAX; lvl++) {
         struct scheduler_domain *d = global.scheduler_domains[lvl];
 

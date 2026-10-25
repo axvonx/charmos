@@ -13,7 +13,7 @@
 extern struct movealloc_callback_node __skernel_movealloc_callbacks[];
 extern struct movealloc_callback_node __ekernel_movealloc_callbacks[];
 
-void movealloc_init_chain(void) {
+static void movealloc_init_chain(void) {
     list_head_init(&global.movealloc_chain.list);
     struct movealloc_callback_node *start = __skernel_movealloc_callbacks;
     struct movealloc_callback_node *end = __ekernel_movealloc_callbacks;

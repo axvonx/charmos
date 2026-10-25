@@ -22,7 +22,7 @@ const char *bootstage_str[BOOTSTAGE_COUNT] = {
     [BOOTSTAGE_COMPLETE] = "Complete",
 };
 
-enum bootstage bootstage_get() {
+enum bootstage bootstage_get(void) {
     return global.current_bootstage;
 }
 

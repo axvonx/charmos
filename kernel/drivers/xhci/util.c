@@ -87,7 +87,7 @@ void xhci_cleanup(struct xhci_device *dev, struct xhci_request *req) {
     usb_device_putref(udev);
 }
 
-struct xhci_ring *xhci_allocate_ring() {
+struct xhci_ring *xhci_allocate_ring(void) {
     struct xhci_trb *trbs = valloc_aligned(PAGE_SIZE, PAGE_SIZE, ALLOC_ZERO);
     if (!trbs)
         return NULL;

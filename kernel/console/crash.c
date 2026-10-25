@@ -94,6 +94,8 @@ void crash_broadcast_nmi(void) {
 }
 
 /* called from panic.asm, returns with interrupts disabled */
+/* Only called from panic.asm */
+void panic_handler(struct crash_regs *regs) TSA_ACQUIRES_IRQS;
 void panic_handler(struct crash_regs *regs) TSA_ACQUIRES_IRQS {
     irq_disable();
 

@@ -3,6 +3,7 @@
 #include <log.h>
 
 struct block_device;
+struct partition;
 enum fs_type {
     FS_DEVTMPFS = -2,
     FS_TMPFS = -1,
@@ -32,3 +33,5 @@ LOG_HANDLE_EXTERN(fs_detect);
 #define fs_detect_info(fmt, ...) fs_detect_log(LOG_INFO, fmt, ##__VA_ARGS__)
 #define fs_detect_debug(fmt, ...) fs_detect_log(LOG_DEBUG, fmt, ##__VA_ARGS__)
 #define fs_detect_trace(fmt, ...) fs_detect_log(LOG_TRACE, fmt, ##__VA_ARGS__)
+
+void dummy_print(struct partition *p);

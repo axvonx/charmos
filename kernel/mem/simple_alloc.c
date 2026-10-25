@@ -1,5 +1,6 @@
 #include <mem/page.h>
 #include <mem/pmm.h>
+#include <mem/simple_alloc.h>
 #include <mem/vas.h>
 #include <mem/vmm.h>
 #include <string.h>

@@ -65,7 +65,7 @@ void pmm_early_init(struct limine_memmap_request m) {
     global.total_pages = total_phys / PAGE_SIZE;
 }
 
-void pmm_mid_init() {
+void pmm_mid_init(void) {
     buddy_init();
     current_alloc_fn = buddy_alloc_pages_global;
     current_free_fn = buddy_free_pages_global;

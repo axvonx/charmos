@@ -50,11 +50,11 @@ bool apc_cancel(struct thread *t, struct apc *a);
 
 void apc_check_and_deliver(struct thread *t);
 
-void apc_enable_special();
-void apc_disable_special();
+void apc_enable_special(void);
+void apc_disable_special(void);
 
-void apc_enable_kernel();
-void apc_disable_kernel();
+void apc_enable_kernel(void);
+void apc_disable_kernel(void);
 
 void apc_rundown_thread(struct thread *t);
 

@@ -14,6 +14,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#pragma GCC diagnostic ignored "-Wmissing-prototypes"
+
 #define is_aligned(value, align) (((value) & ((align) - 1)) == 0)
 
 typedef struct {
@@ -105,7 +107,7 @@ struct ubsan_function_type_mismatch_data {
     source_location_t location;
     struct type_descriptor_t *type;
 };
-const char *kind_to_type(uint16_t kind) {
+static const char *kind_to_type(uint16_t kind) {
     const char *type;
     switch (kind) {
     case 0: type = "integer"; break;
@@ -115,7 +117,7 @@ const char *kind_to_type(uint16_t kind) {
     return type;
 }
 
-unsigned int info_to_bits(uint16_t info) {
+static unsigned int info_to_bits(uint16_t info) {
     return 1 << (info >> 1);
 }
 void __ubsan_handle_load_invalid_value(data_load_invalid_value_t *data,

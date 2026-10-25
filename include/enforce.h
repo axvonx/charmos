@@ -6,18 +6,6 @@
 
 #define _enforce_msg(x) "Enforcement \"" #x "\" failed"
 
-#define _debug_enforce_off_dispatch(first, ...)                                \
-    _debug_enforce_off_as(first, PP_CONCAT(_enforce_res_, __COUNTER__))
-
-#define _debug_enforce_off_as(first, res_)                                     \
-    ({                                                                         \
-        ct_decay(first) res_ = (first);                                        \
-        if (cc_unlikely(!(res_)))                                              \
-            ci_unreachable();                                                  \
-                                                                               \
-        (void) res_;                                                           \
-    })
-
 #define _enforce_eval(x, msg_stmt)                                             \
     _enforce_eval_as(x, msg_stmt, PP_CONCAT(_enforce_res_, __COUNTER__))
 
@@ -80,13 +68,54 @@
 
 #define unreachable(...) _enforce_fail("unreachable! ", ##__VA_ARGS__)
 
-#ifdef DEBUG_ENFORCE
+/*
+ * assume(x)
+ * assume(x, CODE)
+ * assume(x, "msg %d", 12)
+ * assume(x, CODE, "msg %d", 12)
+ *
+ * enforce() is a runtime check: "I'm not sure this holds, verify it". assume()
+ * is an unreachability hint: "the path where x is false does not exist". It
+ * is only checked under DEBUG_ASSUME, as a test of that claim. Without it, x
+ * is never evaluated and a false x is UB that the optimizer may propagate
+ * anywhere, including deleting checks before and after it. Anything
+ * that depends on input, hardware, timing, or another subsystem's correctness
+ * belongs in enforce()
+ *
+ * x must be free of side effects: no ++/=, no atomic or volatile accesses,
+ * and no calls to functions that aren't cc_pure/cc_constfn. Clang rejects
+ * violations in both modes (-Werror=assume) via the unevaluated cc_assume
+ * below, and a constant-false x (assume(0)) is an error in favor of
+ * unreachable(). Evaluates to nothing either way
+ */
+/* Never defined: only ever named inside sizeof, the call is not emitted */
+void _assume_not_constant_false(bool cond)
+    cc_diagnose_if(!cond,
+                   "assume() on a constant-false condition; use unreachable() "
+                   "for a dead path or static_assert() for a constant",
+                   "error");
 
-#define debug_enforce(x, ...)                                                  \
-    _enforce_arity(__VA_ARGS__)("DEBUG ", x, ##__VA_ARGS__)
+#define _assume_static_checks(x)                                               \
+    ((void) sizeof(({                                                          \
+        cc_assume(x);                                                          \
+        _assume_not_constant_false(x);                                         \
+        0;                                                                     \
+    })))
+
+#ifdef DEBUG_ASSUME
+
+#define assume(x, ...)                                                         \
+    ({                                                                         \
+        _assume_static_checks(x);                                              \
+        (void) _enforce_arity(__VA_ARGS__)("assume! ", x, ##__VA_ARGS__);      \
+    })
 
 #else
 
-#define debug_enforce(...) _debug_enforce_off_dispatch(__VA_ARGS__)
+#define assume(x, ...)                                                         \
+    ({                                                                         \
+        _assume_static_checks(x);                                              \
+        cc_assume(x);                                                          \
+    })
 
 #endif

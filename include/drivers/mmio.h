@@ -13,7 +13,7 @@
 void cc_mem_io *mmio_map(paddr_t phys, size_t size);
 void mmio_unmap(void cc_mem_io *vaddr, size_t size);
 void *mmio_map_dma(paddr_t phys, size_t size);
-void mmio_init();
+void mmio_init(void);
 
 static inline void mmio_write_64(volatile void cc_mem_io *address,
                                  uint64_t value) {

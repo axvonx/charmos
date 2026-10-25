@@ -53,7 +53,7 @@ void time_print_unix(time_s_t timestamp) {
     printf("%04d-%02d-%02d %02d:%02d:%02d", year, month + 1, day, hour, minute,
            second);
 }
-void time_print_current() {
+void time_print_current(void) {
     time_print_unix(time_get_unix());
 }
 
@@ -83,7 +83,7 @@ static inline uint8_t cmos_read(uint8_t reg) {
     return inb(CMOS_DATA);
 }
 
-static bool is_updating() {
+static bool is_updating(void) {
     outb(CMOS_ADDRESS, 0x0A);
     return inb(CMOS_DATA) & 0x80;
 }
@@ -93,7 +93,7 @@ static uint8_t bcd_to_bin(uint8_t bcd) {
 }
 
 #define GET_TIME_UNIT(unit, cmos_addr)                                         \
-    uint8_t time_get_##unit() {                                                \
+    uint8_t time_get_##unit(void) {                                            \
         uint8_t unit = 0;                                                      \
         while (is_updating())                                                  \
             ;                                                                  \
@@ -114,13 +114,13 @@ GET_TIME_UNIT(month, 0x08)
 GET_TIME_UNIT(year, 0x09)
 GET_TIME_UNIT(century, 0x32)
 
-uint32_t time_get_unix() {
+uint32_t time_get_unix(void) {
     return datetime_to_unix(time_get_century() * 100 + time_get_year(),
                             time_get_month(), time_get_day(), time_get_hour(),
                             time_get_minute(), time_get_second());
 }
 
-time_ns_t time_get_ns() {
+time_ns_t time_get_ns(void) {
     if (global.current_bootstage < BOOTSTAGE_MID_MP)
         return hpet_timestamp_ns();
 

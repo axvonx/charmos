@@ -17,11 +17,16 @@
         _Pragma("GCC diagnostic ignored \"-Woverride-init\"")                  \
             _Pragma("GCC diagnostic ignored \"-Woverride-init-side-effects\"")
 #define cc_wno_override_init_end _Pragma("GCC diagnostic pop")
+#define cc_wno_override_init_cat_(a, b) a##b
+#define cc_wno_override_init_cat(a, b) cc_wno_override_init_cat_(a, b)
 #define cc_wno_override_init_expr(type, initializer)                           \
+    cc_wno_override_init_expr_(                                                \
+        type, initializer,                                                     \
+        cc_wno_override_init_cat(cc_wno_override_init_value_, __COUNTER__))
+#define cc_wno_override_init_expr_(type, initializer, val_)                    \
     ({                                                                         \
-        cc_wno_override_init_start type cc_wno_override_init_value =           \
-            initializer;                                                       \
-        cc_wno_override_init_end cc_wno_override_init_value;                   \
+        cc_wno_override_init_start type val_ = initializer;                    \
+        cc_wno_override_init_end val_;                                         \
     })
 #endif
 

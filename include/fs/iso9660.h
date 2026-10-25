@@ -30,7 +30,7 @@ struct iso9660_dir_record {
     uint16_t vol_seq_num_le;
     uint16_t vol_seq_num_be;
     uint8_t name_len;
-    char name[];
+    char name[] cc_counted_by(name_len);
 } cc_packed;
 
 // Primary Volume Descriptor (fixed size, 2048 bytes)
@@ -76,3 +76,5 @@ struct iso9660_datetime iso9660_get_current_date(void);
 
 #define ISO9660_PVD_SECTOR 16
 #define ISO9660_SECTOR_SIZE 2048
+
+void iso9660_read_and_print_file(struct iso9660_fs *fs, const char *name);

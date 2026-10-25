@@ -87,8 +87,8 @@ static bool key_in_report(uint8_t key, const struct usb_kbd_report *r) {
     return false;
 }
 
-void usb_kbd_process_report(struct usb_hid_keyboard     *kbd,
-                            const struct usb_kbd_report *cur) {
+static void usb_kbd_process_report(struct usb_hid_keyboard     *kbd,
+                                   const struct usb_kbd_report *cur) {
     const struct usb_kbd_report *prev = &kbd->last;
 
     uint8_t changed = prev->modifiers ^ cur->modifiers;
@@ -125,9 +125,9 @@ void usb_kbd_process_report(struct usb_hid_keyboard     *kbd,
     }
 }
 
-enum usb_error usb_keyboard_get_descriptor(struct usb_device *dev,
-                                           uint8_t            interface_number,
-                                           uint16_t len, void *buf) {
+static enum usb_error usb_keyboard_get_descriptor(struct usb_device *dev,
+                                                  uint8_t  interface_number,
+                                                  uint16_t len, void *buf) {
     uint8_t bm = usb_construct_rq_bitmap(USB_REQUEST_TRANS_DTH,
                                          USB_REQUEST_TYPE_STANDARD,
                                          USB_REQUEST_RECIPIENT_INTERFACE);
@@ -165,7 +165,7 @@ static void usb_kbd_worker(void *arg) {
     atomic_store(&kbd->worker_here, false);
 }
 
-struct usb_hid_keyboard *cc_nullable
+static struct usb_hid_keyboard *cc_nullable
 usb_keyboard_create(struct usb_device *dev, struct usb_endpoint *ep) {
     struct usb_hid_keyboard *kbd = vnew(kbd, ALLOC_ZERO);
     if (!kbd)
@@ -194,7 +194,7 @@ LOG_SITE_DEFINE_PRINT(usbkb);
 #define usbkb_log(log_level, fmt, ...)                                         \
     log(LOG_SITE(usbkb), LOG_HANDLE(usbkb), log_level, fmt, ##__VA_ARGS__)
 
-enum usb_error usb_keyboard_bringup(struct usb_device *dev) {
+static enum usb_error usb_keyboard_bringup(struct usb_device *dev) {
     struct usb_interface_descriptor *intf =
         usb_find_interface(dev, USB_CLASS_HID, USB_SUBCLASS_HID_BOOT_INTERFACE,
                            USB_PROTOCOL_HID_KEYBOARD);
@@ -232,7 +232,7 @@ enum usb_error usb_keyboard_bringup(struct usb_device *dev) {
     return USB_ERR_NO_ENDPOINT;
 }
 
-void usb_keyboard_teardown(struct usb_device *dev) {
+static void usb_keyboard_teardown(struct usb_device *dev) {
     struct usb_hid_keyboard *kb = dev->driver_private;
     if (!kb)
         return;
@@ -241,7 +241,7 @@ void usb_keyboard_teardown(struct usb_device *dev) {
         scheduler_yield();
 }
 
-void usb_keyboard_free(struct usb_device *dev) {
+static void usb_keyboard_free(struct usb_device *dev) {
     vfree(dev->driver_private);
     usbkb_log(LOG_INFO, "Keyboard disconnected");
 }

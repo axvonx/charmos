@@ -1,3 +1,4 @@
+#include <acpi/cst.h>
 #include <asm.h>
 #include <console/printf.h>
 #include <mem/vmm.h>

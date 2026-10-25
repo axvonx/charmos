@@ -8,6 +8,8 @@
 #include <mem/vmm.h>
 #include <string.h>
 
+#include "internal.h"
+
 LOG_HANDLE_DEFINE_PRINT(vtd);
 LOG_SITE_DEFINE_PRINT(vtd);
 
@@ -204,7 +206,7 @@ static enum iommu_error vtd_passthrough_all_devices(struct vtd_unit *u) {
     return IOMMU_ERR_OK;
 }
 
-enum iommu_error vtd_unit_init(struct iommu *unit) {
+static enum iommu_error vtd_unit_init(struct iommu *unit) {
     struct vtd_unit *u = unit->private;
 
     vtd_info("initializing VT-d unit seg=%u regs=%p", u->segment, u->regs);

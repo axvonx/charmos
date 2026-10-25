@@ -78,7 +78,8 @@ static inline fx32_32_t fx_div(fx32_32_t a, fx32_32_t b) {
 }
 
 static inline fx32_32_t fx_from_int(int64_t x) {
-    return x << 32;
+    /* x << 32 is UB for negative x, the unsigned shift is the same bits */
+    return (fx32_32_t) ((uint64_t) x << 32);
 }
 
 static inline int64_t fx_to_int(fx32_32_t x) {

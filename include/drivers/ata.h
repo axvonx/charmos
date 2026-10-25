@@ -124,7 +124,7 @@ bool ide_read_sector_wrapper(struct block_device *d, uint64_t lba, uint8_t *buf,
 bool ide_write_sector_wrapper(struct block_device *d, uint64_t lba,
                               const uint8_t *buf, uint64_t cnt);
 
-uint8_t ide_detect_drives();
+uint8_t ide_detect_drives(void);
 
 bool ata_setup_drive(struct ata_drive *ide, struct pci_device *devices,
                      uint64_t count, int channel, bool is_slave);
@@ -212,3 +212,5 @@ enum irq_result ide_irq_handler(struct irq_context *ct, void *ctx);
 void ide_reorder(struct block_device *disk);
 bool ide_submit_bio_async(struct block_device *d, struct bio_request *b);
 struct block_device *atapi_create_generic(struct ata_drive *d);
+
+void atapi_print_info(struct block_device *disk);

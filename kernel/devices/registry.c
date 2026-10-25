@@ -100,7 +100,7 @@ void registry_mkname(struct block_device *disk, const char *prefix,
 
 LOG_HANDLE_EXTERN(pci);
 LOG_HANDLE_EXTERN(vfs);
-void registry_setup() {
+void registry_setup(void) {
     struct pci_device *devices;
     uint64_t count;
 

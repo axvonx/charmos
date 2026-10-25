@@ -33,7 +33,7 @@ static void cc_unused do_checks(struct arena *a) {
     if (a->flags & ARENA_FLAG_LOCKED) {}
 }
 #else
-static void do_checks(struct arena *a) {
+static cc_maybe_unused void do_checks(struct arena *a) {
     cc_ignore(a);
 }
 #endif

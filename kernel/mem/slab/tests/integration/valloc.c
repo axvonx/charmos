@@ -7,7 +7,8 @@ static atomic_int valloc_done = 0;
 
 static void mt_valloc_worker(void *arg) {
     cc_ignore(arg);
-    void *ptrs[MT_ALLOC_TIMES] = {0};
+    void **ptrs = vnews(ptrs, MT_ALLOC_TIMES, ALLOC_ZERO);
+    TEST_ASSERT_VOID_NONNULL(ptrs);
 
     for (uint64_t i = 0; i < MT_ALLOC_TIMES; i++) {
         ptrs[i] = valloc(64);
@@ -29,6 +30,7 @@ static void mt_valloc_worker(void *arg) {
         }
     }
 
+    vfree(ptrs);
     atomic_inc(&valloc_done);
 }
 

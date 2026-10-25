@@ -316,3 +316,5 @@ void nvme_do_coalesce(struct block_device *disk, struct bio_request *into,
 
 void nvme_reorder(struct block_device *disk);
 void nvme_work(void *rvoid, void *dvoid);
+
+void nvme_print_wrapper(struct block_device *d);

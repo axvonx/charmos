@@ -7,9 +7,9 @@
 
 #define STACK_TRACE_MAX_DEPTH ((size_t) 64)
 
-void debug_print_registers();
+void debug_print_registers(void);
 
-void debug_print_stack();
+void debug_print_stack(void);
 
 void debug_print_memory(void *addr, size_t size);
 

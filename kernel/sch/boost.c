@@ -87,7 +87,7 @@ static void thread_donation_drop_locked(struct thread_class_donation *d) {
     thread_class_floor_dec_locked(t, d->class);
 
     /* NOTE: we can ignore re-sending DPCs when boosting down */
-    cc_ignore(thread_recompute_prio_class_locked(t));
+    cc_discard(thread_recompute_prio_class_locked(t));
 
     d->target = NULL;
     d->class = THREAD_PRIO_CLASS_BACKGROUND;
@@ -259,7 +259,7 @@ void thread_io_unboost_self(void) {
         thread_class_floor_dec_locked(curr, THREAD_PRIO_CLASS_URGENT);
 
         /* Unboost won't need to re-IPI */
-        cc_ignore(thread_recompute_prio_class_locked(curr));
+        cc_discard(thread_recompute_prio_class_locked(curr));
     }
 }
 

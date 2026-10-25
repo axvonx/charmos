@@ -18,7 +18,7 @@ void rt_scheduler_static_destroy_work_enqueue(struct rt_scheduler_static *rts) {
     workqueue_enqueue(rt_wq, this_work);
 }
 
-void rt_scheduler_static_work_init(struct rt_scheduler_static *rts) {
+static void rt_scheduler_static_work_init(struct rt_scheduler_static *rts) {
     struct work *this_work = &rts->teardown_work;
     work_init(this_work, destroy_work, WORK_ARGS(rts, NULL));
 }
@@ -71,8 +71,8 @@ static void destroy_rt_mappings(struct rt_scheduler_static *rts) {
 }
 
 /* Lock the mapping for this CPU, and return it. */
-struct rt_scheduler_mapping *rt_lookup_mapping(struct rt_scheduler_static *rts,
-                                               struct core *c) {
+static struct rt_scheduler_mapping *
+rt_lookup_mapping(struct rt_scheduler_static *rts, struct core *c) {
     rt_domain_id_t id = rts->ops.domain_id_for_cpu(c);
     struct rbt_node *found = rbt_search(&rts->mappings_internal, id);
     if (!found)
@@ -88,7 +88,8 @@ struct rt_scheduler_mapping *rt_lookup_mapping(struct rt_scheduler_static *rts,
 }
 
 /* We build the mapping ONCE at the very start, and then it becomes RO */
-enum rt_scheduler_error rt_build_mapping(struct rt_scheduler_static *rts) {
+static enum rt_scheduler_error
+rt_build_mapping(struct rt_scheduler_static *rts) {
     struct rt_scheduler_ops *ops = &rts->ops;
     struct core *iter;
 
@@ -407,7 +408,7 @@ static inline void clear_switch_and_post(struct rt_scheduler_percpu *rts,
     semaphore_post(&rts->switch_semaphore);
 }
 
-void rt_scheduler_switch() {
+void rt_scheduler_switch(void) {
     struct rt_scheduler_percpu *pcpu = smp_core_scheduler()->rt;
     struct rt_scheduler_static *into = atomic_load_acq(&pcpu->switch_into);
 

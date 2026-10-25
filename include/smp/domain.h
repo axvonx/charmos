@@ -39,7 +39,7 @@ void domain_set_cpu_mask(struct cpu_mask *mask, struct domain *domain);
 bool domain_idle(struct domain *domain);
 numa_node_t numa_node_for_cpu(cpu_id_t cpu);
 domain_id_t domain_for_cpu(cpu_id_t cpu);
-void domain_init_after_smp();
+void domain_init_after_smp(void);
 void domain_caller_verify(enum topology_caller caller);
 void domain_dump(void);
 

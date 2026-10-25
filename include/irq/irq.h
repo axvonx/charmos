@@ -170,8 +170,9 @@ static inline uint32_t irq_mark_self_in_nmi(bool new) {
 }
 
 /* These are called from the verification logic,
- * they are simple reads */
-static inline bool irq_in_nmi(void) {
+ * they are simple reads. cc_pure so assume() accepts it: NMI nesting is
+ * balanced, so it is invariant from the interrupted code's point of view */
+static inline cc_pure bool irq_in_nmi(void) {
     return (smp_ctx(TOPC_NONE) & SMP_CTX_NMI_MASK) != 0;
 }
 

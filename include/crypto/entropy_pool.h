@@ -13,3 +13,10 @@ struct entropy_pool {
     uint64_t entropy_bits;             // Estimated entropy in bits
     struct spinlock lock;              // To protect concurrent access
 };
+
+void entropy_pool_init(struct entropy_pool *pool);
+void entropy_pool_add(struct entropy_pool *pool, const uint8_t *data,
+                      uint64_t len, uint64_t entropy_bits);
+void entropy_pool_decrease(struct entropy_pool *pool, uint64_t bits);
+void entropy_pool_seed(struct entropy_pool *pool);
+void entropy_pool_reseed(struct entropy_pool *pool);

@@ -219,3 +219,5 @@ enum err vfs_mount(struct vfs_node *mountpoint, struct vfs_node *target,
                    const char *name);
 enum err vfs_unmount(struct vfs_mount *mountpoint);
 struct vfs_node *vfs_finddir(struct vfs_node *node, const char *fname);
+
+void vfs_clear_mounts(void);

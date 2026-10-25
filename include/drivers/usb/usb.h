@@ -481,3 +481,5 @@ LINKER_SECTION_EXTERN(struct usb_driver, usb_drivers);
                       .bringup = bringup_fn,                                   \
                       .teardown = teardown_fn,                                 \
                       .free = free_fn};
+
+void usb_destroy(struct usb_request *rq);

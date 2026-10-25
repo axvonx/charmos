@@ -256,13 +256,15 @@ static bool rw_async_wrapper(struct block_device *disk,
     return true;
 }
 
-bool nvme_read_sector(struct block_device *disk, uint64_t lba, uint8_t *buffer,
-                      uint16_t count, struct io_wait_token *i) {
+static bool nvme_read_sector(struct block_device *disk, uint64_t lba,
+                             uint8_t *buffer, uint16_t count,
+                             struct io_wait_token *i) {
     return rw_sync(disk, lba, buffer, count, nvme_read_sector_async, i);
 }
 
-bool nvme_write_sector(struct block_device *disk, uint64_t lba, uint8_t *buffer,
-                       uint16_t count, struct io_wait_token *i) {
+static bool nvme_write_sector(struct block_device *disk, uint64_t lba,
+                              uint8_t *buffer, uint16_t count,
+                              struct io_wait_token *i) {
     return rw_sync(disk, lba, buffer, count, nvme_write_sector_async, i);
 }
 

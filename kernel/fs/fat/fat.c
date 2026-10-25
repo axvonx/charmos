@@ -50,9 +50,9 @@ uint32_t fat_cluster_to_lba(const struct fat_fs *fs, uint32_t cluster) {
            fs->volume_base_lba;
 }
 
-struct fat_bpb *fat_read_bpb(struct block_device *drive,
-                             enum fat_fstype *out_type, uint32_t *out_lba,
-                             uint32_t base_lba) {
+static struct fat_bpb *fat_read_bpb(struct block_device *drive,
+                                    enum fat_fstype *out_type,
+                                    uint32_t *out_lba, uint32_t base_lba) {
     uint8_t *sector = valloc(drive->sector_size);
     if (!sector)
         return NULL;

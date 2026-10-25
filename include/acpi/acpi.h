@@ -3,3 +3,5 @@ void slit_init(void);
 void dmar_init(void);
 void srat_init(void);
 void madt_init(void);
+
+int power_button_init(void);

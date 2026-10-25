@@ -187,7 +187,7 @@ struct test {
     enum fs_type required_fs;
 
     size_t inject_count;
-    struct inject_site *inject[];
+    struct inject_site *inject[] cc_counted_by(inject_count);
 };
 
 /* The reason this exists is because the actual structures in struct
@@ -430,3 +430,5 @@ STRINGIFY_DECLARE_ENUM(test_skip_reason) {
     default: cc_unreachable();
     }
 }
+
+void test_verify_signatures(void);

@@ -104,7 +104,7 @@ void nvme_work(void *dvoid, void *nothing) {
     }
 }
 
-void nvme_process_completions(struct nvme_device *dev, uint32_t qid) {
+static void nvme_process_completions(struct nvme_device *dev, uint32_t qid) {
     struct nvme_queue *queue = dev->io_queues[qid];
 
     enum irql irql = spin_lock_high(&queue->lock);

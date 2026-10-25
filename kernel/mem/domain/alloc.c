@@ -1,4 +1,5 @@
 #include <enforce.h>
+#include <mem/domain.h>
 #include <mem/pmm.h>
 #include <mem/vmm.h>
 #include <smp/domain.h>

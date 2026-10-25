@@ -27,7 +27,7 @@
 #define TIMER_FLAG_CPU_MASK 0x0003FFFF
 #define TIMER_FLAG_CPU(c) ((c) & TIMER_FLAG_CPU_MASK)
 
-#define TIMER_FLAG_BUCKET_MASK 0x3FF
+#define TIMER_FLAG_BUCKET_MASK 0x3FFu
 #define TIMER_FLAG_BUCKET_SHIFT 22
 #define TIMER_FLAG_BUCKET(b)                                                   \
     (((b) & TIMER_FLAG_BUCKET_MASK) << TIMER_FLAG_BUCKET_SHIFT)

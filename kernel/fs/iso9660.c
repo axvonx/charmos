@@ -9,8 +9,8 @@
 
 #include <time/time.h>
 
-bool iso9660_read_file(struct iso9660_fs *fs, uint32_t lba, uint32_t size,
-                       void *out_buf) {
+static bool iso9660_read_file(struct iso9660_fs *fs, uint32_t lba,
+                              uint32_t size, void *out_buf) {
     uint32_t num_blocks = DIV_ROUND_UP(size, fs->block_size);
 
     if (!fs->disk->read_sector(fs->disk, lba + fs->partition->start_lba,
@@ -21,7 +21,8 @@ bool iso9660_read_file(struct iso9660_fs *fs, uint32_t lba, uint32_t size,
     return true;
 }
 
-bool iso9660_parse_pvd(struct partition *p, struct iso9660_pvd *out_pvd) {
+static bool iso9660_parse_pvd(struct partition *p,
+                              struct iso9660_pvd *out_pvd) {
     uint8_t *buffer = valloc(ISO9660_SECTOR_SIZE);
     if (!buffer)
         return false;
@@ -57,7 +58,7 @@ static void print_str(const char *label, const char *src, uint64_t len) {
     printf("%s: \"%s\"\n", label, buf);
 }
 
-void iso9660_pvd_print(const struct iso9660_pvd *pvd) {
+static void iso9660_pvd_print(const struct iso9660_pvd *pvd) {
     printf("=== ISO9660 Primary Volume Descriptor ===\n");
     printf("Descriptor Type: %u\n", pvd->type);
     printf("Identifier: %-5s\n", pvd->id);
@@ -108,7 +109,7 @@ struct vfs_node *iso9660_mount(struct partition *p) {
     return NULL;
 }
 
-void iso9660_ls(struct iso9660_fs *fs, uint32_t lba, uint32_t size) {
+static void iso9660_ls(struct iso9660_fs *fs, uint32_t lba, uint32_t size) {
     uint32_t num_blocks = DIV_ROUND_UP(size, fs->block_size);
     uint8_t *dir_data = valloc(num_blocks * fs->block_size);
     if (!dir_data)
@@ -164,9 +165,9 @@ void iso9660_print(struct partition *disk) {
     iso9660_ls(fs, fs->root_lba, fs->root_size);
 }
 
-struct iso9660_dir_record *iso9660_find(struct iso9660_fs *fs,
-                                        const char *target_name, uint32_t lba,
-                                        uint32_t size) {
+static struct iso9660_dir_record *iso9660_find(struct iso9660_fs *fs,
+                                               const char *target_name,
+                                               uint32_t lba, uint32_t size) {
     uint32_t num_blocks = DIV_ROUND_UP(size, fs->block_size);
     uint8_t *dir_data = valloc(num_blocks * fs->block_size);
     if (!dir_data)

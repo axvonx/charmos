@@ -6,6 +6,8 @@
 #include <stddef.h>
 #include <structures/list.h>
 
+struct slab_domain;
+
 struct slab_elcm_candidate {
     size_t pages;
     size_t bitmap_size_bytes;
@@ -40,10 +42,13 @@ struct slab_size_constant {
 
 #define SLAB_OBJ_ALIGN_DEFAULT 8u
 #define SLAB_FREE_POISON_BYTE 0x67
+#define SLAB_ALLOC_NONZERO_POISON_BYTE 0x42
 
-void slab_allocator_init();
+void slab_allocator_init(void);
 void slab_domain_init(void);
-void slab_domains_print();
-void slab_domain_init_late();
+void slab_domains_print(void);
+void slab_domain_init_late(void);
 
 LINKER_SECTION_EXTERN(struct slab_size_constant, slab_sizes);
+
+bool slab_domain_busy(struct slab_domain *domain);

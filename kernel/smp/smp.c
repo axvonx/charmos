@@ -270,7 +270,7 @@ static inline void set_core_awake(void) {
 }
 
 /* returns with interrupts disabled; the scheduler takes it from here */
-void smp_ap_wakeup(struct limine_mp_info *info) TSA_ACQUIRES_IRQS {
+static void smp_ap_wakeup(struct limine_mp_info *info) TSA_ACQUIRES_IRQS {
     cc_ignore(info);
     irq_disable();
 
@@ -388,15 +388,14 @@ static void send_em_all_out(bool e) {
         cpu_pause();
 }
 
-void smp_disable_all_ticks() {
+void smp_disable_all_ticks(void) {
     entry = irq_alloc_entry();
     irq_register("tick_op", entry, tick_op_isr, NULL, IRQ_FLAG_NONE);
     irq_set_chip(entry, lapic_get_chip(), NULL);
     send_em_all_out(false);
 }
 
-extern void nop_handler(void *, uint8_t, void *);
-void smp_enable_all_ticks() {
+void smp_enable_all_ticks(void) {
     send_em_all_out(true);
     irq_free_entry(entry);
     irq_set_chip(entry, NULL, NULL);

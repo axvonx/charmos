@@ -6,8 +6,8 @@
 #include "gc_internal.h"
 
 /* Derive the amount of slabs we should attempt to free */
-size_t slab_gc_derive_target_gc_slabs(struct slab_gc *gc,
-                                      enum slab_gc_flags flags) {
+static size_t slab_gc_derive_target_gc_slabs(struct slab_gc *gc,
+                                             enum slab_gc_flags flags) {
     enum slab_gc_flags aggressiveness = flags & SLAB_GC_FLAG_AGG_MASK;
     const size_t max = gc_agg_scan_max[aggressiveness];
     const size_t pct = gc_agg_scan_pct[aggressiveness];
@@ -15,7 +15,7 @@ size_t slab_gc_derive_target_gc_slabs(struct slab_gc *gc,
     return MIN(target, max);
 }
 
-size_t slab_gc_score(struct slab *slab, enum slab_gc_flags flags) {
+static size_t slab_gc_score(struct slab *slab, enum slab_gc_flags flags) {
     enum slab_gc_flags aggressiveness = flags & SLAB_GC_FLAG_AGG_MASK;
     size_t age_factor_pct = gc_agg_age_factor_pct[aggressiveness];
     size_t size_factor_pct = gc_agg_size_factor_pct[aggressiveness];
@@ -38,7 +38,7 @@ static inline size_t scale_bias(uint8_t bias, size_t pct) {
     return ((100 - pct) * bias / 100);
 }
 
-bool slab_gc_should_recycle(struct slab *slab, uint8_t bias_destroy) {
+static bool slab_gc_should_recycle(struct slab *slab, uint8_t bias_destroy) {
     enforce(bias_destroy < 16);
 
     struct slab_cache *parent = slab->parent_cache;
@@ -144,8 +144,8 @@ static void slab_recycle(struct slab_cache *best, struct slab *slab,
  * to consider both the amount of free slabs in the cache order,
  * and the amount of slabs we have already recycled to that order,
  * to prevent overly aggressive draining to one order */
-void slab_gc_recycle(struct slab_domain *domain, struct slab *slab,
-                     size_t *slabs_recycled, uint32_t bias_bitmap) {
+static void slab_gc_recycle(struct slab_domain *domain, struct slab *slab,
+                            size_t *slabs_recycled, uint32_t bias_bitmap) {
     /* Precondition: caller has taken this slab out of GC and dropped gc->lock,
      * slab_cache_insert takes the cache lock, so we can't hold gc->lock */
     struct slab_caches *caches = slab_gc_pick_caches(domain, slab);

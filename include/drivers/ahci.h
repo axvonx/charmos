@@ -348,3 +348,5 @@ static inline struct ahci_port cc_mem_io *ahci_get_port(struct ahci_device *dev,
     return (struct ahci_port cc_mem_io *) ((uintptr_t) dev->ctrl +
                                            AHCI_PORT_OFFSET(n));
 }
+
+void ahci_print_wrapper(struct block_device *d);

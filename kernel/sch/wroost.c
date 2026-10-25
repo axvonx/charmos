@@ -98,8 +98,8 @@ static inline uint8_t wroost_dec_counter(struct wroost_thread_data *wtd,
     return ctr_val - 1;
 }
 
-static inline uint16_t wroost_read_tally(struct wroost_bucket *bkt,
-                                         enum thread_prio_class class) {
+static inline cc_maybe_unused uint16_t
+wroost_read_tally(struct wroost_bucket *bkt, enum thread_prio_class class) {
     enforce(class < THREAD_PRIO_CLASS_COUNT);
     uint64_t ret = atomic_load_acq(&bkt->raw_tally);
     return (ret >> ((size_t) class * BIT_SIZEOF(uint16_t))) & UINT16_MAX;
@@ -459,7 +459,7 @@ static void unboost_thread(struct thread *t) {
     wtd->contributed_floor = false;
 
     /* Unboost is fine to ignore the kicks from a boost */
-    cc_ignore(thread_recompute_prio_class_locked(t));
+    cc_discard(thread_recompute_prio_class_locked(t));
 }
 
 static enum thread_prio_class ceil_for_thread(wroost_id_t id,
@@ -1052,7 +1052,7 @@ static enum thread_prio_class update_reader(struct wroost_percpu_data *pcd,
     if (found_fine_count == wtd->read_nesting_depth)
         goto out;
 
-    wroost_counter_t val;
+    cc_maybe_unused wroost_counter_t val;
     wroost_id_t i;
     wroost_for_each_set_ctr(val, i, wtd->counters,
                             WROOST_THREAD_COUNTER_BYTES) {

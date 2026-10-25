@@ -47,7 +47,7 @@ set(DEBUG_FLAGS
     DEBUG_RBT
     DEBUG_RBT_DEEP
     DEBUG_CMDLINE
-    DEBUG_ENFORCE # Debug enforcement
+    DEBUG_ASSUME
 )
 
 set(PROFILING_FLAGS PROFILING_SCHED)
@@ -58,6 +58,7 @@ set(TEST_NIGHTMARE_FLAGS TEST_NIGHTMARE_LOCKS TEST_NIGHTMARE_WAKE TEST_NIGHTMARE
 set(DEBUG_FLAG_MAP DEBUG_ASAN:DEBUG_SLAB_DEEP)
 
 option(DEBUG_ASAN "Enable KASAN address sanitizer (clang only)" OFF)
+option(DEBUG_UBSAN "Enable UBSan runtime checks (bounds, object size, overflow, ...)" OFF)
 
 # Every implication target is tri-state, so an OFF can veto
 set(TRISTATE_FLAGS "")
@@ -68,6 +69,22 @@ foreach (pair ${DEBUG_FLAG_MAP})
 endforeach ()
 list(REMOVE_DUPLICATES TRISTATE_FLAGS)
 
+macro (_force_on flag)
+    set(${flag} ON)
+    if (NOT "$CACHE{${flag}}" STREQUAL "ON")
+        list(APPEND _derived_flags ${flag})
+        if ("${flag}" IN_LIST TRISTATE_FLAGS)
+            set(${flag}
+                ON
+                CACHE STRING "Enable ${flag}: ON / OFF / AUTO" FORCE)
+        else ()
+            set(${flag}
+                ON
+                CACHE BOOL "Enable ${flag}" FORCE)
+        endif ()
+    endif ()
+endmacro ()
+
 macro (_flag_is_auto flag out)
     if ("${${flag}}" STREQUAL "AUTO")
         set(${out} TRUE)
@@ -75,6 +92,26 @@ macro (_flag_is_auto flag out)
         set(${out} FALSE)
     endif ()
 endmacro ()
+
+function (revert_derived_flags)
+    foreach (flag ${CHARMOS_DERIVED_FLAGS})
+        if (NOT "$CACHE{${flag}}" STREQUAL "ON")
+            continue()
+        endif ()
+        if (flag IN_LIST TRISTATE_FLAGS)
+            set(${flag}
+                AUTO
+                CACHE STRING "Enable ${flag}: ON / OFF / AUTO" FORCE)
+        else ()
+            set(${flag}
+                OFF
+                CACHE BOOL "Enable ${flag}" FORCE)
+        endif ()
+    endforeach ()
+    set(CHARMOS_DERIVED_FLAGS
+        ""
+        CACHE INTERNAL "Flags switched on by an implication, not the user")
+endfunction ()
 
 function (declare_tristate_flags FLAGS)
     foreach (flag ${FLAGS})
@@ -117,7 +154,7 @@ macro (_apply_enable_all ENABLE_ALL FLAGS)
         foreach (flag ${FLAGS})
             _flag_is_auto(${flag} _is_auto)
             if (_is_auto OR NOT flag IN_LIST TRISTATE_FLAGS)
-                set(${flag} ON)
+                _force_on(${flag})
             endif ()
         endforeach ()
     endif ()
@@ -153,6 +190,7 @@ function (emit_flag_group GROUP_NAME ENABLE_ALL FLAGS)
     endif ()
 endfunction ()
 
+revert_derived_flags()
 declare_tristate_flags("${TRISTATE_FLAGS}")
 
 declare_flag_group(PROFILING PROFILING_ALL OFF "${PROFILING_FLAGS}")
@@ -169,7 +207,7 @@ foreach (pair ${DEBUG_FLAG_MAP})
     list(GET _kv 1 _other_flag)
     _flag_is_auto(${_other_flag} _is_auto)
     if (${_debug_flag} AND _is_auto)
-        set(${_other_flag} ON)
+        _force_on(${_other_flag})
     elseif (${_debug_flag} AND NOT ${_other_flag})
         message(STATUS "charmOS: ${_debug_flag} would imply ${_other_flag}, "
                        "honouring the explicit ${_other_flag}=OFF")
@@ -184,10 +222,14 @@ foreach (flag ${DEBUG_FLAGS})
         math(EXPR new_len "${len} - 5")
         string(SUBSTRING "${flag}" 0 ${new_len} trimmed)
         if (trimmed IN_LIST DEBUG_FLAGS)
-            set(${trimmed} ON)
+            _force_on(${trimmed})
         endif ()
     endif ()
 endforeach ()
+
+set(CHARMOS_DERIVED_FLAGS
+    "${_derived_flags}"
+    CACHE INTERNAL "Implied flags")
 
 emit_flag_group(PROFILING PROFILING_ALL "${PROFILING_FLAGS}")
 emit_flag_group(TEST_NIGHTMARE TEST_NIGHTMARE_ALL "${TEST_NIGHTMARE_FLAGS}")

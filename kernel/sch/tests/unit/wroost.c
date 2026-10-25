@@ -53,10 +53,9 @@ TEST_DEFINE_UNIT(wroost, basic_boost, .min_cores = 2) {
     rwlock_init(&fix->lock, THREAD_PRIO_CLASS_REALTIME);
     test_latch_init(&fix->reader_started);
 
-    test_fleet_spawn(fleet, "reader", basic_reader, .core_id = test_core(0),
-                     .arg = fix);
+    test_fleet_spawn(fleet, "reader", basic_reader, .core_id = 0, .arg = fix);
 
-    test_fleet_spawn(fleet, "writer", basic_writer, .core_id = test_core(1),
+    test_fleet_spawn(fleet, "writer", basic_writer, .core_id = 1,
                      .prio_class = THREAD_PRIO_CLASS_REALTIME, .arg = fix);
 
     test_fleet_start_all(fleet);

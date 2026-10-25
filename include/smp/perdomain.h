@@ -60,13 +60,19 @@ LINKER_SECTION_EXTERN(struct perdomain_descriptor, perdomain_desc);
 
 #define PERDOMAIN_EXTERN(type, name) PERDOMAIN_EXTERN_AS(type, name, name)
 
+/* cc_pure so assume() accepts it, ready only ever goes false -> true */
+static inline cc_pure bool
+perdomain_desc_ready(const struct perdomain_descriptor *desc) {
+    return atomic_load(&desc->ready);
+}
+
 #define PERDOMAIN(name) &(__perdomain_##name)
 #define PERDOMAIN_READY(name)                                                  \
     (atomic_load(&(__perdomain_desc_ref_##name)->ready))
 
 #define PERDOMAIN_PTR_FOR(name, d)                                             \
     ({                                                                         \
-        (void) debug_enforce(PERDOMAIN_READY(name));                           \
+        assume(perdomain_desc_ready(__perdomain_desc_ref_##name));             \
         ((typeof(__perdomain_##name) *) (__perdomain_desc_ref_##name)          \
              ->perdomain_ptrs[d]);                                             \
     })

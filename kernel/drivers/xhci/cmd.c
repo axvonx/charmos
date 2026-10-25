@@ -140,7 +140,8 @@ struct xhci_ctrl_emit {
     uint16_t                 length;
 };
 
-void xhci_emit_control(struct xhci_command *cmd, struct xhci_ring *ring) {
+static void xhci_emit_control(struct xhci_command *cmd,
+                              struct xhci_ring    *ring) {
     struct xhci_ctrl_emit *c = cmd->private;
     struct xhci_trb       *trb;
 
@@ -179,9 +180,9 @@ static inline enum usb_error fail_control_transfer(enum usb_error err) {
     return err;
 }
 
-enum usb_error xhci_send_control_transfer(struct xhci_device *dev,
-                                          struct xhci_slot   *slot,
-                                          struct usb_request *req) {
+static enum usb_error xhci_send_control_transfer(struct xhci_device *dev,
+                                                 struct xhci_slot   *slot,
+                                                 struct usb_request *req) {
     if (!req->setup)
         return fail_control_transfer(USB_ERR_INVALID_ARGUMENT);
 

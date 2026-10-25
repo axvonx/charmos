@@ -25,7 +25,7 @@ const char *err_facility_to_str(enum err e) {
     return NULL;
 }
 
-void err_facilities_init() {
+void err_facilities_init(void) {
     enforce(__ekernel_err_facilities - __skernel_err_facilities <= UINT16_MAX,
             "too many?");
 

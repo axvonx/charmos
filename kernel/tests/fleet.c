@@ -13,7 +13,7 @@
 
 #ifdef TEST_ENABLED
 
-cpu_id_t test_core(size_t index) {
+static cpu_id_t test_core_modulo(size_t index) {
     size_t count = global.core_count ? global.core_count : 1;
     return (cpu_id_t) (index % count);
 }
@@ -236,7 +236,7 @@ test_fleet_spawn_full(struct test_fleet *f, const char *role,
     enum thread_prio_class prio_class = opts.prio_class;
     cpu_id_t core_id = CPU_ID_MAX;
 
-    core_id = opts.core_id;
+    core_id = test_core_modulo(opts.core_id);
 
     if (core_id != CPU_ID_MAX) {
         struct thread *t = thread_create(

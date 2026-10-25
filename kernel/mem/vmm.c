@@ -106,11 +106,11 @@ static enum err pte_init(pte_t *entry, uint64_t flags) {
     return ERR_OK;
 }
 
-enum irql pte_lock(pte_t *pt) TSA_NO_ANALYSIS {
+static enum irql pte_lock(pte_t *pt) TSA_NO_ANALYSIS {
     return pte_lock_irql((void *) pt);
 }
 
-void pte_unlock(pte_t *pt, enum irql irql) TSA_NO_ANALYSIS {
+static void pte_unlock(pte_t *pt, enum irql irql) TSA_NO_ANALYSIS {
     pte_unlock_irql((void *) pt, irql);
 }
 

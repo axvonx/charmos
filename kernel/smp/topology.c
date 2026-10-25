@@ -98,7 +98,7 @@ static void print_topology_node(struct topology_node *node, int depth) {
     }
 }
 
-void topology_dump(void) {
+static void topology_dump(void) {
     log_msg(LOG_INFO, "Processor topology:");
     print_topology_node(&machine_node, 0);
 }
@@ -525,7 +525,8 @@ struct core *topology_find_idle_core(struct core *local_core,
     return NULL;
 }
 
-struct cpu_mask topology_level_mask(cpu_id_t id, enum topology_level level) {
+static struct cpu_mask topology_level_mask(cpu_id_t id,
+                                           enum topology_level level) {
     if (level == TOPOLOGY_LEVEL_EX_DOMAIN) {
         domain_id_t domain = global.cores[id]->domain->id;
         struct cpu_mask ret = CPU_MASK_INIT;

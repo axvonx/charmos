@@ -64,7 +64,7 @@ struct iommu_domain {
     struct vas *vas;
 };
 
-void iommu_init();
+void iommu_init(void);
 
 enum iommu_error iommu_unit_init(struct iommu *unit);
 void iommu_unit_destroy(struct iommu *unit);

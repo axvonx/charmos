@@ -47,7 +47,7 @@ uint32_t lapic_this_id(void) {
     return cpu_has_x2apic() ? x2apic_get_id() : lapic_get_id();
 }
 
-void lapic_eoi(struct irq_desc *unused) {
+static void lapic_eoi(struct irq_desc *unused) {
     cc_ignore(unused);
     lapic_write(LAPIC_REG_EOI, 0);
 }
@@ -61,7 +61,7 @@ static struct irq_chip lapic_irq_chip = {
     .name = "lapic",
 };
 
-struct irq_chip *lapic_get_chip() {
+struct irq_chip *lapic_get_chip(void) {
     return &lapic_irq_chip;
 }
 

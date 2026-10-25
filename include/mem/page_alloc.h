@@ -30,4 +30,4 @@ void *page_alloc_demand_full(size_t page_count, struct alloc_params params)
     cw_alloc();
 void page_free_full(void *ptr, size_t page_count, enum alloc_behavior behavior);
 bool page_alloc_vaddr_in_vas(vaddr_t vaddr);
-void page_alloc_init();
+void page_alloc_init(void);

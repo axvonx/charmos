@@ -176,8 +176,8 @@ void fat_format_filename_83(const char *name, char out[11]);
 
 uint32_t fat_first_data_sector(const struct fat_fs *fs);
 uint32_t fat_cluster_to_lba(const struct fat_fs *fs, uint32_t cluster);
-struct fat_date fat_get_current_date();
-struct fat_time fat_get_current_time();
+struct fat_date fat_get_current_date(void);
+struct fat_time fat_get_current_time(void);
 
 //
 //

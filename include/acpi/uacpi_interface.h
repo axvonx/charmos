@@ -24,4 +24,4 @@ typedef struct {
 
 void uacpi_mark_irq_installed(irq_t irq);
 void uacpi_init(uint64_t rsdp);
-void uacpi_print_devs();
+void uacpi_print_devs(void);

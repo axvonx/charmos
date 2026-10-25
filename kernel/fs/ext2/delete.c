@@ -15,8 +15,9 @@ struct unlink_ctx {
     uint32_t prev_offset;
 };
 
-void free_block_visitor(struct ext2_fs *fs, struct ext2_inode *inode,
-                        uint32_t depth, uint32_t *block_ptr, void *user_data) {
+static void free_block_visitor(struct ext2_fs *fs, struct ext2_inode *inode,
+                               uint32_t depth, uint32_t *block_ptr,
+                               void *user_data) {
     cc_ignore(inode, user_data, depth);
     if (*block_ptr) {
         ext2_free_block(fs, *block_ptr);
@@ -24,9 +25,9 @@ void free_block_visitor(struct ext2_fs *fs, struct ext2_inode *inode,
     }
 }
 
-bool unlink_callback(struct ext2_fs *fs, struct ext2_dir_entry *entry,
-                     void *arg, uint32_t block_num, uint32_t e,
-                     uint32_t entry_offset) {
+static bool unlink_callback(struct ext2_fs *fs, struct ext2_dir_entry *entry,
+                            void *arg, uint32_t block_num, uint32_t e,
+                            uint32_t entry_offset) {
     cc_ignore(e, fs);
     struct unlink_ctx *ctx = (struct unlink_ctx *) arg;
 

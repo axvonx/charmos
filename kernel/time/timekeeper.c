@@ -4,6 +4,7 @@
 #include <sync/seqlock.h>
 #include <time/clock.h>
 #include <time/time.h>
+#include <time/timekeeper.h>
 #include <time/tsc.h>
 
 #include "internal.h"

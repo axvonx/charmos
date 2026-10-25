@@ -137,7 +137,7 @@ static inline void timer_fn_call(struct timer *timer) {
     timer->func(timer);
 }
 
-static inline void timer_sync_wait_spin() {
+static inline void timer_sync_wait_spin(void) {
     for (int i = 0; i < TIMER_SYNC_SPIN_TIMES; i++)
         cpu_pause();
 }
@@ -575,7 +575,7 @@ void timer_base_reprogram_hardware(cpu_id_t cpu) {
             MIN(next_us, pcpu->bases[TIMER_BASE_GLOBAL].next_expiration_us);
 
     /* TODO: _DEFERRED handling */
-    if (next_us == TIME_US_MAX || next_us == (time_us_t) -1) {
+    if (next_us == TIME_US_MAX) {
         irql_lower(outer);
         return;
     }

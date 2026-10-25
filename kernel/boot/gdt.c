@@ -10,8 +10,8 @@
 
 #define GDT_ENTRIES 7
 
-void gdt_set_tss(struct gdt_entry_tss *tss_desc, uint64_t base,
-                 uint32_t limit) {
+static void gdt_set_tss(struct gdt_entry_tss *tss_desc, uint64_t base,
+                        uint32_t limit) {
     tss_desc->limit_low = limit & 0xFFFF;
     tss_desc->base_low = base & 0xFFFF;
     tss_desc->base_middle = (base >> 16) & 0xFF;
@@ -23,8 +23,8 @@ void gdt_set_tss(struct gdt_entry_tss *tss_desc, uint64_t base,
     tss_desc->reserved = 0;
 }
 
-void gdt_set_gate(struct gdt_entry *gdt, int num, uint64_t base, uint32_t limit,
-                  uint8_t access, uint8_t gran) {
+static void gdt_set_gate(struct gdt_entry *gdt, int num, uint64_t base,
+                         uint32_t limit, uint8_t access, uint8_t gran) {
     gdt[num].limit_low = (limit & 0xFFFF);
     gdt[num].base_low = (base & 0xFFFF);
     gdt[num].base_middle = (base >> 16) & 0xFF;
@@ -42,7 +42,8 @@ static void gdt_lgdt(struct gdt_entry *gdt, uint64_t entry_count) {
     asm volatile("lgdt %0" : : "m"(gp));
 }
 
-void reload_segment_registers(uint16_t cs_selector, uint16_t ds_selector) {
+static void reload_segment_registers(uint16_t cs_selector,
+                                     uint16_t ds_selector) {
     asm volatile("pushq %0\n\t"
                  "leaq 1f(%%rip), %%rax\n\t"
                  "pushq %%rax\n\t"
@@ -59,7 +60,7 @@ void reload_segment_registers(uint16_t cs_selector, uint16_t ds_selector) {
                  : "rax", "memory");
 }
 
-void gdt_init(struct gdt_entry *gdt, struct tss *tss) {
+static void gdt_init(struct gdt_entry *gdt, struct tss *tss) {
     gdt_set_gate(gdt, 0, 0, 0, 0, 0); // Null
 
     gdt_set_gate(gdt, 1, 0, 0xFFFFFFFF, ACCESS_CODE_RING0, GRAN_CODE);

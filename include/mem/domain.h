@@ -9,6 +9,6 @@ void domain_free(paddr_t address, size_t page_count);
 paddr_t domain_alloc(size_t pages, enum alloc_flags flags);
 paddr_t domain_alloc_from_domain(struct domain *cd, size_t pages);
 void domain_buddy_dump(void);
-void domain_buddies_init_late();
+void domain_buddies_init_late(void);
 struct domain *domain_for_addr(paddr_t addr);
-void domain_buddies_init_after_smp();
+void domain_buddies_init_after_smp(void);

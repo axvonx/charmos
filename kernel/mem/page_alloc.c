@@ -26,7 +26,7 @@ ADDRESS_RANGE_DEFINE(page_alloc, .align = PAGE_SIZE,
                      .flags = ADDRESS_RANGE_DYNAMIC, .size = TIB(8),
                      .page_fault_handler = &page_alloc_pfh);
 
-void page_alloc_init() {
+void page_alloc_init(void) {
     page_alloc_vas = vas_bootstrap_from(&ADDRESS_RANGE(page_alloc));
 }
 

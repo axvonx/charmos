@@ -276,7 +276,7 @@ void thread_set_timesharing(struct thread *t) {
     enum irql pirql = spin_lock_high(&t->pi_lock);
 
     t->base_prio_class = THREAD_PRIO_CLASS_TIMESHARE;
-    cc_ignore(thread_recompute_prio_class_locked(t));
+    cc_discard(thread_recompute_prio_class_locked(t));
 
     spin_unlock(&t->pi_lock, pirql);
 }
@@ -285,7 +285,7 @@ void thread_set_background(struct thread *t) {
     enum irql pirql = spin_lock_high(&t->pi_lock);
 
     t->base_prio_class = THREAD_PRIO_CLASS_BACKGROUND;
-    cc_ignore(thread_recompute_prio_class_locked(t));
+    cc_discard(thread_recompute_prio_class_locked(t));
 
     spin_unlock(&t->pi_lock, pirql);
 }

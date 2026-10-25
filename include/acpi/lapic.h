@@ -109,12 +109,12 @@ static inline uint32_t lapic_read(uint32_t reg) {
     }
 }
 
-void lapic_init();
-void x2apic_init();
+void lapic_init(void);
+void x2apic_init(void);
 uint64_t lapic_get_id(void);
 uint32_t x2apic_get_id(void);
 uint32_t lapic_this_id(void);
-struct irq_chip *lapic_get_chip();
+struct irq_chip *lapic_get_chip(void);
 
 void lapic_icr_write(uint32_t dest, uint32_t lo);
 

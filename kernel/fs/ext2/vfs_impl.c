@@ -50,12 +50,12 @@ enum err ext2_vfs_rmdir(struct vfs_node *n, const char *name);
 enum err ext2_vfs_readdir(struct vfs_node *n, struct vfs_dirent *out,
                           uint64_t index);
 
-enum err vfs_dummy_open(struct vfs_node *a, uint32_t b) {
+static enum err vfs_dummy_open(struct vfs_node *a, uint32_t b) {
     cc_ignore(a, b);
     return ERR_OK;
 }
 
-enum err vfs_dummy_close(struct vfs_node *a) {
+static enum err vfs_dummy_close(struct vfs_node *a) {
     cc_ignore(a);
     return ERR_OK;
 }

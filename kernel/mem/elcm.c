@@ -134,7 +134,7 @@ static inline size_t bitmap_bytes_for(size_t obj_count, size_t bits_per_obj) {
     return DIV_ROUND_UP(total_bits, sizeof(uint8_t) * 8);
 }
 
-size_t get_aligned_obj_size(size_t obj_size, size_t align) {
+static size_t get_aligned_obj_size(size_t obj_size, size_t align) {
     return DIV_ROUND_UP(obj_size + align, align) * align;
 }
 

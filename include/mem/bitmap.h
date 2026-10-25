@@ -46,3 +46,5 @@ static inline cc_no_asan bool test_bit(uint64_t index) {
     __atomic_load(&bitmap[byte], &value, __ATOMIC_SEQ_CST);
     return BIT_TEST(value, index % 8);
 }
+
+paddr_t bitmap_alloc_page(void);

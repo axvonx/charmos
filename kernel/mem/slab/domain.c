@@ -7,7 +7,7 @@
 #include "internal.h"
 #include "mem/domain/internal.h"
 
-void slab_domain_build_locality_lists(struct slab_domain *sdom) {
+static void slab_domain_build_locality_lists(struct slab_domain *sdom) {
     struct domain_buddy *buddy = sdom->domain->domain_buddy;
     struct domain_zonelist *zl = &buddy->zonelist;
 
@@ -32,7 +32,7 @@ void slab_domain_build_locality_lists(struct slab_domain *sdom) {
     sdom->zonelist_entry_count = zl->count;
 }
 
-void slab_init_caches(struct slab_caches *caches, enum slab_type type) {
+static void slab_init_caches(struct slab_caches *caches, enum slab_type type) {
     for (size_t i = 0; i < slab_global.num_sizes; i++) {
         struct slab_cache *cache = &caches->caches[i];
         cache->type = type;
@@ -40,8 +40,8 @@ void slab_init_caches(struct slab_caches *caches, enum slab_type type) {
     }
 }
 
-void slab_domain_link_caches(struct slab_domain *domain,
-                             struct slab_caches *caches) {
+static void slab_domain_link_caches(struct slab_domain *domain,
+                                    struct slab_caches *caches) {
     for (size_t i = 0; i < slab_global.num_sizes; i++) {
         caches->caches[i].parent_domain = domain;
         caches->caches[i].parent = caches;
@@ -58,7 +58,7 @@ static void slab_domain_init_cache(struct slab_domain *dom,
     slab_domain_link_caches(dom, caches);
 }
 
-void slab_domain_init_caches(struct slab_domain *dom) {
+static void slab_domain_init_caches(struct slab_domain *dom) {
     for (int i = 0; i < SLAB_TYPE_COUNT; i++) {
         slab_domain_init_cache(dom, i);
     }
@@ -91,7 +91,7 @@ static size_t slab_bucket_reset(struct stat_bucket *bucket) {
     return 0;
 }
 
-void slab_domain_init_stats(struct slab_domain *domain) {
+static void slab_domain_init_stats(struct slab_domain *domain) {
     domain->stats = stat_series_create(SLAB_STAT_SERIES_CAPACITY,
                                        SLAB_STAT_SERIES_BUCKET_US,
                                        slab_bucket_reset, domain);
@@ -117,7 +117,7 @@ static struct slab_cache *slab_domain_cache_for_slab(struct slab *slab) {
     return &d->slab_domain->caches[SLAB_TYPE_NONPAGEABLE]->caches[o];
 }
 
-void slab_domain_move_slabs(void) {
+static void slab_domain_move_slabs(void) {
     for (size_t i = 0; i < slab_global.num_sizes; i++) {
         struct slab_cache *c = &slab_global.caches.caches[i];
         for (size_t j = 0; j < SLAB_STANDARD_STATE_COUNT; j++) {
@@ -158,7 +158,7 @@ void slab_domain_init(void) {
     slab_global.domains_enabled = true;
 }
 
-void slab_domain_init_late() {
+void slab_domain_init_late(void) {
     for (size_t i = 0; i < global.domain_count; i++) {
         struct slab_domain *sd = global.domains[i]->slab_domain;
         slab_domain_init_workqueue(sd);

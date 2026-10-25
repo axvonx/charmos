@@ -2,6 +2,8 @@
 #include <ndjson.h>
 #include <string.h>
 
+#include "internal.h"
+
 NDJSON_DEFINE(ndjson_schema, NDJSON_SECTION_NDJSON, NDJSON_KIND_SCHEMA, 1,
               NDJSON_STR(section), NDJSON_STR(kind), NDJSON_U64(rec_version),
               NDJSON_U64(nfields), NDJSON_U64(index), NDJSON_STR(field),

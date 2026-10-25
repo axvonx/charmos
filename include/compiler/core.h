@@ -284,6 +284,12 @@
 
 #define cc_ignore(...) PP_CALL(PP_CC_VAR_UNUSED, __VA_ARGS__)
 
+#define cc_discard(expr)                                                       \
+    ({                                                                         \
+        __auto_type _cc_discard_ = (expr);                                     \
+        (void) _cc_discard_;                                                   \
+    })
+
 /* ==== ct_ Compile-Time & Static Assertions ==== */
 
 #define static_assert_1(cond) _Static_assert(cond, #cond)

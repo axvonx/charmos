@@ -619,7 +619,7 @@ void slab_switch_to_domain_allocations(void);
 
 /* ELCM for slab allocator */
 struct slab_elcm_candidate slab_elcm(size_t obj_size, size_t obj_alignment);
-void slab_elcm_initialize();
+void slab_elcm_initialize(void);
 
 /* Resizing */
 bool slab_resize(struct slab *slab, size_t new_size_pages);
@@ -754,7 +754,7 @@ static inline void slab_index_and_mask(struct slab *slab, void *obj,
     slab_byte_index_and_mask(index, byte_idx_out, bitmask_out);
 }
 
-static inline struct slab_cache *slab_caches_alloc() {
+static inline struct slab_cache *slab_caches_alloc(void) {
     return simple_alloc(slab_global.vas,
                         sizeof(struct slab_cache) * slab_global.num_sizes);
 }
@@ -826,6 +826,12 @@ static inline cc_no_asan bool is_buffer_uniform(const void *ptr, size_t len,
 
     return true;
 }
+
+bool slab_free_queue_enqueue(struct slab_free_queue *q, vaddr_t addr);
+size_t slab_free_queue_flush(struct slab_domain *domain,
+                             struct slab_free_queue *queue,
+                             enum alloc_behavior bh);
+stack_handle_t slab_stack_handle_for(void *ptr);
 
 #ifdef TEST_MEM
 #include "tests/import.h"

@@ -1,1 +1,1 @@
-void syscall_entry();
+void syscall_entry(void);

@@ -314,8 +314,8 @@ static struct arena_bin *bucket_id_lookup(struct arena_bucket *bkt,
  * free callback has not run, we know that the next-in-line is the acting
  * leader, which is where the arenas would get freed to in a dumpster.
  */
-struct arena_bin *arena_dumpster_find_leader(struct arena_dumpster *ad,
-                                             arena_identity_t id) {
+static struct arena_bin *arena_dumpster_find_leader(struct arena_dumpster *ad,
+                                                    arena_identity_t id) {
     struct arena_bucket *bkt = get_bucket(ad, id);
     struct arena_bin *entry, **found = NULL;
 

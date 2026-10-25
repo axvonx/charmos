@@ -117,6 +117,14 @@ if (DEBUG_ASAN)
                                 PROPERTIES COMPILE_OPTIONS "-fno-sanitize=kernel-address")
 endif ()
 
+if (DEBUG_UBSAN)
+    set_property(SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/ubsan.c ${EARLY_INIT_FILES} ${UACPI_SOURCES} ${FLANTERM_SOURCES}
+                 APPEND PROPERTY COMPILE_OPTIONS -fno-sanitize=all)
+endif ()
+
+# flanterm relies on comment-style fallthrough
+set_property(SOURCE ${FLANTERM_SOURCES} APPEND PROPERTY COMPILE_OPTIONS -Wno-implicit-fallthrough)
+
 target_sources(kernel PRIVATE ${SYMS_SOURCE} ${UACPI_SOURCES})
 
 target_include_directories(kernel PRIVATE ${UACPI_INCLUDES})

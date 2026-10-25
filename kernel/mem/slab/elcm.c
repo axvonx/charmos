@@ -45,6 +45,6 @@ struct slab_elcm_candidate slab_elcm(size_t obj_size, size_t obj_alignment) {
         .obj_count = elc.obj_count};
 }
 
-void slab_elcm_initialize() {
+void slab_elcm_initialize(void) {
     initialized = true;
 }

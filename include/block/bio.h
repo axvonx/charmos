@@ -95,3 +95,5 @@ struct bio_request *bio_create_read(struct block_device *d, uint64_t lba,
                                     uint64_t sectors, uint64_t size,
                                     void (*cb)(struct bio_request *),
                                     void *user, void *buf);
+
+void bio_request_free(struct bio_request *req);

@@ -4,6 +4,7 @@
 #include <math/sort.h>
 #include <mem/alloc.h>
 #include <mem/buddy.h>
+#include <mem/domain.h>
 #include <mem/nofail.h>
 #include <mem/numa.h>
 #include <mem/page_alloc.h>
@@ -48,7 +49,7 @@ static void domain_build_zonelist(struct domain_buddy *dom) {
              sizeof(struct domain_zonelist_entry), compare_zonelist_entries);
 }
 
-void domain_buddy_track_pages(struct domain_buddy *dom) {
+static void domain_buddy_track_pages(struct domain_buddy *dom) {
     size_t total_pages = dom->length / PAGE_SIZE;
     size_t free_pages = 0;
 
@@ -187,7 +188,7 @@ static void domain_structs_init(struct domain_buddy *dom, size_t arena_capacity,
     spinlock_init(&dom->lock);
 }
 
-static void init_after_smp() {
+static void init_after_smp(void) {
     for (size_t i = 0; i < global.domain_count; i++) {
         struct domain_buddy *dom = global.domains[i]->domain_buddy;
         struct domain *core_domain = global.domains[i];
@@ -309,11 +310,11 @@ void domain_buddies_init(void) {
     }
 }
 
-void domain_buddies_init_after_smp() {
+void domain_buddies_init_after_smp(void) {
     init_after_smp();
 }
 
-void domain_buddies_init_late() {
+void domain_buddies_init_late(void) {
     for (size_t i = 0; i < global.domain_count; i++)
         domain_spawn(&global.domain_buddies[i]);
 }

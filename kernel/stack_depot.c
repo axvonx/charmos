@@ -11,7 +11,7 @@ FIXED_SIZE_RANGE_PERDOMAIN_DEFINE(
     .obj_align = cc_alignof(struct stack_depot_record));
 static struct fixed_size_range boot_fsr;
 
-void stack_depot_init() {
+void stack_depot_init(void) {
     stack_depot_global.starting_seed = 1234;
     for (int i = 0; i < STACK_DEPOT_HASH_SIZE; i++) {
         list_head_init(&stack_depot_global.chains[i].list);
@@ -68,7 +68,7 @@ static struct stack_depot_record *handle_to_record(stack_handle_t handle) {
     return handle;
 }
 
-static struct stack_depot_record *record_alloc() {
+static struct stack_depot_record *record_alloc(void) {
     if (!FSR_PERDOMAIN_ENABLED(stack_depot))
         return fixed_size_alloc(&boot_fsr);
 
@@ -169,7 +169,7 @@ void stack_depot_putref(stack_handle_t key) {
     }
 }
 
-stack_handle_t stack_depot_save_current() {
+stack_handle_t stack_depot_save_current(void) {
     uintptr_t entries[STACK_TRACE_MAX_DEPTH] = {0};
     size_t num_entries = stack_unwind((uint64_t) ci_frame_address(0), entries,
                                       STACK_TRACE_MAX_DEPTH);

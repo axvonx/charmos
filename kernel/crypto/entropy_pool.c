@@ -34,8 +34,8 @@ void entropy_pool_add(struct entropy_pool *pool, const uint8_t *data,
     spin_unlock(&pool->lock, irql);
 }
 
-uint64_t entropy_pool_extract(struct entropy_pool *pool, uint8_t *out,
-                              uint64_t len) {
+static uint64_t entropy_pool_extract(struct entropy_pool *pool, uint8_t *out,
+                                     uint64_t len) {
     uint8_t seed[32];
 
     enum irql irql = spin_lock(&pool->lock);
@@ -60,7 +60,7 @@ uint64_t entropy_pool_extract(struct entropy_pool *pool, uint8_t *out,
     return len;
 }
 
-uint64_t entropy_pool_bits(struct entropy_pool *pool) {
+static uint64_t entropy_pool_bits(struct entropy_pool *pool) {
     enum irql irql = spin_lock(&pool->lock);
     uint64_t bits = pool->entropy_bits;
     spin_unlock(&pool->lock, irql);

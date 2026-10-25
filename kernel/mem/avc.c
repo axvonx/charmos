@@ -9,7 +9,7 @@ FIXED_SIZE_RANGE_PERDOMAIN_DEFINE(
     avc, .obj_size = sizeof(struct anon_vma_chain),
     .obj_align = cc_alignof(struct anon_vma_chain));
 
-struct anon_vma_chain *avc_alloc() {
+struct anon_vma_chain *avc_alloc(void) {
     return FSR_PERDOMAIN_ALLOC(avc);
 }
 

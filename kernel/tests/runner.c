@@ -241,7 +241,7 @@ static enum test_skip_reason test_check_preconditions(const struct test *t) {
     return TEST_SKIP_NONE;
 }
 
-static void tests_set_enabled_states() {
+static void tests_set_enabled_states(void) {
 #ifdef TEST_ENABLED
 
     /* Here we just apply the globals */
@@ -317,7 +317,7 @@ static cc_unused int test_dup_item_cmp(const void *a, const void *b) {
         return strcmp(ta->name, tb->name);
 }
 
-static void tests_check_duplicate_names() {
+static void tests_check_duplicate_names(void) {
     /* Rule: no two test groups may have the same name */
     for (struct test_group *tg1 = __skernel_test_groups;
          tg1 < __ekernel_test_groups; tg1++) {
@@ -405,7 +405,7 @@ static void test_filter_enable(char *name) {
     panic("%s in the filter is not a valid test group or test name", name);
 }
 
-static void tests_apply_filters() {
+static void tests_apply_filters(void) {
     struct cmdline_entry *filter = CMDLINE_CHILD(test_root, filter);
     if (filter->status != CMDLINE_ENTRY_FOUND)
         return;
@@ -434,7 +434,7 @@ static void tests_apply_filters() {
     }
 }
 
-static void tests_setup_groups() {
+static void tests_setup_groups(void) {
     for (struct test_group *tg = __skernel_test_groups;
          tg < __ekernel_test_groups; tg++) {
         size_t num_tests[TEST_TIER_MAX] = {0};
@@ -881,7 +881,7 @@ static void test_group_run(struct test_group *tg) {
     }
 }
 
-static void test_global_aggregate_results() {
+static void test_global_aggregate_results(void) {
     for (int i = 0; i < TEST_TIER_MAX; i++) {
         for (int j = 0; j < TEST_RESULT_MAX; j++) {
             test_global.results_agg[j] += test_global.results[i][j];
@@ -976,7 +976,7 @@ static void tests_resolve_imports(void) {
     }
 }
 
-static void tests_set_intensities() {
+static void tests_set_intensities(void) {
     for (struct test_group *tg = __skernel_test_groups;
          tg < __ekernel_test_groups; tg++) {
         if (tg->default_intensity == TEST_INTENSITY_SENTINEL)

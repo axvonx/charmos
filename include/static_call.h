@@ -14,7 +14,7 @@
 
 #define static_call(name) name##_trampoline
 
-static inline void __static_call_update(void *trampoline, void *fn) {
+static inline void static_call_update_raw(void *trampoline, void *fn) {
     uint8_t *p = trampoline;
     uint32_t rel = (uint32_t) ((uintptr_t) fn - (uintptr_t) trampoline - 5);
 
@@ -26,5 +26,5 @@ static inline void __static_call_update(void *trampoline, void *fn) {
 #define static_call_update(name, fn)                                           \
     do {                                                                       \
         typeof(&name##_trampoline) _scu_fn = (fn);                             \
-        __static_call_update((void *) name##_trampoline, (void *) _scu_fn);    \
+        static_call_update_raw((void *) name##_trampoline, (void *) _scu_fn);  \
     } while (0)

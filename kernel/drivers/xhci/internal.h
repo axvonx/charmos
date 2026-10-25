@@ -32,7 +32,7 @@ enum usb_error xhci_address_device(struct xhci_port *p, uint8_t slot_id,
 void xhci_teardown_slot(struct xhci_slot *me);
 void xhci_wake_waiter(struct xhci_device *dev, struct xhci_request *request);
 void xhci_cleanup(struct xhci_device *dev, struct xhci_request *req);
-struct xhci_ring *cc_nullable xhci_allocate_ring();
+struct xhci_ring *cc_nullable xhci_allocate_ring(void);
 struct xhci_ring *cc_nullable xhci_allocate_event_ring(void);
 void xhci_free_ring(struct xhci_ring *ring);
 void cc_mem_io *xhci_map_mmio(uint8_t bus, uint8_t slot, uint8_t func);

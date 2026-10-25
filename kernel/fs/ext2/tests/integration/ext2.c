@@ -21,7 +21,7 @@ static void check_bcache(void) {
     TEST_ASSERT_EQ(bcache_total_dirty, 0);
 }*/
 
-static void flush() {
+static void flush(void) {
     struct ext2_fs *fs = global.root_node->fs_data;
     struct block_device *d = fs->drive;
 

@@ -68,6 +68,8 @@ struct globals global = {0};
 
 #define BEHAVIOR /* avoids undefined behavior */
 
+/* Only called from the linker script ENTRY */
+cc_no_asan void k_main(void) TSA_ACQUIRES_IRQS;
 cc_no_asan void k_main(void) TSA_ACQUIRES_IRQS {
     irq_disable();
     global.core_count = mp_request.response->cpu_count;
