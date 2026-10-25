@@ -3,6 +3,7 @@
 #include <irq/idt.h>
 #include <sch/sched.h>
 #include <smp/core.h>
+#include <smp/smp.h>
 #include <sync/rcu.h>
 #include <thread/dpc.h>
 #include <thread/workqueue.h>
@@ -15,6 +16,8 @@ void scheduler_idle_main(void *nop) {
 
     while (true) {
         irq_disable();
+
+        smp_boot_fence_park();
 
         rcu_idle_exit(); /* For potential NMI events */
 

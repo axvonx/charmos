@@ -37,7 +37,14 @@ struct turnstile {
     void *lock_obj; /* lock we are for */
     struct rbt queues[TURNSTILE_NUM_QUEUES];
     enum turnstile_state state;
+
+    uint64_t next_wait_seq;
+    uint32_t handoffs; /* since the last fairness turn */
 };
+
+/* Every TURNSTILE_BYPASS_LIMIT-th handoff wakes the longest waiting
+ * waiter instead of the highest wq_prio */
+#define TURNSTILE_BYPASS_LIMIT 4
 
 #define turnstile_from_freelist(fl)                                            \
     (container_of(fl, struct turnstile, freelist_node))
@@ -79,7 +86,12 @@ void turnstile_wake(struct turnstile *ts, size_t queue, size_t num_threads,
  * bother the caller pcd (also merges kicks into pcd) */
 bool turnstile_propagate_wroost(struct wroost_percpu_data *pcd,
                                 struct thread *t);
+/* Hand off to queue head if `target` is NULL */
 void turnstile_wake_handoff(struct turnstile *ts, size_t queue,
-                            enum irql lock_irql);
+                            struct thread *target, enum irql lock_irql);
+
+/* Called once per handoff with chain locked. NULL means we should
+ * use the priority ordering of wq_prio */
+struct thread *turnstile_fair_pick(struct turnstile *ts, size_t *queue_out);
 size_t turnstile_get_waiter_count(void *lock_obj);
 int32_t turnstile_thread_priority(struct thread *t);

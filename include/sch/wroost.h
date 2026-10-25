@@ -158,6 +158,9 @@ struct wroost_percpu_data {
      * obtained them for a migration. These threads must also
      * be woken on the CPU that they went to sleep on for this reason. */
     struct hlist_head blocked_ts_readers;
+
+    /* Set on switch-out when blocked_ts_reader gets boosted */
+    bool ts_requeue_pending;
     atomic(bitmap_word_t) * pending_bitmap;
 
     struct wroost_process_result process_result;

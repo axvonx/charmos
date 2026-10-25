@@ -205,10 +205,12 @@ struct thread {
     };
 
     /* Waitqueue nodes. TODO: union */
-    struct rbt_node wq_tree_node;   /* waitqueue tree node */
-    int32_t wq_prio;                /* turnstile sort key
-                                     * TODO: there is probably a smarter way
-                                     */
+    struct rbt_node wq_tree_node; /* waitqueue tree node */
+    int32_t wq_prio;              /* turnstile sort key
+                                   * TODO: there is probably a smarter way
+                                   */
+
+    uint64_t wq_seq;                /* Turnstile arrival order sequence count */
     struct list_node wq_list_node;  /* waitqueue list node */
     struct list_node rcu_list_node; /* blocked reader node on RCU leaf */
 

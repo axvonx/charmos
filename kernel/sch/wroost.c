@@ -344,11 +344,8 @@ static enum thread_prio_class ceil_for(wroost_id_t lock_id,
     return ceil;
 }
 
-/* Use the raw recomputation because that avoids sending out DPCs,
- * which can deadlock us. Writers handle DPCs and tallies in their switch out
- *
- * TODO: Re-enqueue DPCs */
-static void boost_thread_to(struct thread *t, enum thread_prio_class prio) {
+static struct wroost_kicks boost_thread_to(struct thread *t,
+                                           enum thread_prio_class prio) {
     struct wroost_thread_data *wtd = &t->wroost_data;
     enforce(prio <= wtd->max_boost);
 
@@ -364,7 +361,7 @@ static void boost_thread_to(struct thread *t, enum thread_prio_class prio) {
         wtd->floor = prio;
     }
 
-    thread_recompute_prio_class_raw_locked(t, NULL, NULL);
+    return thread_recompute_prio_class_locked(t);
 }
 
 bool wroost_merge_kicks(struct wroost_percpu_data *pcd,
@@ -540,7 +537,7 @@ static bool process_pending_word(struct scheduler *self, size_t w_idx,
             wroost_counter_t cc_unused val;
             wroost_id_t i;
             wroost_for_each_set_ctr(val, i, wtd->counters,
-                                    WROOST_THREAD_COUNTERS) {
+                                    WROOST_THREAD_COUNTER_BYTES) {
                 if (i != coarse)
                     continue;
 
@@ -604,7 +601,7 @@ static bool process_pending_word_ts(struct scheduler *self, size_t w_idx,
             wroost_counter_t cc_unused val;
             wroost_id_t i;
             wroost_for_each_set_ctr(val, i, wtd->counters,
-                                    WROOST_THREAD_COUNTERS) {
+                                    WROOST_THREAD_COUNTER_BYTES) {
                 if (i != coarse)
                     continue;
 
@@ -646,11 +643,9 @@ static void process_pending_bitmap(struct scheduler *self,
 
     for (size_t w = 0; w < BITMAP_WORDS(bucket_count()); w++) {
         bitmap_word_t pending = atomic_xchg_acq_rel(&pcd->pending_bitmap[w], 0);
-        bitmap_word_t pending_prior = pending;
 
         pending |= result->seen_data[w];
-
-        result->seen_data[w] = pending_prior;
+        result->seen_data[w] = pending;
 
         if (process_pending_word(self, w, pending, result))
             goto out_inner;
@@ -675,6 +670,20 @@ static void process_pending_bitmap(struct scheduler *self,
 
         if (process_pending_word_ts(self, w, pending, result))
             goto out_outer;
+    }
+
+    if (pcd->ts_requeue_pending) {
+        pcd->ts_requeue_pending = false;
+
+        struct thread *iter;
+        hlist_for_each_entry(iter, &pcd->blocked_ts_readers,
+                             wroost_data.map_node) {
+            if (turnstile_propagate_wroost(pcd, iter)) {
+                pcd->ts_requeue_pending = true;
+                result->restart = true;
+                goto out_outer;
+            }
+        }
     }
 
     spin_unlock(&self->wroost_lock, wirql);
@@ -868,19 +877,12 @@ static void post_read_release(struct rwlock *lock) {
             wtd->counters[i] = 0;
 
 #ifdef DEBUG_WROOST
-        /* fine_valid = 0 automatically permits allocations,
-         * we do not need to clear lock_id */
-        bool found = false;
+        /* fine_valid = 0 automatically permits allocations, we do not need
+         * to clear lock_id */
         for (int i = 0; i < WROOST_FINE_ENTRY_COUNT; i++) {
-            if (wtd->fine_entries[i].lock_id == id) {
-                found = true;
-            } else {
-                enforce(wtd->fine_entries[i].lock_id == 0);
-                enforce((wtd->fine_valid & BIT(i)) == 0);
-            }
+            if (wtd->fine_valid & BIT(i))
+                enforce(wtd->fine_entries[i].lock_id == id);
         }
-
-        enforce(found);
 #endif
 
         wtd->fine_valid = 0;
@@ -1060,7 +1062,7 @@ static enum thread_prio_class update_reader(struct wroost_percpu_data *pcd,
             continue;
 
         for (size_t j = 0; j < WROOST_COARSE_FACTOR; j++) {
-            wroost_id_t k = (wroost_id_t) i + j;
+            wroost_id_t k = (wroost_id_t) (i * WROOST_COARSE_FACTOR + j);
 
             if (add) {
                 percpu_inc_id(pcd, k, t->base_prio_class);
@@ -1116,7 +1118,19 @@ static void switch_out_reader(struct thread *t) {
 
     enum thread_prio_class boost_to = update_reader(pcd, t, /* add = */ true);
 
-    boost_thread_to(t, boost_to);
+    struct wroost_kicks kicks = boost_thread_to(t, boost_to);
+    if (kicks.need_kicks) {
+#ifdef DEBUG_WROOST
+        enforce(cpu_mask_first_set(&pcd->dpc_enqueue_deferred) ==
+                    CPU_MASK_BITS ||
+                pcd->writer_lock_id == kicks.lock_id);
+#endif
+        cpu_mask_or(&pcd->dpc_enqueue_deferred, &kicks.cpus);
+        pcd->writer_lock_id = kicks.lock_id;
+    }
+
+    if (wtd->in_blocked_ts_list && t->wq_prio != turnstile_thread_priority(t))
+        pcd->ts_requeue_pending = true;
 }
 
 /* Runs in scheduler with runqueue lock held */
@@ -1159,6 +1173,9 @@ void wroost_scheduler_switch_in_hook(void) {
     }
 
     pcd->writer_lock_id = 0;
+
+    if (pcd->ts_requeue_pending)
+        percpu_boost_kick(pcd->id, 0, WROOST_KICK_SEND_DPCS);
 }
 
 void wroost_pre_wait(struct thread *curr) {
@@ -1220,6 +1237,7 @@ struct wroost_kicks wroost_post_prio_change_locked(struct thread *t,
          * the caller happens to be holding */
         if (old < new) {
             kicks.need_kicks = true;
+            kicks.lock_id = lock_id;
             set_target_cpus(bkt, &kicks.cpus, new);
         }
     }

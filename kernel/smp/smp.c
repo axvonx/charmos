@@ -401,6 +401,51 @@ void smp_enable_all_ticks(void) {
     irq_set_chip(entry, NULL, NULL);
 }
 
+/* Force every AP into the top spin part of its idel loop while the BSP
+ * advances to BOOTSTAGE_LATE. This is because IRQL operations
+ * treat < BOOTSTAGE_LATE as a no-op and return IRQL_NONE.
+ *
+ * We have to do this instead of just disabling ticks because the tick
+ * disabling IPI can wake idle APs and go into scheduler_yield() */
+static atomic_bool boot_fence_up = false;
+static atomic_uint32_t boot_fence_parked = 0;
+
+void smp_boot_fence_raise(void) {
+    atomic_store(&boot_fence_parked, 0);
+    atomic_store_release(&boot_fence_up, true);
+
+    size_t i;
+    for_each_cpu_id(i) {
+        if (i == 0)
+            continue;
+
+        ipi_send(i, IRQ_NOP);
+    }
+
+    while (atomic_load_acq(&boot_fence_parked) < (global.core_count - 1))
+        cpu_pause();
+}
+
+void smp_boot_fence_lower(void) {
+    atomic_store_release(&boot_fence_up, false);
+}
+
+void smp_boot_fence_park(void) {
+    if (cc_likely(!atomic_load_acq(&boot_fence_up)))
+        return;
+
+    enforce(!irqs_enabled());
+    atomic_inc(&boot_fence_parked);
+
+    while (atomic_load_acq(&boot_fence_up))
+        cpu_pause();
+
+    /* serializing instruction for bootstage_advance(), since that
+     * would patch kernel text and do stuff */
+    uint32_t a, b, c, d;
+    cpuid_count(0, 0, &a, &b, &c, &d);
+}
+
 struct core *smp_bsp(void) {
     return global.cores[0];
 }

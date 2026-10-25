@@ -379,6 +379,26 @@ static uintptr_t rwlock_get_readers_to_wake(struct turnstile *ts,
     return to_wake;
 }
 
+/* Wake every reader from the head to target */
+static uintptr_t rwlock_get_readers_to_wake_through(struct turnstile *ts,
+                                                    struct thread *target,
+                                                    size_t *raw_count) {
+    struct rbt_node *iter;
+    uintptr_t to_wake = 0;
+    *raw_count = 0;
+
+    rbt_for_each_reverse(iter, &ts->queues[TURNSTILE_READER_QUEUE]) {
+        struct thread *reader = thread_from_wq_rbt_node(iter);
+        to_wake += rwlock_make_one_reader_count(reader->base_prio_class);
+        *raw_count = *raw_count + 1;
+
+        if (reader == target)
+            return to_wake;
+    }
+
+    unreachable("fairness target is not on the reader queue");
+}
+
 static uintptr_t
 rwlock_unlock_get_val_to_sub(struct rwlock *lock,
                              enum thread_prio_class base_class) {
@@ -466,21 +486,48 @@ void rw_unlock_full(struct rwlock *lock,
         struct rbt_node *wnode = rbt_last(&ts->queues[TURNSTILE_WRITER_QUEUE]);
 
         struct thread *writer = wnode ? thread_from_wq_rbt_node(wnode) : NULL;
-        size_t to_wake;
-        uintptr_t to_wake_ctr = rwlock_get_readers_to_wake(ts, &to_wake);
+        size_t to_wake = 0;
+        uintptr_t to_wake_ctr = 0;
+
+        size_t fair_queue = TURNSTILE_WRITER_QUEUE;
+        struct thread *fair = turnstile_fair_pick(ts, &fair_queue);
+
+        if (fair && fair_queue == TURNSTILE_WRITER_QUEUE) {
+            writer = fair;
+            to_wake = 0;
+        } else if (fair) {
+            /* Wake up a superset of waiters
+             * of what pure priority ordering would.
+             *
+             * This is because fast path readers can simply trylock CAS
+             * and get the lock before any older blocked readers might
+             */
+            size_t prio_wake;
+            uintptr_t prio_ctr = rwlock_get_readers_to_wake(ts, &prio_wake);
+            to_wake_ctr =
+                rwlock_get_readers_to_wake_through(ts, fair, &to_wake);
+            if (prio_wake > to_wake) {
+                to_wake = prio_wake;
+                to_wake_ctr = prio_ctr;
+            }
+        } else {
+            to_wake_ctr = rwlock_get_readers_to_wake(ts, &to_wake);
+        }
 
         if (writer && to_wake == 0) {
-            /* directly transfer ownership to the very next writer */
+            /* directly transfer ownership to the next writer */
             new = rwlock_make_write_word(lock, writer);
 
             if (ts->waiters > 1)
                 new |= RWLOCK_WAITER_BIT;
 
-            if (rbt_prev(wnode))
+            /* Still more writers? */
+            if (&writer->wq_tree_node != wnode || rbt_prev(wnode))
                 new |= RWLOCK_WRITER_WANT_BIT;
 
             RWLOCK_WRITE_LOCK_WORD(lock, new);
-            turnstile_wake_handoff(ts, TURNSTILE_WRITER_QUEUE, irql_out);
+            turnstile_wake_handoff(ts, TURNSTILE_WRITER_QUEUE, writer,
+                                   irql_out);
         } else {
             /* give the lock to all waiters at once */
             new = to_wake_ctr;

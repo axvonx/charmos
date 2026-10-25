@@ -184,7 +184,9 @@ void k_sch_main(void *nop) {
      * bootstage later on (causing mis-raised IRQLs) */
     smp_disable_all_ticks();
 
+    smp_boot_fence_raise();
     bootstage_advance(BOOTSTAGE_LATE);
+    smp_boot_fence_lower();
     lock_chk_init();
     smp_timer_init();
 

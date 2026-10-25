@@ -113,6 +113,8 @@ struct turnstile *turnstile_init(struct turnstile *ts) {
     ts->state = TURNSTILE_STATE_UNUSED;
     ts->owner = NULL;
     ts->pi = THREAD_CLASS_DONATION_EMPTY;
+    ts->next_wait_seq = 0;
+    ts->handoffs = 0;
 
     rbt_init(&ts->queues[TURNSTILE_READER_QUEUE], turnstile_thread_get_data,
              turnstile_thread_cmp);
@@ -162,6 +164,7 @@ static void turnstile_insert(struct turnstile_hash_chain *chain,
     list_head_push_back(&chain->list, &ts->hash_list);
     ts->state = TURNSTILE_STATE_IN_HASH_TABLE;
     ts->lock_obj = lock_obj;
+    ts->handoffs = 0;
 }
 
 static void turnstile_remove(struct turnstile_hash_chain *chain,
@@ -245,14 +248,13 @@ static void turnstile_pi_remove(struct turnstile *ts) {
     thread_uninherit_priority(&ts->pi);
 }
 
-static struct thread *turnstile_dequeue_first(struct turnstile *ts,
-                                              size_t queue) {
+static struct thread *turnstile_dequeue(struct turnstile *ts, size_t queue,
+                                        struct rbt_node *node) {
     void *obj = ts->lock_obj;
     struct turnstile_hash_chain *chain = turnstile_chain_for(obj);
 
-    struct rbt_node *last = rbt_last(&ts->queues[queue]);
-    rbt_delete(&ts->queues[queue], last);
-    struct thread *thread = thread_from_wq_rbt_node(last);
+    rbt_delete(&ts->queues[queue], node);
+    struct thread *thread = thread_from_wq_rbt_node(node);
 
     atomic_store_release(&thread->blocked_ts, NULL);
 
@@ -273,6 +275,61 @@ static struct thread *turnstile_dequeue_first(struct turnstile *ts,
     /* you are also no longer a waiter */
     ts->waiters--;
     return thread;
+}
+
+static struct thread *turnstile_dequeue_first(struct turnstile *ts,
+                                              size_t queue) {
+    return turnstile_dequeue(ts, queue, rbt_last(&ts->queues[queue]));
+}
+
+static int turnstile_prio_band(int32_t prio) {
+    if (prio < TURNSTILE_TS_PRIO_BASE)
+        return 0;
+
+    if (prio <= TURNSTILE_TS_PRIO_MAX)
+        return 1;
+
+    return prio == TURNSTILE_RT_PRIO ? 2 : 3;
+}
+
+/* Fairly pick so high prio waiters can't prevent
+ * low prio waiters from waking */
+struct thread *turnstile_fair_pick(struct turnstile *ts, size_t *queue_out) {
+    SPINLOCK_ASSERT_HELD(&turnstile_chain_for(ts->lock_obj)->lock);
+
+    if (++ts->handoffs < TURNSTILE_BYPASS_LIMIT)
+        return NULL;
+
+    ts->handoffs = 0;
+
+    int32_t top = INT32_MIN;
+    for (size_t q = 0; q < TURNSTILE_NUM_QUEUES; q++) {
+        struct rbt_node *n = rbt_last(&ts->queues[q]);
+        if (n && thread_from_wq_rbt_node(n)->wq_prio > top)
+            top = thread_from_wq_rbt_node(n)->wq_prio;
+    }
+
+    if (top == INT32_MIN)
+        return NULL;
+
+    int band = turnstile_prio_band(top);
+    struct thread *oldest = NULL;
+    struct rbt_node *it;
+
+    for (size_t q = 0; q < TURNSTILE_NUM_QUEUES; q++) {
+        rbt_for_each_reverse(it, &ts->queues[q]) {
+            struct thread *w = thread_from_wq_rbt_node(it);
+            if (turnstile_prio_band(w->wq_prio) != band)
+                break; /* reverse order, everything after would be lower */
+
+            if (!oldest || w->wq_seq < oldest->wq_seq) {
+                oldest = w;
+                *queue_out = q;
+            }
+        }
+    }
+
+    return oldest;
 }
 
 void turnstile_wake(struct turnstile *ts, size_t queue, size_t num_threads,
@@ -314,7 +371,7 @@ static enum thread_prio_class turnstile_waiter_class(struct rbt_node *n) {
 }
 
 void turnstile_wake_handoff(struct turnstile *ts, size_t queue,
-                            enum irql lock_irql) {
+                            struct thread *target, enum irql lock_irql) {
     void *obj = ts->lock_obj;
     struct turnstile_hash_chain *chain = turnstile_chain_for(obj);
     SPINLOCK_ASSERT_HELD(&chain->lock);
@@ -323,8 +380,10 @@ void turnstile_wake_handoff(struct turnstile *ts, size_t queue,
     turnstile_pi_remove(ts);
     ts->owner = NULL;
 
-    struct rbt_node *first = rbt_last(&ts->queues[queue]);
-    enforce(first);
+    struct rbt_node *head = rbt_last(&ts->queues[queue]);
+    enforce(head);
+    struct rbt_node *first = target ? &target->wq_tree_node : head;
+    enforce(rbt_has_node(&ts->queues[queue], first));
     struct thread *new_owner = thread_from_wq_rbt_node(first);
 
     if (ts->waiters > 1) {
@@ -332,8 +391,16 @@ void turnstile_wake_handoff(struct turnstile *ts, size_t queue,
         enum thread_prio_class top = THREAD_PRIO_CLASS_BACKGROUND;
 
         for (size_t q = 0; q < TURNSTILE_NUM_QUEUES; q++) {
-            struct rbt_node *n =
-                q == queue ? rbt_prev(first) : rbt_last(&ts->queues[q]);
+            /* highest remaining waiter once new_owner leaves this queue */
+            struct rbt_node *n;
+            if (q != queue) {
+                n = rbt_last(&ts->queues[q]);
+            } else if (first == head) {
+                n = rbt_prev(head);
+            } else {
+                n = head;
+            }
+
             if (!n)
                 continue;
 
@@ -350,7 +417,7 @@ void turnstile_wake_handoff(struct turnstile *ts, size_t queue,
         }
     }
 
-    struct thread *to_wake = turnstile_dequeue_first(ts, queue);
+    struct thread *to_wake = turnstile_dequeue(ts, queue, first);
     enforce(to_wake == new_owner);
 
     turnstile_hash_chain_unlock(chain, lock_irql);
@@ -503,6 +570,7 @@ static void turnstile_block_on(struct turnstile *ts, size_t queue_num) {
                             THREAD_BLOCK_REASON_MANUAL);
 
     curr->wq_prio = turnstile_thread_priority(curr);
+    curr->wq_seq = ts->next_wait_seq++;
     rbt_insert(&ts->queues[queue_num], &curr->wq_tree_node);
 }
 
