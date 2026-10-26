@@ -14,6 +14,8 @@
 #define BIT(n) (1ull << (n))
 #define BITS_PER_BYTE (8)
 #define BIT_SIZEOF(t) (sizeof(t) * BITS_PER_BYTE)
+#define BIT_OFFSETOF(s, m) (offsetof(s, m) * BITS_PER_BYTE)
+#define BIT_ALIGNOF(s, m) (cc_alignof(s, m) * BITS_PER_BYTE)
 
 /* Verify that we aren't going OOB at runtime */
 #define __bit_index_ok(n, bits)                                                \

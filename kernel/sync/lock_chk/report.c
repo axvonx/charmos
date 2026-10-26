@@ -3,9 +3,11 @@
 #include <atomic.h>
 #include <console/crash.h>
 #include <console/printf.h>
+#include <console/term.h>
 #include <enforce.h>
 #include <ndjson.h>
 #include <nightmare/nightmare.h>
+#include <string.h>
 
 #include "internal.h"
 
@@ -99,55 +101,103 @@ static void maybe_report_degradation(const struct lock_chk_fault *fault,
                                     lock_chk_fault_msg(fault));
 }
 
-static void print_cycle(const struct lock_chk_fault *fault) {
-    const struct lock_chk_report *report = fault->report;
-    if (fault->kind != LOCK_CHK_FAIL_CYCLE || report == NULL ||
-        report->cycle_len == 0)
-        return;
-
-    printf_unlocked("Cycle path (%u hops%s):\n", report->cycle_len,
-                    report->cycle_truncated ? ", truncated" : "");
-    for (uint16_t i = 0; i < report->cycle_len; i++) {
-        const struct lock_chk_cycle_hop *hop = &report->cycle_hops[i];
-        printf_unlocked(
-            "  [%u] '%s' (%s:%u sc %u) [%s]\n", i,
-            hop->from_class ? hop->from_class->name : "<unknown>",
-            hop->from_class ? hop->from_class->file : "?",
-            hop->from_class ? hop->from_class->line : 0, hop->from_subclass,
-            hop->from_mode == LOCK_CHK_MODE_EXCLUSIVE ? "EXCLUSIVE" : "SHARED");
-        printf_unlocked(
-            "      -> '%s' (%s:%u sc %u) [%s] at %s:%u\n",
-            hop->to_class ? hop->to_class->name : "<unknown>",
-            hop->to_class ? hop->to_class->file : "?",
-            hop->to_class ? hop->to_class->line : 0, hop->to_subclass,
-            hop->to_mode == LOCK_CHK_MODE_EXCLUSIVE ? "EXCLUSIVE" : "SHARED",
-            hop->site ? hop->site->file : "?", hop->site ? hop->site->line : 0);
+static const char *lock_chk_crash_code_str(uint16_t delta) {
+    switch ((enum lock_chk_failure_kind)(delta - CRASH_CODE_DELTA_START)) {
+    case LOCK_CHK_FAIL_CYCLE: return "Lock cycle detected";
+    case LOCK_CHK_FAIL_RECURSION: return "Recursive lock acquisition";
+    case LOCK_CHK_FAIL_RELEASE: return "Bad lock release";
+    case LOCK_CHK_FAIL_CONTEXT: return "Lock used in an invalid context";
+    case LOCK_CHK_FAIL_THREAD_EXIT: return "Thread exited holding locks";
+    case LOCK_CHK_FAIL_SPIN_ORDER: return "Spinlock release order violated";
+    case LOCK_CHK_FAIL_CAPACITY: return "Validator capacity exhausted";
+    case LOCK_CHK_FAIL_UNINITIALIZED: return "Uninitialized lock used";
+    case LOCK_CHK_FAIL_NOT_HELD: return "Lock expected held, but is not";
+    case LOCK_CHK_FAIL_UNEXPECTED_HELD: return "Lock held when it must not be";
+    default: return "Unknown lock validator failure";
     }
 }
 
-static void print_fail(const struct lock_chk_fault *fault,
-                       const char *signature) {
-    printf_unlocked("\n========================================================"
-                    "========================\n");
-    printf_unlocked("LOCK_CHK VIOLATION: %s\n", lock_chk_fault_msg(fault));
-    printf_unlocked("Signature: 0x%s\n", signature);
-    if (fault->site != NULL)
-        printf_unlocked("Location: %s:%u\n", fault->site->file,
-                        fault->site->line);
+static void lock_chk_crash_dump(uint16_t delta, struct crash_payload pl);
+
+CRASH_FACILITY_DEFINE(lock_chk, .desc = "Lock dependency validator",
+                      .to_str = lock_chk_crash_code_str,
+                      .dump = lock_chk_crash_dump);
+
+#define lock_chk_dump_field(label, fmt, ...)                                   \
+    crash_facility_line("%s%-9s%s " fmt, term_style(TERM_SEV_LABEL), label,    \
+                        term_style_reset(), ##__VA_ARGS__)
+
+static const char *lock_chk_class_name(const struct lock_chk_class *class) {
+    return class ? class->name : "<unknown>";
+}
+
+static const char *lock_chk_basename(const char *path) {
+    const char *slash = path ? strrchr(path, '/') : NULL;
+    return slash ? slash + 1 : (path ? path : "?");
+}
+
+static void dump_cycle(const struct lock_chk_report *report) {
+    crash_facility_line("");
+    crash_facility_line(
+        "%scycle%s %s(%u hops%s)%s", term_style(TERM_SEV_LABEL),
+        term_style_reset(), term_style(TERM_SEV_DIM), report->cycle_len,
+        report->cycle_truncated ? ", truncated" : "", term_style_reset());
+
+    for (uint16_t i = 0; i < report->cycle_len; i++) {
+        const struct lock_chk_cycle_hop *hop = &report->cycle_hops[i];
+
+        crash_facility_line(
+            "%s[%u]%s '%s'/%u %s%s%s", term_style(TERM_SEV_DIM), i,
+            term_style_reset(), lock_chk_class_name(hop->from_class),
+            hop->from_subclass, term_style(TERM_SEV_DIM),
+            lock_chk_mode_name(hop->from_mode), term_style_reset());
+        crash_facility_line(
+            "    %s->%s '%s'/%u %s%s%s", term_style(TERM_SEV_WARN),
+            term_style_reset(), lock_chk_class_name(hop->to_class),
+            hop->to_subclass, term_style(TERM_SEV_DIM),
+            lock_chk_mode_name(hop->to_mode), term_style_reset());
+        crash_facility_line(
+            "       %sat %s:%u%s", term_style(TERM_SEV_DIM),
+            lock_chk_basename(hop->site ? hop->site->file : NULL),
+            hop->site ? hop->site->line : 0, term_style_reset());
+    }
+}
+
+static void lock_chk_crash_dump(uint16_t delta, struct crash_payload pl) {
+    cc_ignore(delta);
+    const struct lock_chk_fault *fault = pl.data;
+    uint64_t signature = pl.params[0];
+
+    if (!fault)
+        return;
+
+    lock_chk_dump_field("signature", "%016lx", signature);
 
     const struct lock_chk_class *class = fault->class;
-    if (class)
-        printf_unlocked("Lock Class: '%s' (%s:%u subclass %u)\n", class->name,
-                        class->file, class->line, fault->subclass);
+    if (class) {
+        lock_chk_dump_field("class", "'%s'/%u", class->name, fault->subclass);
+        lock_chk_dump_field(
+            "", "%sdeclared at %s:%u%s", term_style(TERM_SEV_DIM),
+            lock_chk_basename(class->file), class->line, term_style_reset());
+    }
 
-    print_cycle(fault);
+    if (fault->instance)
+        lock_chk_dump_field("instance", "%s %p",
+                            lock_chk_type_to_str(fault->type), fault->instance);
+
+    if (fault->mode == LOCK_CHK_MODE_EXCLUSIVE ||
+        fault->mode == LOCK_CHK_MODE_SHARED)
+        lock_chk_dump_field("mode", "%s", lock_chk_mode_name(fault->mode));
+
     if (fault->kind == LOCK_CHK_FAIL_CAPACITY)
-        printf_unlocked("Capacity pool '%s': used %u / limit %u\n",
-                        fault->capacity_pool ? fault->capacity_pool
-                                             : "<unknown>",
-                        fault->capacity_used, fault->capacity_limit);
-    printf_unlocked("=========================================================="
-                    "======================\n\n");
+        lock_chk_dump_field("capacity", "'%s' used %u / limit %u",
+                            fault->capacity_pool ? fault->capacity_pool
+                                                 : "<unknown>",
+                            fault->capacity_used, fault->capacity_limit);
+
+    const struct lock_chk_report *report = fault->report;
+    if (fault->kind == LOCK_CHK_FAIL_CYCLE && report && report->cycle_len)
+        dump_cycle(report);
 }
 
 void lock_chk_report_fail(const struct lock_chk_fault *fault) {
@@ -162,13 +212,16 @@ void lock_chk_report_fail(const struct lock_chk_fault *fault) {
         return;
     }
 
-    print_fail(fault, signature_text);
     lock_chk_emit_finding(fault, lock_chk_fail_kind_to_str(fault->kind),
                           signature_text);
     nightmare_request_external_fail("lock_chk", signature, "%s",
                                     lock_chk_fault_msg(fault));
 
     crash_full(&(struct crash_context){
+        .payload = {.code = CRASH_CODE(lock_chk,
+                                       fault->kind + CRASH_CODE_DELTA_START),
+                    .data = (void *) fault,
+                    .params = {signature}},
         .source = CRASH_SOURCE_LOCK_CHK,
         .formats = CRASH_FMT_DEFAULT,
         .file = fault->site ? fault->site->file : __RELFILE__,

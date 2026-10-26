@@ -1,3 +1,4 @@
+#ifdef TEST_NIGHTMARE_ENABLED
 #include "internal.h"
 
 #include <cmdline.h>
@@ -153,3 +154,4 @@ const struct test_perturb_desc *nightmare_perturb_lookup(const char *name) {
 
     return test_perturb_lookup(name);
 }
+#endif

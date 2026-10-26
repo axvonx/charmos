@@ -397,8 +397,7 @@ static void make_cycle_fail(const struct lock_chk_ctx *ctx,
     if (report == NULL)
         return;
 
-    snprintf(report->msg, sizeof(report->msg),
-             "Dependency cycle detected (%s -> %s)",
+    snprintf(report->msg, sizeof(report->msg), "'%s' -> '%s'",
              from.node->class ? from.node->class->name : "lock",
              to.node->class ? to.node->class->name : "lock");
     report->cycle_len =
@@ -423,7 +422,7 @@ static void make_cap_fail(const struct lock_chk_ctx *ctx,
 
     if (ctx->fault->report != NULL)
         snprintf(ctx->fault->report->msg, sizeof(ctx->fault->report->msg),
-                 "Edge capacity exhausted (%u/%u)", ctx->graph->edge_count,
+                 "dependency edges %u/%u", ctx->graph->edge_count,
                  LOCK_CHK_MAX_EDGES);
 }
 

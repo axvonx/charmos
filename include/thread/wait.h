@@ -36,6 +36,7 @@ struct thread_wait_block {
     struct thread_wait_header *header;
     uint64_t epoch;
 };
+ct_assert_struct_size_eq(thread_wait_block, 56);
 
 struct thread_wait_object {
     struct thread_wait_header *header;

@@ -607,6 +607,15 @@ static void crash_where_box(struct report_target *tgt, const char *file,
     report_box_close(&box);
 }
 
+static void crash_code_name_box(struct report_target *tgt, const char *name) {
+    struct report_box box;
+
+    report_box_open(&box, *tgt, NULL, (uint16_t) report_strwidth(name));
+    report_box_printf(&box, "%s%s%s", term_style(TERM_SEV_CRIT), name,
+                      term_style_reset());
+    report_box_close(&box);
+}
+
 static void crash_empty_box_panel(struct report_target *tgt) {
     for (size_t i = 0; i < panic_scene_count; i++)
         report_puts(tgt, panic_scene[i]);
@@ -624,9 +633,40 @@ void crash_facility_printf(const char *fmt, ...) {
         report_wrap(active_facility_target, buf);
     } else {
         vprintf(NULL, fmt, ap);
+        printf_unlocked("\n");
     }
 
     va_end(ap);
+}
+
+void crash_facility_line(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+
+    char buf[REPORT_PANE_LINE_MAX];
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+
+    if (!active_facility_target) {
+        printf_unlocked("%s\n", buf);
+    } else if (report_strwidth(buf) <=
+               report_target_width(active_facility_target)) {
+        report_puts(active_facility_target, buf);
+    } else {
+        size_t indent = strspn(buf, " ");
+        struct report_target hang =
+            report_target_indent(*active_facility_target, (uint16_t) indent);
+        report_wrap(&hang, buf + indent);
+    }
+
+    va_end(ap);
+}
+
+static void crash_facility_dump(const struct crash_facility *facility,
+                                struct report_target *tgt,
+                                struct crash_payload pl) {
+    active_facility_target = tgt;
+    facility->dump(CRASH_CODE_GET_DELTA(pl.code), pl);
+    active_facility_target = NULL;
 }
 
 static void crash_emit_ndjson_records(const struct crash_context *ctx,
@@ -736,36 +776,33 @@ static void crash_report_visual(const struct crash_context *ctx,
     report_section_end();
 
     char name_top[128];
+    const char *code_name = NULL;
     if (facility) {
         uint16_t delta = CRASH_CODE_GET_DELTA(code);
         snprintf(name_top, sizeof(name_top),
-                 "\"%s\" " ANSI_RED "crashed" ANSI_BRIGHT_BLUE
-                 " with code " ANSI_BOLD ANSI_WHITE "0x%x" ANSI_RESET
-                 " - " ANSI_CYAN "\"%s\"" ANSI_RESET,
-                 facility->name ? facility->name : "unknown", code,
-                 facility->to_str ? facility->to_str(delta) : "unknown");
+                 "%s (" ANSI_GREEN "%s" ANSI_BRIGHT_BLUE ") " ANSI_RESET
+                 "crashed with code " ANSI_BOLD ANSI_WHITE "0x%x" ANSI_RESET,
+                 facility->name ? facility->name : "unknown",
+                 facility->desc ? facility->desc : "no description", code);
+        code_name = facility->to_str ? facility->to_str(delta) : NULL;
     } else if (code != 0) {
-        char *to_str = (char *) crash_code_to_str(code);
-        if (!to_str)
-            to_str = "unknown";
-
         snprintf(name_top, sizeof(name_top),
-                 ANSI_RED "crashed" ANSI_BRIGHT_BLUE
-                          " with code " ANSI_BOLD ANSI_WHITE "0x%x" ANSI_RESET
-                          " - " ANSI_CYAN "\"%s\"" ANSI_RESET,
-                 code, to_str);
+                 "crashed" ANSI_BRIGHT_BLUE " with code " ANSI_BOLD ANSI_WHITE
+                 "0x%x" ANSI_RESET,
+                 code);
+        code_name = crash_code_to_str(code);
     } else {
         strcpy(name_top, "empty box");
     }
 
     if (report_section_begin_at(&right, name_top)) {
-        if (facility && facility->dump) {
-            active_facility_target = &right;
-            facility->dump(CRASH_CODE_GET_DELTA(code), ctx->payload);
-            active_facility_target = NULL;
-        } else {
+        if (code_name)
+            crash_code_name_box(&right, code_name);
+
+        if (facility && facility->dump)
+            crash_facility_dump(facility, &right, ctx->payload);
+        else if (!code_name)
             crash_empty_box_panel(&right);
-        }
     }
 
     report_section_end();
@@ -806,6 +843,18 @@ static void crash_report_raw_serial(const struct crash_context *ctx,
                         ctx->func ? ctx->func : "<unknown>");
     if (ctx->msg)
         printf_unlocked("Message : %s\n", ctx->msg);
+
+    enum crash_code code = ctx->payload.code;
+    struct crash_facility *facility = crash_facility_for(code);
+    if (facility) {
+        uint16_t delta = CRASH_CODE_GET_DELTA(code);
+        printf_unlocked("Code    : 0x%x (%s: %s)\n", code,
+                        facility->name ? facility->name : "unknown",
+                        facility->to_str ? facility->to_str(delta) : "unknown");
+        if (facility->dump)
+            crash_facility_dump(facility, NULL, ctx->payload);
+    }
+
     if (regs) {
         printf_unlocked(
             "RIP: %016lx  RSP: %016lx  RFLAGS: %016lx  CR2: %016lx\n",
@@ -922,15 +971,23 @@ const char *crash_code_from_facility_to_str(enum crash_code code) {
     return this->to_str(del);
 }
 
-void crash_facilities_init(void) {
-    enforce(__ekernel_crash_facilities - __skernel_crash_facilities <=
-                UINT16_MAX,
-            "too many?");
+static int cmp_facility(const void *a, const void *b) {
+    return cmp_facility_prefix(&((const struct crash_facility *) a)->prefix, b);
+}
 
-    /* Simple: 1 + index in array, keeps it sorted, avoids 0 */
-    for (struct crash_facility *f = __skernel_crash_facilities;
-         f < __ekernel_crash_facilities; f++)
-        f->prefix = (f - __skernel_crash_facilities) + 1;
+void crash_facilities_init(void) {
+    size_t count = __ekernel_crash_facilities - __skernel_crash_facilities;
+    struct crash_facility *f = __skernel_crash_facilities;
+
+    heapsort(f, count, sizeof(*f), cmp_facility);
+
+    for (size_t i = 0; i < count; i++) {
+        enforce(f[i].prefix != CRASH_PREFIX_RESERVED,
+                "crash facility '%s' has the reserved prefix 0", f[i].name);
+        enforce(i == 0 || f[i].prefix != f[i - 1].prefix,
+                "crash facilities '%s' and '%s' share prefix %u", f[i - 1].name,
+                f[i].name, f[i].prefix);
+    }
 }
 
 #ifdef DEBUG_CRASH

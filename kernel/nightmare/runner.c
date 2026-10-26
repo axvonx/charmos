@@ -1,3 +1,4 @@
+#ifdef TEST_NIGHTMARE_ENABLED
 #include "internal.h"
 
 #include <asm.h>
@@ -591,3 +592,4 @@ void nightmare_run(void) {
         nightmare_emit_verdict(final, "completed");
 #endif
 }
+#endif

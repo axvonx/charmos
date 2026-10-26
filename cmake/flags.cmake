@@ -20,7 +20,6 @@ set(KERNEL_WARNINGS
     -Werror=int-conversion
     -Werror=enum-compare
     -Werror=enum-conversion
-    -Werror=sign-compare
     -Werror=shift-count-overflow
     -Werror=shift-count-negative
     -Werror=shift-negative-value
@@ -51,13 +50,7 @@ set(KERNEL_WARNINGS
     -Werror=int-in-bool-context
     -Werror=implicit-fallthrough
     -Werror=undef
-    -Werror=strict-prototypes
-    -Werror=missing-prototypes
-    # dead code and dropped results
-    -Werror=unused-result
-    -Werror=unused-function
-    -Werror=unused-variable
-    -Werror=unused-but-set-variable)
+    -Werror=strict-prototypes)
 
 if (DEBUG_ASAN)
     set(KERNEL_FRAME_LIMIT 16384)

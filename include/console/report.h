@@ -174,7 +174,7 @@ void report_fields_end(struct report_fields *g);
 #define REPORT_PANES_MAX UINT32_C(3)
 
 /* Max rows for a pane */
-#define REPORT_PANE_ROWS 48
+#define REPORT_PANE_ROWS 96
 
 /* Bytes stored per line */
 #define REPORT_PANE_LINE_MAX 384

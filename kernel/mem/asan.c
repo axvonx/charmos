@@ -1,4 +1,6 @@
+#include <compiler/intrinsic.h>
 #include <console/crash.h>
+#include <console/term.h>
 #include <dbg.h>
 #include <enforce.h>
 #include <global.h>
@@ -17,22 +19,6 @@
 
 #include "mem/slab/internal.h"
 
-#define kasan_panic(what, addr, size, is_write)                                \
-    do {                                                                       \
-        char _kasan_msg[CRASH_MSG_MAX];                                        \
-        snprintf(_kasan_msg, sizeof(_kasan_msg),                               \
-                 "KASAN: %s at %p (size=%zu, %s)", (what), (addr),             \
-                 (size_t) (size), (is_write) ? "store" : "load");              \
-        crash_full(&(struct crash_context){                                    \
-            .source = CRASH_SOURCE_KASAN,                                      \
-            .formats = CRASH_FMT_DEFAULT,                                      \
-            .file = __FILE__,                                                  \
-            .line = __LINE__,                                                  \
-            .func = __func__,                                                  \
-            .msg = _kasan_msg,                                                 \
-        });                                                                    \
-    } while (0)
-
 #ifdef DEBUG_ASAN
 LOG_SITE_DEFINE_PRINT(asan);
 LOG_HANDLE_DEFINE_PRINT(asan);
@@ -43,6 +29,13 @@ LOG_HANDLE_DEFINE_PRINT(asan);
 #define ASAN_COVERED_END SLAB_HEAP_END
 
 static bool asan_ready = false;
+
+static cc_noreturn void asan_runtime_panic(const char *what, const void *addr,
+                                           size_t size, const char *file,
+                                           int line, const char *func);
+
+#define kasan_panic(what, addr, size)                                          \
+    asan_runtime_panic((what), (addr), (size), __FILE__, __LINE__, __func__)
 
 /* Two pages that everything aliases to for pages that are fully OK/not OK to
  * read/modify */
@@ -221,13 +214,11 @@ static void asan_map_early_shadow(void) {
 
     asan_zero_shadow_phys = pmm_alloc_page(ALLOC_FLAGS_ZERO);
     if (!asan_zero_shadow_phys)
-        kasan_panic("could not allocate the shared shadow page", NULL, 0,
-                    false);
+        kasan_panic("could not allocate the shared shadow page", NULL, 0);
 
     asan_freed_shadow_phys = pmm_alloc_page();
     if (!asan_freed_shadow_phys)
-        kasan_panic("could not allocate the shared freed shadow page", NULL, 0,
-                    false);
+        kasan_panic("could not allocate the shared freed shadow page", NULL, 0);
 
     memset(hhdm_paddr_to_ptr(asan_freed_shadow_phys), ASAN_POISON_HEAP_FREED,
            PAGE_SIZE);
@@ -237,7 +228,7 @@ static void asan_map_early_shadow(void) {
                                    .page_flags = PAGE_PRESENT | PAGE_XD);
     if (err < 0)
         kasan_panic("could not map the shared shadow window",
-                    (const void *) start, end - start, false);
+                    (const void *) start, end - start);
 
     asan_info("shared shadow: [%lx, %lx), %zu GiB of window on one zero page "
               "at %lx\n",
@@ -261,25 +252,98 @@ NDJSON_DEFINE(asan_frame, NDJSON_SECTION_ASAN, NDJSON_KIND_FRAME, 1,
               NDJSON_U64(idx), NDJSON_HEX(addr), NDJSON_STR(sym),
               NDJSON_U64(off));
 
-static void asan_report_shadow(const void *addr) {
-    const uint8_t *sh = asan_shadow_for_internal(addr);
+enum asan_crash_code {
+    ASAN_CRASH_USE_AFTER_FREE = CRASH_CODE_DELTA_START,
+    ASAN_CRASH_HEAP_REDZONE,
+    ASAN_CRASH_UNALLOCATED,
+    ASAN_CRASH_PARTIAL_GRANULE,
+    ASAN_CRASH_POISONED,
+    ASAN_CRASH_UNCLASSIFIED,
+    ASAN_CRASH_RUNTIME,
+};
 
-    printf("[ASAN] shadow near %p, one byte per %u bytes, fault at column 0:\n",
-           addr, (unsigned) ASAN_GRANULE);
-    for (int row = -1; row <= 1; row++) {
-        printf("[ASAN]  %+6d ", row * 16 * (int) ASAN_GRANULE);
-        for (int i = 0; i < 16; i++)
-            printf("%02x ", sh[row * 16 + i]);
-        printf("\n");
+#define ASAN_REPORT_SHADOW_ROWS 3
+#define ASAN_REPORT_SHADOW_COLS 8 /* fits the facility box at 80 columns */
+#define ASAN_REPORT_NOTE_MAX 128
+
+struct asan_report {
+    const void *addr;
+    size_t size;
+    bool is_write;
+    bool has_shadow;
+    uint8_t shadow[ASAN_REPORT_SHADOW_ROWS][ASAN_REPORT_SHADOW_COLS];
+    char owner[ASAN_REPORT_NOTE_MAX]; /* empty = not a slab object */
+    stack_handle_t owner_trace;
+    struct slab *owner_slab; /* NULL until the object is pinned down */
+    size_t owner_idx;
+};
+
+static const char *asan_crash_code_str(uint16_t delta) {
+    switch (delta) {
+    case ASAN_CRASH_USE_AFTER_FREE: return "Use after free";
+    case ASAN_CRASH_HEAP_REDZONE: return "Heap out of bounds (redzone)";
+    case ASAN_CRASH_UNALLOCATED: return "Access to unallocated memory";
+    case ASAN_CRASH_PARTIAL_GRANULE: return "Heap overflow (partial granule)";
+    case ASAN_CRASH_POISONED: return "Access to poisoned memory";
+    case ASAN_CRASH_UNCLASSIFIED: return "Bad memory access";
+    case ASAN_CRASH_RUNTIME: return "ASAN runtime failure";
+    default: return "Unknown ASAN fault";
     }
 }
 
-/* stack_depot_print is bare addresses, so we debug_symbolize */
-static void asan_report_stack(stack_handle_t h) {
+static enum asan_crash_code asan_poison_code(uint8_t shadow) {
+    switch (shadow) {
+    case ASAN_POISON_HEAP_FREED: return ASAN_CRASH_USE_AFTER_FREE;
+    case ASAN_POISON_HEAP_REDZONE: return ASAN_CRASH_HEAP_REDZONE;
+    case ASAN_POISON_VALUE: return ASAN_CRASH_UNALLOCATED;
+    default:
+        return asan_shadow_is_poison(shadow) ? ASAN_CRASH_POISONED
+                                             : ASAN_CRASH_PARTIAL_GRANULE;
+    }
+}
+
+static void asan_crash_dump(uint16_t delta, struct crash_payload pl);
+
+CRASH_FACILITY_DEFINE(asan, .desc = "Kernel address sanitizer",
+                      .to_str = asan_crash_code_str, .dump = asan_crash_dump);
+
+static void asan_dump_shadow(const struct asan_report *r) {
+    char row[256]; /* room for a color escape around every byte */
+
+    crash_facility_line("%sshadow bytes%s", term_style(TERM_SEV_LABEL),
+                        term_style_reset());
+
+    for (int i = 0; i < ASAN_REPORT_SHADOW_ROWS; i++) {
+        int rel = i - ASAN_REPORT_SHADOW_ROWS / 2;
+        size_t n = 0;
+
+        for (int j = 0; j < ASAN_REPORT_SHADOW_COLS; j++) {
+            bool fault = rel == 0 && j == 0;
+            uint8_t b = r->shadow[i][j];
+            const char *style = fault ? term_style(TERM_SEV_CRIT)
+                                : b   ? term_style(TERM_SEV_WARN)
+                                      : term_style(TERM_SEV_DIM);
+
+            n += (size_t) snprintf(row + n, (int) (sizeof(row) - n),
+                                   "%s%02x%s ", style, b, term_style_reset());
+            if (n >= sizeof(row))
+                break;
+        }
+
+        char off[16];
+        snprintf(off, (int) sizeof(off), "%s%d", rel > 0 ? "+" : "",
+                 rel * ASAN_REPORT_SHADOW_COLS * (int) ASAN_GRANULE);
+        crash_facility_line("%s%6s%s  %s", term_style(TERM_SEV_DIM), off,
+                            term_style_reset(), row);
+    }
+}
+
+static void asan_dump_trace(stack_handle_t h) {
     struct stack_depot_record *rec = stack_depot_get_record(h);
 
     if (!rec) {
-        printf("[ASAN]   <trace no longer in the depot>\n");
+        crash_facility_line("  %s<trace no longer in the depot>%s",
+                            term_style(TERM_SEV_DIM), term_style_reset());
         return;
     }
 
@@ -288,115 +352,163 @@ static void asan_report_stack(stack_handle_t h) {
         const char *sym = debug_symbolize(rec->entries[i], &off);
 
         if (sym)
-            printf("[ASAN]   #%-2lu %p %s+0x%lx\n", (unsigned long) i,
-                   (void *) rec->entries[i], sym, (unsigned long) off);
+            crash_facility_line("  %s#%-2zu%s %s+0x%lx",
+                                term_style(TERM_SEV_DIM), i, term_style_reset(),
+                                sym, off);
         else
-            printf("[ASAN]   #%-2lu %p\n", (unsigned long) i,
-                   (void *) rec->entries[i]);
+            crash_facility_line("  %s#%-2zu%s %016lx", term_style(TERM_SEV_DIM),
+                                i, term_style_reset(), rec->entries[i]);
+    }
+}
+
+static void asan_crash_dump(uint16_t delta, struct crash_payload pl) {
+    const struct asan_report *r = pl.data;
+
+    if (!r)
+        return;
+
+    crash_facility_line("%saddress%s %p", term_style(TERM_SEV_LABEL),
+                        term_style_reset(), r->addr);
+
+    if (delta != ASAN_CRASH_RUNTIME)
+        crash_facility_line("%saccess%s  %zu-byte %s",
+                            term_style(TERM_SEV_LABEL), term_style_reset(),
+                            r->size, r->is_write ? "store" : "load");
+    else if (r->size)
+        crash_facility_line("%ssize%s    0x%zx", term_style(TERM_SEV_LABEL),
+                            term_style_reset(), r->size);
+
+    if (r->has_shadow) {
+        crash_facility_line("");
+        asan_dump_shadow(r);
+    }
+
+    if (r->owner[0]) {
+        crash_facility_line("");
+        crash_facility_printf("%sowner%s %s", term_style(TERM_SEV_LABEL),
+                              term_style_reset(), r->owner);
+        if (r->owner_trace)
+            asan_dump_trace(r->owner_trace);
+    }
+}
+
+static void asan_collect_shadow(struct asan_report *r) {
+    if (!asan_ready || !asan_addr_covered((uintptr_t) r->addr, 1))
+        return;
+
+    const uint8_t *sh = asan_shadow_for_internal(r->addr);
+    int mid = ASAN_REPORT_SHADOW_ROWS / 2;
+
+    for (int i = 0; i < ASAN_REPORT_SHADOW_ROWS; i++)
+        for (int j = 0; j < ASAN_REPORT_SHADOW_COLS; j++)
+            r->shadow[i][j] = sh[(i - mid) * ASAN_REPORT_SHADOW_COLS + j];
+
+    r->has_shadow = true;
+}
+
+static void asan_emit_trace(stack_handle_t h) {
+    struct stack_depot_record *rec = stack_depot_get_record(h);
+
+    if (!rec)
+        return;
+
+    for (size_t i = 0; i < rec->num_entries; i++) {
+        uint64_t off = 0;
+        const char *sym = debug_symbolize(rec->entries[i], &off);
 
         ndjson_emit(asan_frame, .idx = i, .addr = rec->entries[i], .sym = sym,
                     .off = off);
     }
 }
 
+#define asan_owner_note(r, ...)                                                \
+    snprintf((r)->owner, sizeof((r)->owner), __VA_ARGS__)
+
 /* Slabs keep a stack depot handle per object when DEBUG_SLAB_DEEP, so
  * we must tread carefully when retrieving the backtrace, lest we
  * dereference an unmapped page or cause other problems */
-static void asan_report_owner(const void *addr) {
+static void asan_collect_owner(struct asan_report *r) {
 #ifdef DEBUG_SLAB_DEEP
     static bool reporting;
+    void *addr = (void *) r->addr;
 
-    if (reporting || !slab_ptr_in_slab((void *) addr))
+    if (reporting || !slab_ptr_in_slab(addr))
         return;
     reporting = true;
 
     if (slab_order_map_get((vaddr_t) addr) == SLAB_POW2_ORDER_EMPTY) {
-        printf("[ASAN] %p is in the slab heap but no chunk is mapped there\n",
-               addr);
+        asan_owner_note(r, "in the slab heap but no chunk is mapped there");
         goto out;
     }
 
-    struct slab *s = slab_for_ptr((void *) addr);
+    struct slab *s = slab_for_ptr(addr);
     struct slab_cache *cache = s->parent_cache;
 
     /* Metadata may be what went wrong, so sanity check before trusting it */
     if ((uintptr_t) cache < SLAB_HEAP_START || !cache->obj_stride ||
         !cache->objs_per_slab || s->mem < (vaddr_t) s ||
         (vaddr_t) addr < s->mem) {
-        printf("[ASAN] slab metadata at %p is not usable (cache=%p)\n",
-               (void *) s, (void *) cache);
+        asan_owner_note(r, "slab metadata at %p is not usable (cache=%p)",
+                        (void *) s, (void *) cache);
         goto out;
     }
 
-    size_t idx = slab_allocation_index(s, (void *) addr);
+    size_t idx = slab_allocation_index(s, addr);
     if (idx >= cache->objs_per_slab) {
-        printf("[ASAN] object index %lu out of range for this slab\n",
-               (unsigned long) idx);
+        asan_owner_note(r, "object index %zu out of range for slab %p", idx,
+                        (void *) s);
         goto out;
     }
 
     stack_handle_t h = s->traces[idx];
     if (!h) {
-        printf("[ASAN] object %lu of slab %p has no recorded allocation\n",
-               (unsigned long) idx, (void *) s);
+        asan_owner_note(r, "object %zu of slab %p has no owner", idx,
+                        (void *) s);
         goto out;
     }
 
-    printf("[ASAN] object %lu of slab %p was last allocated at:\n",
-           (unsigned long) idx, (void *) s);
-    asan_report_stack(h);
+    asan_owner_note(r, "object %zu of slab %p, last allocated at:", idx,
+                    (void *) s);
+    r->owner_slab = s;
+    r->owner_idx = idx;
+    r->owner_trace = h;
+    asan_emit_trace(h);
 
 out:
     reporting = false;
 #else
-    cc_ignore(addr);
+    cc_ignore(r);
 #endif
 }
 
-static void __asan_report_and_panic(const char *what, const void *addr,
-                                    size_t size, bool is_write) {
-    printf("[ASAN] %s at %p size=%zu %s\n", what, addr, size,
-           is_write ? "store" : "load");
-
-    ndjson_emit(asan_fault, .what = what, .addr = (uint64_t) (uintptr_t) addr,
-                .size = size, .access = is_write ? "store" : "load");
-    asan_report_shadow(addr);
-    asan_report_owner(addr);
-
-    char msg[CRASH_MSG_MAX];
-    snprintf(msg, sizeof(msg), "KASAN: %s at %p (size=%zu, %s)",
-             what ? what : "<fault>", addr, size, is_write ? "store" : "load");
+static cc_noreturn void asan_crash(enum asan_crash_code code, const char *msg,
+                                   struct asan_report *r, const char *file,
+                                   int line, const char *func) {
     crash_full(&(struct crash_context){
+        .payload = CRASH_PAYLOAD(CRASH_CODE(asan, code), r),
         .source = CRASH_SOURCE_KASAN,
         .formats = CRASH_FMT_DEFAULT,
-        .file = __FILE__,
-        .line = __LINE__,
-        .func = __func__,
+        .file = file,
+        .line = line,
+        .func = func,
         .msg = msg,
     });
 }
 
-static const char *asan_poison_reason(uint8_t shadow) {
-    switch (shadow) {
-    case ASAN_POISON_HEAP_FREED: return "use-after-free";
-    case ASAN_POISON_HEAP_REDZONE: return "heap redzone (out of bounds)";
-    case ASAN_POISON_VALUE: return "poisoned (unallocated)";
-    default:
-        return asan_shadow_is_poison(shadow)
-                   ? "poisoned"
-                   : "heap overflow (partial granule)";
-    }
+static cc_noreturn void asan_runtime_panic(const char *what, const void *addr,
+                                           size_t size, const char *file,
+                                           int line, const char *func) {
+    struct asan_report r = {.addr = addr, .size = size};
+
+    ndjson_emit(asan_fault, .what = what, .addr = (uint64_t) (uintptr_t) addr,
+                .size = size, .access = "");
+    asan_crash(ASAN_CRASH_RUNTIME, what, &r, file, line, func);
 }
 
-static inline void asan_check_access_core(const void *addr, size_t size,
-                                          bool is_write) {
-    ASAN_ABORT_IF_NOT_READY();
-
-    if (size == 0)
-        return;
-
-    if (!asan_addr_covered((uintptr_t) addr, size))
-        return;
+/* First shadow byte that makes [addr, addr + size) bad, 0 if all of it is OK */
+static inline uint8_t asan_bad_shadow(const void *addr, size_t size) {
+    if (size == 0 || !asan_addr_covered((uintptr_t) addr, size))
+        return 0;
 
     uintptr_t start = (uintptr_t) addr;
     uintptr_t last = start + (size - 1);
@@ -414,49 +526,88 @@ static inline void asan_check_access_core(const void *addr, size_t size,
         if (!asan_shadow_is_poison(s) && hi <= s)
             continue;
 
-        __asan_report_and_panic(asan_poison_reason(s), addr, size, is_write);
-        return;
+        return s;
     }
+
+    return 0;
+}
+
+static cc_noreturn void asan_report_access(const void *addr, size_t size,
+                                           bool is_write, void *pc) {
+    uint8_t s = asan_ready ? asan_bad_shadow(addr, size) : 0;
+    enum asan_crash_code code =
+        s ? asan_poison_code(s) : ASAN_CRASH_UNCLASSIFIED;
+    const char *access = is_write ? "store" : "load";
+    struct asan_report r = {.addr = addr, .size = size, .is_write = is_write};
+    char msg[CRASH_MSG_MAX];
+
+    ndjson_emit(asan_fault, .what = asan_crash_code_str(code),
+                .addr = (uint64_t) (uintptr_t) addr, .size = size,
+                .access = access);
+
+    asan_collect_shadow(&r);
+    asan_collect_owner(&r);
+
+    int n = snprintf(msg, sizeof(msg), "%zu-byte %s at %p", size, access, addr);
+    if (r.owner_slab && n > 0 && (size_t) n < sizeof(msg))
+        snprintf(msg + n, sizeof(msg) - (size_t) n, " (object %zu of slab %p)",
+                 r.owner_idx, (void *) r.owner_slab);
+
+    uint64_t site = (uint64_t) (uintptr_t) pc - 1;
+    uint64_t off = 0;
+    uint32_t line = 0;
+    const char *func = debug_symbolize(site, &off);
+    const char *file = debug_line_for(site, &line);
+
+    asan_crash(code, msg, &r, file, (int) line, func);
+}
+
+static inline void asan_check_access_core(const void *addr, size_t size,
+                                          bool is_write, void *pc) {
+    ASAN_ABORT_IF_NOT_READY();
+
+    if (asan_bad_shadow(addr, size))
+        asan_report_access(addr, size, is_write, pc);
 }
 
 void __asan_load1(const void *addr) {
-    asan_check_access_core(addr, 1, false);
+    asan_check_access_core(addr, 1, false, ci_return_address(0));
 }
 void __asan_load2(const void *addr) {
-    asan_check_access_core(addr, 2, false);
+    asan_check_access_core(addr, 2, false, ci_return_address(0));
 }
 void __asan_load4(const void *addr) {
-    asan_check_access_core(addr, 4, false);
+    asan_check_access_core(addr, 4, false, ci_return_address(0));
 }
 void __asan_load8(const void *addr) {
-    asan_check_access_core(addr, 8, false);
+    asan_check_access_core(addr, 8, false, ci_return_address(0));
 }
 void __asan_load16(const void *addr) {
-    asan_check_access_core(addr, 16, false);
+    asan_check_access_core(addr, 16, false, ci_return_address(0));
 } /* some compilers */
 
 void __asan_store1(const void *addr) {
-    asan_check_access_core(addr, 1, true);
+    asan_check_access_core(addr, 1, true, ci_return_address(0));
 }
 void __asan_store2(const void *addr) {
-    asan_check_access_core(addr, 2, true);
+    asan_check_access_core(addr, 2, true, ci_return_address(0));
 }
 void __asan_store4(const void *addr) {
-    asan_check_access_core(addr, 4, true);
+    asan_check_access_core(addr, 4, true, ci_return_address(0));
 }
 void __asan_store8(const void *addr) {
-    asan_check_access_core(addr, 8, true);
+    asan_check_access_core(addr, 8, true, ci_return_address(0));
 }
 void __asan_store16(const void *addr) {
-    asan_check_access_core(addr, 16, true);
+    asan_check_access_core(addr, 16, true, ci_return_address(0));
 }
 
 /* Generic wrappers the compiler sometimes uses */
 void __asan_loadN(const void *addr, size_t size) {
-    asan_check_access_core(addr, size, false);
+    asan_check_access_core(addr, size, false, ci_return_address(0));
 }
 void __asan_storeN(const void *addr, size_t size) {
-    asan_check_access_core(addr, size, true);
+    asan_check_access_core(addr, size, true, ci_return_address(0));
 }
 
 /* The compiler's spelling of the same two operations */
@@ -536,61 +687,59 @@ void __asan_stack_free(void *addr) {
 }
 
 void __asan_report_load1(void *addr) {
-    __asan_report_and_panic("ASAN: load1", addr, 1, false);
+    asan_report_access(addr, 1, false, ci_return_address(0));
 }
 void __asan_report_load2(void *addr) {
-    __asan_report_and_panic("ASAN: load2", addr, 2, false);
+    asan_report_access(addr, 2, false, ci_return_address(0));
 }
 void __asan_report_load4(void *addr) {
-    __asan_report_and_panic("ASAN: load4", addr, 4, false);
+    asan_report_access(addr, 4, false, ci_return_address(0));
 }
 void __asan_report_load8(void *addr) {
-    __asan_report_and_panic("ASAN: load8", addr, 8, false);
+    asan_report_access(addr, 8, false, ci_return_address(0));
 }
 void __asan_report_load16(void *addr) {
-    __asan_report_and_panic("ASAN: invalid 16-byte load", addr, 16, false);
+    asan_report_access(addr, 16, false, ci_return_address(0));
 }
 
 void __asan_report_load32(void *addr) {
-    __asan_report_and_panic("ASAN: invalid 32-byte load", addr, 32, false);
+    asan_report_access(addr, 32, false, ci_return_address(0));
 }
 
 void __asan_report_load64(void *addr) {
-    __asan_report_and_panic("ASAN: invalid 64-byte load", addr, 64, false);
+    asan_report_access(addr, 64, false, ci_return_address(0));
 }
 
 void __asan_report_load_n(void *addr, size_t size) {
-    __asan_report_and_panic("ASAN: invalid variable-size load", addr, size,
-                            false);
+    asan_report_access(addr, size, false, ci_return_address(0));
 }
 
 void __asan_report_store1(void *addr) {
-    __asan_report_and_panic("ASAN: store1", addr, 1, true);
+    asan_report_access(addr, 1, true, ci_return_address(0));
 }
 void __asan_report_store2(void *addr) {
-    __asan_report_and_panic("ASAN: store2", addr, 2, true);
+    asan_report_access(addr, 2, true, ci_return_address(0));
 }
 void __asan_report_store4(void *addr) {
-    __asan_report_and_panic("ASAN: store4", addr, 4, true);
+    asan_report_access(addr, 4, true, ci_return_address(0));
 }
 void __asan_report_store8(void *addr) {
-    __asan_report_and_panic("ASAN: store8", addr, 8, true);
+    asan_report_access(addr, 8, true, ci_return_address(0));
 }
 void __asan_report_store16(void *addr) {
-    __asan_report_and_panic("ASAN: invalid 16-byte store", addr, 16, true);
+    asan_report_access(addr, 16, true, ci_return_address(0));
 }
 
 void __asan_report_store32(void *addr) {
-    __asan_report_and_panic("ASAN: invalid 32-byte store", addr, 32, true);
+    asan_report_access(addr, 32, true, ci_return_address(0));
 }
 
 void __asan_report_store64(void *addr) {
-    __asan_report_and_panic("ASAN: invalid 64-byte store", addr, 64, true);
+    asan_report_access(addr, 64, true, ci_return_address(0));
 }
 
 void __asan_report_store_n(void *addr, size_t size) {
-    __asan_report_and_panic("ASAN: invalid variable-size store", addr, size,
-                            true);
+    asan_report_access(addr, size, true, ci_return_address(0));
 }
 
 int __asan_option_detect_stack_use_after_return = 0;
@@ -669,12 +818,11 @@ void __asan_stack_free_9(void *p, size_t size) {
 
 void *__asan_malloc(size_t size) {
     /* Not relevant for kernel: just panic if somehow called */
-    __asan_report_and_panic("asan_malloc called", NULL, size, true);
-    return NULL;
+    kasan_panic("__asan_malloc called", NULL, size);
 }
 
 void __asan_free(void *p) {
-    __asan_report_and_panic("asan_free called", p, 0, true);
+    kasan_panic("__asan_free called", p, 0);
 }
 
 void __asan_malloc_hook(void *ptr, size_t size) {

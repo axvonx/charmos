@@ -48,6 +48,17 @@ enum crash_code {
     CRASH_CODE_GENERIC,
 };
 
+enum crash_facility_prefix {
+    CRASH_PREFIX_RESERVED = 0,
+
+    CRASH_PREFIX_VALIDATOR_FIRST = 1,
+    CRASH_PREFIX_asan = CRASH_PREFIX_VALIDATOR_FIRST,
+    CRASH_PREFIX_lock_chk,
+    CRASH_PREFIX_VALIDATOR_LAST = 16,
+
+    CRASH_PREFIX_OPEN_FIRST,
+};
+
 enum crash_source {
     CRASH_SOURCE_PANIC = 0,     /* panic() call */
     CRASH_SOURCE_ENFORCE,       /* enforce() failure */
@@ -250,13 +261,13 @@ struct crash_context {
 
 #define CRASH_CODE_TO_PAYLOAD(c) ((struct crash_payload) {.code = c})
 #define CRASH_CODE_CREATE(pre, del)                                            \
-    ({ ((((int) (pre)) << 16) | (((int) (del)) & 0xFFFF)); })
+    ((((int) (pre)) << 16) | (((int) (del)) & 0xFFFF))
 
-#define CRASH_CODE_GET_FACILITY(c) ({ (((c)) >> 16) & 0xFFFF; })
+#define CRASH_CODE_GET_FACILITY(c) ((((c)) >> 16) & 0xFFFF)
 
-#define CRASH_CODE_GET_DELTA(c) ({ (((c)) & 0xFFFF); })
+#define CRASH_CODE_GET_DELTA(c) (((c)) & 0xFFFF)
 
-#define CRASH_CODE_PREFIX(n) ((__crash_facility_##n).prefix)
+#define CRASH_CODE_PREFIX(n) (CRASH_PREFIX_##n)
 #define CRASH_CODE_DELTA_START (1)
 #define CRASH_CODE(n, d) CRASH_CODE_CREATE(CRASH_CODE_PREFIX(n), d)
 
@@ -265,7 +276,7 @@ struct crash_context {
     extern struct crash_facility __crash_facility_##n
 #define CRASH_FACILITY_DEFINE(n, ...)                                          \
     LINKER_SECTION_OBJECT(struct crash_facility, crash_facilities)             \
-    __crash_facility_##n = {.name = #n, __VA_ARGS__}
+    __crash_facility_##n = {.prefix = CRASH_PREFIX_##n, .name = #n, __VA_ARGS__}
 
 LINKER_SECTION_EXTERN(struct crash_facility, crash_facilities);
 
@@ -289,6 +300,7 @@ const char *crash_code_from_facility_to_str(enum crash_code code);
 void crash_nmi_handoff(void *p, struct irq_registers *irqc);
 void debug_print_stack(void);
 void crash_facility_printf(const char *fmt, ...) cc_printf_like(1, 2);
+void crash_facility_line(const char *fmt, ...) cc_printf_like(1, 2);
 
 #ifdef DEBUG_CRASH
 

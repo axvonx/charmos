@@ -38,7 +38,7 @@ void lock_debug_spin_classify(atomic(enum lock_op_flags) * usage,
     if ((expected & LOCK_OP_IRQ_MASK) != (requested & LOCK_OP_IRQ_MASK)) {
         struct lock_chk_fault fail = lock_chk_fault_from_lock(
             LOCK_CHK_FAIL_CONTEXT, lock, site, LOCK_CHK_MODE_IGNORED);
-        lock_chk_fail(&fail, "%s %p changed IRQL usage",
+        lock_chk_fail(&fail, "%s %p (IRQL usage changed)",
                       lock_chk_type_to_str(lock->type), lock->instance);
     }
 }
@@ -55,7 +55,8 @@ bool lock_debug_spin_push(struct lock_chk_lock *lock, enum irql prev_irql,
         fail.capacity_pool = "shallow spin stack";
         fail.capacity_used = LOCK_CHK_MAX_SPIN_DEPTH;
         fail.capacity_limit = LOCK_CHK_MAX_SPIN_DEPTH;
-        lock_chk_fail(&fail, "Shallow spin stack capacity exhausted (%u/%u)",
+        lock_chk_fail(&fail, "%s %p (shallow spin stack %u/%u)",
+                      lock_chk_type_to_str(lock->type), lock->instance,
                       LOCK_CHK_MAX_SPIN_DEPTH, LOCK_CHK_MAX_SPIN_DEPTH);
         atomic_store_release(&lock_chk_global.debug, LOCK_CHK_DEGRADED);
         return false;
@@ -82,8 +83,8 @@ void lock_debug_spin_validate_top(struct lock_chk_lock *lock,
     if (cpu->depth == 0) {
         struct lock_chk_fault fail = lock_chk_fault_from_lock(
             LOCK_CHK_FAIL_SPIN_ORDER, lock, site, LOCK_CHK_MODE_IGNORED);
-        lock_chk_fail(&fail, "Releasing untracked %s %p",
-                      lock_chk_type_to_str(type), instance);
+        lock_chk_fail(&fail, "%s %p (untracked)", lock_chk_type_to_str(type),
+                      instance);
         return;
     }
 
@@ -92,8 +93,9 @@ void lock_debug_spin_validate_top(struct lock_chk_lock *lock,
         top->prev_irql != prev_irql) {
         struct lock_chk_fault fail = lock_chk_fault_from_lock(
             LOCK_CHK_FAIL_SPIN_ORDER, lock, site, LOCK_CHK_MODE_IGNORED);
-        lock_chk_fail(&fail, "Non-LIFO %s release %p",
-                      lock_chk_type_to_str(type), instance);
+        lock_chk_fail(&fail, "%s %p (top of stack is %s %p)",
+                      lock_chk_type_to_str(type), instance,
+                      lock_chk_type_to_str(top->type), top->instance);
     }
 }
 

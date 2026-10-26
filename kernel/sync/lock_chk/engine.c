@@ -91,7 +91,9 @@ static void lock_chk_do_graph_fail(enum lock_chk_result result,
 
     if (result == LOCK_CHK_RESULT_BAD_CONTEXT) {
         *fault = lock_chk_fault_from_req(LOCK_CHK_FAIL_CONTEXT, request);
-        lock_chk_fail(fault, "Lock class changed interrupt-safety context");
+        lock_chk_fail(fault, "%s %p (class interrupt safety changed)",
+                      lock_chk_type_to_str(request->lock.type),
+                      request->lock.instance);
         return;
     }
 
@@ -100,14 +102,18 @@ static void lock_chk_do_graph_fail(enum lock_chk_result result,
         fault->capacity_pool = "nodes";
         fault->capacity_used = LOCK_CHK_MAX_NODES;
         fault->capacity_limit = LOCK_CHK_MAX_NODES;
-        lock_chk_fail(fault, "Node capacity exhausted (%u/%u)",
-                      LOCK_CHK_MAX_NODES, LOCK_CHK_MAX_NODES);
+        lock_chk_fail(fault, "%s %p (nodes %u/%u)",
+                      lock_chk_type_to_str(request->lock.type),
+                      request->lock.instance, LOCK_CHK_MAX_NODES,
+                      LOCK_CHK_MAX_NODES);
         lock_chk_note_capacity_exhausted(result);
         return;
     }
 
     *fault = lock_chk_fault_from_req(LOCK_CHK_FAIL_UNINITIALIZED, request);
-    lock_chk_fail(fault, "Internal graph preparation failure (%u)", result);
+    lock_chk_fail(fault, "%s %p (graph preparation result %u)",
+                  lock_chk_type_to_str(request->lock.type),
+                  request->lock.instance, result);
 }
 
 static void
@@ -118,13 +124,15 @@ lock_chk_do_validation_fail(enum lock_chk_result result,
 
     if (result == LOCK_CHK_RESULT_BAD_CONTEXT) {
         fail.kind = LOCK_CHK_FAIL_CONTEXT;
-        lock_chk_fail(&fail, "Invalid acquisition context (irq=%d, irql=%u)",
-                      request->in_irq, (unsigned) request->prev_irql);
+        lock_chk_fail(&fail, "%s %p (irq=%d, irql=%u)",
+                      lock_chk_type_to_str(request->lock.type),
+                      request->lock.instance, request->in_irq,
+                      (unsigned) request->prev_irql);
         return;
     }
     if (result == LOCK_CHK_RESULT_RECURSION) {
         fail.kind = LOCK_CHK_FAIL_RECURSION;
-        lock_chk_fail(&fail, "Recursive lock acquisition (instance %p)",
+        lock_chk_fail(&fail, "%s %p", lock_chk_type_to_str(request->lock.type),
                       request->lock.instance);
         return;
     }
@@ -133,15 +141,19 @@ lock_chk_do_validation_fail(enum lock_chk_result result,
         fail.capacity_pool = "per-thread held";
         fail.capacity_used = LOCK_CHK_MAX_HELD_LOCKS;
         fail.capacity_limit = LOCK_CHK_MAX_HELD_LOCKS;
-        lock_chk_fail(&fail, "Per-thread held capacity exhausted (%u/%u)",
-                      LOCK_CHK_MAX_HELD_LOCKS, LOCK_CHK_MAX_HELD_LOCKS);
+        lock_chk_fail(&fail, "%s %p (per-thread held %u/%u)",
+                      lock_chk_type_to_str(request->lock.type),
+                      request->lock.instance, LOCK_CHK_MAX_HELD_LOCKS,
+                      LOCK_CHK_MAX_HELD_LOCKS);
         if (!lock_chk_global.panic_on_exhaustion)
             lock_chk_degrade();
         return;
     }
 
     fail.kind = LOCK_CHK_FAIL_UNINITIALIZED;
-    lock_chk_fail(&fail, "Subclass out of range (%u >= %u)", request->subclass,
+    lock_chk_fail(&fail, "%s %p (subclass %u >= %u)",
+                  lock_chk_type_to_str(request->lock.type),
+                  request->lock.instance, request->subclass,
                   LOCK_CHK_MAX_SUBCLASSES);
 }
 
@@ -261,7 +273,8 @@ void lock_chk_before_rel(struct lock_chk_rel_token *token,
 
     struct lock_chk_fault fail =
         lock_chk_fault_from_rel(LOCK_CHK_FAIL_RELEASE, request);
-    lock_chk_fail(&fail, "Foreign or unbalanced lock release (instance %p)",
+    lock_chk_fail(&fail, "%s %p (not held by this thread)",
+                  lock_chk_type_to_str(request->lock.type),
                   request->lock.instance);
 
 out:
@@ -326,12 +339,7 @@ bool lock_chk_assert_held_deep(struct lock_chk_lock *lock,
         struct lock_chk_fault fail = lock_chk_fault_from_lock(
             want_held ? LOCK_CHK_FAIL_NOT_HELD : LOCK_CHK_FAIL_UNEXPECTED_HELD,
             lock, site, found_mode);
-        lock_chk_fail(&fail,
-                      want_held ? "Lock assumed held but not held by current "
-                                  "thread (instance %p)"
-                                : "Lock assumed not held but held by current "
-                                  "thread (instance %p)",
-                      instance);
+        lock_chk_fail(&fail, "%s %p", lock_chk_type_to_str(type), instance);
     }
 
 out:
@@ -351,7 +359,9 @@ void lock_chk_assert_schedulable(const struct lock_chk_site *site) {
             .site = site,
         };
         lock_chk_fail(&fail,
-                      "Scheduling while holding a thread-checked spinlock");
+                      "thread '%s' (scheduling with %u thread-checked "
+                      "spinlocks held)",
+                      thread->name, thread->lock_chk.thread_checked_spin_depth);
     }
     lock_chk_leave(&guard);
 }
@@ -369,8 +379,9 @@ void lock_chk_thread_exit(struct thread *thread) {
         struct lock_chk_fault fail = {
             .kind = LOCK_CHK_FAIL_THREAD_EXIT,
         };
-        lock_chk_fail(&fail, "Thread %p exited with %u checked locks held",
-                      thread, thread->lock_chk.thread_checked_depth);
+        lock_chk_fail(&fail, "thread '%s' %p (%u checked locks held)",
+                      thread->name, thread,
+                      thread->lock_chk.thread_checked_depth);
     }
     lock_chk_leave(&guard);
 }
