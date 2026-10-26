@@ -55,8 +55,19 @@
             : (VNEW_PTR(p)) valloc(_vn_bytes_, ##__VA_ARGS__);                 \
     })
 
-/*     struct pkt { uint32_t len; uint8_t data[]; };
- *     struct pkt *pkt = vnew_flex(pkt, data, len, ALLOC_ZERO); */
+#if cn_has_builtin(__builtin_counted_by_ref)
+#define VNEW_FLEX_COUNTER(q, member)                                           \
+    _Generic(__builtin_counted_by_ref((q)->member),                            \
+        void *: &(size_t) {0},                                                 \
+        default: __builtin_counted_by_ref((q)->member))
+#else
+#define VNEW_FLEX_COUNTER(q, member) (&(size_t) {0})
+#endif
+
+/*     struct pkt { uint32_t len; uint8_t data[] cc_counted_by(len); };
+ *     struct pkt *pkt = vnew_flex(pkt, data, len, ALLOC_ZERO);
+ *
+ * pkt->len = len when data is counted_by or NULL if len doesn't fit it */
 #define vnew_flex(p, member, n, ...)                                           \
     ({                                                                         \
         VNEW_CHECK(p);                                                         \
@@ -65,10 +76,16 @@
                                           typeof(&(p)->member[0])),            \
             "vnew_flex: member must be an array, not a pointer");              \
         size_t _vf_tail_, _vf_bytes_;                                          \
-        (ci_mul_overflow((n), sizeof((p)->member[0]), &_vf_tail_) ||           \
-         ci_add_overflow(sizeof(*(p)), _vf_tail_, &_vf_bytes_))                \
-            ? (VNEW_PTR(p)) NULL                                               \
-            : (VNEW_PTR(p)) valloc(_vf_bytes_, ##__VA_ARGS__);                 \
+        __typeof_unqual__(*VNEW_FLEX_COUNTER(p, member)) _vf_count_;           \
+        VNEW_PTR(p) _vf_q_ = NULL;                                             \
+        if (!ci_add_overflow((n), 0, &_vf_count_) &&                           \
+            !ci_mul_overflow((n), sizeof((p)->member[0]), &_vf_tail_) &&       \
+            !ci_add_overflow(sizeof(*(p)), _vf_tail_, &_vf_bytes_)) {          \
+            _vf_q_ = (VNEW_PTR(p)) valloc(_vf_bytes_, ##__VA_ARGS__);          \
+            if (_vf_q_)                                                        \
+                *VNEW_FLEX_COUNTER(_vf_q_, member) = _vf_count_;               \
+        }                                                                      \
+        _vf_q_;                                                                \
     })
 
 #define vfree_aligned_1(ptr) vfree_aligned_2((ptr), ALLOC_BEHAVIOR_DEFAULT)

@@ -10,7 +10,7 @@ struct arena_layout_desc {
 };
 
 struct arena_desc_table {
-    struct arena_desc **descs;
+    struct arena_desc **descs cc_counted_by(desc_count);
     size_t desc_count;
     struct rcu_cb rcu_cb;
 };

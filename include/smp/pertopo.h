@@ -66,9 +66,8 @@ LINKER_SECTION_EXTERN(struct pertopo_descriptor, pertopo_desc);
 
 #define PERTOPO_EXTERN(type, name) PERTOPO_EXTERN_AS(type, name, name)
 
-/* cc_pure so assume() accepts it, ready only ever goes false -> true */
-static inline cc_pure bool
-pertopo_desc_ready(const struct pertopo_descriptor *desc) {
+static inline
+    cc_pure bool pertopo_desc_ready(const struct pertopo_descriptor *desc) {
     return atomic_load(&desc->ready);
 }
 

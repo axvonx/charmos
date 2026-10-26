@@ -18,7 +18,7 @@ struct block_device;
 /* must be allocated with malloc */
 struct bcache_entry {
     /* allocated upon new reads */
-    uint8_t *buffer;
+    uint8_t *buffer cc_counted_by(size);
 
     uint64_t size;
 

@@ -12,7 +12,7 @@ struct rt_slot {
 struct rt_slot_db {
     size_t num_slots;
     struct spinlock lock;
-    struct rt_slot *slots;
+    struct rt_slot *slots cc_counted_by(num_slots);
 };
 
 void rt_scheduler_static_destroy_work_enqueue(struct rt_scheduler_static *rts);

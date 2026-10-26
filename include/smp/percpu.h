@@ -60,9 +60,8 @@ LINKER_SECTION_EXTERN(struct percpu_descriptor, percpu_desc);
 
 #define PERCPU_EXTERN(type, name) PERCPU_EXTERN_AS(type, name, name)
 
-/* cc_pure so assume() accepts it, ready only ever goes false -> true */
-static inline cc_pure bool
-percpu_desc_ready(const struct percpu_descriptor *desc) {
+static inline
+    cc_pure bool percpu_desc_ready(const struct percpu_descriptor *desc) {
     return atomic_load(&desc->ready);
 }
 

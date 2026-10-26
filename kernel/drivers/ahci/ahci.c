@@ -8,6 +8,7 @@
 #include <mem/alloc.h>
 #include <mem/vmm.h>
 #include <registry.h>
+#include <smp/core.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -52,11 +53,11 @@ struct ahci_disk *ahci_discover_device(uint8_t bus, uint8_t device,
         return NULL;
     }
 
-    uint64_t core = 0; /* TODO: BSP only for now */
+    cpu_id_t core = 0; /* TODO: BSP only for now */
     irq_register("ahci", disk->device->irq_num, ahci_isr_handler, disk->device,
                  IRQ_FLAG_NONE);
     irq_set_chip(disk->device->irq_num, lapic_get_chip(), NULL);
-    ioapic_route_irq(irq_line, disk->device->irq_num, core, false);
+    ioapic_route_irq(irq_line, disk->device->irq_num, smp_apic_id(core), false);
     return disk;
 }
 

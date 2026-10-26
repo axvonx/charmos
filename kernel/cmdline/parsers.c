@@ -220,6 +220,18 @@ const struct cmdline_type_parser cmdline_parsers[] = {
         .detect = detect_data_size,
         .parse = cmdline_parse_data_size,
     },
+    /* must come before cpu_mask: "10" is a CPU mask only
+     * when there are more than 10 CPUs, and untyped
+     * data shouldn't change its type with a CPU count */
+    {
+        .type = CMDLINE_TYPE_UINT,
+        .name = "uint",
+        .arg_hint = "<unsigned-int>",
+        .value_size = sizeof(uint64_t),
+        .uses_allocated_ptr = false,
+        .detect = detect_uint,
+        .parse = cmdline_parse_u64,
+    },
     {
         .type = CMDLINE_TYPE_CPU_MASK,
         .name = "cpu_mask",
@@ -255,15 +267,6 @@ const struct cmdline_type_parser cmdline_parsers[] = {
         .uses_allocated_ptr = false,
         .detect = detect_fx,
         .parse = cmdline_parse_fx,
-    },
-    {
-        .type = CMDLINE_TYPE_UINT,
-        .name = "uint",
-        .arg_hint = "<unsigned-int>",
-        .value_size = sizeof(uint64_t),
-        .uses_allocated_ptr = false,
-        .detect = detect_uint,
-        .parse = cmdline_parse_u64,
     },
     {
         .type = CMDLINE_TYPE_INT,
@@ -348,8 +351,6 @@ void cmdline_assign_all_args(void) {
         if (ent->arg != NULL)
             continue;
 
-        /* TYPED and CUSTOM are both CMDLINE_MODE_VAR, a CMDLINE_PARSER()
-         * override is what makes an entry custom */
         if (ent->value.mode == CMDLINE_MODE_CUSTOM && ent->value.parse) {
             for (size_t i = 0; i < cmdline_parsers_count; i++) {
                 if (cmdline_parsers[i].parse == ent->value.parse) {

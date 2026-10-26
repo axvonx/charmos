@@ -85,7 +85,7 @@ struct ndjson_record {
     const char *kind;
     uint16_t version;
     uint16_t nfields;
-    const struct ndjson_field *fields;
+    const struct ndjson_field *fields cc_counted_by(nfields);
 };
 
 LINKER_SECTION_EXTERN(struct ndjson_record, ndjson_records);

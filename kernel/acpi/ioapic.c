@@ -78,7 +78,7 @@ uint32_t ioapic_isa_to_gsi(uint8_t isa_irq) {
     return madt_isa_to_gsi(isa_irq);
 }
 
-void ioapic_route_irq(irq_t irq, uint8_t vector, uint8_t dest_apic_id,
+void ioapic_route_irq(irq_t irq, uint8_t vector, uint32_t dest_apic_id,
                       bool masked) {
     union ioapic_redirection_entry entry = {0};
     entry.vector = vector;
@@ -87,12 +87,12 @@ void ioapic_route_irq(irq_t irq, uint8_t vector, uint8_t dest_apic_id,
     entry.polarity = IOAPIC_POLARITY_ACTIVE_HIGH;
     entry.trigger_mode = IOAPIC_TRIGGER_EDGE;
     entry.mask = masked ? IOAPIC_MASK_MASKED : IOAPIC_MASK_UNMASKED;
-    entry.dest_apic_id = dest_apic_id;
+    entry.dest_apic_id = lapic_dest_8bit(dest_apic_id);
     ioapic_set_redirection_entry(irq, entry.raw);
 }
 
-void ioapic_route_isa_irq(uint8_t isa_irq, uint8_t vector, uint8_t dest_apic_id,
-                          bool masked) {
+void ioapic_route_isa_irq(uint8_t isa_irq, uint8_t vector,
+                          uint32_t dest_apic_id, bool masked) {
     uint32_t gsi = madt_isa_to_gsi(isa_irq);
     uint16_t flags = madt_isa_flags(isa_irq);
 
@@ -100,7 +100,7 @@ void ioapic_route_isa_irq(uint8_t isa_irq, uint8_t vector, uint8_t dest_apic_id,
     entry.vector = vector;
     entry.delivery_mode = IOAPIC_DELIVERY_FIXED;
     entry.dest_mode = IOAPIC_DEST_PHYSICAL;
-    entry.dest_apic_id = dest_apic_id;
+    entry.dest_apic_id = lapic_dest_8bit(dest_apic_id);
     entry.mask = masked ? IOAPIC_MASK_MASKED : IOAPIC_MASK_UNMASKED;
 
     entry.polarity =
@@ -116,7 +116,7 @@ void ioapic_route_isa_irq(uint8_t isa_irq, uint8_t vector, uint8_t dest_apic_id,
     ioapic_set_redirection_entry(gsi, entry.raw);
 }
 
-void ioapic_route_isa_nmi(uint8_t isa_irq, uint8_t dest_apic_id) {
+void ioapic_route_isa_nmi(uint8_t isa_irq, uint32_t dest_apic_id) {
     uint32_t gsi = madt_isa_to_gsi(isa_irq);
 
     union ioapic_redirection_entry entry = {0};
@@ -126,7 +126,7 @@ void ioapic_route_isa_nmi(uint8_t isa_irq, uint8_t dest_apic_id) {
     entry.polarity = IOAPIC_POLARITY_ACTIVE_HIGH;
     entry.trigger_mode = IOAPIC_TRIGGER_EDGE;
     entry.mask = IOAPIC_MASK_UNMASKED;
-    entry.dest_apic_id = dest_apic_id;
+    entry.dest_apic_id = lapic_dest_8bit(dest_apic_id);
 
     ioapic_set_redirection_entry(gsi, entry.raw);
 }

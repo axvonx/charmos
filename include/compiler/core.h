@@ -110,13 +110,13 @@
 #define cc_dealloc(fn, arg_idx)
 #endif
 
-/* clang static analyzer ownership model */
 #if defined(cn_id_clang)
-#define cc_owner_returns(tag) __attribute__((ownership_returns(tag)))
+#define cc_owner_returns(tag, ...)                                             \
+    __attribute__((ownership_returns(tag, ##__VA_ARGS__)))
 #define cc_owner_takes(tag, arg_idx)                                           \
     __attribute__((ownership_takes(tag, arg_idx)))
 #else
-#define cc_owner_returns(tag)
+#define cc_owner_returns(tag, ...)
 #define cc_owner_takes(tag, arg_idx)
 #endif
 
@@ -130,10 +130,40 @@
 #define cc_warning(msg) __attribute__((warning(msg)))
 #define cc_nonnull(...) __attribute__((nonnull(__VA_ARGS__)))
 
-#if cn_has_attribute(counted_by)
+/* Bounds for a flexible array or pointer member */
+#if defined(cn_id_clang) || cn_id_gcc_at_least(16, 0)
 #define cc_counted_by(member) __attribute__((counted_by(member)))
 #else
 #define cc_counted_by(member)
+#endif
+
+#if cn_has_attribute(counted_by_or_null)
+#define cc_counted_by_or_null(member)                                          \
+    __attribute__((counted_by_or_null(member)))
+#else
+#define cc_counted_by_or_null(member)
+#endif
+
+#if cn_has_attribute(sized_by)
+#define cc_sized_by(member) __attribute__((sized_by(member)))
+#else
+#define cc_sized_by(member)
+#endif
+
+#if cn_has_attribute(sized_by_or_null)
+#define cc_sized_by_or_null(member) __attribute__((sized_by_or_null(member)))
+#else
+#define cc_sized_by_or_null(member)
+#endif
+
+/*
+ *     void fill(void *p cc_pass_object_size(0), size_t n)
+ *         cc_diagnose_if(n > __builtin_object_size(p, 0), "overflow", "error");
+ */
+#if cn_has_attribute(pass_object_size)
+#define cc_pass_object_size(type) __attribute__((pass_object_size(type)))
+#else
+#define cc_pass_object_size(type)
 #endif
 
 #if cn_has_attribute(diagnose_if)

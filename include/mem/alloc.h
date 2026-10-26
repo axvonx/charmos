@@ -37,19 +37,21 @@ void *cc_nullable valloc_new(size_t size, struct alloc_params params)
         ALLOC_SIZE_CONTRACT(size);
 void vfree_new(void *ptr, enum alloc_behavior behavior);
 
-void *cc_nullable valloc_from_domain(domain_id_t domain, size_t size)
-    cw_alloc(2) cc_warn_unused_result;
-
 void vfree_full(void *ptr, enum alloc_behavior behavior)
     cc_owner_takes(valloc, 1);
 void vfree_defer_irq(void *ptr) cc_owner_takes(valloc, 1);
 void vfree_aligned_full(void *ptr, enum alloc_behavior behavior)
     cc_owner_takes(valloc_aligned, 1);
 
+void *cc_nullable valloc_from_domain(domain_id_t domain, size_t size)
+    cw_alloc(2) cc_dealloc(vfree_full, 1) cc_dealloc(vfree_defer_irq, 1)
+    cc_owner_returns(valloc, 2) cc_warn_unused_result;
+
 void *cc_nullable valloc_full(size_t size, struct alloc_params params)
     cw_alloc(1) cc_dealloc(vfree_full, 1) cc_dealloc(vfree_defer_irq, 1)
-    cc_owner_returns(valloc) cc_warn_unused_result ALLOC_PARAMS_CONTRACT(params)
-        ALLOC_SIZE_CONTRACT(size);
+    cc_owner_returns(valloc, 1)
+        cc_warn_unused_result ALLOC_PARAMS_CONTRACT(params)
+            ALLOC_SIZE_CONTRACT(size);
 
 void *cc_nullable vrealloc_full(void *ptr, size_t size,
                                 struct alloc_params params) cc_alloc_size(2)
@@ -58,7 +60,7 @@ size_t vsize(void *ptr);
 
 void *cc_nullable valloc_aligned_full(size_t size, size_t align,
                                       struct alloc_params params) cw_alloc(1, 2)
-    cc_dealloc(vfree_aligned_full, 1) cc_owner_returns(valloc_aligned)
+    cc_dealloc(vfree_aligned_full, 1) cc_owner_returns(valloc_aligned, 1)
         cc_warn_unused_result ALLOC_PARAMS_CONTRACT(params)
             ALLOC_SIZE_CONTRACT(size) ALLOC_ALIGN_CONTRACT(align);
 

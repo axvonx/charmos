@@ -86,7 +86,7 @@ struct test_conc {
     atomic_bool quiesce_requested;
     atomic_size_t parked_count;
 
-    struct test_conc_worker *workers;
+    struct test_conc_worker *workers cc_counted_by(worker_count);
     size_t worker_count;
 
     /* An extra thread that should be alerted on

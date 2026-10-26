@@ -14,6 +14,7 @@
 #include <mem/vmm.h>
 #include <registry.h>
 #include <sch/sched.h>
+#include <smp/core.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -126,7 +127,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
     for (uint32_t i = 1; i <= sqs_to_make; i++) {
         uint8_t nvme_isr = irq_alloc_entry();
 
-        pci_enable_msix_on_core(bus, slot, func, nvme_isr, i - 1);
+        pci_enable_msix_on_core(bus, slot, func, nvme_isr, smp_apic_id(i - 1));
         nvme->isr_index[i] = nvme_isr;
 
         nvme_alloc_io_queues(nvme, i);

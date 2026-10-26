@@ -114,6 +114,10 @@ void x2apic_init(void);
 uint64_t lapic_get_id(void);
 uint32_t x2apic_get_id(void);
 uint32_t lapic_this_id(void);
+
+/* IOAPIC entries and MSI addresses have 8 destination bits, larger ones
+ * need x2apic */
+uint8_t lapic_dest_8bit(uint32_t apic_id);
 struct irq_chip *lapic_get_chip(void);
 
 void lapic_icr_write(uint32_t dest, uint32_t lo);

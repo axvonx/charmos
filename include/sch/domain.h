@@ -18,7 +18,7 @@ struct scheduler_group {
 /* per-domain: list of groups at same level */
 struct scheduler_domain {
     enum topology_level level; /* which topology level this domain maps to */
-    struct scheduler_group *groups; /* array */
+    struct scheduler_group *groups cc_counted_by(ngroups);
     size_t ngroups;
     struct scheduler_domain
         *parent; /* pointer to parent domain (higher level) */

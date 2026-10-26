@@ -81,16 +81,6 @@ __STRING_FAST int __memcmp_inline(const void *s1, const void *s2, size_t n) {
     return (int) p1[-1] - (int) p2[-1];
 }
 
-/*
- * Fortify: the primitives below are inline asm, so the compiler can't see
- * what they touch. These checks hand it the object sizes instead, via
- * __builtin_dynamic_object_size, which sees through cw_alloc's alloc_size,
- * local arrays and struct members.
- *
- *   size provably too big     -> compile error (__fortify_overflow)
- *   size known only at runtime -> one compare, panics on overflow
- *   object size unknown        -> SIZE_MAX, the check folds away
- */
 cc_noreturn void fortify_panic(const char *fn, size_t want, size_t have);
 void __fortify_overflow(void)
     cc_error("fortify: size provably exceeds the object it accesses");
@@ -108,7 +98,6 @@ void __fortify_overflow(void)
             fortify_panic(fn, _fortify_want_, _fortify_have_);                 \
     })
 
-/* Only pays for the strlen() when the destination's size is known */
 #define _fortify_str_check(fn, d, need_expr)                                   \
     ({                                                                         \
         if (_fortify_obj(d) != SIZE_MAX)                                       \

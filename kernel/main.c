@@ -108,7 +108,7 @@ cc_no_asan void k_main(void) TSA_ACQUIRES_IRQS {
     bootstage_advance(BOOTSTAGE_EARLY_ALLOCATORS);
     gdt_load();
     syscall_setup(syscall_entry);
-    smp_setup_bsp();
+    smp_setup_bsp(mp_request.response);
 
     clocks_init();
 

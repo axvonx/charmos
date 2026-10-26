@@ -277,7 +277,7 @@ struct wroost_bucket {
 };
 
 struct wroost_hash_table {
-    struct wroost_bucket *buckets;
+    struct wroost_bucket *buckets cc_counted_by(bucket_count);
     size_t bucket_count;
 };
 

@@ -120,7 +120,7 @@ void domain_init(void) {
     }
 
     /* NOTE: This is THE exception that we make */
-    global.cores[0]->domain = global.domains[0];
+    global.cores[0]->domain = global.domains[0]; // NOLINT(*ArrayBound)
 }
 
 static void construct_domains_after_smp(void) {

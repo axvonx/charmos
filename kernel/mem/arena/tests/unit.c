@@ -50,3 +50,18 @@ TEST_DEFINE_UNIT(arena, create_lookup_basic) {
     cc_ignore(a);
     return TEST_SUCCESS;
 }
+
+TEST_DEFINE_UNIT(arena, desc_register_lookup) {
+    static struct arena_desc d_hi = {.name = "test_hi",
+                                     .strategy = (enum arena_strategy) 0x7f02};
+    static struct arena_desc d_lo = {.name = "test_lo",
+                                     .strategy = (enum arena_strategy) 0x7f01};
+
+    TEST_ASSERT_OK(arena_desc_register(&d_hi));
+    TEST_ASSERT_OK(arena_desc_register(&d_lo));
+
+    TEST_ASSERT_PTR_EQ(arena_desc_lookup(d_lo.strategy), &d_lo);
+    TEST_ASSERT_PTR_EQ(arena_desc_lookup(d_hi.strategy), &d_hi);
+    TEST_ASSERT_NULL(arena_desc_lookup((enum arena_strategy) 0x7f03));
+    return TEST_SUCCESS;
+}

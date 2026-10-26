@@ -72,13 +72,13 @@ void ioapic_write(uint8_t reg, uint32_t val);
 uint32_t ioapic_read(uint8_t reg);
 void ioapic_set_redirection_entry(int irq, uint64_t entry);
 uint64_t ioapic_get_redirection_entry(int irq);
-void ioapic_route_irq(irq_t irq, uint8_t vector, uint8_t dest_apic_id,
+void ioapic_route_irq(irq_t irq, uint8_t vector, uint32_t dest_apic_id,
                       bool masked);
 void ioapic_mask_irq(irq_t irq);
 void ioapic_unmask_irq(irq_t irq);
 
 struct irq_chip *ioapic_get_chip(void);
 uint32_t ioapic_isa_to_gsi(uint8_t isa_irq);
-void ioapic_route_isa_irq(uint8_t isa_irq, uint8_t vector, uint8_t dest_apic_id,
-                          bool masked);
-void ioapic_route_isa_nmi(uint8_t isa_irq, uint8_t dest_apic_id);
+void ioapic_route_isa_irq(uint8_t isa_irq, uint8_t vector,
+                          uint32_t dest_apic_id, bool masked);
+void ioapic_route_isa_nmi(uint8_t isa_irq, uint32_t dest_apic_id);

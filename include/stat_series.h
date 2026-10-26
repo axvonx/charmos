@@ -26,12 +26,12 @@ typedef size_t (*stat_series_callback)(struct stat_bucket *bucket);
 
 struct stat_series {
     stat_series_callback bucket_reset; /* to call upon bucket reset */
-    struct stat_bucket *buckets;       /* ringbuffer */
-    uint32_t nbuckets;                 /* how many buckets */
-    atomic_uint32_t current;           /* current bucket idx */
-    time_us_t bucket_us;               /* duration for each bucket */
-    atomic_uint64_t last_update_us;    /* last time we advanced */
-    void *private;                     /* private, per subsystem */
+    struct stat_bucket *buckets cc_counted_by(nbuckets); /* ringbuffer */
+    uint32_t nbuckets;                                   /* how many buckets */
+    atomic_uint32_t current;        /* current bucket idx */
+    time_us_t bucket_us;            /* duration for each bucket */
+    atomic_uint64_t last_update_us; /* last time we advanced */
+    void *private;                  /* private, per subsystem */
     struct spinlock lock;
 };
 

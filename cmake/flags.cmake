@@ -147,6 +147,46 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     list(APPEND KERNEL_WARNINGS -Werror=use-after-free -Werror=mismatched-dealloc)
 endif ()
 
+option(CHARMOS_GCC_ANALYZER "Run GCC -fanalyzer on every compile (slow)" OFF)
+if (CHARMOS_GCC_ANALYZER AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    list(APPEND KERNEL_WARNINGS -fanalyzer)
+    list(
+        APPEND
+        KERNEL_WARNINGS
+        -Werror=analyzer-double-free
+        -Werror=analyzer-use-after-free
+        -Werror=analyzer-free-of-non-heap
+        -Werror=analyzer-use-of-pointer-in-stale-stack-frame
+        -Werror=analyzer-stale-setjmp-buffer
+        -Werror=analyzer-deref-before-check
+        -Werror=analyzer-possible-null-dereference
+        -Werror=analyzer-null-argument
+        -Werror=analyzer-possible-null-argument
+        -Werror=analyzer-jump-through-null
+        -Werror=analyzer-overlapping-buffers
+        -Werror=analyzer-exposure-through-uninit-copy
+        -Werror=analyzer-infinite-recursion
+        -Werror=analyzer-shift-count-negative
+        -Werror=analyzer-shift-count-overflow
+        -Werror=analyzer-write-to-string-literal
+        -Werror=analyzer-va-arg-type-mismatch
+        -Werror=analyzer-va-list-exhausted
+        -Werror=analyzer-va-list-leak
+        -Werror=analyzer-va-list-use-after-va-end)
+    list(
+        APPEND
+        KERNEL_WARNINGS
+        -Wno-analyzer-malloc-leak                    # 47 / 42
+        -Wno-analyzer-null-dereference               # 22 / 24
+        -Wno-analyzer-undefined-behavior-ptrdiff     #  - / 8
+        -Wno-analyzer-out-of-bounds                  #  1 / 4
+        -Wno-analyzer-write-to-const                 #  2 / 2
+        -Wno-analyzer-use-of-uninitialized-value     #  1 / 2
+        -Wno-analyzer-infinite-loop                  #  2 / 2
+        -Wno-analyzer-allocation-size                #  2 / 2
+        -Wno-analyzer-mismatching-deallocation)      #  1 / 1
+endif ()
+
 set(KERNEL_WARNINGS_RELEASE -Wunused -Wvla)
 
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU")

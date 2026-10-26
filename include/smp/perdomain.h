@@ -60,9 +60,8 @@ LINKER_SECTION_EXTERN(struct perdomain_descriptor, perdomain_desc);
 
 #define PERDOMAIN_EXTERN(type, name) PERDOMAIN_EXTERN_AS(type, name, name)
 
-/* cc_pure so assume() accepts it, ready only ever goes false -> true */
-static inline cc_pure bool
-perdomain_desc_ready(const struct perdomain_descriptor *desc) {
+static inline
+    cc_pure bool perdomain_desc_ready(const struct perdomain_descriptor *desc) {
     return atomic_load(&desc->ready);
 }
 

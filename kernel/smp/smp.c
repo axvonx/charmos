@@ -230,8 +230,8 @@ static void init_smt_info(struct core *c) {
         }
     }
 
-    apic_id = c->id;
-    c->package_id = c->id >> core_width;
+    apic_id = smp_apic_id(c->id);
+    c->package_id = apic_id >> core_width;
     c->smt_mask = BIT(smt_width) - 1;
     c->smt_id = apic_id & c->smt_mask;
     c->core_id = (apic_id >> smt_width) & (BIT(core_width - smt_width) - 1);
@@ -271,13 +271,13 @@ static inline void set_core_awake(void) {
 
 /* returns with interrupts disabled; the scheduler takes it from here */
 static void smp_ap_wakeup(struct limine_mp_info *info) TSA_ACQUIRES_IRQS {
-    cc_ignore(info);
     irq_disable();
 
     cr3_write(atomic_load_acq(&cr3));
 
     x2apic_init();
-    cpu_id_t cpu = smp_cpu_from_apic_id(lapic_this_id());
+    cpu_id_t cpu = (cpu_id_t) info->extra_argument; /* smp_map_apic_ids */
+    enforce(lapic_this_id() == smp_apic_id(cpu), "AP APIC ID mismatch");
     setup_cpu(cpu);
 
     gdt_load();
@@ -325,8 +325,9 @@ void smp_wait_for_others_to_idle(void) {
 
 void smp_wake(struct limine_mp_response *mpr) {
     atomic_store_release(&cr3, cr3_read());
-    for (uint64_t i = 1; i < mpr->cpu_count; i++)
-        mpr->cpus[i]->goto_address = smp_ap_wakeup;
+    for (uint64_t i = 0; i < mpr->cpu_count; i++)
+        if (mpr->cpus[i]->lapic_id != mpr->bsp_lapic_id)
+            mpr->cpus[i]->goto_address = smp_ap_wakeup;
 
     smp_core(TOPC_NONE)->tsc_hz = tsc_calibrate();
     if (global.core_count == 1)
@@ -340,7 +341,39 @@ void smp_wake(struct limine_mp_response *mpr) {
         cpu_pause();
 }
 
-void smp_setup_bsp(void) {
+uint32_t *smp_apic_ids;
+
+static void smp_map_apic_ids(struct limine_mp_response *mpr) {
+    smp_apic_ids = nofail_vnews(smp_apic_ids, global.core_count);
+    smp_apic_ids[0] = mpr->bsp_lapic_id;
+
+    cpu_id_t next = 1;
+    for (uint64_t i = 0; i < mpr->cpu_count; i++) {
+        struct limine_mp_info *info = mpr->cpus[i];
+        if (info->lapic_id == mpr->bsp_lapic_id) {
+            info->extra_argument = 0;
+            continue;
+        }
+
+        enforce(next < global.core_count, "limine lists no BSP");
+        info->extra_argument = next;
+        smp_apic_ids[next++] = info->lapic_id;
+    }
+}
+
+cpu_id_t smp_cpu_from_apic_id(uint32_t apic_id) {
+    cpu_id_t cpu;
+    for_each_cpu_id(cpu) {
+        if (smp_apic_ids[cpu] == apic_id)
+            return cpu;
+    }
+
+    return CPU_ID_NONE;
+}
+
+void smp_setup_bsp(struct limine_mp_response *mpr) {
+    smp_map_apic_ids(mpr);
+
     struct core *c = nofail_vnew(c, ALLOC_ZERO);
 
     c->id = 0;

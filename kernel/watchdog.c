@@ -5,6 +5,7 @@
 #include <math/min_max.h>
 #include <mem/nofail.h>
 #include <pit.h>
+#include <smp/core.h>
 #include <smp/percpu.h>
 #include <string.h>
 #include <sync/seqlock.h>
@@ -793,7 +794,7 @@ void watchdog_start(void) {
 
     pit_init();
     pit_wire_periodic_nmi(config.master_tick_interval);
-    ioapic_route_isa_nmi(0, /* cpu id */ 0);
+    ioapic_route_isa_nmi(0, smp_apic_id(0));
 }
 
 void watchdog_pet(void) {

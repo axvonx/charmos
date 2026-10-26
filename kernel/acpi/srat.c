@@ -97,7 +97,11 @@ void srat_init(void) {
                     (uint64_t) cpu->proximity_domain_high[1] << 16 |
                     (uint64_t) cpu->proximity_domain_high[2] << 24;
 
-                cpu_mask_set(&global.numa_nodes[prox_domain].cpus, cpu->id);
+                cpu_id_t cpu_id = smp_cpu_from_apic_id(cpu->id);
+                if (cpu_id != CPU_ID_NONE) {
+                    /* NOLINTNEXTLINE(*ArrayBound) */
+                    cpu_mask_set(&global.numa_nodes[prox_domain].cpus, cpu_id);
+                }
             }
             break;
         }

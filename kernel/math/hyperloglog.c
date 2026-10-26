@@ -14,7 +14,7 @@ struct hyperloglog {
     uint8_t register_width;
     fx32_32_t alpha_mm;
     size_t nr_registers;
-    uint8_t *registers;
+    uint8_t *registers cc_counted_by(nr_registers);
 };
 
 static inline fx32_32_t hll_alpha_128_plus(size_t nr_registers) {

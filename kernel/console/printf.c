@@ -13,7 +13,6 @@
 #include "flanterm/src/flanterm.h"
 #include <flanterm/src/flanterm_backends/fb.h>
 
-/* the definitions below need the real names, not the fortify wrappers */
 #undef snprintf
 #undef vsnprintf
 

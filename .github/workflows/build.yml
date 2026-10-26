@@ -79,3 +79,31 @@ jobs:
           -DTEST_NIGHTMARE_ALL=ON
           -DINJECT_ALL=ON
           -DCHARMOS_CLANG_TIDY=ON
+
+  analyzer:
+    name: GCC -fanalyzer
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/axvonx/charmos-x86-env@sha256:f65d35505d3e48ffe00651fd5da9a7568c2b266d3acd142c6d38f89ec4d57d1e
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      - name: Analyze with all features enabled
+        run: >
+          ./scripts/build.sh -t Debug --compiler gcc
+          --
+          -DDEBUG_ALL=ON
+          -DTEST_ALL=ON
+          -DPROFILING_ALL=ON
+          -DTEST_NIGHTMARE_ALL=ON
+          -DINJECT_ALL=ON
+          -DCHARMOS_GCC_ANALYZER=ON

@@ -8,7 +8,7 @@ struct core;
 void smp_init(void);
 void smp_timer_init(void);
 void smp_wake(struct limine_mp_response *mpr);
-void smp_setup_bsp(void);
+void smp_setup_bsp(struct limine_mp_response *mpr);
 void smp_wait_for_others_to_idle(void);
 void topology_init(void);
 void smp_disable_all_ticks(void);

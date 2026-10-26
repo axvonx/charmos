@@ -73,26 +73,10 @@
  * assume(x, CODE)
  * assume(x, "msg %d", 12)
  * assume(x, CODE, "msg %d", 12)
- *
- * enforce() is a runtime check: "I'm not sure this holds, verify it". assume()
- * is an unreachability hint: "the path where x is false does not exist". It
- * is only checked under DEBUG_ASSUME, as a test of that claim. Without it, x
- * is never evaluated and a false x is UB that the optimizer may propagate
- * anywhere, including deleting checks before and after it. Anything
- * that depends on input, hardware, timing, or another subsystem's correctness
- * belongs in enforce()
- *
- * x must be free of side effects: no ++/=, no atomic or volatile accesses,
- * and no calls to functions that aren't cc_pure/cc_constfn. Clang rejects
- * violations in both modes (-Werror=assume) via the unevaluated cc_assume
- * below, and a constant-false x (assume(0)) is an error in favor of
- * unreachable(). Evaluates to nothing either way
+
  */
-/* Never defined: only ever named inside sizeof, the call is not emitted */
 void _assume_not_constant_false(bool cond)
-    cc_diagnose_if(!cond,
-                   "assume() on a constant-false condition; use unreachable() "
-                   "for a dead path or static_assert() for a constant",
+    cc_diagnose_if(!cond, "assume() on a constant false, use unreachable()",
                    "error");
 
 #define _assume_static_checks(x)                                               \

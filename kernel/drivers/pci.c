@@ -1,3 +1,4 @@
+#include <acpi/lapic.h>
 #include <console/printf.h>
 #include <drivers/mmio.h>
 #include <drivers/pci.h>
@@ -189,7 +190,7 @@ static uint64_t pci_read_bar64(uint8_t bus, uint8_t slot, uint8_t func,
 
 void pci_program_msix_entry(uint8_t bus, uint8_t slot, uint8_t func,
                             uint32_t table_index, uint8_t vector,
-                            uint8_t apic_id) {
+                            uint32_t apic_id) {
     uint8_t cap = pci_find_capability(bus, slot, func, PCI_CAP_ID_MSIX);
     if (!cap) {
         pci_log(LOG_ERROR, "MSI-X capability not found");
@@ -230,7 +231,8 @@ void pci_program_msix_entry(uint8_t bus, uint8_t slot, uint8_t func,
                                                    (entry_phys &
                                                     (PAGE_SIZE - 1)));
 
-    uint64_t msg_addr = 0xFEE00000ull | ((uint64_t) apic_id << 12);
+    uint64_t msg_addr =
+        0xFEE00000ull | ((uint64_t) lapic_dest_8bit(apic_id) << 12);
     mmio_write_32(&entry->msg_addr_low, (uint32_t) (msg_addr & 0xFFFFFFFF));
     mmio_write_32(&entry->msg_addr_high, (uint32_t) (msg_addr >> 32));
     mmio_write_32(&entry->msg_data, (uint32_t) vector);
@@ -241,7 +243,7 @@ void pci_program_msix_entry(uint8_t bus, uint8_t slot, uint8_t func,
 }
 
 void pci_enable_msix_on_core(uint8_t bus, uint8_t slot, uint8_t func,
-                             uint8_t vector_index, uint8_t apic_id) {
+                             uint8_t vector_index, uint32_t apic_id) {
     uint8_t cap = pci_find_capability(bus, slot, func, PCI_CAP_ID_MSIX);
     if (cap == 0) {
         pci_log(LOG_ERROR, "MSI-X capability not found");
@@ -272,7 +274,8 @@ void pci_enable_msix_on_core(uint8_t bus, uint8_t slot, uint8_t func,
         (void cc_mem_io *) msix_table +
         vector_index * sizeof(struct pci_msix_table_entry);
 
-    uint64_t msg_addr = 0xFEE00000 | (apic_id << 12);
+    uint64_t msg_addr =
+        0xFEE00000ull | ((uint64_t) lapic_dest_8bit(apic_id) << 12);
 
     mmio_write_32(&entry_addr->msg_addr_low, msg_addr);
     mmio_write_32(&entry_addr->msg_addr_high, 0);

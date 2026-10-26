@@ -33,15 +33,15 @@ struct globals {
 
     atomic_size_t idle_core_count;
     size_t core_count;
-    struct core **cores;
-    struct scheduler **schedulers;
-    struct dpc_cpu *dpc_data;
+    struct core **cores cc_counted_by(core_count);
+    struct scheduler **schedulers cc_counted_by(core_count);
+    struct dpc_cpu *dpc_data cc_counted_by(core_count);
 
     atomic_size_t thread_count;
 
     /* TODO: We can consider migrating these to per-subsystem locations */
     size_t domain_count;
-    struct domain **domains;
+    struct domain **domains cc_counted_by(domain_count);
     struct domain_buddy *domain_buddies;
     struct page *page_array;
     struct buddy_free_area buddy_free_area[BUDDY_MAX_ORDER];
@@ -57,7 +57,7 @@ struct globals {
     struct movealloc_callback_chain movealloc_chain;
 
     /* Per core workqueues */
-    struct workqueue **workqueues;
+    struct workqueue **workqueues cc_counted_by(core_count);
 
     struct turnstile_hash_table *turnstiles;
     struct locked_list thread_list;

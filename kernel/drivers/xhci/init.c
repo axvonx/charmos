@@ -8,6 +8,7 @@
 #include <mem/nofail.h>
 #include <mem/page.h>
 #include <mem/vmm.h>
+#include <smp/core.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <time/spin_sleep.h>
@@ -373,7 +374,7 @@ void xhci_device_start_interrupts(uint8_t bus, uint8_t slot, uint8_t func,
     dev->irq = irq_alloc_entry();
     irq_register("xhci", dev->irq, xhci_isr, dev, IRQ_FLAG_NONE);
     irq_set_chip(dev->irq, lapic_get_chip(), NULL);
-    pci_program_msix_entry(bus, slot, func, 0, dev->irq, /*core=*/0);
+    pci_program_msix_entry(bus, slot, func, 0, dev->irq, smp_apic_id(0));
 }
 
 enum usb_error xhci_port_init(struct xhci_port *p) {

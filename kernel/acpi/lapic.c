@@ -2,6 +2,7 @@
 #include <asm.h>
 #include <cpuid_defs.h>
 #include <drivers/mmio.h>
+#include <enforce.h>
 #include <irq/irq.h>
 #include <log.h>
 #include <mem/page.h>
@@ -45,6 +46,12 @@ uint64_t lapic_get_id(void) {
 
 uint32_t lapic_this_id(void) {
     return cpu_has_x2apic() ? x2apic_get_id() : lapic_get_id();
+}
+
+uint8_t lapic_dest_8bit(uint32_t apic_id) {
+    enforce(apic_id <= UINT8_MAX, "APIC ID %u needs interrupt remapping",
+            apic_id);
+    return (uint8_t) apic_id;
 }
 
 static void lapic_eoi(struct irq_desc *unused) {

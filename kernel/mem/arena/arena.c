@@ -30,10 +30,16 @@ static void arena_desc_table_free_cb(struct rcu_cb *cb) {
     vfree(tbl);
 }
 
-static int32_t arena_desc_cmp(const void *a, const void *b) {
-    const struct arena_desc *ada = a;
-    const struct arena_desc *adb = b;
-    return ada->strategy - adb->strategy;
+static int arena_desc_cmp(const void *a, const void *b) {
+    const struct arena_desc *ada = *(struct arena_desc *const *) a;
+    const struct arena_desc *adb = *(struct arena_desc *const *) b;
+    return (ada->strategy > adb->strategy) - (ada->strategy < adb->strategy);
+}
+
+static int arena_desc_strategy_cmp(const void *key, const void *elem) {
+    enum arena_strategy strat = *(const enum arena_strategy *) key;
+    const struct arena_desc *d = *(struct arena_desc *const *) elem;
+    return (strat > d->strategy) - (strat < d->strategy);
 }
 
 enum err arena_desc_register(struct arena_desc *desc) {
@@ -64,9 +70,9 @@ enum err arena_desc_register(struct arena_desc *desc) {
                old_desc_count * sizeof(struct arena_desc *));
 
     new_descs[old_desc_count] = desc;
+    heapsort(new_descs, desc_count, sizeof(*new_descs), arena_desc_cmp);
     new_tbl->desc_count = desc_count;
-    heapsort(new_descs, sizeof(struct arena_desc *), desc_count,
-             arena_desc_cmp);
+    new_tbl->descs = new_descs;
 
     rcu_assign_pointer(arena_global.desc_table, new_tbl);
     rcu_defer(&old_tbl->rcu_cb, arena_desc_table_free_cb);
@@ -81,8 +87,11 @@ struct arena_desc *arena_desc_lookup(enum arena_strategy strat) {
 
     struct arena_desc_table *tbl = rcu_dereference(arena_global.desc_table);
 
-    struct arena_desc *found = bsearch(&strat, tbl, sizeof(struct arena_desc *),
-                                       tbl->desc_count, arena_desc_cmp);
+    struct arena_desc **slot =
+        tbl->descs ? bsearch(&strat, tbl->descs, tbl->desc_count,
+                             sizeof(*tbl->descs), arena_desc_strategy_cmp)
+                   : NULL;
+    struct arena_desc *found = slot ? *slot : NULL;
 
     rcu_read_unlock();
 

@@ -164,7 +164,7 @@ struct thread {
     /* ========== Processor context data ========== */
 
     /* Stack */
-    void *stack;
+    void *stack cc_sized_by(stack_size);
     size_t stack_size;
 
     /* TODO: we should isolate this into the debug nesting

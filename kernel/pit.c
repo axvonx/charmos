@@ -4,6 +4,7 @@
 #include <irq/irq.h>
 #include <log.h>
 #include <pit.h>
+#include <smp/core.h>
 #include <stdint.h>
 #include <time/time.h>
 #include <types/types.h>
@@ -96,7 +97,7 @@ void pit_set_interval_ns(time_ns_t interval_ns) {
 
 void pit_wire_periodic_nmi(time_ns_t interval_ns) {
     pit_set_interval_ns(interval_ns);
-    ioapic_route_isa_nmi(0, 0);
+    ioapic_route_isa_nmi(0, smp_apic_id(0));
 }
 
 void pit_init(void) {

@@ -8,6 +8,7 @@
 #include <math/align.h>
 #include <math/bit.h>
 #include <math/min_max.h>
+#include <math/sort.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
 #include <mem/numa.h>
@@ -52,7 +53,17 @@ const char *topology_level_name(enum topology_level l) {
     return topo_node_str[l];
 }
 
-static void print_topology_node(struct topology_node *node, int depth) {
+static bool topology_is_child(const struct topology_node *node,
+                              const struct topology_node *child) {
+    /* a NUMA node can span LLCs but has one parent_node */
+    if (node->level == TOPOLOGY_LEVEL_LLC)
+        return cpu_mask_intersects(&node->cpus, &child->cpus);
+
+    return child->parent_node == node;
+}
+
+static void print_topology_node(struct topology_node *node, int depth,
+                                const struct cpu_mask *scope) {
     for (int i = 0; i < depth; i++)
         printf("  ");
 
@@ -63,47 +74,34 @@ static void print_topology_node(struct topology_node *node, int depth) {
     cpu_mask_print(&node->cpus);
     printf("\n");
 
+    enum topology_level child_level;
     switch (node->level) {
-    case TOPOLOGY_LEVEL_MACHINE:
-        for (int i = 0; i < global.topology.count[TOPOLOGY_LEVEL_PACKAGE]; i++)
-            if (package_nodes[i].parent == node->id)
-                print_topology_node(&package_nodes[i], depth + 1);
-        break;
+    case TOPOLOGY_LEVEL_MACHINE: child_level = TOPOLOGY_LEVEL_PACKAGE; break;
+    case TOPOLOGY_LEVEL_PACKAGE: child_level = TOPOLOGY_LEVEL_LLC; break;
+    case TOPOLOGY_LEVEL_LLC: child_level = TOPOLOGY_LEVEL_NUMA; break;
+    case TOPOLOGY_LEVEL_NUMA: child_level = TOPOLOGY_LEVEL_CORE; break;
+    case TOPOLOGY_LEVEL_CORE: child_level = TOPOLOGY_LEVEL_SMT; break;
+    default: return;
+    }
 
-    case TOPOLOGY_LEVEL_PACKAGE:
-        for (int i = 0; i < global.topology.count[TOPOLOGY_LEVEL_LLC]; i++)
-            if (llc_nodes[i].parent == node->id)
-                print_topology_node(&llc_nodes[i], depth + 1);
-        break;
+    if (node->level != TOPOLOGY_LEVEL_NUMA)
+        scope = &node->cpus;
 
-    case TOPOLOGY_LEVEL_LLC:
-        for (int i = 0; i < global.topology.count[TOPOLOGY_LEVEL_NUMA]; i++)
-            if (numa_nodes[i].parent == node->id)
-                print_topology_node(&numa_nodes[i], depth + 1);
-        break;
-
-    case TOPOLOGY_LEVEL_NUMA:
-        for (int i = 0; i < global.topology.count[TOPOLOGY_LEVEL_CORE]; i++)
-            if (core_nodes[i].parent == node->id)
-                print_topology_node(&core_nodes[i], depth + 1);
-        break;
-
-    case TOPOLOGY_LEVEL_CORE:
-        for (int i = 0; i < global.topology.count[TOPOLOGY_LEVEL_SMT]; i++)
-            if (smt_nodes[i].parent == node->id)
-                print_topology_node(&smt_nodes[i], depth + 1);
-        break;
-
-    default: break;
+    struct topology_node *children = global.topology.level[child_level];
+    for (size_t i = 0; i < global.topology.count[child_level]; i++) {
+        struct topology_node *child = &children[i];
+        if (topology_is_child(node, child) &&
+            cpu_mask_intersects(&child->cpus, scope))
+            print_topology_node(child, depth + 1, scope);
     }
 }
 
 static void topology_dump(void) {
     log_msg(LOG_INFO, "Processor topology:");
-    print_topology_node(&machine_node, 0);
+    print_topology_node(&machine_node, 0, &machine_node.cpus);
 }
 
-static size_t build_smt_nodes(size_t cpu_count) {
+static size_t build_smt_nodes(size_t cpu_count, size_t core_count) {
     smt_nodes = nofail_vnews(smt_nodes, cpu_count, ALLOC_ZERO);
 
     for (size_t i = 0; i < cpu_count; i++) {
@@ -111,9 +109,9 @@ static size_t build_smt_nodes(size_t cpu_count) {
 
         struct topology_node *node = &smt_nodes[i];
 
+        /* only the first core_count core_nodes are filled in */
         size_t core_index = 0;
-        size_t j;
-        for_each_cpu_id(j) {
+        for (size_t j = 0; j < core_count; j++) {
             if (core_nodes[j].core->core_id == c->core_id &&
                 core_nodes[j].core->package_id == c->package_id) {
                 core_index = j;
@@ -226,6 +224,7 @@ static size_t build_numa_nodes(size_t core_count, size_t llc_count) {
     for (size_t i = 0; i < core_count; i++) {
         struct core *c = core_nodes[i].core;
         uint32_t numa_id = c->numa_node;
+        /* NOLINTNEXTLINE(*ArrayBound) */
         struct topology_node *numa = &numa_nodes[numa_id];
 
         core_nodes[i].parent = numa_id;
@@ -322,6 +321,9 @@ static size_t build_llc_nodes(size_t core_count) {
 
     size_t package_count = max_pkg_id + 1;
 
+    /* dense package IDs (densify_package_ids) and every package has a core */
+    enforce(package_count <= core_count, "more packages than cores");
+
     for (size_t p = 0; p < package_count; p++) {
         struct topology_node *node = &llc_nodes[llc_count];
         node->level = TOPOLOGY_LEVEL_LLC;
@@ -417,11 +419,42 @@ static void build_machine_node(size_t package_count) {
     }
 }
 
+static int cmp_u32(const void *a, const void *b) {
+    uint32_t x = *(const uint32_t *) a, y = *(const uint32_t *) b;
+    return (x > y) - (x < y);
+}
+
+/* package_id comes from the APIC ID */
+static void densify_package_ids(size_t cpu_count) {
+    uint32_t *ids = nofail_vnews(ids, cpu_count);
+    for (size_t i = 0; i < cpu_count; i++)
+        ids[i] = global.cores[i]->package_id;
+
+    heapsort(ids, cpu_count, sizeof(*ids), cmp_u32);
+
+    size_t distinct = 0;
+    for (size_t i = 0; i < cpu_count; i++)
+        if (distinct == 0 || ids[distinct - 1] != ids[i])
+            ids[distinct++] = ids[i];
+
+    for (size_t i = 0; i < cpu_count; i++) {
+        struct core *c = global.cores[i];
+        uint32_t *slot =
+            bsearch(&c->package_id, ids, distinct, sizeof(*ids), cmp_u32);
+        c->package_id = (uint32_t) (slot - ids);
+    }
+
+    vfree(ids);
+}
+
 void topology_init(void) {
     size_t cpu_count = global.core_count; /* Logical processor count */
+    enforce(cpu_count > 0);
+
+    densify_package_ids(cpu_count);
 
     size_t core_count = build_core_nodes(cpu_count);
-    size_t smt_count = build_smt_nodes(cpu_count);
+    size_t smt_count = build_smt_nodes(cpu_count, core_count);
     size_t llc_count = build_llc_nodes(core_count);
     size_t numa_count = build_numa_nodes(core_count, llc_count);
     size_t package_count = build_package_nodes(core_count, llc_count);

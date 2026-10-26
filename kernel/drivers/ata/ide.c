@@ -11,6 +11,7 @@
 #include <math/bit.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
+#include <smp/core.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <time/spin_sleep.h>
@@ -145,7 +146,7 @@ struct block_device *ide_create_generic(struct ata_drive *ide) {
     ide_log(LOG_INFO, "IDE drive IRQ on line %u, allocated entry %u", ide->irq,
             irq);
 
-    ioapic_route_irq(ide->irq, irq, 0, false);
+    ioapic_route_irq(ide->irq, irq, smp_apic_id(0), false);
     irq_register("ata", irq, ide_irq_handler, &ide->channel, IRQ_FLAG_NONE);
     irq_set_chip(irq, lapic_get_chip(), NULL);
     ide->channel.current_drive = ide;

@@ -72,7 +72,7 @@ struct rcu_globals {
 
     struct semaphore sem; /* wake the GP worker */
 
-    struct rcu_node *nodes; /* root first */
+    struct rcu_node *nodes cc_counted_by(node_count); /* root first */
     size_t node_count;
     struct rcu_node *root;
     struct rcu_node *leaves;

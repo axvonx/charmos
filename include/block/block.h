@@ -87,7 +87,7 @@ struct block_device {
     struct bio_scheduler *scheduler;
     struct bcache *cache;
     uint64_t partition_count;
-    struct partition *partitions;
+    struct partition *partitions cc_counted_by(partition_count);
 };
 
 static inline bool bdev_skip_coalesce(struct block_device *disk) {

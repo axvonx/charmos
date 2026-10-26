@@ -196,10 +196,10 @@ uint32_t pci_read_bar(uint8_t bus, uint8_t device, uint8_t function,
                       uint8_t bar_index);
 void pci_enable_msix(uint8_t bus, uint8_t slot, uint8_t func);
 void pci_enable_msix_on_core(uint8_t bus, uint8_t slot, uint8_t func,
-                             uint8_t vector, uint8_t core);
+                             uint8_t vector, uint32_t apic_id);
 void pci_init_devices(struct pci_device *devices, uint64_t count);
 uint8_t pci_find_capability(uint8_t bus, uint8_t slot, uint8_t func,
                             uint8_t cap_id);
 void pci_program_msix_entry(uint8_t bus, uint8_t slot, uint8_t func,
                             uint32_t table_index, uint8_t vector,
-                            uint8_t apic_id);
+                            uint32_t apic_id);
