@@ -13,6 +13,7 @@
 #include <time/time.h>
 #include <types/types.h>
 
+struct crash_facility;
 struct spinlock;
 struct qspinlock;
 struct rwlock;
@@ -44,20 +45,19 @@ struct crash_regs {
 
 ct_assert_struct_size_eq(crash_regs, CRASH_REG_COUNT * 8);
 
-enum crash_code {
-    CRASH_CODE_GENERIC,
+/* NULL crashes are the generic, code-less crash */
+struct crash_code {
+    const char *name;
+    const char *desc;
+    const struct crash_facility *facility;
 };
 
-enum crash_facility_prefix {
-    CRASH_PREFIX_RESERVED = 0,
-
-    CRASH_PREFIX_VALIDATOR_FIRST = 1,
-    CRASH_PREFIX_asan = CRASH_PREFIX_VALIDATOR_FIRST,
-    CRASH_PREFIX_lock_chk,
-    CRASH_PREFIX_VALIDATOR_LAST = 16,
-
-    CRASH_PREFIX_OPEN_FIRST,
-};
+/* Codes that don't have a facility, like enforce(p, INVALID_ARGUMENT) */
+#define CRASH_CODES_global                                                     \
+    (INVALID_ARGUMENT, "Argument was NULL or out of range"),                   \
+        (INVALID_STATE, "Object was in a state this operation forbids"),       \
+        (OUT_OF_MEMORY, "Allocation that must not fail did fail"),             \
+        (UNSUPPORTED, "Hardware or firmware lacks a required feature")
 
 enum crash_source {
     CRASH_SOURCE_PANIC = 0,     /* panic() call */
@@ -88,10 +88,9 @@ enum crash_format_flags {
 
 enum crash_hook_flags {
     CRASH_HOOK_DEFAULT = 0,
-    CRASH_HOOK_FACILITY = 1 << 0, /* Facility granularity.
-                                   * This means that the crash_code the
-                                   * crash_hook contains is only checked for the
-                                   * upper word facility
+    CRASH_HOOK_FACILITY = 1 << 0, /* Facility granularity: match
+                                   * any code whose ->facility is the
+                                   * code's facility
                                    */
 
     CRASH_HOOK_NO_UNWIND = 1 << 1, /* By default, the crash handler will make
@@ -124,30 +123,18 @@ enum crash_unwind_type {
 };
 
 struct crash_payload {
-    enum crash_code code;
+    const struct crash_code *code;
     void *data;
     uintptr_t params[4];
 };
 
 struct report_target;
 struct crash_facility {
-    uint16_t prefix;
     const char *name;
     const char *desc;
-    uint16_t hookable_threshold; /* We use this to state that if the delta
-                                  * >= this, we treat it as hookable. So,
-                                  * if it's left unset, it'll be 0 and
-                                  * all codes are hookable. We do this
-                                  * because setting some high bit can cause
-                                  * the enum to count funny as it would
-                                  * bump up from there
-                                  *
-                                  * this is basically "First hookable code"
-                                  */
-    const char *(*const to_str)(uint16_t delta);
-    void (*const dump)(uint16_t delta, struct crash_payload pl);
-
-    void (*const emit_ndjson)(uint16_t delta, struct crash_payload pl);
+    const struct crash_code *const *codes; /* list order */
+    size_t nr_codes;
+    void (*const dump)(struct crash_payload pl);
 };
 
 /* The idea here:
@@ -226,12 +213,12 @@ struct crash_thread_data {
  * registration path itself can crash (would be problematic)
  * due to synchronization violations.
  *
- * CRASH_CODE_GENERIC is not hookable
+ * The generic (NULL) code is not hookable
  */
 struct crash_hook {
     char *name;
     struct list_node list;
-    enum crash_code code;
+    const struct crash_code *code;
     enum crash_source source_mask;
 };
 
@@ -260,47 +247,112 @@ struct crash_context {
                                         (uintptr_t) (p2), (uintptr_t) (p3)}})
 
 #define CRASH_CODE_TO_PAYLOAD(c) ((struct crash_payload) {.code = c})
-#define CRASH_CODE_CREATE(pre, del)                                            \
-    ((((int) (pre)) << 16) | (((int) (del)) & 0xFFFF))
 
-#define CRASH_CODE_GET_FACILITY(c) ((((c)) >> 16) & 0xFFFF)
+/*
+ * Use like this:
+ *   #define CRASH_CODES_asan                                \
+ *       (USE_AFTER_FREE, "Use after free"),                 \
+ *       (PARTIAL_GRANULE)
+ *
+ *   CRASH_CODE(asan, USE_AFTER_FREE)
+ */
+#define CRASH_FACILITY(f) __crash_facility_##f
 
-#define CRASH_CODE_GET_DELTA(c) (((c)) & 0xFFFF)
+#define CRASH_CODE(f, n) _crash_code_sym(f, n)
+#define CRASH_CODE_NTH(f, i) __crash_codes_##f[(i)]
 
-#define CRASH_CODE_PREFIX(n) (CRASH_PREFIX_##n)
-#define CRASH_CODE_DELTA_START (1)
-#define CRASH_CODE(n, d) CRASH_CODE_CREATE(CRASH_CODE_PREFIX(n), d)
+#define CRASH_CODES_ENUM(f, prefix)                                            \
+    PP_FOREACH_CTX(_crash_code_enumerator, prefix, CRASH_CODES_##f)
+#define crash_code_in(c, f) crash_code_in_facility((c), &CRASH_FACILITY(f))
 
-#define CRASH_FACILITY(n) __crash_facility_##n
-#define CRASH_FACILITY_EXTERN(n)                                               \
-    extern struct crash_facility __crash_facility_##n
-#define CRASH_FACILITY_DEFINE(n, ...)                                          \
-    LINKER_SECTION_OBJECT(struct crash_facility, crash_facilities)             \
-    __crash_facility_##n = {.prefix = CRASH_PREFIX_##n, .name = #n, __VA_ARGS__}
+#define CRASH_CODES_DECLARE(f)                                                 \
+    extern const struct crash_facility CRASH_FACILITY(f);                      \
+    extern const struct crash_code *const __crash_codes_##f[];                 \
+    PP_FOREACH_CTX(_crash_code_extern, f, CRASH_CODES_##f)
 
-LINKER_SECTION_EXTERN(struct crash_facility, crash_facilities);
+#define CRASH_FACILITY_DEFINE(f, d, ...)                                       \
+    CRASH_CODES_DECLARE(f);                                                    \
+    PP_FOREACH_CTX(_crash_code_def, f, CRASH_CODES_##f)                        \
+    const struct crash_code *const __crash_codes_##f[] = {                     \
+        PP_FOREACH_CTX(_crash_code_ptr, f, CRASH_CODES_##f)};                  \
+    const struct crash_facility CRASH_FACILITY(f) = {                          \
+        .name = #f,                                                            \
+        .desc = d,                                                             \
+        .codes = __crash_codes_##f,                                            \
+        .nr_codes = ct_array_size(__crash_codes_##f),                          \
+        __VA_ARGS__}
+
+#define _crash_code_sym(f, n) __crash_code_##f##_##n
+#define _crash_code_name(t) PP_GET_1 t
+#define _crash_code_desc(t) _crash_code_desc_(PP_UNPAREN(t), NULL, ~)
+#define _crash_code_desc_(...) _crash_code_desc_pick(__VA_ARGS__)
+#define _crash_code_desc_pick(n, d, ...) d
+
+#define _crash_code_extern(f, t) _crash_code_extern_(f, _crash_code_name(t))
+#define _crash_code_extern_(f, n)                                              \
+    extern const struct crash_code _crash_code_sym(f, n)[1];
+#define _crash_code_def(f, t)                                                  \
+    _crash_code_def_(f, _crash_code_name(t), _crash_code_desc(t))
+#define _crash_code_def_(f, n, d)                                              \
+    const struct crash_code _crash_code_sym(f, n)[1] = {                       \
+        {PP_STRINGIZE(n), d, &CRASH_FACILITY(f)}};
+#define _crash_code_ptr(f, t) _crash_code_ptr_(f, _crash_code_name(t))
+#define _crash_code_ptr_(f, n) _crash_code_sym(f, n),
+#define _crash_code_enumerator(p, t) PP_CONCAT(p, _crash_code_name(t)),
+
+CRASH_CODES_DECLARE(global);
+
+#define CRASH_CODE_ARG(a) PP_IIF(PP_IS_PAREN(a))(_crash_tuple_code(a), a)
+
+#define _crash_tuple_code(t)                                                   \
+    PP_CONCAT(_crash_tuple_code_, _crash_narg(PP_UNPAREN(t))) t
+#define _crash_narg(...) PP_NARG(__VA_ARGS__)
+#define _crash_tuple_code_1(n) CRASH_CODE(global, n)
+#define _crash_tuple_code_2(f, n) CRASH_CODE(f, n)
+
+/* Wraps stmt in the bare-name scope unless code was a tuple */
+#define CRASH_CODE_SCOPED(a, ...)                                              \
+    PP_CONCAT(_crash_code_scoped_, PP_IS_PAREN(a))(__VA_ARGS__)
+#define _crash_code_scoped_1(...) __VA_ARGS__
+#define _crash_code_scoped_0(...)                                              \
+    ({                                                                         \
+        _CRASH_CODE_SCOPE                                                      \
+        __VA_ARGS__;                                                           \
+    })
+
+#define _crash_code_alias(f, t) _crash_code_alias_(f, _crash_code_name(t))
+#define _crash_code_alias_(f, n)                                               \
+    cc_unused extern const struct crash_code n[1] asm(PP_STRINGIZE(__USER_LABEL_PREFIX__) PP_STRINGIZE(_crash_code_sym(f, n)));
+
+#define _CRASH_CODE_SCOPE                                                      \
+    PP_FOREACH_CTX(_crash_code_alias, global, CRASH_CODES_global)
 
 cc_noreturn void enforce_impl_msg(const char *file, int line, const char *func,
                                   const char *prefix, const char *expr,
                                   const char *fmt, ...) cc_printf_like(6, 7);
 cc_noreturn void enforce_impl_code(const char *file, int line, const char *func,
                                    const char *prefix, const char *expr,
-                                   enum crash_code code, const char *fmt, ...)
-    cc_printf_like(7, 8);
+                                   const struct crash_code *code,
+                                   const char *fmt, ...) cc_printf_like(7, 8);
 cc_noreturn void enforce_impl_code_only(const char *file, int line,
                                         const char *func, const char *prefix,
-                                        const char *expr, enum crash_code code);
+                                        const char *expr,
+                                        const struct crash_code *code);
 
 cc_noreturn void crash_full(const struct crash_context *ctx);
 
 bool crash_cpu_is_owner(uint64_t id);
 void crash_broadcast_nmi(void);
-void crash_facilities_init(void);
-const char *crash_code_from_facility_to_str(enum crash_code code);
+size_t crash_code_name(const struct crash_code *code, char *buf, size_t len);
 void crash_nmi_handoff(void *p, struct irq_registers *irqc);
 void debug_print_stack(void);
 void crash_facility_printf(const char *fmt, ...) cc_printf_like(1, 2);
 void crash_facility_line(const char *fmt, ...) cc_printf_like(1, 2);
+
+static inline bool crash_code_in_facility(const struct crash_code *code,
+                                          const struct crash_facility *f) {
+    return code && code->facility == f;
+}
 
 #ifdef DEBUG_CRASH
 
@@ -369,11 +421,4 @@ static inline void crash_unwind_exit_qspinlock(struct qspinlock *q) {
 
 static inline void qemu_exit(int code) {
     outb(0xf4, (uint8_t) code);
-}
-
-STRINGIFY_DECLARE_ENUM(crash_code) {
-    switch (stringify_in) {
-    case CRASH_CODE_GENERIC: return "Generic";
-    default: return crash_code_from_facility_to_str(stringify_in);
-    }
 }

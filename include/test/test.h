@@ -130,7 +130,7 @@ struct test_group {
  * enforce(my_var) would have the 'stmt' of my_var
  */
 struct test_death {
-    enum crash_code expect;
+    const struct crash_code *expect;
     uint32_t line_hint;
     const char *msg_hint;
     const char *stmt_hint;

@@ -3,6 +3,7 @@
 #ifdef DEBUG_LOCK_CHK
 
 #include <atomic.h>
+#include <console/crash.h>
 #include <math/hash.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -65,18 +66,21 @@ struct lock_chk_graph {
     uint32_t generation;
 };
 
+#define CRASH_CODES_lock_chk                                                   \
+    (CYCLE, "Lock cycle detected"), (RECURSION, "Recursive lock acquisition"), \
+        (RELEASE, "Bad lock release"),                                         \
+        (CONTEXT, "Lock used in an invalid context"),                          \
+        (THREAD_EXIT, "Thread exited holding locks"),                          \
+        (SPIN_ORDER, "Spinlock release order violated"),                       \
+        (CAPACITY, "Validator capacity exhausted"),                            \
+        (UNINITIALIZED, "Uninitialized lock used"),                            \
+        (NOT_HELD, "Lock expected held, but is not"),                          \
+        (UNEXPECTED_HELD, "Lock held when it must not be")
+
 enum lock_chk_failure_kind : uint8_t {
-    LOCK_CHK_FAIL_CYCLE,
-    LOCK_CHK_FAIL_RECURSION,
-    LOCK_CHK_FAIL_RELEASE,
-    LOCK_CHK_FAIL_CONTEXT,
-    LOCK_CHK_FAIL_THREAD_EXIT,
-    LOCK_CHK_FAIL_SPIN_ORDER,
-    LOCK_CHK_FAIL_CAPACITY,
-    LOCK_CHK_FAIL_UNINITIALIZED,
-    LOCK_CHK_FAIL_NOT_HELD,
-    LOCK_CHK_FAIL_UNEXPECTED_HELD,
+    CRASH_CODES_ENUM(lock_chk, LOCK_CHK_FAIL_)
 };
+CRASH_CODES_DECLARE(lock_chk);
 
 #define LOCK_CHK_MAX_CYCLE_HOPS 16
 
@@ -364,22 +368,6 @@ STRINGIFY_DECLARE_ENUM(lock_chk_type) {
     case LOCK_CHK_TYPE_MUTEX: return "mutex";
     case LOCK_CHK_TYPE_MUTEX_SIMPLE: return "simple mutex";
     case LOCK_CHK_TYPE_RWLOCK: return "rwlock";
-    default: cc_unreachable();
-    }
-}
-
-STRINGIFY_DECLARE(lock_chk_fail_kind_to_str, enum lock_chk_failure_kind) {
-    switch (stringify_in) {
-    case LOCK_CHK_FAIL_CYCLE: return "cycle";
-    case LOCK_CHK_FAIL_RECURSION: return "recursion";
-    case LOCK_CHK_FAIL_RELEASE: return "release";
-    case LOCK_CHK_FAIL_CONTEXT: return "context";
-    case LOCK_CHK_FAIL_THREAD_EXIT: return "thread_exit";
-    case LOCK_CHK_FAIL_SPIN_ORDER: return "spin_order";
-    case LOCK_CHK_FAIL_CAPACITY: return "capacity";
-    case LOCK_CHK_FAIL_UNINITIALIZED: return "uninitialized";
-    case LOCK_CHK_FAIL_NOT_HELD: return "not_held";
-    case LOCK_CHK_FAIL_UNEXPECTED_HELD: return "unexpected_held";
     default: cc_unreachable();
     }
 }

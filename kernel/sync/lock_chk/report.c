@@ -18,6 +18,10 @@ NDJSON_DEFINE(lock_chk_finding, NDJSON_SECTION_LOCK_CHK, NDJSON_KIND_FINDING, 1,
               NDJSON_STR(capacity_pool), NDJSON_U64(capacity_used),
               NDJSON_U64(capacity_limit));
 
+static const char *lock_chk_fail_kind_to_str(enum lock_chk_failure_kind kind) {
+    return CRASH_CODE_NTH(lock_chk, kind)->name;
+}
+
 static const char *lock_chk_mode_name(enum lock_chk_mode mode) {
     if (mode == LOCK_CHK_MODE_EXCLUSIVE)
         return "exclusive";
@@ -96,31 +100,14 @@ static void maybe_report_degradation(const struct lock_chk_fault *fault,
                     "(%u/%u) because DEGRADED***\n\n",
                     fault->capacity_pool ? fault->capacity_pool : "<unknown>",
                     fault->capacity_used, fault->capacity_limit);
-    lock_chk_emit_finding(fault, "capacity_degraded", signature_text);
+    lock_chk_emit_finding(fault, "CAPACITY_DEGRADED", signature_text);
     nightmare_request_external_fail("lock_chk_degraded", signature, "%s",
                                     lock_chk_fault_msg(fault));
 }
 
-static const char *lock_chk_crash_code_str(uint16_t delta) {
-    switch ((enum lock_chk_failure_kind)(delta - CRASH_CODE_DELTA_START)) {
-    case LOCK_CHK_FAIL_CYCLE: return "Lock cycle detected";
-    case LOCK_CHK_FAIL_RECURSION: return "Recursive lock acquisition";
-    case LOCK_CHK_FAIL_RELEASE: return "Bad lock release";
-    case LOCK_CHK_FAIL_CONTEXT: return "Lock used in an invalid context";
-    case LOCK_CHK_FAIL_THREAD_EXIT: return "Thread exited holding locks";
-    case LOCK_CHK_FAIL_SPIN_ORDER: return "Spinlock release order violated";
-    case LOCK_CHK_FAIL_CAPACITY: return "Validator capacity exhausted";
-    case LOCK_CHK_FAIL_UNINITIALIZED: return "Uninitialized lock used";
-    case LOCK_CHK_FAIL_NOT_HELD: return "Lock expected held, but is not";
-    case LOCK_CHK_FAIL_UNEXPECTED_HELD: return "Lock held when it must not be";
-    default: return "Unknown lock validator failure";
-    }
-}
+static void lock_chk_crash_dump(struct crash_payload pl);
 
-static void lock_chk_crash_dump(uint16_t delta, struct crash_payload pl);
-
-CRASH_FACILITY_DEFINE(lock_chk, .desc = "Lock dependency validator",
-                      .to_str = lock_chk_crash_code_str,
+CRASH_FACILITY_DEFINE(lock_chk, "Lock dependency validator",
                       .dump = lock_chk_crash_dump);
 
 #define lock_chk_dump_field(label, fmt, ...)                                   \
@@ -163,8 +150,7 @@ static void dump_cycle(const struct lock_chk_report *report) {
     }
 }
 
-static void lock_chk_crash_dump(uint16_t delta, struct crash_payload pl) {
-    cc_ignore(delta);
+static void lock_chk_crash_dump(struct crash_payload pl) {
     const struct lock_chk_fault *fault = pl.data;
     uint64_t signature = pl.params[0];
 
@@ -218,8 +204,7 @@ void lock_chk_report_fail(const struct lock_chk_fault *fault) {
                                     lock_chk_fault_msg(fault));
 
     crash_full(&(struct crash_context){
-        .payload = {.code = CRASH_CODE(lock_chk,
-                                       fault->kind + CRASH_CODE_DELTA_START),
+        .payload = {.code = CRASH_CODE_NTH(lock_chk, fault->kind),
                     .data = (void *) fault,
                     .params = {signature}},
         .source = CRASH_SOURCE_LOCK_CHK,

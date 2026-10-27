@@ -184,7 +184,7 @@ enum slab_magazine_type {
 };
 
 enum slab_crash_code {
-    SLAB_CRASH_CHUNK = CRASH_CODE_DELTA_START,
+    SLAB_CRASH_CHUNK = 1, /* unwired: should become CRASH_CODES_slab */
     SLAB_CRASH_SLAB,
     SLAB_CRASH_FREE_QUEUE,
     SLAB_CRASH_MAGAZINE,

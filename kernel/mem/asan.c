@@ -252,15 +252,14 @@ NDJSON_DEFINE(asan_frame, NDJSON_SECTION_ASAN, NDJSON_KIND_FRAME, 1,
               NDJSON_U64(idx), NDJSON_HEX(addr), NDJSON_STR(sym),
               NDJSON_U64(off));
 
-enum asan_crash_code {
-    ASAN_CRASH_USE_AFTER_FREE = CRASH_CODE_DELTA_START,
-    ASAN_CRASH_HEAP_REDZONE,
-    ASAN_CRASH_UNALLOCATED,
-    ASAN_CRASH_PARTIAL_GRANULE,
-    ASAN_CRASH_POISONED,
-    ASAN_CRASH_UNCLASSIFIED,
-    ASAN_CRASH_RUNTIME,
-};
+#define CRASH_CODES_asan                                                       \
+    (USE_AFTER_FREE, "Use after free"),                                        \
+        (HEAP_REDZONE, "Heap out of bounds (redzone)"),                        \
+        (UNALLOCATED, "Access to unallocated memory"),                         \
+        (PARTIAL_GRANULE, "Heap overflow (partial granule)"),                  \
+        (POISONED, "Access to poisoned memory"),                               \
+        (UNCLASSIFIED, "Bad memory access"), (RUNTIME, "ASAN runtime failure")
+CRASH_CODES_DECLARE(asan);
 
 #define ASAN_REPORT_SHADOW_ROWS 3
 #define ASAN_REPORT_SHADOW_COLS 8 /* fits the facility box at 80 columns */
@@ -278,34 +277,22 @@ struct asan_report {
     size_t owner_idx;
 };
 
-static const char *asan_crash_code_str(uint16_t delta) {
-    switch (delta) {
-    case ASAN_CRASH_USE_AFTER_FREE: return "Use after free";
-    case ASAN_CRASH_HEAP_REDZONE: return "Heap out of bounds (redzone)";
-    case ASAN_CRASH_UNALLOCATED: return "Access to unallocated memory";
-    case ASAN_CRASH_PARTIAL_GRANULE: return "Heap overflow (partial granule)";
-    case ASAN_CRASH_POISONED: return "Access to poisoned memory";
-    case ASAN_CRASH_UNCLASSIFIED: return "Bad memory access";
-    case ASAN_CRASH_RUNTIME: return "ASAN runtime failure";
-    default: return "Unknown ASAN fault";
-    }
-}
-
-static enum asan_crash_code asan_poison_code(uint8_t shadow) {
+static const struct crash_code *asan_poison_code(uint8_t shadow) {
     switch (shadow) {
-    case ASAN_POISON_HEAP_FREED: return ASAN_CRASH_USE_AFTER_FREE;
-    case ASAN_POISON_HEAP_REDZONE: return ASAN_CRASH_HEAP_REDZONE;
-    case ASAN_POISON_VALUE: return ASAN_CRASH_UNALLOCATED;
+    case ASAN_POISON_HEAP_FREED: return CRASH_CODE(asan, USE_AFTER_FREE);
+    case ASAN_POISON_HEAP_REDZONE: return CRASH_CODE(asan, HEAP_REDZONE);
+    case ASAN_POISON_VALUE: return CRASH_CODE(asan, UNALLOCATED);
     default:
-        return asan_shadow_is_poison(shadow) ? ASAN_CRASH_POISONED
-                                             : ASAN_CRASH_PARTIAL_GRANULE;
+        return asan_shadow_is_poison(shadow)
+                   ? CRASH_CODE(asan, POISONED)
+                   : CRASH_CODE(asan, PARTIAL_GRANULE);
     }
 }
 
-static void asan_crash_dump(uint16_t delta, struct crash_payload pl);
+static void asan_crash_dump(struct crash_payload pl);
 
-CRASH_FACILITY_DEFINE(asan, .desc = "Kernel address sanitizer",
-                      .to_str = asan_crash_code_str, .dump = asan_crash_dump);
+CRASH_FACILITY_DEFINE(asan, "Kernel address sanitizer",
+                      .dump = asan_crash_dump);
 
 static void asan_dump_shadow(const struct asan_report *r) {
     char row[256]; /* room for a color escape around every byte */
@@ -361,7 +348,7 @@ static void asan_dump_trace(stack_handle_t h) {
     }
 }
 
-static void asan_crash_dump(uint16_t delta, struct crash_payload pl) {
+static void asan_crash_dump(struct crash_payload pl) {
     const struct asan_report *r = pl.data;
 
     if (!r)
@@ -370,7 +357,7 @@ static void asan_crash_dump(uint16_t delta, struct crash_payload pl) {
     crash_facility_line("%saddress%s %p", term_style(TERM_SEV_LABEL),
                         term_style_reset(), r->addr);
 
-    if (delta != ASAN_CRASH_RUNTIME)
+    if (pl.code != CRASH_CODE(asan, RUNTIME))
         crash_facility_line("%saccess%s  %zu-byte %s",
                             term_style(TERM_SEV_LABEL), term_style_reset(),
                             r->size, r->is_write ? "store" : "load");
@@ -481,11 +468,12 @@ out:
 #endif
 }
 
-static cc_noreturn void asan_crash(enum asan_crash_code code, const char *msg,
-                                   struct asan_report *r, const char *file,
-                                   int line, const char *func) {
+static cc_noreturn void asan_crash(const struct crash_code *code,
+                                   const char *msg, struct asan_report *r,
+                                   const char *file, int line,
+                                   const char *func) {
     crash_full(&(struct crash_context){
-        .payload = CRASH_PAYLOAD(CRASH_CODE(asan, code), r),
+        .payload = CRASH_PAYLOAD(code, r),
         .source = CRASH_SOURCE_KASAN,
         .formats = CRASH_FMT_DEFAULT,
         .file = file,
@@ -502,7 +490,7 @@ static cc_noreturn void asan_runtime_panic(const char *what, const void *addr,
 
     ndjson_emit(asan_fault, .what = what, .addr = (uint64_t) (uintptr_t) addr,
                 .size = size, .access = "");
-    asan_crash(ASAN_CRASH_RUNTIME, what, &r, file, line, func);
+    asan_crash(CRASH_CODE(asan, RUNTIME), what, &r, file, line, func);
 }
 
 /* First shadow byte that makes [addr, addr + size) bad, 0 if all of it is OK */
@@ -535,13 +523,13 @@ static inline uint8_t asan_bad_shadow(const void *addr, size_t size) {
 static cc_noreturn void asan_report_access(const void *addr, size_t size,
                                            bool is_write, void *pc) {
     uint8_t s = asan_ready ? asan_bad_shadow(addr, size) : 0;
-    enum asan_crash_code code =
-        s ? asan_poison_code(s) : ASAN_CRASH_UNCLASSIFIED;
+    const struct crash_code *code =
+        s ? asan_poison_code(s) : CRASH_CODE(asan, UNCLASSIFIED);
     const char *access = is_write ? "store" : "load";
     struct asan_report r = {.addr = addr, .size = size, .is_write = is_write};
     char msg[CRASH_MSG_MAX];
 
-    ndjson_emit(asan_fault, .what = asan_crash_code_str(code),
+    ndjson_emit(asan_fault, .what = code->desc,
                 .addr = (uint64_t) (uintptr_t) addr, .size = size,
                 .access = access);
 

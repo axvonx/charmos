@@ -4,16 +4,16 @@
 #include <console/crash.h>
 #include <console/panic.h>
 
-#define _enforce_msg(x) "Enforcement \"" #x "\" failed"
+#define _enforce_msg(s) "Enforcement \"" s "\" failed"
 
-#define _enforce_eval(x, msg_stmt)                                             \
-    _enforce_eval_as(x, msg_stmt, PP_CONCAT(_enforce_res_, __COUNTER__))
+#define _enforce_eval(x, ...)                                                  \
+    _enforce_eval_as(x, PP_CONCAT(_enforce_res_, __COUNTER__), __VA_ARGS__)
 
-#define _enforce_eval_as(x, msg_stmt, res_)                                    \
+#define _enforce_eval_as(x, res_, ...)                                         \
     ({                                                                         \
         ct_decay(x) res_ = (x);                                                \
         if (cc_unlikely(!(res_))) {                                            \
-            msg_stmt;                                                          \
+            __VA_ARGS__;                                                       \
             ci_unreachable();                                                  \
         }                                                                      \
         res_;                                                                  \
@@ -33,34 +33,41 @@
     cc_generic((a), char * : enforce_impl_msg,                                 \
                const char * : enforce_impl_msg, default : code_fn)
 
-#define _enforce_ctx(prefix, x)                                                \
-    __FILE__, __LINE__, __func__, prefix, _enforce_msg(x)
+#define _enforce_ctx(prefix, s)                                                \
+    __FILE__, __LINE__, __func__, prefix, _enforce_msg(s)
 
 /* enforce(x) */
-#define _enforce_0(prefix, x)                                                  \
-    _enforce_eval(x, enforce_impl_code_only(_enforce_ctx(prefix, x),           \
-                                            CRASH_CODE_GENERIC))
+#define _enforce_0(prefix, s, x)                                               \
+    _enforce_eval(x, enforce_impl_code_only(_enforce_ctx(prefix, s), NULL))
 
 /*
- * enforce(x, CODE)
  * enforce(x, "msg")
+ * enforce(x, INVALID_ARGUMENT)
+ * enforce(x, (asan, POISONED))
+ *
+ * Code forms are documented at CRASH_CODE_ARG in console/crash.h
  */
-#define _enforce_1(prefix, x, a)                                               \
+#define _enforce_1(prefix, s, x, a)                                            \
     _enforce_eval(                                                             \
-        x, _enforce_fn(a, enforce_impl_code_only)(_enforce_ctx(prefix, x), a))
+        x, CRASH_CODE_SCOPED(                                                  \
+               a, _enforce_fn(CRASH_CODE_ARG(a), enforce_impl_code_only)(      \
+                      _enforce_ctx(prefix, s), CRASH_CODE_ARG(a))))
 
 /*
  * enforce(x, "msg %d", 12)
- * enforce(x, CODE, "msg %d", 12)
+ * enforce(x, INVALID_ARGUMENT, "msg %d", 12)
+ * enforce(x, (asan, POISONED), "msg %d", 12)
  */
-#define _enforce_n(prefix, x, a, ...)                                          \
-    _enforce_eval(x, _enforce_fn(a, enforce_impl_code)(                        \
-                         _enforce_ctx(prefix, x), a, __VA_ARGS__))
+#define _enforce_n(prefix, s, x, a, ...)                                       \
+    _enforce_eval(x, CRASH_CODE_SCOPED(                                        \
+                         a, _enforce_fn(CRASH_CODE_ARG(a), enforce_impl_code)( \
+                                _enforce_ctx(prefix, s), CRASH_CODE_ARG(a),    \
+                                __VA_ARGS__)))
 
 #define _enforce_fail(prefix, ...)                                             \
     enforce_impl_msg(__FILE__, __LINE__, __func__, prefix, NULL, "" __VA_ARGS__)
 
-#define enforce(x, ...) _enforce_arity(__VA_ARGS__)("", x, ##__VA_ARGS__)
+#define enforce(x, ...) _enforce_arity(__VA_ARGS__)("", #x, x, ##__VA_ARGS__)
 
 #define unimplemented(...) _enforce_fail("unimplemented! ", ##__VA_ARGS__)
 
@@ -70,10 +77,9 @@
 
 /*
  * assume(x)
- * assume(x, CODE)
  * assume(x, "msg %d", 12)
- * assume(x, CODE, "msg %d", 12)
-
+ *
+ * No crash codes for assume()
  */
 void _assume_not_constant_false(bool cond)
     cc_diagnose_if(!cond, "assume() on a constant false, use unreachable()",
@@ -86,12 +92,22 @@ void _assume_not_constant_false(bool cond)
         0;                                                                     \
     })))
 
+/* Only used in sizeof for a format check, not a real function anywhere */
+int _assume_fmt(const char *fmt, ...) cc_printf_like(1, 2);
+
+#define _assume_msg_only(...)                                                  \
+    static_assert(!PP_IS_PAREN(PP_GET_1(__VA_ARGS__, ~)),                      \
+                  "assume() takes no crash code");                             \
+    (void) sizeof(_assume_fmt("" __VA_ARGS__))
+
 #ifdef DEBUG_ASSUME
 
 #define assume(x, ...)                                                         \
     ({                                                                         \
         _assume_static_checks(x);                                              \
-        (void) _enforce_arity(__VA_ARGS__)("assume! ", x, ##__VA_ARGS__);      \
+        _assume_msg_only(__VA_ARGS__);                                         \
+        if (cc_unlikely(!(x)))                                                 \
+            enforce_impl_msg(_enforce_ctx("assume! ", #x), "" __VA_ARGS__);    \
     })
 
 #else
@@ -99,6 +115,7 @@ void _assume_not_constant_false(bool cond)
 #define assume(x, ...)                                                         \
     ({                                                                         \
         _assume_static_checks(x);                                              \
+        _assume_msg_only(__VA_ARGS__);                                         \
         cc_assume(x);                                                          \
     })
 

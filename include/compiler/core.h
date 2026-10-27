@@ -312,6 +312,53 @@
 #define PP_UNPAREN_ESC__(...) PP_UNPAREN_VAN_##__VA_ARGS__
 #define PP_UNPAREN_VAN_PP_UNPAREN_ISH_
 
+/* 1 if x is parenthesized, else 0 */
+#define PP_IS_PAREN(x) PP_IS_PAREN_N_(PP_IS_PAREN_PROBE_ x, 0, ~)
+#define PP_IS_PAREN_PROBE_(...) ~, 1,
+#define PP_IS_PAREN_N_(...) PP_IS_PAREN_PICK_(__VA_ARGS__)
+#define PP_IS_PAREN_PICK_(x, n, ...) n
+
+/* PP_IIF(0 or 1)(then, else) */
+#define PP_IIF(c) PP_CONCAT(PP_IIF_, c)
+#define PP_IIF_0(t, f) f
+#define PP_IIF_1(t, f) t
+
+#define PP_FOREACH_CTX(m, c, ...)                                              \
+    PP_CONCAT(PP_FE_, PP_NARG(__VA_ARGS__))(m, c, __VA_ARGS__)
+#define PP_FE_0(m, c, ...)
+#define PP_FE_1(m, c, x) m(c, x)
+#define PP_FE_2(m, c, x, ...) m(c, x) PP_FE_1(m, c, __VA_ARGS__)
+#define PP_FE_3(m, c, x, ...) m(c, x) PP_FE_2(m, c, __VA_ARGS__)
+#define PP_FE_4(m, c, x, ...) m(c, x) PP_FE_3(m, c, __VA_ARGS__)
+#define PP_FE_5(m, c, x, ...) m(c, x) PP_FE_4(m, c, __VA_ARGS__)
+#define PP_FE_6(m, c, x, ...) m(c, x) PP_FE_5(m, c, __VA_ARGS__)
+#define PP_FE_7(m, c, x, ...) m(c, x) PP_FE_6(m, c, __VA_ARGS__)
+#define PP_FE_8(m, c, x, ...) m(c, x) PP_FE_7(m, c, __VA_ARGS__)
+#define PP_FE_9(m, c, x, ...) m(c, x) PP_FE_8(m, c, __VA_ARGS__)
+#define PP_FE_10(m, c, x, ...) m(c, x) PP_FE_9(m, c, __VA_ARGS__)
+#define PP_FE_11(m, c, x, ...) m(c, x) PP_FE_10(m, c, __VA_ARGS__)
+#define PP_FE_12(m, c, x, ...) m(c, x) PP_FE_11(m, c, __VA_ARGS__)
+#define PP_FE_13(m, c, x, ...) m(c, x) PP_FE_12(m, c, __VA_ARGS__)
+#define PP_FE_14(m, c, x, ...) m(c, x) PP_FE_13(m, c, __VA_ARGS__)
+#define PP_FE_15(m, c, x, ...) m(c, x) PP_FE_14(m, c, __VA_ARGS__)
+#define PP_FE_16(m, c, x, ...) m(c, x) PP_FE_15(m, c, __VA_ARGS__)
+#define PP_FE_17(m, c, x, ...) m(c, x) PP_FE_16(m, c, __VA_ARGS__)
+#define PP_FE_18(m, c, x, ...) m(c, x) PP_FE_17(m, c, __VA_ARGS__)
+#define PP_FE_19(m, c, x, ...) m(c, x) PP_FE_18(m, c, __VA_ARGS__)
+#define PP_FE_20(m, c, x, ...) m(c, x) PP_FE_19(m, c, __VA_ARGS__)
+#define PP_FE_21(m, c, x, ...) m(c, x) PP_FE_20(m, c, __VA_ARGS__)
+#define PP_FE_22(m, c, x, ...) m(c, x) PP_FE_21(m, c, __VA_ARGS__)
+#define PP_FE_23(m, c, x, ...) m(c, x) PP_FE_22(m, c, __VA_ARGS__)
+#define PP_FE_24(m, c, x, ...) m(c, x) PP_FE_23(m, c, __VA_ARGS__)
+#define PP_FE_25(m, c, x, ...) m(c, x) PP_FE_24(m, c, __VA_ARGS__)
+#define PP_FE_26(m, c, x, ...) m(c, x) PP_FE_25(m, c, __VA_ARGS__)
+#define PP_FE_27(m, c, x, ...) m(c, x) PP_FE_26(m, c, __VA_ARGS__)
+#define PP_FE_28(m, c, x, ...) m(c, x) PP_FE_27(m, c, __VA_ARGS__)
+#define PP_FE_29(m, c, x, ...) m(c, x) PP_FE_28(m, c, __VA_ARGS__)
+#define PP_FE_30(m, c, x, ...) m(c, x) PP_FE_29(m, c, __VA_ARGS__)
+#define PP_FE_31(m, c, x, ...) m(c, x) PP_FE_30(m, c, __VA_ARGS__)
+#define PP_FE_32(m, c, x, ...) m(c, x) PP_FE_31(m, c, __VA_ARGS__)
+
 #define cc_ignore(...) PP_CALL(PP_CC_VAR_UNUSED, __VA_ARGS__)
 
 #define cc_discard(expr)                                                       \

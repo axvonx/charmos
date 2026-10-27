@@ -63,9 +63,9 @@ static inline void async_complete(struct async_completion *ac, void *ctx) {
     }
 }
 
-static inline void async_apc_callback_internal(struct apc_context *ac,
+static inline void async_apc_callback_internal(struct apc_context *apc_ctx,
                                                void *arg) {
-    cc_ignore(ac);
+    cc_ignore(apc_ctx);
     struct async_completion *ac = arg;
     ac->callback(ac);
 }

@@ -9,10 +9,10 @@ panic_impl_msg(const char *file, int line, const char *func, const char *fmt,
                ...);
 cc_noreturn cc_cold cc_printf_like(5, 6) cc_nonnull(1, 3, 5) void
 panic_impl_code(const char *file, int line, const char *func,
-                enum crash_code code, const char *fmt, ...);
+                const struct crash_code *code, const char *fmt, ...);
 cc_noreturn cc_cold cc_nonnull(1, 3) void
 panic_impl_code_only(const char *file, int line, const char *func,
-                     enum crash_code code);
+                     const struct crash_code *code);
 
 #define _panic_pick(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12,     \
                     _13, _14, _15, _16, NAME, ...)                             \
@@ -29,21 +29,27 @@ panic_impl_code_only(const char *file, int line, const char *func,
                default : code_fn)
 
 /* panic() */
-#define _panic_0()                                                             \
-    panic_impl_code_only(__FILE__, __LINE__, __func__, CRASH_CODE_GENERIC)
+#define _panic_0() panic_impl_code_only(__FILE__, __LINE__, __func__, NULL)
 
 /*
- * panic(CODE)
  * panic("msg")
+ * panic(INVALID_STATE)
+ * panic((asan, RUNTIME))
+ *
+ * more about CRASH_CODE_ARG in console/crash.h
  */
 #define _panic_1(a)                                                            \
-    _panic_fn(a, panic_impl_code_only)(__FILE__, __LINE__, __func__, a)
+    CRASH_CODE_SCOPED(a, _panic_fn(CRASH_CODE_ARG(a), panic_impl_code_only)(   \
+                             __FILE__, __LINE__, __func__, CRASH_CODE_ARG(a)))
 
 /*
  * panic("msg %d", 12)
- * panic(CODE, "msg %d", 12)
+ * panic(INVALID_STATE, "msg %d", 12)
+ * panic((asan, RUNTIME), "msg %d", 12)
  */
 #define _panic_n(a, ...)                                                       \
-    _panic_fn(a, panic_impl_code)(__FILE__, __LINE__, __func__, a, __VA_ARGS__)
+    CRASH_CODE_SCOPED(                                                         \
+        a, _panic_fn(CRASH_CODE_ARG(a), panic_impl_code)(                      \
+               __FILE__, __LINE__, __func__, CRASH_CODE_ARG(a), __VA_ARGS__))
 
 #define panic(...) _panic_arity(__VA_ARGS__)(__VA_ARGS__)

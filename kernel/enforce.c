@@ -83,14 +83,15 @@ cc_noreturn void enforce_impl_msg(const char *file, int line, const char *func,
                                   const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    enforce_v(CRASH_CODE_TO_PAYLOAD(CRASH_CODE_GENERIC), file, line, func,
-              prefix, expr, fmt, args);
+    enforce_v(CRASH_CODE_TO_PAYLOAD(NULL), file, line, func, prefix, expr, fmt,
+              args);
     va_end(args);
 }
 
 cc_noreturn void enforce_impl_code(const char *file, int line, const char *func,
                                    const char *prefix, const char *expr,
-                                   enum crash_code code, const char *fmt, ...) {
+                                   const struct crash_code *code,
+                                   const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     enforce_v(CRASH_CODE_TO_PAYLOAD(code), file, line, func, prefix, expr, fmt,
@@ -101,6 +102,6 @@ cc_noreturn void enforce_impl_code(const char *file, int line, const char *func,
 cc_noreturn void enforce_impl_code_only(const char *file, int line,
                                         const char *func, const char *prefix,
                                         const char *expr,
-                                        enum crash_code code) {
+                                        const struct crash_code *code) {
     enforce_impl_code(file, line, func, prefix, expr, code, NULL);
 }

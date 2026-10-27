@@ -52,7 +52,6 @@ NDJSON_DEFINE(panic_frame, NDJSON_SECTION_PANIC, NDJSON_KIND_FRAME, 1,
               NDJSON_U64(off), NDJSON_STR(file), NDJSON_U64(line));
 
 extern void crash_capture_regs(struct crash_regs *out);
-static struct crash_facility *crash_facility_for(enum crash_code code);
 
 bool crash_cpu_is_owner(uint64_t id) {
     return atomic_load_rlx(&crash_owner) == (int64_t) id;
@@ -665,7 +664,7 @@ static void crash_facility_dump(const struct crash_facility *facility,
                                 struct report_target *tgt,
                                 struct crash_payload pl) {
     active_facility_target = tgt;
-    facility->dump(CRASH_CODE_GET_DELTA(pl.code), pl);
+    facility->dump(pl);
     active_facility_target = NULL;
 }
 
@@ -753,8 +752,8 @@ static void crash_report_visual(const struct crash_context *ctx,
     struct report_target left = report_pane(panes, 0);
     struct report_target right = report_pane(panes, 1);
 
-    enum crash_code code = ctx->payload.code;
-    struct crash_facility *facility = crash_facility_for(code);
+    const struct crash_code *code = ctx->payload.code;
+    const struct crash_facility *facility = code ? code->facility : NULL;
     crash_logo_panel(&left, OS_LOGO_PANIC_CENTERED);
     report_blank(&left);
 
@@ -776,21 +775,13 @@ static void crash_report_visual(const struct crash_context *ctx,
     report_section_end();
 
     char name_top[128];
+    char code_id[64];
     const char *code_name = NULL;
-    if (facility) {
-        uint16_t delta = CRASH_CODE_GET_DELTA(code);
+    if (code) {
+        crash_code_name(code, code_id, sizeof(code_id));
         snprintf(name_top, sizeof(name_top),
-                 "%s (" ANSI_GREEN "%s" ANSI_BRIGHT_BLUE ") " ANSI_RESET
-                 "crashed with code " ANSI_BOLD ANSI_WHITE "0x%x" ANSI_RESET,
-                 facility->name ? facility->name : "unknown",
-                 facility->desc ? facility->desc : "no description", code);
-        code_name = facility->to_str ? facility->to_str(delta) : NULL;
-    } else if (code != 0) {
-        snprintf(name_top, sizeof(name_top),
-                 "crashed" ANSI_BRIGHT_BLUE " with code " ANSI_BOLD ANSI_WHITE
-                 "0x%x" ANSI_RESET,
-                 code);
-        code_name = crash_code_to_str(code);
+                 ANSI_BOLD ANSI_WHITE "%s" ANSI_RESET, code_id);
+        code_name = code->desc;
     } else {
         strcpy(name_top, "empty box");
     }
@@ -844,16 +835,17 @@ static void crash_report_raw_serial(const struct crash_context *ctx,
     if (ctx->msg)
         printf_unlocked("Message : %s\n", ctx->msg);
 
-    enum crash_code code = ctx->payload.code;
-    struct crash_facility *facility = crash_facility_for(code);
-    if (facility) {
-        uint16_t delta = CRASH_CODE_GET_DELTA(code);
-        printf_unlocked("Code    : 0x%x (%s: %s)\n", code,
-                        facility->name ? facility->name : "unknown",
-                        facility->to_str ? facility->to_str(delta) : "unknown");
-        if (facility->dump)
-            crash_facility_dump(facility, NULL, ctx->payload);
+    const struct crash_code *code = ctx->payload.code;
+    const struct crash_facility *facility = code ? code->facility : NULL;
+    if (code) {
+        char code_id[64];
+        crash_code_name(code, code_id, sizeof(code_id));
+        printf_unlocked("Code    : %s%s%s%s\n", code_id, code->desc ? " (" : "",
+                        code->desc ? code->desc : "", code->desc ? ")" : "");
     }
+
+    if (facility && facility->dump)
+        crash_facility_dump(facility, NULL, ctx->payload);
 
     if (regs) {
         printf_unlocked(
@@ -940,54 +932,17 @@ cc_noreturn void crash_full(const struct crash_context *ctx) TSA_NO_ANALYSIS {
         cpu_halt();
 }
 
-static int cmp_facility_prefix(const void *key, const void *elem) {
-    uint16_t pref = *(const uint16_t *) key;
-    const struct crash_facility *f = elem;
-    return (pref > f->prefix) - (pref < f->prefix);
-}
+CRASH_FACILITY_DEFINE(global, NULL);
 
-/* bsearch __skernel_crash_facilities to __ekernel_crash_facilities */
-static struct crash_facility *facility_for(uint16_t pref) {
-    if (!pref)
-        return NULL;
+size_t crash_code_name(const struct crash_code *code, char *buf, size_t len) {
+    if (!code)
+        return (size_t) snprintf(buf, len, "GENERIC");
 
-    size_t count = __ekernel_crash_facilities - __skernel_crash_facilities;
-    return bsearch(&pref, __skernel_crash_facilities, count,
-                   sizeof(struct crash_facility), cmp_facility_prefix);
-}
+    if (code->facility == &CRASH_FACILITY(global))
+        return (size_t) snprintf(buf, len, "%s", code->name);
 
-static struct crash_facility *crash_facility_for(enum crash_code code) {
-    return facility_for(CRASH_CODE_GET_FACILITY(code));
-}
-
-/* Can't crash in here,
- * TODO: Consider supporting crashing in here*/
-const char *crash_code_from_facility_to_str(enum crash_code code) {
-    uint16_t del = CRASH_CODE_GET_DELTA(code);
-    struct crash_facility *this = crash_facility_for(code);
-    if (!del || !this || !this->to_str)
-        return NULL;
-
-    return this->to_str(del);
-}
-
-static int cmp_facility(const void *a, const void *b) {
-    return cmp_facility_prefix(&((const struct crash_facility *) a)->prefix, b);
-}
-
-void crash_facilities_init(void) {
-    size_t count = __ekernel_crash_facilities - __skernel_crash_facilities;
-    struct crash_facility *f = __skernel_crash_facilities;
-
-    heapsort(f, count, sizeof(*f), cmp_facility);
-
-    for (size_t i = 0; i < count; i++) {
-        enforce(f[i].prefix != CRASH_PREFIX_RESERVED,
-                "crash facility '%s' has the reserved prefix 0", f[i].name);
-        enforce(i == 0 || f[i].prefix != f[i - 1].prefix,
-                "crash facilities '%s' and '%s' share prefix %u", f[i - 1].name,
-                f[i].name, f[i].prefix);
-    }
+    return (size_t) snprintf(buf, len, "%s.%s", code->facility->name,
+                             code->name);
 }
 
 #ifdef DEBUG_CRASH
