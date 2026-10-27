@@ -497,10 +497,11 @@ void topology_mark_core_idle(cpu_id_t cpu_id, bool idle) {
 
 struct core *topology_find_idle_core(struct core *local_core,
                                      enum topology_level max_search) {
-    enforce(max_search >
-            TOPOLOGY_LEVEL_SMT); /* 'SMT' will be the core itself.
-                                  * It has no neighbors, and thus
-                                  * cannot be searched through (one core) */
+    enforce_precond(
+        max_search >
+        TOPOLOGY_LEVEL_SMT); /* 'SMT' will be the core itself.
+                              * It has no neighbors, and thus
+                              * cannot be searched through (one core) */
 
     struct topology_node *smt_node = local_core->topo_node; /* Direct node  */
     struct topology_node *core_node = smt_node->parent_node;

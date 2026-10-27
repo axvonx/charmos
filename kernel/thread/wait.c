@@ -39,9 +39,10 @@ static void prepare_wait(const struct thread_wait_object *objects, size_t count,
                          struct thread_wait_block *storage,
                          enum thread_wait_type type, thread_act_reason_t reason,
                          enum thread_state state) {
-    enforce(count <= UINT16_MAX, CAPACITY_EXCEEDED);
-    enforce(type != THREAD_WAIT_NONE);
-    enforce(storage || count <= THREAD_NUM_WAIT_BLOCKS, CAPACITY_EXCEEDED);
+    enforce_precond(count <= UINT16_MAX, CAPACITY_EXCEEDED);
+    enforce_precond(type != THREAD_WAIT_NONE);
+    enforce_precond(storage || count <= THREAD_NUM_WAIT_BLOCKS,
+                    CAPACITY_EXCEEDED);
 
     struct thread *t = thread_get_current();
     if (!storage)
@@ -304,8 +305,8 @@ static void deliver_alert_locked(struct thread *t) {
     scheduler_complete_object_wait(t, t->wait_completion_reason);
 }
 
-void thread_alert(struct thread *t) {
-    enforce(t);
+void thread_alert(struct thread *cc_nonnull_ptr t) {
+    enforce_precond(t);
     enum irql irql = spin_lock_high(&t->wait_lock);
 
     if (!thread_test_flag(t, THREAD_FLAG_DYING)) {

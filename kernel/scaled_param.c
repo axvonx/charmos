@@ -15,7 +15,7 @@ static size_t geom_interp(size_t a, size_t b, fx32_32_t t) {
     if (a == b)
         return a;
 
-    enforce(a <= INT64_MAX && b <= INT64_MAX);
+    enforce_precond(a <= INT64_MAX && b <= INT64_MAX);
     int64_t lower = (int64_t) a;
     int64_t upper = (int64_t) b;
     fx32_32_t ln_a = fx_ln(fx_from_int(lower));
@@ -35,7 +35,7 @@ static size_t linear_interp(size_t a, size_t b, fx32_32_t t) {
     if (a == b)
         return a;
 
-    enforce(a <= INT64_MAX && b <= INT64_MAX);
+    enforce_precond(a <= INT64_MAX && b <= INT64_MAX);
     int64_t lower = (int64_t) a;
     int64_t upper = (int64_t) b;
     fx32_32_t span = fx_from_int(upper - lower);

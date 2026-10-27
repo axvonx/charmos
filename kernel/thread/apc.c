@@ -285,9 +285,10 @@ struct apc *apc_create(void) {
     return a;
 }
 
-void apc_init(struct apc *a, apc_func_t fn, void *arg1, apc_destroy_t destroy) {
-    enforce(a);
-    enforce(fn);
+void apc_init(struct apc *cc_nonnull_ptr a, apc_func_t cc_nonnull_ptr fn,
+              void *arg1, apc_destroy_t destroy) {
+    enforce_precond(a);
+    enforce_precond(fn);
     a->func = fn;
     a->ctx = arg1;
     a->next = NULL;
@@ -301,8 +302,8 @@ bool apc_getref(struct apc *a) {
     return a && refcount_inc_not_zero(&a->refcount);
 }
 
-void apc_putref(struct apc *a) {
-    enforce(a);
+void apc_putref(struct apc *cc_nonnull_ptr a) {
+    enforce_precond(a);
     if (!refcount_dec_and_test(&a->refcount))
         return;
 

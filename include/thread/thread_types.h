@@ -137,6 +137,7 @@ struct thread_class_donation {
                                      .class = THREAD_PRIO_CLASS_BACKGROUND,    \
                                      .active = false})
 
-struct thread *thread_create_full(char *name, thread_entry_fn_t entry,
+struct thread *thread_create_full(char *cc_nonnull_ptr name,
+                                  thread_entry_fn_t entry,
                                   struct thread_create_params *params,
                                   va_list args) cc_printf_like(1, 0);

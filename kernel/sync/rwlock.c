@@ -108,8 +108,8 @@ static size_t rwlock_get_backoff(size_t current_backoff) {
 static void rwlock_chk_state_init(struct rwlock *lock,
                                   const struct lock_chk_class *class,
                                   enum lock_chk_flags flags) {
-    enforce((flags & ~LOCK_CHKD_FULL) == 0);
-    enforce(flags == LOCK_UNCHKD || class != NULL);
+    enforce_precond((flags & ~LOCK_CHKD_FULL) == 0);
+    enforce_precond(flags == LOCK_UNCHKD || class != NULL);
     lock->chk.flags = flags;
     lock->chk.initialized = true;
     atomic_store_rlx(&lock->chk.used, false);
@@ -127,7 +127,7 @@ void rwlock_set_chk_flags(struct rwlock *lock, enum lock_chk_flags flags) {
     enforce(lock->chk.initialized, UNINITIALIZED);
     enforce(rwlock_idle_for_reconfiguration(lock));
     enforce(!atomic_load_rlx(&lock->chk.used));
-    enforce((flags & ~LOCK_CHKD_FULL) == 0);
+    enforce_precond((flags & ~LOCK_CHKD_FULL) == 0);
     lock->chk.flags = flags;
 }
 
@@ -202,8 +202,8 @@ void rw_lock_full(struct rwlock *lock, enum rwlock_acquire_type acq_type,
                   enum lock_subclass subclass,
                   const struct lock_chk_site *site) TSA_NO_ANALYSIS {
     cc_ignore(site);
-    enforce(subclass < LOCK_CHK_MAX_SUBCLASSES, CAPACITY_EXCEEDED);
-    enforce(acq_type == RWLOCK_READ || acq_type == RWLOCK_WRITE);
+    enforce_precond(subclass < LOCK_CHK_MAX_SUBCLASSES, CAPACITY_EXCEEDED);
+    enforce_precond(acq_type == RWLOCK_READ || acq_type == RWLOCK_WRITE);
 
     enforce(irq_not_in_interrupt(), INVALID_CONTEXT);
     enforce(irql_get() <= IRQL_APC_LEVEL, INVALID_CONTEXT);

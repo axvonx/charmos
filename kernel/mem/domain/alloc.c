@@ -311,7 +311,7 @@ static paddr_t alloc_with_locality(size_t pages, bool flexible_locality,
 }
 
 paddr_t domain_alloc(size_t pages, enum alloc_flags flags) {
-    enforce(pages != 0);
+    enforce_precond(pages != 0);
     /* pin our core and disable preemption */
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
 

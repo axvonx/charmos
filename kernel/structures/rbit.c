@@ -358,8 +358,8 @@ static size_t validate_rbit(struct rbit_node *node, size_t *black_height) {
     return 1;
 }
 
-void rbit_delete(struct rbit *tree, struct rbit_node *z) {
-    enforce(z != NULL);
+void rbit_delete(struct rbit *tree, struct rbit_node *cc_nonnull_ptr z) {
+    enforce_precond(z != NULL);
     enforce(rbit_has_node(tree, z));
     rbit_check_cycle(tree->root, __func__);
     struct rbit_node *y = z;
@@ -499,8 +499,8 @@ static void fix_insertion(struct rbit *tree, struct rbit_node *node) {
     tree->root->color = RBIT_BLACK;
 }
 
-void rbit_insert(struct rbit *tree, struct rbit_node *new_node) {
-    enforce(new_node != NULL);
+void rbit_insert(struct rbit *tree, struct rbit_node *cc_nonnull_ptr new_node) {
+    enforce_precond(new_node != NULL);
     enforce(!rbit_has_node(tree, new_node), DUPLICATE);
     rbit_check_cycle(tree->root, __func__);
     new_node->left = NULL;

@@ -63,8 +63,8 @@ static void mutex_chk_unlocked(struct mutex_chk_rel_state *state) {
 static void mutex_chk_state_init(struct mutex *mtx,
                                  const struct lock_chk_class *class,
                                  enum lock_chk_flags flags) {
-    enforce((flags & ~LOCK_CHKD_FULL) == 0);
-    enforce(flags == LOCK_UNCHKD || class != NULL);
+    enforce_precond((flags & ~LOCK_CHKD_FULL) == 0);
+    enforce_precond(flags == LOCK_UNCHKD || class != NULL);
     mtx->chk.flags = flags;
     mtx->chk.initialized = true;
     atomic_store_rlx(&mtx->chk.used, false);
@@ -75,7 +75,7 @@ void mutex_set_chk_flags(struct mutex *mtx, enum lock_chk_flags flags) {
     enforce(mtx->chk.initialized, UNINITIALIZED);
     enforce(!mutex_locked(mtx));
     enforce(!atomic_load_rlx(&mtx->chk.used));
-    enforce((flags & ~LOCK_CHKD_FULL) == 0);
+    enforce_precond((flags & ~LOCK_CHKD_FULL) == 0);
     mtx->chk.flags = flags;
 }
 
@@ -186,7 +186,7 @@ static void mutex_sanity_check(void) {
 void mutex_lock_subclass_full(struct mutex *mutex, enum lock_subclass subclass,
                               const struct lock_chk_site *site)
     TSA_NO_ANALYSIS {
-    enforce(subclass < LOCK_CHK_MAX_SUBCLASSES, CAPACITY_EXCEEDED);
+    enforce_precond(subclass < LOCK_CHK_MAX_SUBCLASSES, CAPACITY_EXCEEDED);
     mutex_sanity_check();
 
     struct mutex_chk_acq_state chk_state;

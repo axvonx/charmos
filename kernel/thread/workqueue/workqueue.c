@@ -59,8 +59,8 @@ enum workqueue_error workqueue_add_remote(struct work *work) {
     return workqueue_enqueue(queue, work);
 }
 
-void work_execute(struct work *task) {
-    enforce(task);
+void work_execute(struct work *cc_nonnull_ptr task) {
+    enforce_precond(task);
     task->func(task->args.arg1, task->args.arg2);
     atomic_exchange(&task->active, false);
 }
@@ -202,8 +202,8 @@ void workqueue_free(struct workqueue *wq) {
 }
 
 /* Give all threads the exit signal and clean up the structs */
-void workqueue_destroy(struct workqueue *queue) {
-    enforce(queue);
+void workqueue_destroy(struct workqueue *cc_nonnull_ptr queue) {
+    enforce_precond(queue);
 
     WORKQUEUE_STATE_SET(queue, WORKQUEUE_STATE_DESTROYING);
     atomic_store(&queue->ignore_timeouts, true);

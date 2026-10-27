@@ -47,8 +47,8 @@ static fx32_32_t pow2_proximity(size_t n) {
  * lcsf(m, M, n) = ln(e - { [ (e - 1)  * (n - m) ] / r})
  */
 static fx32_32_t log_clamped_scale_factor(size_t min, size_t max, size_t n) {
-    enforce(max > min);
-    enforce(IN_RANGE(n, min, max));
+    enforce_precond(max > min);
+    enforce_precond(IN_RANGE(n, min, max));
 
     fx32_32_t f_max = fx_from_int(max);
     fx32_32_t f_min = fx_from_int(min);
@@ -246,12 +246,12 @@ enum err elcm(struct elcm_params *params) {
     size_t metadata_bytes_per_page = params->metadata_bytes_per_page;
     bool bias_towards_pow2 = params->bias_towards_pow2;
 
-    enforce(obj_size > 0, INVALID_ARGUMENT);
-    enforce(page_size > 0, INVALID_ARGUMENT);
-    enforce(obj_alignment <= page_size, INVALID_ARGUMENT,
-            "alignment cannot exceed page size");
-    enforce(max_wastage_pct <= 100, INVALID_ARGUMENT,
-            "max wastage percentage must be 0-100");
+    enforce_precond(obj_size > 0);
+    enforce_precond(page_size > 0);
+    enforce_precond(obj_alignment <= page_size,
+                    "alignment cannot exceed page size");
+    enforce_precond(max_wastage_pct <= 100,
+                    "max wastage percentage must be 0-100");
 
     size_t best_possible = find_best(params);
 

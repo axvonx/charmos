@@ -84,7 +84,7 @@ struct thread *thread_wait_header_satisfy(struct thread_wait_header *header,
 /* Alert is a "level-triggered" singular event. We only end interruptible
  * waits with alerts, but otherwise, the alert will merely pend until
  * the next interruptible wait/park happens */
-void thread_alert(struct thread *thread);
+void thread_alert(struct thread *cc_nonnull_ptr thread);
 void thread_park(void);
 
 /* The actual "go wait" action, yield and whatnot */

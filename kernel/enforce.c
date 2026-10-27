@@ -88,6 +88,17 @@ cc_noreturn void enforce_impl_msg(const char *file, int line, const char *func,
     va_end(args);
 }
 
+cc_noreturn void enforce_impl_precond_msg(const char *file, int line,
+                                          const char *func, const char *prefix,
+                                          const char *expr, const char *fmt,
+                                          ...) {
+    va_list args;
+    va_start(args, fmt);
+    enforce_v(CRASH_CODE_TO_PAYLOAD(CRASH_CODE(global, INVALID_ARGUMENT)), file,
+              line, func, prefix, expr, fmt, args);
+    va_end(args);
+}
+
 cc_noreturn void enforce_impl_code(const char *file, int line, const char *func,
                                    const char *prefix, const char *expr,
                                    const struct crash_code *code,

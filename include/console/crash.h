@@ -343,6 +343,11 @@ CRASH_CODES_DECLARE(global);
 cc_noreturn void enforce_impl_msg(const char *file, int line, const char *func,
                                   const char *prefix, const char *expr,
                                   const char *fmt, ...) cc_printf_like(6, 7);
+/* enforce_impl_msg() with INVALID_ARGUMENT for enforce_precond() */
+cc_noreturn void enforce_impl_precond_msg(const char *file, int line,
+                                          const char *func, const char *prefix,
+                                          const char *expr, const char *fmt,
+                                          ...) cc_printf_like(6, 7);
 cc_noreturn void enforce_impl_code(const char *file, int line, const char *func,
                                    const char *prefix, const char *expr,
                                    const struct crash_code *code,

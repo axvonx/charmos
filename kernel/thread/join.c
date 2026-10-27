@@ -1,7 +1,7 @@
 #include <thread/thread.h>
 
-static void join_check(struct thread *t) {
-    enforce(t);
+static void join_check(struct thread *cc_nonnull_ptr t) {
+    enforce_precond(t);
     enforce(t != thread_get_current(), "thread '%s' joined itself", t->name);
     enforce(irql_get() == IRQL_PASSIVE_LEVEL, INVALID_CONTEXT,
             "thread_join() blocks");

@@ -29,9 +29,10 @@
                   _enforce_n, _enforce_n, _enforce_n, _enforce_n, _enforce_n,  \
                   _enforce_n, _enforce_n, _enforce_1, _enforce_0)
 
-#define _enforce_fn(a, code_fn)                                                \
-    cc_generic((a), char * : enforce_impl_msg,                                 \
-               const char * : enforce_impl_msg, default : code_fn)
+#define _enforce_fn_as(a, msg_fn, code_fn)                                     \
+    cc_generic((a), char * : msg_fn, const char * : msg_fn, default : code_fn)
+
+#define _enforce_fn(a, code_fn) _enforce_fn_as(a, enforce_impl_msg, code_fn)
 
 #define _enforce_ctx(prefix, s)                                                \
     __FILE__, __LINE__, __func__, prefix, _enforce_msg(s)
@@ -68,6 +69,51 @@
     enforce_impl_msg(__FILE__, __LINE__, __func__, prefix, NULL, "" __VA_ARGS__)
 
 #define enforce(x, ...) _enforce_arity(__VA_ARGS__)("", #x, x, ##__VA_ARGS__)
+
+/*
+ * enforce_precond(x)
+ * enforce_precond(x, "msg %d", 12)
+ * enforce_precond(x, CODE)
+ * enforce_precond(x, CODE, "msg %d", 12)
+ *
+ * enforce() sugar for precondition validation and messages. Failure
+ * message doesn't have the expression unless DEBUG_ASSUME is on
+ */
+#ifdef DEBUG_ASSUME
+#define _precond_msg(s) "Precondition \"" s "\" failed"
+#else
+#define _precond_msg(s) "Precondition failed"
+#endif
+
+#define _precond_ctx(s) __FILE__, __LINE__, __func__, "", _precond_msg(s)
+
+#define _precond_arity(...)                                                    \
+    _enforce_pick(_, ##__VA_ARGS__, _precond_n, _precond_n, _precond_n,        \
+                  _precond_n, _precond_n, _precond_n, _precond_n, _precond_n,  \
+                  _precond_n, _precond_n, _precond_n, _precond_n, _precond_n,  \
+                  _precond_n, _precond_n, _precond_1, _precond_0)
+
+#define _precond_0(s, x)                                                       \
+    _enforce_eval(                                                             \
+        x, enforce_impl_code_only(_precond_ctx(s),                             \
+                                  CRASH_CODE(global, INVALID_ARGUMENT)))
+
+#define _precond_1(s, x, a)                                                    \
+    _enforce_eval(                                                             \
+        x, CRASH_CODE_SCOPED(                                                  \
+               a, _enforce_fn_as(CRASH_CODE_ARG(a), enforce_impl_precond_msg,  \
+                                 enforce_impl_code_only)(_precond_ctx(s),      \
+                                                         CRASH_CODE_ARG(a))))
+
+#define _precond_n(s, x, a, ...)                                               \
+    _enforce_eval(                                                             \
+        x, CRASH_CODE_SCOPED(                                                  \
+               a, _enforce_fn_as(CRASH_CODE_ARG(a), enforce_impl_precond_msg,  \
+                                 enforce_impl_code)(                           \
+                      _precond_ctx(s), CRASH_CODE_ARG(a), __VA_ARGS__)))
+
+#define enforce_precond(x, ...)                                                \
+    _precond_arity(__VA_ARGS__)(#x, x, ##__VA_ARGS__)
 
 #define unimplemented(...) _enforce_fail("unimplemented! ", ##__VA_ARGS__)
 

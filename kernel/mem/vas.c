@@ -132,7 +132,7 @@ static int32_t segment_cmp(const struct rbt_node *a, const struct rbt_node *b) {
 }
 
 static uint32_t size_to_bin(size_t size) {
-    enforce(size);
+    enforce_precond(size);
     return 63U - ci_clzll(size);
 }
 

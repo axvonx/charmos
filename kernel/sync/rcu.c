@@ -295,8 +295,8 @@ void rcu_idle_exit(void) {
     atomic_xchg_acq_rel(&me->idle, false);
 }
 
-void rcu_defer(struct rcu_cb *cb, rcu_fn func) {
-    enforce(cb && func);
+void rcu_defer(struct rcu_cb *cc_nonnull_ptr cb, rcu_fn cc_nonnull_ptr func) {
+    enforce_precond(cb && func);
 
     cb->fn = func;
 

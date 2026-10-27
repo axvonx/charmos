@@ -226,10 +226,10 @@ bool watchdog_count_heartbeats_at(const struct watchdog_buckets *buckets,
     if (!watchdog_buckets_snapshot(buckets, &snap))
         return false;
 
-    enforce(window_buckets && window_buckets <= WATCHDOG_NUM_BUCKETS,
-            CAPACITY_EXCEEDED);
-    enforce(bucket_interval_ms);
-    enforce(expected_per_bucket);
+    enforce_precond(window_buckets && window_buckets <= WATCHDOG_NUM_BUCKETS,
+                    CAPACITY_EXCEEDED);
+    enforce_precond(bucket_interval_ms);
+    enforce_precond(expected_per_bucket);
 
     if (snap.last_heartbeat_ms == 0)
         goto not_ready;

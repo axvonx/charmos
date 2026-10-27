@@ -56,8 +56,8 @@ mutex_simple_chk_unlocked(struct mutex_simple_chk_release_state *state) {
 static void mutex_simple_chk_state_init(struct mutex_simple *m,
                                         const struct lock_chk_class *class,
                                         enum lock_chk_flags flags) {
-    enforce((flags & ~LOCK_CHKD_FULL) == 0);
-    enforce(flags == LOCK_UNCHKD || class != NULL);
+    enforce_precond((flags & ~LOCK_CHKD_FULL) == 0);
+    enforce_precond(flags == LOCK_UNCHKD || class != NULL);
     m->chk.flags = flags;
     m->chk.initialized = true;
     atomic_store_rlx(&m->chk.used, false);
@@ -72,7 +72,7 @@ void mutex_simple_set_chk_flags(struct mutex_simple *m,
     enforce(!spinlock_locked(&m->waiters.lock));
     enforce(!spinlock_locked(&m->lock));
     enforce(!atomic_load_rlx(&m->chk.used));
-    enforce((flags & ~LOCK_CHKD_FULL) == 0);
+    enforce_precond((flags & ~LOCK_CHKD_FULL) == 0);
     m->chk.flags = flags;
 }
 

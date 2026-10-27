@@ -54,8 +54,8 @@ void timekeeper_init(void) {
     seq_write_unlock(&timekeeper.lock, irql);
 }
 
-void timekeeper_set_clock(struct clock *clk) {
-    enforce(clk != NULL, "timekeeper_set_clock called with NULL clock");
+void timekeeper_set_clock(struct clock *cc_nonnull_ptr clk) {
+    enforce_precond(clk != NULL, "timekeeper_set_clock called with NULL clock");
 
     enum irql irql = seq_write_lock_high(&timekeeper.lock);
     if (timekeeper.clock) {

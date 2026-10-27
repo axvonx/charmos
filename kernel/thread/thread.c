@@ -256,10 +256,11 @@ static struct thread *thread_init(struct thread *thread,
     return thread;
 }
 
-struct thread *thread_create_full(char *name, thread_entry_fn_t entry,
+struct thread *thread_create_full(char *cc_nonnull_ptr name,
+                                  thread_entry_fn_t entry,
                                   struct thread_create_params *params,
                                   va_list args) {
-    enforce(name);
+    enforce_precond(name);
     struct thread *new_thread = vnew(new_thread, ALLOC_ZERO);
     if (cc_unlikely(!new_thread))
         goto err;
@@ -612,10 +613,10 @@ void thread_unlock_thread_and_rq(struct scheduler *thread_rq,
     spin_unlock(&first->lock, irq_first);
 }
 
-void thread_lock_two_pi_locks(struct thread *a, struct thread *b,
-                              enum irql *irq_a,
+void thread_lock_two_pi_locks(struct thread *cc_nonnull_ptr a,
+                              struct thread *cc_nonnull_ptr b, enum irql *irq_a,
                               enum irql *irq_b) TSA_NO_ANALYSIS {
-    enforce(a && b && a != b);
+    enforce_precond(a && b && a != b);
     if (a < b) {
         *irq_a = spin_lock_high_subclass(&a->pi_lock, LOCK_SUBCLASS_LOWER);
         *irq_b = spin_lock_high_subclass(&b->pi_lock, LOCK_SUBCLASS_HIGHER);
@@ -625,10 +626,11 @@ void thread_lock_two_pi_locks(struct thread *a, struct thread *b,
     }
 }
 
-void thread_unlock_two_pi_locks(struct thread *a, struct thread *b,
+void thread_unlock_two_pi_locks(struct thread *cc_nonnull_ptr a,
+                                struct thread *cc_nonnull_ptr b,
                                 enum irql *irq_a,
                                 enum irql *irq_b) TSA_NO_ANALYSIS {
-    enforce(a && b && a != b);
+    enforce_precond(a && b && a != b);
     if (a < b) {
         spin_unlock(&b->pi_lock, *irq_b);
         spin_unlock(&a->pi_lock, *irq_a);

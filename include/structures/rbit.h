@@ -147,9 +147,9 @@ struct rbit_node *rbit_next(struct rbit_node *node);
 struct rbit_node *rbit_find_predecessor(struct rbit *tree, size_t low);
 struct rbit_node *rbit_find_successor(struct rbit *tree, size_t low);
 bool rbit_has_node(struct rbit *tree, struct rbit_node *node);
-void rbit_delete(struct rbit *tree, struct rbit_node *z);
+void rbit_delete(struct rbit *tree, struct rbit_node *cc_nonnull_ptr z);
 struct rbit_node *rbit_search(struct rbit_node *root, struct interval iv);
 struct rbit_node *rbit_overlap_search(struct rbit_node *root,
                                       struct interval iv);
 void rbit_remove(struct rbit *tree, struct interval iv);
-void rbit_insert(struct rbit *tree, struct rbit_node *new_node);
+void rbit_insert(struct rbit *tree, struct rbit_node *cc_nonnull_ptr new_node);

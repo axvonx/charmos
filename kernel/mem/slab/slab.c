@@ -354,7 +354,7 @@ void slab_cache_init(size_t order, struct slab_cache *cache,
 static void slab_zero_out(struct slab *slab, size_t page_count) {
     void *start = (void *) slab->mem;
     size_t non_data = slab->mem - (vaddr_t) slab;
-    enforce(page_count);
+    enforce_precond(page_count);
     size_t len = page_count * PAGE_SIZE - non_data;
     memset(start, 0, len);
 }

@@ -37,9 +37,10 @@ struct apc {
 };
 
 struct apc *apc_create(void);
-void apc_init(struct apc *a, apc_func_t fn, void *arg1, apc_destroy_t destroy);
+void apc_init(struct apc *cc_nonnull_ptr a, apc_func_t cc_nonnull_ptr fn,
+              void *arg1, apc_destroy_t destroy);
 bool apc_getref(struct apc *a);
-void apc_putref(struct apc *a);
+void apc_putref(struct apc *cc_nonnull_ptr a);
 void apc_destroy_free(struct apc *a);
 void apc_event_signal(struct apc_event_desc *desc);
 

@@ -234,7 +234,7 @@ static vaddr_t gap_search(struct rbit_node *n, vaddr_t *floor,
 
 vaddr_t mm_vma_range_find_gap(struct mm *mm, size_t len, size_t align,
                               vaddr_t low, vaddr_t high) {
-    enforce(IS_POW2(align));
+    enforce_precond(IS_POW2(align));
     if (len == 0 || high <= low || high - low < len)
         return 0;
 

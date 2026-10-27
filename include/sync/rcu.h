@@ -38,7 +38,7 @@ void rcu_read_unlock(void) TSA_RELEASES(RCU_READ_LOCKED);
 
 void rcu_synchronize(void);
 
-void rcu_defer(struct rcu_cb *cb, rcu_fn func);
+void rcu_defer(struct rcu_cb *cc_nonnull_ptr cb, rcu_fn cc_nonnull_ptr func);
 
 void rcu_note_context_switch(struct thread *outgoing);
 void rcu_note_irq_exit(void);

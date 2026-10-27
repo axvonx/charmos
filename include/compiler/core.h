@@ -173,6 +173,23 @@
 #define cc_diagnose_if(cond, msg, severity)
 #endif
 
+/*
+ *     void take(void *p, unsigned flags, size_t n)
+ *         ct_precond(p != NULL)
+ *         ct_precond(flags & F_A, "use take_noflag() when F_A is clear")
+ *         ct_precond(n <= 4096);
+ *
+ * Notably only is able to check constants passed in.
+ * enforce_precond() for runtime precondition validation
+ */
+#define ct_precond(...)                                                        \
+    PP_CONCAT(_ct_precond_, PP_NARG(__VA_ARGS__))(__VA_ARGS__)
+#define _ct_precond_1(cond)                                                    \
+    cc_diagnose_if(!(cond), "precondition violated: " #cond, "error")
+#define _ct_precond_2(cond, hint)                                              \
+    cc_diagnose_if(!(cond), "precondition violated: " #cond " -- " hint,       \
+                   "error")
+
 #if cn_has_attribute(enable_if)
 #define cc_enable_if(cond, msg) __attribute__((enable_if(cond, msg)))
 #else

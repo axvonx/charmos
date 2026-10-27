@@ -516,11 +516,12 @@ void thread_unlock_thread_and_rq(struct scheduler *thread_rq,
                                  struct scheduler *other_rq,
                                  enum irql irq_first, enum irql irq_second);
 
-void thread_lock_two_pi_locks(struct thread *a, struct thread *b,
-                              enum irql *irq_a,
+void thread_lock_two_pi_locks(struct thread *cc_nonnull_ptr a,
+                              struct thread *cc_nonnull_ptr b, enum irql *irq_a,
                               enum irql *irq_b) TSA_NO_ANALYSIS;
 
-void thread_unlock_two_pi_locks(struct thread *a, struct thread *b,
+void thread_unlock_two_pi_locks(struct thread *cc_nonnull_ptr a,
+                                struct thread *cc_nonnull_ptr b,
                                 enum irql *irq_a,
                                 enum irql *irq_b) TSA_NO_ANALYSIS;
 

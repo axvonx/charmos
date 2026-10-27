@@ -254,11 +254,11 @@ enum workqueue_error workqueue_add_local(struct work *work)
 enum workqueue_error workqueue_add_fast(struct work *work)
     cc_warn_unused_result;
 
-void work_execute(struct work *task);
+void work_execute(struct work *cc_nonnull_ptr task);
 bool workqueue_should_spawn_worker(struct workqueue *queue);
 
 void workqueue_kick(struct workqueue *queue);
-void workqueue_destroy(struct workqueue *queue);
+void workqueue_destroy(struct workqueue *cc_nonnull_ptr queue);
 
 void worker_main(void *);
 

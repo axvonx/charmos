@@ -44,7 +44,7 @@ void thread_class_floor_inc_locked(struct thread *t,
                                    enum thread_prio_class class) {
     SPINLOCK_ASSERT_HELD(&t->pi_lock);
 
-    enforce(class < THREAD_PRIO_CLASS_COUNT);
+    enforce_precond(class < THREAD_PRIO_CLASS_COUNT);
     enforce(t->class_floors[class] != UINT8_MAX, OVERFLOW);
     t->class_floors[class]++;
 }
@@ -53,7 +53,7 @@ void thread_class_floor_dec_locked(struct thread *t,
                                    enum thread_prio_class class) {
     SPINLOCK_ASSERT_HELD(&t->pi_lock);
 
-    enforce(class < THREAD_PRIO_CLASS_COUNT);
+    enforce_precond(class < THREAD_PRIO_CLASS_COUNT);
     enforce(t->class_floors[class] > 0, UNDERFLOW);
     t->class_floors[class]--;
 }

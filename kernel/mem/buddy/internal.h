@@ -60,7 +60,8 @@ static inline void buddy_page_set_next_pfn(struct buddy_page *bp, pfn_t pfn) {
 }
 
 static inline bool buddy_page_is_free(const struct buddy_page *bp) {
-    return (bp->meta & BUDDY_IS_FREE_MASK) != 0;
+    return page_get_tag((const struct page *) bp) == PAGE_TAG_BUDDY &&
+           (bp->meta & BUDDY_IS_FREE_MASK) != 0;
 }
 
 static inline void buddy_page_set_free(struct buddy_page *bp, bool is_free) {

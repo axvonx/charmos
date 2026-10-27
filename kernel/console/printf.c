@@ -51,7 +51,7 @@ static void serial_putc(char c) {
     outb(0x3F8, (uint8_t) c);
 }
 
-void serial_write(const char *str, size_t len) {
+void serial_write(const char *const str cc_pass_object_size(0), size_t len) {
     for (size_t i = 0; i < len; i++)
         serial_putc(str[i]);
 }

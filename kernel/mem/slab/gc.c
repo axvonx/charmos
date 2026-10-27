@@ -39,7 +39,7 @@ static inline size_t scale_bias(uint8_t bias, size_t pct) {
 }
 
 static bool slab_gc_should_recycle(struct slab *slab, uint8_t bias_destroy) {
-    enforce(bias_destroy < 16);
+    enforce_precond(bias_destroy < 16);
 
     struct slab_cache *parent = slab->parent_cache;
     struct slab_caches *parent_caches = parent->parent;

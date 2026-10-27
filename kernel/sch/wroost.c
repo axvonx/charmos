@@ -46,7 +46,7 @@ static inline size_t bucket_count(void) {
 static inline uint8_t wroost_get_counter(struct wroost_thread_data *wtd,
                                          uint8_t index, uint8_t *byte_idx_out,
                                          uint8_t *byte_offset_out) {
-    enforce(index < WROOST_THREAD_COUNTERS);
+    enforce_precond(index < WROOST_THREAD_COUNTERS);
     uint8_t bits_per_ctr_word = BIT_SIZEOF(wroost_counter_t);
     size_t bit_index = index * WROOST_BITS_PER_COUNTER;
 
@@ -68,7 +68,7 @@ wroost_read_counter(struct wroost_thread_data *wtd, uint8_t ctr_idx) {
 
 static inline void wroost_write_counter(struct wroost_thread_data *wtd,
                                         uint8_t ctr_idx, uint8_t new_ctr_val) {
-    enforce((new_ctr_val & WROOST_COUNTER_MASK) == new_ctr_val);
+    enforce_precond((new_ctr_val & WROOST_COUNTER_MASK) == new_ctr_val);
 
     uint8_t idx, offset;
     wroost_counter_t ctr = wroost_get_counter(wtd, ctr_idx, &idx, &offset);
@@ -141,7 +141,7 @@ wroost_get_fine_entry(struct wroost_thread_data *wtd, uint8_t index) {
 
 static inline void wroost_clear_fine_entry(struct wroost_thread_data *wtd,
                                            int slot) {
-    enforce(slot >= 0 && slot < WROOST_FINE_ENTRY_COUNT);
+    enforce_precond(slot >= 0 && slot < WROOST_FINE_ENTRY_COUNT);
     wtd->fine_entries[slot].lock_id = 0;
     wtd->fine_valid &= ~BIT(slot);
 }
@@ -316,11 +316,11 @@ static void percpu_dec_id(struct wroost_percpu_data *pcpu,
 static enum thread_prio_class ceil_for(wroost_id_t lock_id,
                                        enum thread_prio_class max_boost,
                                        enum thread_prio_class min) {
-    enforce(max_boost < THREAD_PRIO_CLASS_COUNT);
+    enforce_precond(max_boost < THREAD_PRIO_CLASS_COUNT);
 
     /* This is for readers. If the max boost is less than the minimum (base)
      * thread priority, it should've panicked on lock entry. */
-    enforce(min <= max_boost);
+    enforce_precond(min <= max_boost);
 
     uint64_t bucket_word =
         atomic_load(&wroost_global.hash_table.buckets[lock_id].raw_tally);

@@ -95,8 +95,8 @@ static void dpc_queue_enqueue(struct dpc_queue *dq, struct dpc *d) {
     }
 }
 
-bool dpc_enqueue_on_cpu(size_t cpu, struct dpc *d) {
-    enforce(d);
+bool dpc_enqueue_on_cpu(size_t cpu, struct dpc *cc_nonnull_ptr d) {
+    enforce_precond(d);
 
     if (atomic_xchg_acq_rel(&d->enqueued, true))
         return false;
@@ -151,9 +151,10 @@ static void dpc_fanout_wrapper(struct dpc_context *dc, void *fn, void *latch) {
     once_latch_count_down((struct once_latch *) latch);
 }
 
-void dpc_fanout(struct dpc *storage, struct cpu_mask cpus, dpc_fanout_fn_t fn) {
-    enforce(storage);
-    enforce(fn);
+void dpc_fanout(struct dpc *cc_nonnull_ptr storage, struct cpu_mask cpus,
+                dpc_fanout_fn_t cc_nonnull_ptr fn) {
+    enforce_precond(storage);
+    enforce_precond(fn);
 
     size_t count = cpu_mask_popcount(&cpus);
     if (!count)

@@ -11,26 +11,23 @@ LOG_HANDLE_EXTERN(slab_flags);
 
 /* Verify the contract */
 #define ALLOC_PARAMS_CONTRACT(params)                                          \
-    cc_diagnose_if(!ALLOC_FLAGS_VALID((params).flags),                         \
-                   "alloc flags set unavailable bits", "error")                \
-        cc_diagnose_if(                                                        \
-            !ALLOC_BEHAVIOR_MAY_FAULT((params).behavior) &&                    \
-                ALLOC_FLAGS_CAN_FAULT((params).flags),                         \
-            "non-faulting alloc behavior cannot request pageable or "          \
-            "movable memory",                                                  \
-            "error")                                                           \
-            cc_diagnose_if(ALLOC_BEHAVIOR_IS_ISR_SAFE((params).behavior) &&    \
-                               ((params).flags & ALLOC_FLAG_PAGEABLE),         \
-                           "ISR-safe alloc behavior cannot request pageable "  \
-                           "memory",                                           \
-                           "error")
+    ct_precond(ALLOC_FLAGS_VALID((params).flags),                              \
+               "alloc flags set unavailable bits")                             \
+        ct_precond(ALLOC_BEHAVIOR_MAY_FAULT((params).behavior) ||              \
+                       !ALLOC_FLAGS_CAN_FAULT((params).flags),                 \
+                   "non-faulting alloc behavior cannot request pageable or "   \
+                   "movable memory")                                           \
+            ct_precond(!ALLOC_BEHAVIOR_IS_ISR_SAFE((params).behavior) ||       \
+                           !((params).flags & ALLOC_FLAG_PAGEABLE),            \
+                       "ISR-safe alloc behavior cannot request pageable "      \
+                       "memory")
 
 #define ALLOC_SIZE_CONTRACT(size)                                              \
     cc_diagnose_if((size) == 0, "zero-size allocation", "warning")
 
 #define ALLOC_ALIGN_CONTRACT(align)                                            \
-    cc_diagnose_if((align) == 0 || ((align) & ((align) - 1)) != 0,             \
-                   "alignment must be a nonzero power of two", "error")
+    ct_precond((align) != 0 && ((align) & ((align) - 1)) == 0,                 \
+               "alignment must be a nonzero power of two")
 
 void *cc_nullable valloc_new(size_t size, struct alloc_params params)
     cw_alloc(1) cc_warn_unused_result ALLOC_PARAMS_CONTRACT(params)
@@ -66,8 +63,7 @@ void *cc_nullable valloc_aligned_full(size_t size, size_t align,
 
 void *cc_nullable valloc_pages(size_t page_count, enum alloc_flags flags)
     cw_alloc()
-        cc_warn_unused_result cc_diagnose_if(!ALLOC_FLAGS_VALID(flags),
-                                             "alloc flags set unavailable bits",
-                                             "error")
+        cc_warn_unused_result ct_precond(ALLOC_FLAGS_VALID(flags),
+                                         "alloc flags set unavailable bits")
             ALLOC_SIZE_CONTRACT(page_count);
 bool valloc_ptr_in_slab_validate(void *ptr);
