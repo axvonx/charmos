@@ -49,7 +49,7 @@ void folio_add_anon_rmap_new(struct folio *f, struct vma_range *vr,
 
     /* TODO: we might consider returning errors for this because
      * the refcount getref might fail? */
-    enforce(anon_vma_getref(vr->anon_vma));
+    enforce(anon_vma_getref(vr->anon_vma), STALE_REFERENCE);
     folio_set_anon(f, vr->anon_vma, va_to_index(vr, va));
     folio_set_flag(f, FOLIO_FLAG_MAPPED);
     folio_mapcount_inc(f);

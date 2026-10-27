@@ -135,7 +135,7 @@ struct arena *arena_create_full(struct arena_seg_desc *seg_descs,
                     seg_descs[i].id);
 
         enforce(!bitmap_test_and_set(seen_id_bitmap, seg_descs[i].id),
-                "duplicate id %hu", seg_descs[i].id);
+                DUPLICATE, "id %hu", seg_descs[i].id);
 
         seg_data_size_total += ALIGN_UP(seg_descs[i].size, ARENA_SEG_ALIGN);
     }
@@ -236,7 +236,7 @@ struct arena_seg arena_seg_lookup(struct arena *a, uint16_t seg_id) {
             found = true;
     }
 
-    enforce(found, "segment %u not found", seg_id);
+    enforce(found, NOT_FOUND, "segment %u", seg_id);
 #endif
 
     size_t cc_unused cursor = 0;
@@ -249,7 +249,7 @@ struct arena_seg arena_seg_lookup(struct arena *a, uint16_t seg_id) {
         }
     }
 
-    panic("segment %u not found, likely UB during traversal", seg_id);
+    panic(CORRUPTION, "segment %u vanished during traversal", seg_id);
 }
 
 struct arena_seg arena_seg_for_idx(struct arena *a, uint16_t idx) {
@@ -389,7 +389,7 @@ void arena_dumpster_delete_bin(struct arena_dumpster *ad,
     mutex_guard(mtx);
 
     struct arena_bin *leader = bucket_id_lookup(bkt, ab->identity);
-    enforce(leader, "likely double delete");
+    enforce(leader, BAD_FREE, "bin has no leader");
 
     list_node_delete_rcu(&ab->bin_list);
     if (leader == ab) {

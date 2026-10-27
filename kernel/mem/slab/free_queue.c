@@ -12,7 +12,7 @@
 void slab_free_queue_init(struct slab_domain *domain, struct slab_free_queue *q,
                           size_t capacity) {
     if (!slab_free_ring_init(&q->mpmc, capacity)) {
-        panic("Could not allocate slab free queue slots!");
+        panic(OUT_OF_MEMORY, "slab free queue slots");
     }
 
     q->parent = domain;

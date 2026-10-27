@@ -74,7 +74,8 @@ paddr_t bitmap_alloc_pages(uint64_t count, enum alloc_flags flags) {
 
 void bitmap_free_pages(paddr_t addr, uint64_t count) {
     if (addr == 0 || count == 0) {
-        panic("Possible UAF");
+        panic(INVALID_ARGUMENT, "addr 0x%lx, count %lu", (unsigned long) addr,
+              (unsigned long) count);
     }
 
     uint64_t start_index = (uint64_t) addr / PAGE_SIZE;

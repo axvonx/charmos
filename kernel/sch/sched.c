@@ -297,11 +297,13 @@ static inline void assert_switch_ctx(const char *where) {
         return;
     }
 
-    enforce(irql_get() >= IRQL_DISPATCH_LEVEL, "%s at %s, want >= %s", where,
-            irql_to_str(irql_get()), irql_to_str(IRQL_DISPATCH_LEVEL));
-    enforce(scheduler_preemption_disabled(TOPC_NONE),
+    enforce(irql_get() >= IRQL_DISPATCH_LEVEL, INVALID_CONTEXT,
+            "%s at %s, want >= %s", where, irql_to_str(irql_get()),
+            irql_to_str(IRQL_DISPATCH_LEVEL));
+    enforce(scheduler_preemption_disabled(TOPC_NONE), INVALID_CONTEXT,
             "%s with preemption enabled", where);
-    enforce(!irqs_enabled(), "%s with interrupts enabled", where);
+    enforce(!irqs_enabled(), INVALID_CONTEXT, "%s with interrupts enabled",
+            where);
 }
 
 static inline void context_switch(struct thread *curr, struct thread *next) {
@@ -473,8 +475,8 @@ static void scheduler_yield_loop(void) {
         scheduler_switch_in();
 
         enforce(irql == IRQL_NONE || irql_get() == IRQL_DISPATCH_LEVEL,
-                "resumed at %s, want %s", irql_to_str(irql_get()),
-                irql_to_str(IRQL_DISPATCH_LEVEL));
+                INVALID_CONTEXT, "resumed at %s, want %s",
+                irql_to_str(irql_get()), irql_to_str(IRQL_DISPATCH_LEVEL));
 
         scheduler_mark_self_in_resched(false);
 
@@ -483,7 +485,7 @@ static void scheduler_yield_loop(void) {
         /* we store irql on the stack here, i.e. T1 entering the routine
          * will "pop out" on the switch_in path on T2, and irql will
          * be T2's entry value, which should match the current state */
-        enforce(irql == IRQL_NONE || irql_get() == irql,
+        enforce(irql == IRQL_NONE || irql_get() == irql, INVALID_CONTEXT,
                 "resumed at %s, entered at %s", irql_to_str(irql_get()),
                 irql_to_str(irql));
     } while (scheduler_mark_self_needs_resched(false));
@@ -496,11 +498,12 @@ void scheduler_yield(void) {
     cpu_id_t entry_cpu = c->id;
 
     if (cc_likely(entry_cpu == smp_core(TOPC_NONE)->id)) {
-        enforce(!entry_in_resched,
+        enforce(!entry_in_resched, INVALID_CONTEXT,
                 "yielding while already in resched on cpu %zu",
                 (size_t) entry_cpu);
-        enforce(entry_depth == 0, "yielding on cpu %zu with preempt depth %u",
-                (size_t) entry_cpu, entry_depth);
+        enforce(entry_depth == 0, INVALID_CONTEXT,
+                "yielding on cpu %zu with preempt depth %u", (size_t) entry_cpu,
+                entry_depth);
     }
 
     struct thread *self = thread_get_current();

@@ -68,8 +68,9 @@ void slab_debug_assert_not_already_free(vaddr_t v, int32_t class) {
                     struct slab_magazine *m = &pc->mags[t][class];
                     for (size_t i = 0; i < m->count; i++)
                         if (m->objs[i] == v)
-                            panic("DOUBLE FREE: %p already parked in d=%zu "
-                                  "cpu=%zu mag type=%d class=%d idx=%zu",
+                            panic(BAD_FREE,
+                                  "%p already parked in d=%zu cpu=%zu mag "
+                                  "type=%d class=%d idx=%zu",
                                   (void *) v, d, c, t, class, i);
                 }
             }
@@ -81,9 +82,8 @@ void slab_debug_assert_not_already_free(vaddr_t v, int32_t class) {
             uint64_t head = atomic_load_acq(&fq->mpmc.hdr.head);
             for (uint64_t pos = tail; pos != head; pos++)
                 if (fq->mpmc.slots[pos & fq->mpmc.hdr.mask].val == v)
-                    panic(
-                        "DOUBLE FREE: %p already in d=%zu free_queue slot=%zu",
-                        (void *) v, d, (size_t) (pos & fq->mpmc.hdr.mask));
+                    panic(BAD_FREE, "%p already in d=%zu free_queue slot=%zu",
+                          (void *) v, d, (size_t) (pos & fq->mpmc.hdr.mask));
         }
     }
 }
@@ -215,7 +215,7 @@ cc_no_asan void slab_dump_corruption(void *obj,
 }
 
 stack_handle_t slab_stack_handle_for(void *ptr) {
-    enforce(slab_ptr_in_slab(ptr));
+    enforce(slab_ptr_in_slab(ptr), BAD_FREE);
     struct slab *s = slab_for_ptr(ptr);
     size_t idx = slab_allocation_index(s, ptr);
     return s->traces[idx];

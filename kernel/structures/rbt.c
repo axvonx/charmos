@@ -13,8 +13,8 @@
 static inline void rbt_debug_step(size_t *steps, const struct rbt_node *at,
                                   const char *caller) {
     if (cc_unlikely(++*steps > RBT_DEBUG_MAX_DEPTH))
-        panic("%s: walk passed %d steps at node %p -- cycle?", caller,
-              RBT_DEBUG_MAX_DEPTH, at);
+        panic(CORRUPTION, "%s: walk passed %d steps at node %p -- cycle?",
+              caller, RBT_DEBUG_MAX_DEPTH, at);
 }
 
 static void rbt_debug_check_linked(const struct rbt *tree,
@@ -26,7 +26,8 @@ static void rbt_debug_check_linked(const struct rbt *tree,
     while (rbt_parent(n)) {
         const struct rbt_node *p = rbt_parent(n);
         if (cc_unlikely(p->left != n && p->right != n))
-            panic("%s: node %p (from %p) claims parent %p, whose children are "
+            panic(CORRUPTION,
+                  "%s: node %p (from %p) claims parent %p, whose children are "
                   "%p/%p, tree %p",
                   caller, n, node, p, p->left, p->right, tree);
 
@@ -35,8 +36,8 @@ static void rbt_debug_check_linked(const struct rbt *tree,
     }
 
     if (cc_unlikely(n != tree->root))
-        panic("%s: node %p is under root %p, not tree %p (root %p)", caller,
-              node, n, tree, tree->root);
+        panic(CORRUPTION, "%s: node %p is under root %p, not tree %p (root %p)",
+              caller, node, n, tree, tree->root);
 }
 
 #else
@@ -63,32 +64,34 @@ static size_t rbt_debug_validate_subtree(const struct rbt *tree,
         return 1;
 
     if (cc_unlikely(depth > RBT_DEBUG_MAX_DEPTH))
-        panic("%s: tree %p deeper than %d at node %p -- cycle?", caller, tree,
-              RBT_DEBUG_MAX_DEPTH, node);
+        panic(CORRUPTION, "%s: tree %p deeper than %d at node %p -- cycle?",
+              caller, tree, RBT_DEBUG_MAX_DEPTH, node);
 
     if (cc_unlikely(node->left && node->left == node->right))
-        panic("%s: node %p has %p as both children, tree %p", caller, node,
-              node->left, tree);
+        panic(CORRUPTION, "%s: node %p has %p as both children, tree %p",
+              caller, node, node->left, tree);
 
     if (cc_unlikely(node->left && rbt_parent(node->left) != node))
-        panic("%s: node %p left child %p has parent %p, tree %p", caller, node,
-              node->left, rbt_parent(node->left), tree);
+        panic(CORRUPTION, "%s: node %p left child %p has parent %p, tree %p",
+              caller, node, node->left, rbt_parent(node->left), tree);
 
     if (cc_unlikely(node->right && rbt_parent(node->right) != node))
-        panic("%s: node %p right child %p has parent %p, tree %p", caller, node,
-              node->right, rbt_parent(node->right), tree);
+        panic(CORRUPTION, "%s: node %p right child %p has parent %p, tree %p",
+              caller, node, node->right, rbt_parent(node->right), tree);
 
     if (cc_unlikely(rbt_color(node) == TREE_NODE_RED &&
                     ((node->left && rbt_color(node->left) == TREE_NODE_RED) ||
                      (node->right && rbt_color(node->right) == TREE_NODE_RED))))
-        panic("%s: red-red violation at node %p, tree %p", caller, node, tree);
+        panic(CORRUPTION, "%s: red-red violation at node %p, tree %p", caller,
+              node, tree);
 
     size_t lh = rbt_debug_validate_subtree(tree, node->left, depth + 1, caller);
     size_t rh =
         rbt_debug_validate_subtree(tree, node->right, depth + 1, caller);
 
     if (cc_unlikely(lh != rh))
-        panic("%s: black-height violation at node %p (left %zu, right %zu), "
+        panic(CORRUPTION,
+              "%s: black-height violation at node %p (left %zu, right %zu), "
               "tree %p",
               caller, node, lh, rh, tree);
 
@@ -101,11 +104,11 @@ static void rbt_debug_validate(const struct rbt *tree, const char *caller) {
         return;
 
     if (cc_unlikely(rbt_parent(root)))
-        panic("%s: root %p of tree %p has parent %p", caller, root, tree,
-              rbt_parent(root));
+        panic(CORRUPTION, "%s: root %p of tree %p has parent %p", caller, root,
+              tree, rbt_parent(root));
 
     if (cc_unlikely(rbt_color(root) != TREE_NODE_BLACK))
-        panic("%s: root %p of tree %p is red", caller, root, tree);
+        panic(CORRUPTION, "%s: root %p of tree %p is red", caller, root, tree);
 
     rbt_debug_validate_subtree(tree, root, 0, caller);
 }
@@ -531,7 +534,8 @@ void rbt_insert(struct rbt *tree, struct rbt_node *new_node) {
 #ifdef DEBUG_RBT
         /* Only finds a duplicate whose key still places it on this path */
         if (cc_unlikely(current == new_node))
-            panic("rbt_insert: node %p is already in tree %p", new_node, tree);
+            panic(DUPLICATE, "rbt_insert: node %p is already in tree %p",
+                  new_node, tree);
 #endif
 
         rbt_debug_step(&steps, current, __func__);
@@ -547,8 +551,9 @@ void rbt_insert(struct rbt *tree, struct rbt_node *new_node) {
 
 #ifdef DEBUG_LOCK_CHK
     if ((cmp < 0 && parent->left) || (cmp >= 0 && parent->right))
-        panic("rbt_insert: node %p would be attached a child of %p "
-              "in tree %p, potential subtree orophaning",
+        panic(CORRUPTION,
+              "rbt_insert: node %p would be attached a child of %p in tree %p, "
+              "potential subtree orophaning",
               new_node, parent, tree);
 #endif
 
@@ -561,7 +566,8 @@ void rbt_insert(struct rbt *tree, struct rbt_node *new_node) {
 
     if (parent)
         enforce(!(rbt_color(parent) == TREE_NODE_RED &&
-                  rbt_color(new_node) == TREE_NODE_RED));
+                  rbt_color(new_node) == TREE_NODE_RED),
+                CORRUPTION);
 
     rbt_debug_validate(tree, __func__);
 }

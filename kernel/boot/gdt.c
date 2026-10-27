@@ -92,7 +92,7 @@ void gdt_load(void) {
         valloc_aligned(sizeof(struct gdt_entry) * GDT_ENTRIES, 64, ALLOC_ZERO);
     struct tss *tss = valloc_aligned(sizeof(struct tss), 64, ALLOC_ZERO);
     if (!gdt || !tss)
-        panic("GDT INIT NOT OK!!!");
+        panic(INIT_FAILED, "GDT");
 
     gdt_init(gdt, tss);
 

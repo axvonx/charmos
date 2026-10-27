@@ -199,12 +199,12 @@ static inline bool spinlock_assert_held_deep(struct spinlock *lock,
 }
 
 static inline void spinlock_assert_initialized(struct spinlock *lock) {
-    enforce(lock->chk.initialized);
+    enforce(lock->chk.initialized, UNINITIALIZED);
 }
 
 static inline void spinlock_policy_set_internal(struct spinlock *lock,
                                                 enum lock_chk_flags flags) {
-    enforce(lock->chk.initialized);
+    enforce(lock->chk.initialized, UNINITIALIZED);
     enforce(!atomic_load_rlx(&lock->chk.used));
     enforce((flags & ~LOCK_CHKD_FULL) == 0);
     lock->chk.flags = flags;
@@ -426,10 +426,11 @@ static inline cc_warn_unused_result enum irql
 spin_lock_full(struct spinlock *lock, enum lock_subclass sc,
                const struct lock_chk_site *site)
     TSA_ACQUIRES_SPIN(lock) TSA_NO_ANALYSIS {
-    enforce(sc < LOCK_CHK_MAX_SUBCLASSES);
+    enforce(sc < LOCK_CHK_MAX_SUBCLASSES, CAPACITY_EXCEEDED);
     if (bootstage_get() >= BOOTSTAGE_MID_MP &&
         (irq_in_interrupt() || irq_in_nmi()))
-        panic("Attempted to take non-ISR safe spinlock outside thread context");
+        panic(INVALID_CONTEXT,
+              "non-ISR-safe spinlock taken outside thread context");
 
     enum lock_op_flags flags = LOCK_OP_KIND_BLOCKING | LOCK_OP_IRQ_DISPATCH;
 
@@ -459,9 +460,9 @@ static inline cc_warn_unused_result enum irql
 spin_lock_high_full(struct spinlock *lock, enum lock_subclass sc,
                     const struct lock_chk_site *site)
     TSA_ACQUIRES_SPIN(lock) TSA_NO_ANALYSIS {
-    enforce(sc < LOCK_CHK_MAX_SUBCLASSES);
+    enforce(sc < LOCK_CHK_MAX_SUBCLASSES, CAPACITY_EXCEEDED);
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())
-        panic("Attempted to take non-raw spinlock from an NMI");
+        panic(INVALID_CONTEXT, "non-raw spinlock taken in NMI");
 
     enum lock_op_flags flags = LOCK_OP_KIND_BLOCKING | LOCK_OP_IRQ_HIGH;
 
@@ -489,7 +490,8 @@ spin_trylock_full(struct spinlock *lock, enum irql *out, enum lock_subclass sc,
     TSA_TRY_ACQUIRES_SPIN(true, lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP &&
         (irq_in_interrupt() || irq_in_nmi()))
-        panic("Attempted to take non-ISR safe spinlock outside thread context");
+        panic(INVALID_CONTEXT,
+              "non-ISR-safe spinlock taken outside thread context");
 
     enum lock_op_flags flags = LOCK_OP_KIND_TRY | LOCK_OP_IRQ_DISPATCH;
 
@@ -524,7 +526,7 @@ spin_trylock_high_full(struct spinlock *lock, enum irql *out,
                        enum lock_subclass sc, const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES_SPIN(true, lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())
-        panic("Attempted to take non-raw spinlock from an NMI");
+        panic(INVALID_CONTEXT, "non-raw spinlock taken in NMI");
 
     enum lock_op_flags flags = LOCK_OP_KIND_TRY | LOCK_OP_IRQ_HIGH;
 

@@ -67,7 +67,7 @@ validate_acq(const struct lock_chk_acq_req *request,
 }
 
 void lock_chk_deep_activate(void) {
-    enforce(PERCPU_READY(lock_chk_recursion_depth));
+    enforce(PERCPU_READY(lock_chk_recursion_depth), UNINITIALIZED);
     lock_chk_graph_init(&lock_chk_global.graph);
     atomic_store_release(&lock_chk_global.deep, LOCK_CHK_ACTIVE);
 }
@@ -216,7 +216,7 @@ void lock_chk_acqd(struct lock_chk_acq_token *token) {
 
     const struct lock_chk_acq_req *request = token->request;
     struct lock_chk_thread_data *thread_data = token->thread_data;
-    enforce(thread_data->depth < LOCK_CHK_MAX_HELD_LOCKS);
+    enforce(thread_data->depth < LOCK_CHK_MAX_HELD_LOCKS, CAPACITY_EXCEEDED);
 
     thread_data->held[thread_data->depth++] = (struct lock_chk_held){
         .node = token->node,

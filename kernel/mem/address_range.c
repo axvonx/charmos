@@ -101,7 +101,8 @@ static void add_static_address_range(struct address_range *ar) {
             rbt_entry(prev, struct address_range, rbt_node_internal);
 
         if (address_ranges_overlap(p, ar))
-            panic("Address range '%s' overlaps '%s'", ar->name, p->name);
+            panic(DUPLICATE, "Address range '%s' overlaps '%s'", ar->name,
+                  p->name);
     }
 
     if (next) {
@@ -109,7 +110,8 @@ static void add_static_address_range(struct address_range *ar) {
             rbt_entry(next, struct address_range, rbt_node_internal);
 
         if (address_ranges_overlap(ar, n))
-            panic("Address range '%s' overlaps '%s'", ar->name, n->name);
+            panic(DUPLICATE, "Address range '%s' overlaps '%s'", ar->name,
+                  n->name);
     }
 
     rbt_insert(&ar_tree, &ar->rbt_node_internal);
@@ -161,7 +163,7 @@ static void add_dynamic_address_range(struct address_range *ar) {
         return;
     }
 
-    panic("No suitable gap for dynamic address range");
+    panic(CAPACITY_EXCEEDED, "No suitable gap for dynamic address range");
 }
 
 /* The idea behind this is as follows:

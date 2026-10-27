@@ -31,7 +31,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
     bool is_io = original_bar0 & 1;
 
     if (is_io) {
-        panic("doesnt look like mmio to me");
+        panic(UNSUPPORTED, "doesnt look like mmio to me");
     }
 
     pci_write(bus, slot, func, 0x10, 0xFFFFFFFF);
@@ -40,7 +40,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
     uint32_t size = ~(size_mask & ~0xFU) + 1;
 
     if (size == 0) {
-        panic("bar0 reports zero size ?");
+        panic(UNSUPPORTED, "bar0 reports zero size ?");
     }
 
     uint64_t phys_addr =
@@ -56,7 +56,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
 
     struct nvme_device *nvme = vnew(nvme, ALLOC_ZERO);
     if (!nvme)
-        panic("Could not allocate space for NVMe drive");
+        panic(OUT_OF_MEMORY, "NVMe drive");
 
     nvme->doorbell_stride = 4U << dstrd;
     nvme->page_size       = PAGE_SIZE;
@@ -67,7 +67,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
     nvme->admin_q_depth = ((nvme->cap) & 0xFFFF) + 1;
     nvme->io_queues     = vnew(nvme->io_queues, ALLOC_ZERO);
     if (!nvme->io_queues)
-        panic("Could not allocate space for NVMe IO queues");
+        panic(OUT_OF_MEMORY, "NVMe IO queues");
 
     nvme->admin_sq_db =
         (uint32_t cc_mem_io *) ((uint8_t cc_mem_io *) nvme->regs +
@@ -104,7 +104,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
 
     uint64_t supported_sqs    = total_sq;
     uint64_t sqs_to_make_wide = MIN(core_count, supported_sqs);
-    enforce(sqs_to_make_wide <= UINT32_MAX);
+    enforce(sqs_to_make_wide <= UINT32_MAX, CAPACITY_EXCEEDED);
     uint32_t sqs_to_make = (uint32_t) sqs_to_make_wide;
 
     nvme->max_transfer_size = BIT(c->mdts) * PAGE_SIZE;
@@ -119,7 +119,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
     nvme->isr_index = vnews(nvme->isr_index, (sqs_to_make + 1), ALLOC_ZERO);
     nvme->io_queues = vnews(nvme->io_queues, (sqs_to_make + 1), ALLOC_ZERO);
     if (cc_unlikely(!nvme->isr_index || !nvme->io_queues))
-        panic("Could not allocate space for NVMe structures");
+        panic(OUT_OF_MEMORY, "NVMe structures");
 
     nvme->queue_count = sqs_to_make;
 
@@ -157,7 +157,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
 
     nvme->workqueue = workqueue_create("nvme_wq", &attrs);
     if (!nvme->workqueue)
-        panic("Could not allocate workqueue");
+        panic(OUT_OF_MEMORY, "workqueue");
 
     semaphore_init(&nvme->sem, 0, SEMAPHORE_INIT_IRQ_DISABLE);
     nvme_work_enqueue(nvme, &nvme->work);
@@ -202,7 +202,7 @@ static struct bio_scheduler_ops nvme_bio_sched_ops = {
 struct block_device *nvme_create_generic(struct nvme_device *nvme) {
     struct block_device *d = vnew(d, ALLOC_ZERO);
     if (!d)
-        panic("Could not allocate space for NVMe device");
+        panic(OUT_OF_MEMORY, "NVMe device");
 
     d->driver_data      = nvme;
     d->sector_size      = nvme->sector_size;
@@ -212,7 +212,7 @@ struct block_device *nvme_create_generic(struct nvme_device *nvme) {
     d->flags            = BDEV_FLAG_NO_REORDER | BDEV_FLAG_NO_COALESCE;
     d->cache            = vnew(d->cache, ALLOC_ZERO);
     if (cc_unlikely(!d->cache))
-        panic("Could not allocate space for NVMe block cache");
+        panic(OUT_OF_MEMORY, "NVMe block cache");
 
     d->scheduler = bio_sched_create(d, &nvme_bio_sched_ops);
 

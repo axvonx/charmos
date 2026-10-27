@@ -56,8 +56,21 @@ struct crash_code {
 #define CRASH_CODES_global                                                     \
     (INVALID_ARGUMENT, "Argument was NULL or out of range"),                   \
         (INVALID_STATE, "Object was in a state this operation forbids"),       \
+        (INVALID_CONTEXT,                                                      \
+         "Operation ran at a forbidden IRQL, IRQ or boot stage"),              \
         (OUT_OF_MEMORY, "Allocation that must not fail did fail"),             \
-        (UNSUPPORTED, "Hardware or firmware lacks a required feature")
+        (UNSUPPORTED, "Hardware or firmware lacks a required feature"),        \
+        (CORRUPTION, "Data structure or allocator invariant was broken"),      \
+        (CAPACITY_EXCEEDED, "A fixed-size limit was exceeded"),                \
+        (UNREACHABLE, "Control reached a path that must not execute"),         \
+        (DUPLICATE, "Object was registered, inserted, or defined twice"),      \
+        (OVERFLOW, "Counter or arithmetic result exceeded its range"),         \
+        (UNDERFLOW, "Counter was decremented below zero"),                     \
+        (STALE_REFERENCE, "Reference to an object that is dying or dead"),     \
+        (BAD_FREE, "Freed memory was already free or never allocated"),        \
+        (UNINITIALIZED, "Object was used before initialization"),              \
+        (INIT_FAILED, "A required initialization step failed"),                \
+        (NOT_FOUND, "Lookup that must succeed found nothing")
 
 enum crash_source {
     CRASH_SOURCE_PANIC = 0,     /* panic() call */

@@ -39,9 +39,9 @@ static void prepare_wait(const struct thread_wait_object *objects, size_t count,
                          struct thread_wait_block *storage,
                          enum thread_wait_type type, thread_act_reason_t reason,
                          enum thread_state state) {
-    enforce(count <= UINT16_MAX);
+    enforce(count <= UINT16_MAX, CAPACITY_EXCEEDED);
     enforce(type != THREAD_WAIT_NONE);
-    enforce(storage || count <= THREAD_NUM_WAIT_BLOCKS);
+    enforce(storage || count <= THREAD_NUM_WAIT_BLOCKS, CAPACITY_EXCEEDED);
 
     struct thread *t = thread_get_current();
     if (!storage)
@@ -201,7 +201,7 @@ struct thread *thread_wait_header_satisfy(struct thread_wait_header *header,
         uint64_t epoch = b->epoch;
         uint16_t key = b->key;
 
-        enforce(thread_getref(t));
+        enforce(thread_getref(t), STALE_REFERENCE);
         spin_unlock(&header->lock, irql);
 
         irql = spin_lock_high(&t->wait_lock);

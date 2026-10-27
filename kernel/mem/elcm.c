@@ -246,11 +246,12 @@ enum err elcm(struct elcm_params *params) {
     size_t metadata_bytes_per_page = params->metadata_bytes_per_page;
     bool bias_towards_pow2 = params->bias_towards_pow2;
 
-    enforce(obj_size > 0 && "Object size must be greater than 0");
-    enforce(page_size > 0 && "Page size must be greater than 0");
-    enforce(obj_alignment <= page_size && "Alignment cannot exceed page size");
-    enforce(max_wastage_pct <= 100 &&
-            "Max wastage percentage must be between 0 and 100");
+    enforce(obj_size > 0, INVALID_ARGUMENT);
+    enforce(page_size > 0, INVALID_ARGUMENT);
+    enforce(obj_alignment <= page_size, INVALID_ARGUMENT,
+            "alignment cannot exceed page size");
+    enforce(max_wastage_pct <= 100, INVALID_ARGUMENT,
+            "max wastage percentage must be 0-100");
 
     size_t best_possible = find_best(params);
 

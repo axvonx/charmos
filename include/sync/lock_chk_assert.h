@@ -45,6 +45,6 @@
         } else if ((m) == LOCK_NOT_HELD) {                                     \
             LOCK_CHK_ASSERT_NOT_HELD((l));                                     \
         } else {                                                               \
-            panic("impossible mode %d", (m));                                  \
+            unreachable("mode %d", (m));                                       \
         }                                                                      \
     } while (0)

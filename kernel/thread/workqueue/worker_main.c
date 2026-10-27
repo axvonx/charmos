@@ -110,7 +110,7 @@ void worker_main(void *unused) TSA_NO_ANALYSIS {
     struct workqueue *queue = w->workqueue;
     enforce(w);
 
-    enforce(workqueue_getref(queue));
+    enforce(workqueue_getref(queue), STALE_REFERENCE);
 
     while (true) {
 

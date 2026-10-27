@@ -107,7 +107,7 @@ static bool thread_apc_sanity_check(struct thread *t) {
 }
 
 static void apc_execute(struct apc *a) {
-    enforce(irql_get() == IRQL_APC_LEVEL);
+    enforce(irql_get() == IRQL_APC_LEVEL, INVALID_CONTEXT);
 
     struct thread *curr = thread_get_current();
 
@@ -353,7 +353,7 @@ void apc_disable_special(void) {
 
 void apc_enable_special(void) {
     struct thread *t = thread_get_current();
-    enforce(t->special_apc_disable > 0);
+    enforce(t->special_apc_disable > 0, UNDERFLOW);
 
     if (--t->special_apc_disable == 0)
         apc_check_and_deliver(t);
@@ -365,7 +365,7 @@ void apc_disable_kernel(void) {
 
 void apc_enable_kernel(void) {
     struct thread *t = thread_get_current();
-    enforce(t->kernel_apc_disable > 0);
+    enforce(t->kernel_apc_disable > 0, UNDERFLOW);
 
     if (--t->kernel_apc_disable == 0)
         apc_check_and_deliver(t);

@@ -18,7 +18,8 @@ static void rbit_check_cycle(struct rbit_node *node, const char *caller) {
             break;
 
         if (tortoise == hare) {
-            panic("Cycle detected in %s (left spine): tortoise == hare at "
+            panic(CORRUPTION,
+                  "Cycle detected in %s (left spine): tortoise == hare at "
                   "node=%p",
                   caller, (void *) tortoise);
             break;
@@ -36,7 +37,8 @@ static void rbit_check_cycle(struct rbit_node *node, const char *caller) {
             break;
 
         if (tortoise == hare) {
-            panic("Cycle detected in %s (right spine): tortoise == hare at "
+            panic(CORRUPTION,
+                  "Cycle detected in %s (right spine): tortoise == hare at "
                   "node=%p",
                   caller, (void *) tortoise);
             break;
@@ -320,8 +322,8 @@ static size_t validate_rbit(struct rbit_node *node, size_t *black_height) {
     if (node->color == RBIT_RED) {
         if ((node->left && node->left->color == RBIT_RED) ||
             (node->right && node->right->color == RBIT_RED)) {
-            panic("Red-Red violation at node [%zu,%zu]", node->interval.low,
-                  node->interval.high);
+            panic(CORRUPTION, "Red-Red violation at node [%zu,%zu]",
+                  node->interval.low, node->interval.high);
             return 0;
         }
     }
@@ -335,7 +337,8 @@ static size_t validate_rbit(struct rbit_node *node, size_t *black_height) {
         return 0;
 
     if (left_black_height != right_black_height) {
-        panic("Black-height violation at node [%zu,%zu] (left=%zu, right=%zu)",
+        panic(CORRUPTION,
+              "Black-height violation at node [%zu,%zu] (left=%zu, right=%zu)",
               node->interval.low, node->interval.high, left_black_height,
               right_black_height);
         return 0;
@@ -344,7 +347,8 @@ static size_t validate_rbit(struct rbit_node *node, size_t *black_height) {
     size_t expected_max =
         MAX(node->interval.high, node_max(node->left), node_max(node->right));
     if (node->max != expected_max) {
-        panic("Max-invariant violation at node [%zu,%zu]: stored=%zu, "
+        panic(CORRUPTION,
+              "Max-invariant violation at node [%zu,%zu]: stored=%zu, "
               "expected=%zu",
               node->interval.low, node->interval.high, node->max, expected_max);
         return 0;
@@ -414,7 +418,7 @@ void rbit_delete(struct rbit *tree, struct rbit_node *z) {
     z->parent = NULL;
 
     size_t dummy_bh = 0;
-    enforce(validate_rbit(tree->root, &dummy_bh));
+    enforce(validate_rbit(tree->root, &dummy_bh), CORRUPTION);
 }
 
 struct rbit_node *rbit_search(struct rbit_node *root, struct interval iv) {
@@ -497,7 +501,7 @@ static void fix_insertion(struct rbit *tree, struct rbit_node *node) {
 
 void rbit_insert(struct rbit *tree, struct rbit_node *new_node) {
     enforce(new_node != NULL);
-    enforce(!rbit_has_node(tree, new_node));
+    enforce(!rbit_has_node(tree, new_node), DUPLICATE);
     rbit_check_cycle(tree->root, __func__);
     new_node->left = NULL;
     new_node->right = NULL;
@@ -532,8 +536,9 @@ void rbit_insert(struct rbit *tree, struct rbit_node *new_node) {
     fix_insertion(tree, new_node);
 
     if (parent)
-        enforce(!(parent->color == RBIT_RED && new_node->color == RBIT_RED));
+        enforce(!(parent->color == RBIT_RED && new_node->color == RBIT_RED),
+                CORRUPTION);
 
     size_t dummy_bh = 0;
-    enforce(validate_rbit(tree->root, &dummy_bh));
+    enforce(validate_rbit(tree->root, &dummy_bh), CORRUPTION);
 }

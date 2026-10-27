@@ -18,7 +18,7 @@ static size_t sched_debug_count_tree(struct scheduler *sched, struct rbt *tree,
     struct rbt_node *node;
 
     rbt_for_each(node, tree) {
-        enforce(!prev || tree->compare(prev, node) <= 0,
+        enforce(!prev || tree->compare(prev, node) <= 0, CORRUPTION,
                 "cpu %zu %s out of key order", (size_t) sched->core_id, which);
         prev = node;
         n++;
@@ -56,20 +56,20 @@ void scheduler_debug_validate(struct scheduler *sched) {
     size_t total = 0;
 
     for (size_t prio = 0; prio < THREAD_PRIO_CLASS_COUNT; prio++) {
-        enforce(linked[prio] == sched->thread_count[prio],
+        enforce(linked[prio] == sched->thread_count[prio], CORRUPTION,
                 "cpu %zu class %zu: %zu linked, %zu counted",
                 (size_t) sched->core_id, prio, linked[prio],
                 sched->thread_count[prio]);
 
         bool bit = bitmap & (1u << prio);
-        enforce(bit == (linked[prio] != 0),
+        enforce(bit == (linked[prio] != 0), CORRUPTION,
                 "cpu %zu class %zu: bitmap says %d with %zu linked",
                 (size_t) sched->core_id, prio, (int) bit, linked[prio]);
 
         total += linked[prio];
     }
 
-    enforce(total == sched->total_thread_count,
+    enforce(total == sched->total_thread_count, CORRUPTION,
             "cpu %zu: %zu linked, total_thread_count %zu",
             (size_t) sched->core_id, total, sched->total_thread_count);
 }

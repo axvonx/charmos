@@ -76,7 +76,8 @@ rt_lookup_mapping(struct rt_scheduler_static *rts, struct core *c) {
     rt_domain_id_t id = rts->ops.domain_id_for_cpu(c);
     struct rbt_node *found = rbt_search(&rts->mappings_internal, id);
     if (!found)
-        panic("CPU %zu does not have a mapping in this scheduler", c->id);
+        panic(NOT_FOUND, "CPU %zu does not have a mapping in this scheduler",
+              c->id);
 
     struct rt_scheduler_mapping *mapping =
         container_of(found, struct rt_scheduler_mapping, tree_node);

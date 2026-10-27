@@ -106,7 +106,7 @@ struct block_device *ahci_create_generic(struct ahci_disk *disk) {
     d->submit_bio_async = ahci_submit_bio_request;
     d->cache            = vnew(d->cache, ALLOC_ZERO);
     if (!d->cache)
-        panic("Could not allocate space for AHCI device block cache");
+        panic(OUT_OF_MEMORY, "AHCI device block cache");
 
     d->scheduler = bio_sched_create(d, &ahci_sata_ssd_ops);
     bcache_init(d->cache, DEFAULT_BLOCK_CACHE_SIZE);

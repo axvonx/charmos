@@ -124,7 +124,7 @@ static bool rwlock_idle_for_reconfiguration(struct rwlock *lock) {
 }
 
 void rwlock_set_chk_flags(struct rwlock *lock, enum lock_chk_flags flags) {
-    enforce(lock->chk.initialized);
+    enforce(lock->chk.initialized, UNINITIALIZED);
     enforce(rwlock_idle_for_reconfiguration(lock));
     enforce(!atomic_load_rlx(&lock->chk.used));
     enforce((flags & ~LOCK_CHKD_FULL) == 0);
@@ -134,7 +134,7 @@ void rwlock_set_chk_flags(struct rwlock *lock, enum lock_chk_flags flags) {
 void rwlock_reinit_chk(struct rwlock *lock, enum thread_prio_class ceiling,
                        const struct lock_chk_class *class,
                        enum lock_chk_flags flags) {
-    enforce(lock->chk.initialized);
+    enforce(lock->chk.initialized, UNINITIALIZED);
     enforce(rwlock_idle_for_reconfiguration(lock));
     rwlock_init_chk_full(lock, ceiling, class, flags);
 }
@@ -202,11 +202,11 @@ void rw_lock_full(struct rwlock *lock, enum rwlock_acquire_type acq_type,
                   enum lock_subclass subclass,
                   const struct lock_chk_site *site) TSA_NO_ANALYSIS {
     cc_ignore(site);
-    enforce(subclass < LOCK_CHK_MAX_SUBCLASSES);
+    enforce(subclass < LOCK_CHK_MAX_SUBCLASSES, CAPACITY_EXCEEDED);
     enforce(acq_type == RWLOCK_READ || acq_type == RWLOCK_WRITE);
 
-    enforce(irq_not_in_interrupt());
-    enforce(irql_get() <= IRQL_APC_LEVEL);
+    enforce(irq_not_in_interrupt(), INVALID_CONTEXT);
+    enforce(irql_get() <= IRQL_APC_LEVEL, INVALID_CONTEXT);
 
 #ifdef DEBUG_LOCK_CHK
     enum lock_chk_mode chk_mode = acq_type == RWLOCK_READ
@@ -229,7 +229,8 @@ void rw_lock_full(struct rwlock *lock, enum rwlock_acquire_type acq_type,
 
     /* We are using this as a potential
      * reserved state for special rwlocks */
-    enforce(RWLOCK_GET_MAX_PRIO(lword) != 0 && "rwlock max prio cannot be 0");
+    enforce(RWLOCK_GET_MAX_PRIO(lword) != 0, INVALID_STATE,
+            "rwlock max prio cannot be 0");
 
     struct thread *curr = thread_get_current();
     enum thread_prio_class base_class = curr->base_prio_class;
@@ -422,8 +423,8 @@ rwlock_unlock_get_val_to_sub(struct rwlock *lock,
 void rw_unlock_full(struct rwlock *lock,
                     const struct lock_chk_site *site) TSA_NO_ANALYSIS {
     cc_ignore(site);
-    enforce(irq_not_in_interrupt());
-    enforce(irql_get() <= IRQL_APC_LEVEL);
+    enforce(irq_not_in_interrupt(), INVALID_CONTEXT);
+    enforce(irql_get() <= IRQL_APC_LEVEL, INVALID_CONTEXT);
 
     uintptr_t lock_word = RWLOCK_READ_LOCK_WORD(lock);
     bool is_writer = (lock_word & RWLOCK_WRITER_HELD_BIT) != 0;

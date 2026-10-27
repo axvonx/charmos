@@ -40,7 +40,7 @@ static void change_slab_backing_page(void *ptr) {
 
 void movealloc_full(domain_id_t new_domain, void *ptr, struct vmm_request rq) {
     if (global.current_bootstage >= BOOTSTAGE_COMPLETE)
-        panic("movealloc cannot be called after boot completes");
+        panic(INVALID_CONTEXT, "movealloc after boot completes");
 
     struct domain *d = global.domains[new_domain];
     size_t size = vsize(ptr);

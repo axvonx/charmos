@@ -21,7 +21,7 @@ static void daemon_putref(struct daemon *d) {
 }
 
 static void daemon_getref(struct daemon *d) {
-    enforce(refcount_inc_not_zero(&d->refcount));
+    enforce(refcount_inc_not_zero(&d->refcount), STALE_REFERENCE);
 }
 
 static struct daemon_thread *current_daemon_thread(void) {
@@ -153,7 +153,7 @@ static void daemon_main(void *a) {
         }
     }
 
-    panic("Daemon thread should not be able to exit the loop");
+    unreachable("daemon loop exited");
 }
 
 static struct daemon_thread *daemon_thread_create(struct daemon *daemon) {

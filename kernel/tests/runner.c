@@ -324,7 +324,7 @@ static void tests_check_duplicate_names(void) {
         for (struct test_group *tg2 = tg1 + 1; tg2 < __ekernel_test_groups;
              tg2++) {
             if (strcmp(tg1->name, tg2->name) == 0) {
-                panic("Duplicate test_group name: %s", tg1->name);
+                panic(DUPLICATE, "test_group name: %s", tg1->name);
             }
         }
     }
@@ -334,7 +334,7 @@ static void tests_check_duplicate_names(void) {
         for (struct test *t2 = t1 + 1; t2 < __ekernel_tests; t2++) {
             if (t1->group == t2->group && strcmp(t1->name, t2->name) == 0) {
                 struct test_group *g = (struct test_group *) t1->group;
-                panic("Duplicate test name '%s' in group '%s'", t1->name,
+                panic(DUPLICATE, "test name '%s' in group '%s'", t1->name,
                       g ? g->name : "<unknown>");
             }
         }
@@ -611,7 +611,8 @@ static void test_group_run(struct test_group *tg) {
 
         enforce(asprintf(&LOG_SITE(test_harness)->name,
                          "%s " ANSI_RESET "(%s" ANSI_RESET ")", tg->name,
-                         tier_name));
+                         tier_name),
+                OUT_OF_MEMORY);
 
         for (size_t test_num = 0; test_num < tg->num_tests[i]; test_num++) {
             struct test *t = tg->tests[i][test_num];
@@ -950,7 +951,9 @@ static void tests_resolve_imports(void) {
         for (const struct test_export_entry *b = a + 1;
              b < __ekernel_test_exports; b++) {
             if (strcmp(a->name, b->name) == 0) {
-                panic("duplicate '%s' exported, use TEST_EXPORT_AS", a->name);
+                panic(DUPLICATE,
+                      "'%s' exported more than once, use TEST_EXPORT_AS",
+                      a->name);
             }
         }
     }

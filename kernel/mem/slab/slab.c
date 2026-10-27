@@ -184,7 +184,7 @@ static void *slab_map_new(struct slab_cache *cache,
     struct slab_domain *domain = cache->parent_domain;
     size_t pages = cache->pages_per_slab;
     enum slab_type type = cache->type;
-    enforce(pages <= SLAB_MAX_PAGES);
+    enforce(pages <= SLAB_MAX_PAGES, CAPACITY_EXCEEDED);
 
     memset(phys_out, 0, pages * sizeof(paddr_t));
     size_t pages_mapped = 0;
@@ -300,8 +300,7 @@ void slab_cache_init(size_t order, struct slab_cache *cache,
     uint64_t available = NON_SLAB_SPACE(cache);
 
     if (cache->obj_size > available)
-        panic("Slab class too large, object size is %lu with %lu available "
-              "bytes -- insufficient",
+        panic(CAPACITY_EXCEEDED, "object size %lu exceeds %lu available bytes",
               cache->obj_size, available);
 
     uint64_t n;
@@ -320,7 +319,7 @@ void slab_cache_init(size_t order, struct slab_cache *cache,
     cache->objs_per_slab = n;
 
     if (cache->objs_per_slab == 0)
-        panic("Slab cache cannot hold any objects per slab!");
+        panic(CAPACITY_EXCEEDED, "zero objects per slab");
 
     cache->bitmap_bytes = SLAB_BITMAP_BYTES_FOR(cache->objs_per_slab);
 
@@ -503,7 +502,8 @@ static void *slab_alloc_from(struct slab_cache *cache, stack_handle_t handle,
             slab->used++;
 
 #ifdef DEBUG_SLAB_DEEP
-            enforce(&slab->traces[i] < (stack_handle_t *) slab->mem);
+            enforce(&slab->traces[i] < (stack_handle_t *) slab->mem,
+                    CORRUPTION);
             if (slab->traces[i])
                 stack_depot_putref(slab->traces[i]);
 
@@ -518,7 +518,9 @@ static void *slab_alloc_from(struct slab_cache *cache, stack_handle_t handle,
 
             vaddr_t ret = slab->mem + i * cache->obj_stride;
             enforce(ret > (vaddr_t) slab &&
-                    ret < (vaddr_t) slab + cache->pages_per_slab * PAGE_SIZE);
+                        ret <
+                            (vaddr_t) slab + cache->pages_per_slab * PAGE_SIZE,
+                    CORRUPTION);
 
             slab_check_assert(slab);
             return (void *) ret;
@@ -542,7 +544,7 @@ static void slab_bitmap_free(struct slab *slab, void *obj) {
     slab_index_and_mask(slab, obj, &byte_idx, &bit_mask);
 
     if (!SLAB_BITMAP_TEST(slab->bitmap[byte_idx], bit_mask)) {
-        panic("Possible UAF of addr %p for bitmap 0b%b with bitmask 0b%b", obj,
+        panic(BAD_FREE, "addr %p, bitmap 0b%b, bitmask 0b%b", obj,
               slab->bitmap[byte_idx], bit_mask);
     }
 
@@ -689,7 +691,7 @@ void slab_allocator_init(void) {
     /* bootstrap VAS */
     slab_global.vas = vas_bootstrap(SLAB_HEAP_START, SLAB_HEAP_END);
     if (!slab_global.vas)
-        panic("Could not initialize slab VAS");
+        panic(INIT_FAILED, "slab VAS");
     struct slab_size_constant *start = __skernel_slab_sizes;
     struct slab_size_constant *end = __ekernel_slab_sizes;
     size_t dyn_count = end - start;
@@ -697,7 +699,7 @@ void slab_allocator_init(void) {
 
     struct slab_size_constant *staging =
         simple_alloc(slab_global.vas, total_input * sizeof(*staging));
-    enforce(staging);
+    enforce(staging, OUT_OF_MEMORY);
     slab_order_map_init();
 
     size_t sidx = 0;
@@ -723,7 +725,7 @@ void slab_allocator_init(void) {
 
     struct slab_size_constant *tmp =
         simple_alloc(slab_global.vas, total_input * sizeof(*tmp));
-    enforce(tmp);
+    enforce(tmp, OUT_OF_MEMORY);
 
     size_t out = 0;
     for (size_t i = 0; i < total_input; i++) {
@@ -740,7 +742,7 @@ void slab_allocator_init(void) {
     slab_global.class_sizes =
         simple_alloc(slab_global.vas,
                      slab_global.num_sizes * sizeof(*slab_global.class_sizes));
-    enforce(slab_global.class_sizes);
+    enforce(slab_global.class_sizes, OUT_OF_MEMORY);
     memcpy(slab_global.class_sizes, tmp,
            slab_global.num_sizes * sizeof(*slab_global.class_sizes));
     slab_global.caches.caches = slab_caches_alloc();
@@ -765,7 +767,7 @@ void slab_allocator_init(void) {
 }
 
 struct slab *slab_for_ptr(void *ptr) {
-    enforce(slab_ptr_in_slab(ptr));
+    enforce(slab_ptr_in_slab(ptr), BAD_FREE);
     vaddr_t vp = (vaddr_t) ptr;
     uint8_t pow2_order = slab_order_map_get(vp);
     enforce(pow2_order != SLAB_POW2_ORDER_EMPTY);
@@ -791,7 +793,8 @@ size_t vsize(void *ptr) {
 
     if (!in_slab) {
         struct slab_page_hdr *hdr = slab_page_hdr_for_addr(ptr);
-        enforce(hdr->magic == VALLOC_PAGE_MAGIC, "header is 0x%x", hdr->magic);
+        enforce(hdr->magic == VALLOC_PAGE_MAGIC, CORRUPTION,
+                "bad header magic 0x%x", hdr->magic);
         return hdr->pages * PAGE_SIZE - sizeof(struct slab_page_hdr);
     }
 
@@ -883,7 +886,7 @@ void slab_free_addr_to_cache(void *addr, enum alloc_behavior bh) {
 
     struct slab *slab = slab_for_ptr(addr);
     if (!slab)
-        panic("Likely double free of address %p", addr);
+        panic(BAD_FREE, "address %p", addr);
 
     slab_free_old(slab, addr);
 }
@@ -947,8 +950,8 @@ static void *valloc_try_from_magazine(struct slab_domain *domain,
         uint64_t byte_idx;
         uint8_t bit_mask;
         slab_index_and_mask(slab, ret, &byte_idx, &bit_mask);
-        enforce(
-            SLAB_BITMAP_TEST(slab_for_ptr(ret)->bitmap[byte_idx], bit_mask));
+        enforce(SLAB_BITMAP_TEST(slab_for_ptr(ret)->bitmap[byte_idx], bit_mask),
+                CORRUPTION);
 
 #ifdef DEBUG_SLAB_DEEP
         size_t idx = slab_allocation_index(slab, ret);
@@ -965,7 +968,8 @@ static void *valloc_try_from_magazine(struct slab_domain *domain,
             slab_dump_corruption(ret, mag, 0);
 #endif
 
-            panic("buffer size %zu idx %zu not uniform", size, class_idx);
+            panic(CORRUPTION, "buffer size %zu idx %zu not uniform", size,
+                  class_idx);
         }
 #endif
     }
@@ -1180,7 +1184,7 @@ out:
                          ascii);
             }
 
-            panic("buffer size %zu not uniform", cache->obj_size);
+            panic(CORRUPTION, "buffer size %zu not uniform", cache->obj_size);
         }
     }
 #endif
@@ -1246,7 +1250,7 @@ void *valloc_new(size_t size, struct alloc_params params) {
     struct slab_domain *selected_dom = local_dom;
 
 #ifdef DEBUG_SLAB_DEEP
-    stack_handle_t handle = enforce(stack_depot_save_current());
+    stack_handle_t handle = enforce(stack_depot_save_current(), OUT_OF_MEMORY);
 #else
     stack_handle_t handle = NULL;
 #endif
@@ -1566,7 +1570,7 @@ void *valloc_full(size_t size, struct alloc_params params) {
      * in non-fatal assertions/debug only assertions, this should
      * get changed so as to not make the code be slower than a memset 0 */
     if (p && (params.flags & ALLOC_FLAG_ZERO_ON_ALLOC))
-        enforce(is_buffer_uniform(p, size, 0));
+        enforce(is_buffer_uniform(p, size, 0), CORRUPTION);
 
     if (p && !(params.flags & ALLOC_FLAG_ZERO_ON_ALLOC))
         memset(p, SLAB_ALLOC_NONZERO_POISON_BYTE, size);

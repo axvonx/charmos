@@ -141,7 +141,7 @@ static void free_to(struct slab_chunks *chunks, struct slab_chunk *chunk,
 
     size_t w = i / 64;
     size_t b = i % 64;
-    enforce(SLAB_BITMAP_TEST(bm[w], BIT(b)));
+    enforce(SLAB_BITMAP_TEST(bm[w], BIT(b)), BAD_FREE);
     SLAB_BITMAP_UNSET(bm[w], BIT(b));
     chunk->used--;
 }

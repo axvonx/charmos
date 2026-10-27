@@ -137,7 +137,7 @@ struct block_device *atapi_create_generic(struct ata_drive *d) {
     struct block_device *ret = vnew(ret);
 
     if (!ret)
-        panic("Could not allocate space for ATAPI device");
+        panic(OUT_OF_MEMORY, "ATAPI device");
 
     ret->driver_data  = d;
     ret->sector_size  = 2048;
@@ -146,7 +146,7 @@ struct block_device *atapi_create_generic(struct ata_drive *d) {
     ret->type         = BDEV_ATAPI_DRIVE;
     ret->cache        = vnew(ret->cache);
     if (!ret->cache)
-        panic("Could not allocate space for ATAPI device block cache");
+        panic(OUT_OF_MEMORY, "ATAPI device block cache");
 
     bcache_init(ret->cache, DEFAULT_BLOCK_CACHE_SIZE);
     return ret;

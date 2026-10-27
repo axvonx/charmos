@@ -3,7 +3,8 @@
 static void join_check(struct thread *t) {
     enforce(t);
     enforce(t != thread_get_current(), "thread '%s' joined itself", t->name);
-    enforce(irql_get() == IRQL_PASSIVE_LEVEL, "thread_join() blocks");
+    enforce(irql_get() == IRQL_PASSIVE_LEVEL, INVALID_CONTEXT,
+            "thread_join() blocks");
 
     enum thread_flags f = thread_or_flags(t, THREAD_FLAG_JOINED);
     enforce(f & THREAD_FLAG_JOINABLE, "join on a detached thread '%s'",

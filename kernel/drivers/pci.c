@@ -110,7 +110,7 @@ void pci_scan_devices(struct pci_device **devices_out, uint64_t *count_out) {
 
     pci_devices = vnews(pci_devices, space_to_alloc);
     if (!pci_devices)
-        panic("Could not allocate space for PCI devices");
+        panic(OUT_OF_MEMORY, "PCI devices");
 
     for (uint16_t bus = 0; bus < 256; ++bus) {
         for (uint8_t device = 0; device < 32; ++device) {

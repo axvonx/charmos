@@ -113,9 +113,9 @@ void scheduler_periodic_work_execute(enum scheduler_periodic_work_type type) {
     if (global.current_bootstage < BOOTSTAGE_LATE)
         return;
 
-    enforce(irql_get() == IRQL_DISPATCH_LEVEL);
-    enforce(scheduler_preemption_disabled(TOPC_IRQL));
-    enforce(!scheduler_in_periodic_work());
+    enforce(irql_get() == IRQL_DISPATCH_LEVEL, INVALID_CONTEXT);
+    enforce(scheduler_preemption_disabled(TOPC_IRQL), INVALID_CONTEXT);
+    enforce(!scheduler_in_periodic_work(), INVALID_CONTEXT);
 
     struct scheduler_periodic_work_percpu *pcpu =
         PERCPU_PTR(TOPC_IRQL, periodic_percpu);

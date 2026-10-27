@@ -174,7 +174,7 @@ void vmm_reclaim_page_tables(void) {
     if (smp_read(TOPC_IRQL, reclaiming_page_tables))
         return;
 
-    enforce(irql_get() == IRQL_DISPATCH_LEVEL);
+    enforce(irql_get() == IRQL_DISPATCH_LEVEL, INVALID_CONTEXT);
     smp_write(TOPC_IRQL, reclaiming_page_tables, true);
 
     uint64_t min_epoch = UINT64_MAX;
@@ -218,7 +218,7 @@ out:
 uintptr_t vmm_make_user_pml4(void) {
     struct page_table *user_pml4 = alloc_pt();
     if (!user_pml4) {
-        panic("Failed to allocate user pml4");
+        panic(OUT_OF_MEMORY, "user pml4");
     }
 
     for (int i = KERNEL_PML4_START_INDEX; i < PT_ENTRIES; i++) {
@@ -268,7 +268,7 @@ void vmm_init(struct limine_memmap_response *memmap,
               struct limine_executable_address_response *xa) {
     kernel_pml4 = alloc_pt();
     if (!kernel_pml4)
-        panic("Could not allocate space for kernel PML4");
+        panic(OUT_OF_MEMORY, "kernel PML4");
 
     uintptr_t kernel_pml4_phys = hhdm_ptr_to_paddr(kernel_pml4);
 
@@ -298,7 +298,7 @@ void vmm_init(struct limine_memmap_response *memmap,
 
         e = vmm_map_page(virt, kernel_phys_start + i, .page_flags = flags);
         if (e < 0)
-            panic("Error %s whilst mapping kernel", errno_to_str(e));
+            panic(INIT_FAILED, "mapping kernel: %s", errno_to_str(e));
     }
 
 #ifdef DEBUG_ASAN
@@ -354,7 +354,7 @@ void vmm_init(struct limine_memmap_response *memmap,
                 phys += PAGE_SIZE;
             }
             if (e < 0)
-                panic("Error %s whilst mapping kernel", errno_to_str(e));
+                panic(INIT_FAILED, "mapping kernel: %s", errno_to_str(e));
         }
     }
 
@@ -503,8 +503,7 @@ static enum err vmm_pt_apply(struct vmm_map_request *rq) {
         atomic_store_release((pte_atomic_t *) last_entry, PTE_LOCK_BIT);
     } else {
         if (in_use(*last_entry) && !modify)
-            panic(
-                "vmm_pt_apply: leaf in use without MODIFY_LEAF (double map?)");
+            panic(DUPLICATE, "leaf in use without MODIFY_LEAF");
 
         atomic_store_release((pte_atomic_t *) last_entry,
                              build_leaf_pte(rq->phys, flags, sz, vflags) |

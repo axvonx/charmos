@@ -69,7 +69,7 @@ static void map_cpus_to_groups(void) {
                     break;
                 }
             }
-            enforce(found != -1);
+            enforce(found != -1, NOT_FOUND);
             c->group_index[i] = found;
         }
     }

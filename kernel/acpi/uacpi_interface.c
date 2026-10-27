@@ -33,7 +33,7 @@ freq_hz_t tsc_freq = 0;
 
 #define panic_if_error(x)                                                      \
     if (uacpi_unlikely_error(x))                                               \
-        panic("uACPI initialization failed!");
+        panic(INIT_FAILED, "uACPI");
 
 static uint64_t our_rsdp = 0;
 void uacpi_init(uint64_t rsdp) {

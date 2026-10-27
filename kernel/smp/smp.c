@@ -277,7 +277,8 @@ static void smp_ap_wakeup(struct limine_mp_info *info) TSA_ACQUIRES_IRQS {
 
     x2apic_init();
     cpu_id_t cpu = (cpu_id_t) info->extra_argument; /* smp_map_apic_ids */
-    enforce(lapic_this_id() == smp_apic_id(cpu), "AP APIC ID mismatch");
+    enforce(lapic_this_id() == smp_apic_id(cpu), UNSUPPORTED,
+            "AP APIC ID mismatch");
     setup_cpu(cpu);
 
     gdt_load();
@@ -355,7 +356,7 @@ static void smp_map_apic_ids(struct limine_mp_response *mpr) {
             continue;
         }
 
-        enforce(next < global.core_count, "limine lists no BSP");
+        enforce(next < global.core_count, UNSUPPORTED, "limine lists no BSP");
         info->extra_argument = next;
         smp_apic_ids[next++] = info->lapic_id;
     }
@@ -467,7 +468,7 @@ void smp_boot_fence_park(void) {
     if (cc_likely(!atomic_load_acq(&boot_fence_up)))
         return;
 
-    enforce(!irqs_enabled());
+    enforce(!irqs_enabled(), INVALID_CONTEXT);
     atomic_inc(&boot_fence_parked);
 
     while (atomic_load_acq(&boot_fence_up))

@@ -46,7 +46,7 @@ void scheduler_init(void) {
 
     global.schedulers = vnews(global.schedulers, global.core_count);
     if (!global.schedulers)
-        panic("Could not allocate scheduler pointer array");
+        panic(OUT_OF_MEMORY, "scheduler pointer array");
 
     wroost_init();
     size_t i;

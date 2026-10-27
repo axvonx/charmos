@@ -28,7 +28,8 @@ static void avl_check_cycle(struct avl_tree_node *node, const char *caller) {
             break;
 
         if (tortoise == hare) {
-            panic("Cycle detected in %s (left spine): tortoise == hare at "
+            panic(CORRUPTION,
+                  "Cycle detected in %s (left spine): tortoise == hare at "
                   "node=%p",
                   caller, (void *) tortoise);
             break;
@@ -46,7 +47,8 @@ static void avl_check_cycle(struct avl_tree_node *node, const char *caller) {
             break;
 
         if (tortoise == hare) {
-            panic("Cycle detected in %s (right spine): tortoise == hare at "
+            panic(CORRUPTION,
+                  "Cycle detected in %s (right spine): tortoise == hare at "
                   "node=%p",
                   caller, (void *) tortoise);
             break;
@@ -282,16 +284,16 @@ static int avl_validate_node(const struct avl_tree *tree,
     }
 
     if (node->parent != parent) {
-        panic("AVL parent link broken");
+        panic(CORRUPTION, "AVL parent link broken");
         return 0;
     }
 
     if (node->left && tree->ops->cmp(node->left, node) > 0) {
-        panic("AVL ordering violation: left child > parent");
+        panic(CORRUPTION, "AVL ordering violation: left child > parent");
         return 0;
     }
     if (node->right && tree->ops->cmp(node->right, node) < 0) {
-        panic("AVL ordering violation: right child < parent");
+        panic(CORRUPTION, "AVL ordering violation: right child < parent");
         return 0;
     }
 
@@ -303,14 +305,14 @@ static int avl_validate_node(const struct avl_tree *tree,
 
     int expected = 1 + MAX(lh, rh);
     if (node->height != expected) {
-        panic("AVL height mismatch: stored %d, actual %d", node->height,
-              expected);
+        panic(CORRUPTION, "AVL height mismatch: stored %d, actual %d",
+              node->height, expected);
         return 0;
     }
 
     int bf = lh - rh;
     if (bf < -1 || bf > 1) {
-        panic("AVL balance violation: bf = %d", bf);
+        panic(CORRUPTION, "AVL balance violation: bf = %d", bf);
         return 0;
     }
 

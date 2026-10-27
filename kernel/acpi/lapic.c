@@ -49,8 +49,8 @@ uint32_t lapic_this_id(void) {
 }
 
 uint8_t lapic_dest_8bit(uint32_t apic_id) {
-    enforce(apic_id <= UINT8_MAX, "APIC ID %u needs interrupt remapping",
-            apic_id);
+    enforce(apic_id <= UINT8_MAX, UNSUPPORTED,
+            "APIC ID %u needs interrupt remapping", apic_id);
     return (uint8_t) apic_id;
 }
 

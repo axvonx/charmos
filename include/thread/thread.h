@@ -553,7 +553,7 @@ static inline void scheduler_yield_nesting_enter(struct thread *t) {
         t->yield_nesting_max = t->yield_nesting;
 
 #ifdef DEBUG_SCHED_NESTING
-    enforce(t->yield_nesting <= SCHED_MAX_YIELD_NESTING,
+    enforce(t->yield_nesting <= SCHED_MAX_YIELD_NESTING, OVERFLOW,
             "scheduler_yield nested %u deep on thread '%s'", t->yield_nesting,
             t->name);
 #endif
@@ -568,8 +568,8 @@ static inline void scheduler_yield_nesting_exit(struct thread *t) {
         return;
 
 #ifdef DEBUG_SCHED_NESTING
-    enforce(t->yield_nesting > 0,
-            "scheduler_yield nesting underflow on thread '%s'", t->name);
+    enforce(t->yield_nesting > 0, UNDERFLOW,
+            "scheduler_yield nesting on thread '%s'", t->name);
 #endif
 
     if (t->yield_nesting)
@@ -612,13 +612,13 @@ static inline void thread_set_flags(struct thread *t, enum thread_flags new) {
 
 static inline uint32_t thread_pin(struct thread *t) {
     uint32_t old = atomic_inc(&t->pinned_depth);
-    enforce(old != UINT32_MAX);
+    enforce(old != UINT32_MAX, OVERFLOW);
     return old;
 }
 
 static inline uint32_t thread_unpin(struct thread *t) {
     uint32_t old = atomic_dec(&t->pinned_depth);
-    enforce(old != 0);
+    enforce(old != 0, UNDERFLOW);
     return old;
 }
 

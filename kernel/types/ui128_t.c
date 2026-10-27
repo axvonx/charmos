@@ -231,33 +231,33 @@ int __parityti2(uint128_t a) {
 
 int128_t __negvti2(int128_t a) {
     if (a == INT128_MIN)
-        panic("__negvti2: 128-bit negation overflow");
+        panic(OVERFLOW);
     return __negti2(a);
 }
 
 int128_t __absvti2(int128_t a) {
     if (a == INT128_MIN)
-        panic("__absvti2: 128-bit abs overflow");
+        panic(OVERFLOW);
     return a < 0 ? __negti2(a) : a;
 }
 
 int128_t __addvti3(int128_t a, int128_t b) {
     int128_t r = (int128_t) ((uint128_t) a + (uint128_t) b);
     if (((a ^ r) & (b ^ r)) < 0)
-        panic("__addvti3: 128-bit addition overflow");
+        panic(OVERFLOW);
     return r;
 }
 
 int128_t __subvti3(int128_t a, int128_t b) {
     int128_t r = (int128_t) ((uint128_t) a - (uint128_t) b);
     if (((a ^ b) & (a ^ r)) < 0)
-        panic("__subvti3: 128-bit subtraction overflow");
+        panic(OVERFLOW);
     return r;
 }
 
 int128_t __mulvti3(int128_t a, int128_t b) {
     int128_t r = __multi3(a, b);
     if (a != 0 && (r / a != b || (a == -1 && b == INT128_MIN)))
-        panic("__mulvti3: 128-bit multiplication overflow");
+        panic(OVERFLOW);
     return r;
 }

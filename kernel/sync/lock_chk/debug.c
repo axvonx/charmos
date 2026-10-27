@@ -15,12 +15,12 @@ static bool debug_is_active(void) {
 }
 
 static struct lock_debug_cpu *debug_cpu_here(void) {
-    enforce(!irqs_enabled());
+    enforce(!irqs_enabled(), INVALID_CONTEXT);
     return PERCPU_PTR(TOPC_IFLAG, lock_debug_cpu);
 }
 
 void lock_debug_activate(void) {
-    enforce(PERCPU_READY(lock_debug_cpu));
+    enforce(PERCPU_READY(lock_debug_cpu), UNINITIALIZED);
     atomic_store_release(&lock_chk_global.debug, LOCK_CHK_ACTIVE);
 }
 

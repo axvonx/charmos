@@ -73,7 +73,9 @@
 
 #define todo(...) _enforce_fail("TODO: ", ##__VA_ARGS__)
 
-#define unreachable(...) _enforce_fail("unreachable! ", ##__VA_ARGS__)
+#define unreachable(...)                                                       \
+    enforce_impl_code(__FILE__, __LINE__, __func__, "unreachable! ", NULL,     \
+                      CRASH_CODE(global, UNREACHABLE), "" __VA_ARGS__)
 
 /*
  * assume(x)

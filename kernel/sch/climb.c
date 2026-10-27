@@ -229,7 +229,7 @@ static void apply_handle(struct thread *t, struct climb_handle *ch) {
         struct rbt *tree = &sched->climb_threads;
 
         /* Get a reference for the tree */
-        enforce(thread_getref(t));
+        enforce(thread_getref(t), STALE_REFERENCE);
         climb_info("Insert %p to tree", cts);
         rbt_insert(tree, &cts->climb_node);
         cts->on_climb_tree = true;
@@ -583,10 +583,10 @@ void climb_post_migrate_hook(struct thread *t, size_t old_cpu, size_t new_cpu) {
     struct scheduler *new = global.schedulers[new_cpu];
 
     if (!rbt_has_node(&old->climb_threads, &t->climb_data.climb_node)) {
-        enforce(t->climb_data.on_climb_tree == false,
+        enforce(t->climb_data.on_climb_tree == false, CORRUPTION,
                 "thread %s is off cpu %zu's tree but thinks it is on one",
                 t->name, old_cpu);
-        enforce(t->climb_data.pressure_periods == 0,
+        enforce(t->climb_data.pressure_periods == 0, CORRUPTION,
                 "thread %s left the tree carrying pressure_periods=%d", t->name,
                 t->climb_data.pressure_periods);
         return;

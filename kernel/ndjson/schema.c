@@ -29,7 +29,7 @@ void ndjson_check_duplicates(void) {
              b++) {
             if (strcmp(a->section, b->section) == 0 &&
                 strcmp(a->kind, b->kind) == 0)
-                panic("Duplicate ndjson record: %s/%s", a->section, a->kind);
+                panic(DUPLICATE, "ndjson record %s/%s", a->section, a->kind);
         }
     }
 }

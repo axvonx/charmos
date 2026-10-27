@@ -101,7 +101,7 @@ static void slab_domain_init_stats(struct slab_domain *domain) {
         vnews(domain->buckets, SLAB_STAT_SERIES_CAPACITY, ALLOC_ZERO);
 
     if (!domain->stats || !domain->stats->buckets || !domain->buckets)
-        panic("Failed to create domain stat series");
+        panic(OUT_OF_MEMORY, "domain stat series");
 
     for (size_t i = 0; i < domain->stats->nbuckets; i++) {
         domain->stats->buckets[i].private = &domain->buckets[i];

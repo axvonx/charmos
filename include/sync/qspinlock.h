@@ -120,7 +120,7 @@ static inline void qspinlock_shallow_init_internal(struct qspinlock *lock) {
 
 static inline void qspinlock_set_chk_flags(struct qspinlock *lock,
                                            enum lock_chk_flags flags) {
-    enforce(lock->chk.initialized);
+    enforce(lock->chk.initialized, UNINITIALIZED);
     enforce(!qspin_is_locked(lock));
     enforce(!atomic_load_rlx(&lock->chk.used));
     enforce((flags & ~LOCK_CHKD_FULL) == 0);
@@ -130,7 +130,7 @@ static inline void qspinlock_set_chk_flags(struct qspinlock *lock,
 static inline void qspinlock_reinit_chk(struct qspinlock *lock,
                                         const struct lock_chk_class *class,
                                         enum lock_chk_flags flags) {
-    enforce(lock->chk.initialized);
+    enforce(lock->chk.initialized, UNINITIALIZED);
     enforce(!qspin_is_locked(lock));
     qspinlock_init_chk_full(lock, class, flags);
 }
@@ -505,11 +505,11 @@ static inline cc_warn_unused_result enum irql
 qspin_lock_full(struct qspinlock *lock, enum lock_subclass sc,
                 const struct lock_chk_site *site)
     TSA_ACQUIRES_SPIN(lock) TSA_NO_ANALYSIS {
-    enforce(sc < LOCK_CHK_MAX_SUBCLASSES);
+    enforce(sc < LOCK_CHK_MAX_SUBCLASSES, CAPACITY_EXCEEDED);
     if (bootstage_get() >= BOOTSTAGE_MID_MP &&
         (irq_in_interrupt() || irq_in_nmi()))
-        panic(
-            "Attempted to take non-ISR safe qspinlock outside thread context");
+        panic(INVALID_CONTEXT,
+              "non-ISR-safe qspinlock taken outside thread context");
 
     enum lock_op_flags flags = LOCK_OP_IRQ_DISPATCH | LOCK_OP_KIND_BLOCKING;
     qspinlock_note_use(lock, flags);
@@ -523,7 +523,7 @@ qspin_lock_full(struct qspinlock *lock, enum lock_subclass sc,
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
     qspin_lock_physical(lock);
 
-    enforce(irqs_enabled());
+    enforce(irqs_enabled(), INVALID_CONTEXT);
     irq_disable();
 
     if (checked_shallow)
@@ -540,9 +540,9 @@ static inline cc_warn_unused_result enum irql
 qspin_lock_high_full(struct qspinlock *lock, enum lock_subclass sc,
                      const struct lock_chk_site *site)
     TSA_ACQUIRES_SPIN(lock) TSA_NO_ANALYSIS {
-    enforce(sc < LOCK_CHK_MAX_SUBCLASSES);
+    enforce(sc < LOCK_CHK_MAX_SUBCLASSES, CAPACITY_EXCEEDED);
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())
-        panic("Attempted to take non-raw qspinlock from an NMI");
+        panic(INVALID_CONTEXT, "non-raw qspinlock taken in NMI");
 
     enum lock_op_flags flags = LOCK_OP_KIND_BLOCKING | LOCK_OP_IRQ_HIGH;
     qspinlock_note_use(lock, flags);
@@ -571,8 +571,8 @@ qspin_trylock_full(struct qspinlock *lock, enum irql *out,
     TSA_TRY_ACQUIRES_SPIN(true, lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP &&
         (irq_in_interrupt() || irq_in_nmi()))
-        panic(
-            "Attempted to take non-ISR safe qspinlock outside thread context");
+        panic(INVALID_CONTEXT,
+              "non-ISR-safe qspinlock taken outside thread context");
 
     enum lock_op_flags flags = LOCK_OP_KIND_TRY | LOCK_OP_IRQ_DISPATCH;
     qspinlock_note_use(lock, flags);
@@ -585,7 +585,7 @@ qspin_trylock_full(struct qspinlock *lock, enum irql *out,
 
     *out = irql_raise(IRQL_DISPATCH_LEVEL);
     if (qspin_trylock_physical(lock)) {
-        enforce(irqs_enabled()); /* Should not go false */
+        enforce(irqs_enabled(), INVALID_CONTEXT); /* Should not go false */
         irq_disable();
         if (checked_shallow)
             qspinlock_shallow_push(lock, *out, site);
@@ -606,7 +606,7 @@ qspin_trylock_high_full(struct qspinlock *lock, enum irql *out,
                         enum lock_subclass sc, const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES_SPIN(true, lock) TSA_NO_ANALYSIS {
     if (bootstage_get() >= BOOTSTAGE_MID_MP && irq_in_nmi())
-        panic("Attempted to take non-raw qspinlock from an NMI");
+        panic(INVALID_CONTEXT, "non-raw qspinlock taken in NMI");
 
     enum lock_op_flags flags = LOCK_OP_KIND_BLOCKING | LOCK_OP_IRQ_HIGH;
     qspinlock_note_use(lock, flags);

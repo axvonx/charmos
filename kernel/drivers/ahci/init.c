@@ -67,7 +67,7 @@ static void allocate_port(struct ahci_device         *dev,
     struct ahci_cmd_header **hdr = vnews(hdr, 32, ALLOC_ZERO);
 
     if (!arr || !hdr)
-        panic("Could not allocate space for AHCI commands");
+        panic(OUT_OF_MEMORY, "AHCI commands");
 
     struct ahci_full_port p = {.port          = port,
                                .fis           = fis,
@@ -124,7 +124,7 @@ static struct ahci_disk *device_setup(struct ahci_device               *dev,
 
     struct ahci_disk *disks = vnews(disks, total_disks, ALLOC_ZERO);
     if (!disks)
-        panic("Could not allocate space for AHCI disks");
+        panic(OUT_OF_MEMORY, "AHCI disks");
 
     uint32_t disks_ind = 0;
 
@@ -180,7 +180,7 @@ struct ahci_disk *ahci_setup_controller(struct ahci_controller cc_mem_io *ctrl,
 
     struct ahci_device *dev = vnew(dev, ALLOC_ZERO);
     if (!dev)
-        panic("Could not allocate space for AHCI device setup");
+        panic(OUT_OF_MEMORY, "AHCI device setup");
 
     dev->ctrl    = ctrl;
     dev->irq_num = irq_alloc_entry();

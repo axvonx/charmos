@@ -89,7 +89,8 @@ void percpu_rc_reinit(struct percpu_rc *rc) {
 
     uintptr_t pcpu = atomic_load_rlx(&rc->percpu_count_ptr);
     atomic_int64_t *counters = PERCPU_RC_PTR(pcpu);
-    enforce(counters, "percpu_rc counters missing during reinit");
+    enforce(counters, UNINITIALIZED,
+            "percpu_rc counters missing during reinit");
 
     atomic_store_rlx(&rc->count, 1 + PERCPU_COUNT_BIAS);
     atomic_store_release(&rc->percpu_count_ptr, (uintptr_t) counters);

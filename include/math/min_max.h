@@ -13,7 +13,7 @@
         if (__abs_n < 0) {                                                     \
             bool __abs_overflow =                                              \
                 ci_sub_overflow((typeof(__abs_n)) 0, __abs_n, &__abs_result);  \
-            (void) enforce(!__abs_overflow);                                   \
+            (void) enforce(!__abs_overflow, OVERFLOW);                         \
         }                                                                      \
         __abs_result;                                                          \
     })

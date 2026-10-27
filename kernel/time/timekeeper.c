@@ -45,7 +45,7 @@ static struct clock *timekeeper_get_clock(void) {
 }
 
 void timekeeper_init(void) {
-    struct clock *clk = enforce(timekeeper_get_clock());
+    struct clock *clk = enforce(timekeeper_get_clock(), UNINITIALIZED);
 
     enum irql irql = seq_write_lock(&timekeeper.lock);
     timekeeper.clock = clk;

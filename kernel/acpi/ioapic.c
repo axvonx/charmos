@@ -136,7 +136,7 @@ void ioapic_init(void) {
 
     struct madt_ioapic_info *info = madt_get_ioapic();
     if (!info->present) {
-        panic("no I/O APIC entry found in MADT");
+        panic(UNSUPPORTED, "no I/O APIC entry found in MADT");
     }
 
     ioapic.id = info->id;

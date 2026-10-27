@@ -124,7 +124,7 @@ static cc_no_asan void mid_init_buddy(size_t pages_needed) {
     }
 
     if (!global.page_array)
-        panic("Failed to allocate buddy metadata");
+        panic(OUT_OF_MEMORY, "buddy metadata");
 }
 
 void buddy_init(void) {

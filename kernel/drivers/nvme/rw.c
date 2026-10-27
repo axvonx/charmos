@@ -82,7 +82,7 @@ static bool nvme_setup_prps(struct nvme_command  *cmd,
      * we need to provide another page for the list,
      * with max_transfer_size always preventing too many */
     uint64_t entries = data->prp_count - 1;
-    enforce(entries <= NVME_PRPS_PER_PAGE);
+    enforce(entries <= NVME_PRPS_PER_PAGE, CAPACITY_EXCEEDED);
 
     paddr_t list_phys = pmm_alloc_page();
     if (!list_phys)
@@ -207,7 +207,7 @@ static bool rw_wrapper(struct block_device *disk, uint64_t lba, uint8_t *buf,
                        uint64_t cnt, sync_fn function) {
     struct nvme_device *nvme = (struct nvme_device *) disk->driver_data;
     uint64_t max_sectors     = nvme->max_transfer_size / disk->sector_size;
-    enforce(max_sectors > 0 && max_sectors <= UINT16_MAX);
+    enforce(max_sectors > 0 && max_sectors <= UINT16_MAX, CAPACITY_EXCEEDED);
     struct io_wait_token iowt = IO_WAIT_TOKEN_EMPTY;
 
     while (cnt > 0) {

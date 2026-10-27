@@ -25,7 +25,7 @@ void pmm_early_init(struct limine_memmap_request m) {
     memmap = m.response;
 
     if (memmap == NULL || memmap->entries == NULL) {
-        panic("Failed to retrieve Limine memory map");
+        panic(INIT_FAILED, "Limine memory map unavailable");
         return;
     }
 

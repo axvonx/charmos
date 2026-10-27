@@ -163,7 +163,7 @@ struct block_device *ide_create_generic(struct ata_drive *ide) {
 
     d->cache = vnew(d->cache, ALLOC_ZERO);
     if (!d->cache)
-        panic("Could not allocate space for IDE drive block cache");
+        panic(OUT_OF_MEMORY, "IDE drive block cache");
 
     d->scheduler = bio_sched_create(d, &ide_bio_ops);
 

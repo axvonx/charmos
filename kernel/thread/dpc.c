@@ -51,7 +51,7 @@ void dpc_drain_local(void) {
     if (atomic_exchange(&me->executing_dpcs, true))
         return;
 
-    enforce(irql_get() == IRQL_DISPATCH_LEVEL);
+    enforce(irql_get() == IRQL_DISPATCH_LEVEL, INVALID_CONTEXT);
 
     size_t cpu = me->id;
     struct dpc_cpu *dc = &global.dpc_data[cpu];

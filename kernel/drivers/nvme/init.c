@@ -98,7 +98,7 @@ void nvme_alloc_admin_queues(struct nvme_device *nvme) {
 
 void nvme_alloc_io_queues(struct nvme_device *nvme, uint32_t qid) {
     if (!qid)
-        panic("Can't allocate IO queue zero!");
+        panic(OUT_OF_MEMORY, "IO queue zero");
 
     nvme->io_queues[qid] = nofail_vnew(nvme->io_queues[qid], ALLOC_ZERO);
 

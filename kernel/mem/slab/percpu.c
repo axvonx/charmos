@@ -35,8 +35,9 @@ static cc_no_asan void slab_magazine_zero_check(struct slab_magazine *mag) {
                     if (v)
                         slab_err("  byte %zu = 0x%02x", b, v);
                 }
-                panic("not uniform at idx %zu on mag %p with count %zu\n", i,
-                      mag, mag->count);
+                panic(CORRUPTION,
+                      "not uniform at idx %zu on mag %p with count %zu", i, mag,
+                      mag->count);
             }
         }
     }
@@ -55,7 +56,7 @@ bool slab_magazine_push(struct slab_magazine *mag, vaddr_t obj) {
 #ifdef DEBUG_SLAB
     if (mag->type == SLAB_MAGAZINE_ZERO &&
         !is_buffer_uniform((void *) obj, mag->obj_size, 0))
-        panic("buffer of size %zu is not uniform\n", mag->obj_size);
+        panic(CORRUPTION, "buffer of size %zu is not uniform", mag->obj_size);
 #endif
 
     enforce(mag->parent == slab_percpu_cache_local());
@@ -152,7 +153,7 @@ static vaddr_t slab_percpu_refill_for_mag_and_cache(
     if (space == 0)
         space = 1; /* we still want 1 so we can return an object */
 
-    enforce(space <= SLAB_MAG_ENTRIES);
+    enforce(space <= SLAB_MAG_ENTRIES, CAPACITY_EXCEEDED);
 
     if (mag->type == SLAB_MAGAZINE_ZERO)
         enforce(cache->type == SLAB_TYPE_PAGEABLE_ZERO ||
@@ -174,7 +175,8 @@ static vaddr_t slab_percpu_refill_for_mag_and_cache(
 #ifdef DEBUG_SLAB
         if (mag->type == SLAB_MAGAZINE_ZERO &&
             !is_buffer_uniform((void *) pc->shadow_objs[i], mag->obj_size, 0))
-            panic("buffer of size %zu is not uniform\n", mag->obj_size);
+            panic(CORRUPTION, "buffer of size %zu is not uniform",
+                  mag->obj_size);
 #endif
 
         mag->objs[mag->count++] = pc->shadow_objs[i];

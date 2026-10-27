@@ -72,7 +72,7 @@ void elf_map(uintptr_t user_pml4_phys, void *elf_data) {
 
             uintptr_t phys = pmm_alloc_page();
             if (!phys)
-                panic("Failed to allocate page for user ELF segment");
+                panic(OUT_OF_MEMORY, "page for user ELF segment");
 
             void *phys_mapped = vmm_map_bump(phys, PAGE_SIZE);
             memset(phys_mapped, 0, PAGE_SIZE);
@@ -109,7 +109,7 @@ uintptr_t map_user_stack(uintptr_t user_pml4_phys) {
     for (uintptr_t v = stack_bottom; v < USER_STACK_TOP; v += PAGE_SIZE) {
         uintptr_t phys = pmm_alloc_page();
         if (!phys)
-            panic("Failed to alloc user stack");
+            panic(OUT_OF_MEMORY, "user stack");
 
         vmm_map_page_user(vmm_phys_to_pml4(user_pml4_phys), v, phys,
                           .page_flags =

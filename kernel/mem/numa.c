@@ -49,7 +49,7 @@ void numa_construct_relative_distances(struct numa_node *node) {
     uint8_t *tmp = valloc(node->distances_cnt, ALLOC_ZERO);
     node->nodes_by_distance = valloc(node->distances_cnt, ALLOC_ZERO);
     if (!node->rel_dists || !tmp || !node->nodes_by_distance)
-        panic("could not allocate numa relative distances");
+        panic(OUT_OF_MEMORY, "numa relative distances");
 
     /* we copy the distance array into the temporary array and
      * sort it. then, for each distance in the distance array,

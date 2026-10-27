@@ -93,7 +93,7 @@ static inline uint8_t wroost_dec_counter(struct wroost_thread_data *wtd,
     if ((ctr_val = wroost_read_counter(wtd, ctr_idx)) == WROOST_COUNTER_MAX)
         return WROOST_COUNTER_MAX;
 
-    enforce(ctr_val > 0);
+    enforce(ctr_val > 0, UNDERFLOW);
     wroost_write_counter(wtd, ctr_idx, ctr_val - 1);
     return ctr_val - 1;
 }
@@ -110,7 +110,7 @@ static inline void wroost_move_tally(struct wroost_bucket *bkt,
                                      enum thread_prio_class to) {
 #ifdef DEBUG_WROOST
     for (int i = 0; i < THREAD_PRIO_CLASS_COUNT; i++)
-        enforce(wroost_read_tally(bkt, i) != UINT16_MAX);
+        enforce(wroost_read_tally(bkt, i) != UINT16_MAX, OVERFLOW);
 #endif
 
     uint64_t inc_mask = BIT((size_t) to * BIT_SIZEOF(uint16_t));
@@ -302,7 +302,7 @@ static void percpu_inc_id(struct wroost_percpu_data *pcpu, wroost_id_t lock_id,
  */
 static void percpu_dec_id(struct wroost_percpu_data *pcpu,
                           wroost_id_t lock_id) {
-    enforce(pcpu->rq_bucket_counts[lock_id] > 0);
+    enforce(pcpu->rq_bucket_counts[lock_id] > 0, UNDERFLOW);
     if (--pcpu->rq_bucket_counts[lock_id] == 0) {
         struct wroost_bucket *bkt = &wroost_global.hash_table.buckets[lock_id];
         size_t idx, offset;
@@ -631,7 +631,7 @@ static bool process_pending_word_ts(struct scheduler *self, size_t w_idx,
 
 static void process_pending_bitmap(struct scheduler *self,
                                    struct wroost_process_result *result) {
-    enforce(irql_get() == IRQL_DISPATCH_LEVEL);
+    enforce(irql_get() == IRQL_DISPATCH_LEVEL, INVALID_CONTEXT);
     enforce(!result->restart);
 
     struct wroost_percpu_data *pcd = self->wroost_data;
@@ -869,7 +869,7 @@ static void post_read_release(struct rwlock *lock) {
 
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
     wroost_check_enforce(wtd);
-    enforce(wtd->read_nesting_depth > 0);
+    enforce(wtd->read_nesting_depth > 0, UNDERFLOW);
 
     wroost_id_t id = wroost_hash(lock);
     if (cc_likely(--wtd->read_nesting_depth == 0)) {
@@ -1034,7 +1034,7 @@ static enum thread_prio_class update_reader(struct wroost_percpu_data *pcd,
         }
     }
 
-    enforce(found_fine_count <= wtd->read_nesting_depth);
+    enforce(found_fine_count <= wtd->read_nesting_depth, CORRUPTION);
     if (add) {
         if (blocked_on_ts) {
             hlist_add_head(&wtd->map_node, &pcd->blocked_ts_readers);
@@ -1261,7 +1261,7 @@ static size_t wroost_calc_default_buckets(size_t cpu_count) {
 void wroost_init(void) {
     size_t bucket_count = wroost_calc_default_buckets(global.core_count);
     enforce(IS_POW2(bucket_count));
-    enforce(bucket_count <= UINT16_MAX - 1);
+    enforce(bucket_count <= UINT16_MAX - 1, CAPACITY_EXCEEDED);
 
     wroost_global.hash_table.bucket_count = bucket_count;
 

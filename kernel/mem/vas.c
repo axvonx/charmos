@@ -21,7 +21,7 @@ static cpu_id_t vas_cpu_id(void) {
 static enum irql vas_enter(void) TSA_ACQUIRES(IRQL_RAISED) TSA_NO_ANALYSIS {
     if (global.current_bootstage >= BOOTSTAGE_MID_MP &&
         (irq_in_interrupt() || irq_in_nmi()))
-        panic("vas: hardware interrupt context");
+        panic(INVALID_CONTEXT, "used from hardware interrupt context");
     return irql_raise(IRQL_DISPATCH_LEVEL);
 }
 
@@ -415,8 +415,9 @@ static void reclaim_locked(struct vas *vas) {
             vaddr_t start = seg->start;
             struct vas_segment *parent = segment_find(&vas->global, start);
             enforce(parent && parent->start == start &&
-                    parent->length == VAS_CHUNK_SIZE &&
-                    atomic_load_rlx(&parent->type) == VAS_SEG_IMPORTED);
+                        parent->length == VAS_CHUNK_SIZE &&
+                        atomic_load_rlx(&parent->type) == VAS_SEG_IMPORTED,
+                    CORRUPTION);
 
             bin_remove(local, seg);
             local->total_free -= seg->length;
@@ -574,7 +575,7 @@ bool vas_vaddr_in_vas(struct vas *vas, vaddr_t addr) {
 
 void vas_free(struct vas *vas, vaddr_t addr, size_t size) {
     if (!vas_vaddr_in_vas(vas, addr) || !size || size > vas->limit - addr)
-        panic("vas_free: invalid extent %p+%zu", (void *) addr, size);
+        panic(BAD_FREE, "invalid extent %p+%zu", (void *) addr, size);
 
     enum irql outer = vas_enter();
     uint32_t cls = mag_class(size);
@@ -591,14 +592,13 @@ void vas_free(struct vas *vas, vaddr_t addr, size_t size) {
 
     if (!seg || atomic_load_rlx(&seg->type) != VAS_SEG_BUSY ||
         seg->start != addr || seg->length != size)
-        panic("vas_free: invalid allocation/double free at %p+%zu",
-              (void *) addr, size);
+        panic(BAD_FREE, "%p+%zu not allocated", (void *) addr, size);
 
     if (seg->mag_slot) {
         struct vas_mag_slot *slot = seg->mag_slot;
         uintptr_t token = vas_token_make(addr, VAS_MAG_LIVE);
         if (!magazine_claim(slot, token))
-            panic("vas_free: concurrent/duplicate magazine free at %p",
+            panic(BAD_FREE, "concurrent/duplicate magazine free at %p",
                   (void *) addr);
 
         magazine_release(vas, arena, slot);

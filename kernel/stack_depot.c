@@ -41,7 +41,7 @@ record_chain_getref_locked(struct stack_depot_record_chain *this_chain,
                  * outside the hashtable. Basically, on putref(), we spin_lock
                  * the record's hash chain, and then if refcount_dec_and_test,
                  * we remove it from the list and free */
-                enforce(refcount_inc_not_zero(&pos->refcount));
+                enforce(refcount_inc_not_zero(&pos->refcount), STALE_REFERENCE);
                 return pos;
             }
         }

@@ -100,7 +100,7 @@ void slab_domain_init_workqueue(struct slab_domain *domain) {
 }
 
 void vfree_defer_irq(void *ptr) {
-    enforce(irq_in_interrupt());
+    enforce(irq_in_interrupt(), INVALID_CONTEXT);
     if (!ptr)
         return;
 

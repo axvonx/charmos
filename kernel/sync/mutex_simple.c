@@ -66,7 +66,7 @@ static void mutex_simple_chk_state_init(struct mutex_simple *m,
 
 void mutex_simple_set_chk_flags(struct mutex_simple *m,
                                 enum lock_chk_flags flags) {
-    enforce(m->chk.initialized);
+    enforce(m->chk.initialized, UNINITIALIZED);
     enforce(m->owner == NULL);
     enforce(list_head_empty(&m->waiters.waiters));
     enforce(!spinlock_locked(&m->waiters.lock));
@@ -79,7 +79,7 @@ void mutex_simple_set_chk_flags(struct mutex_simple *m,
 void mutex_simple_reinit_chk(struct mutex_simple *m,
                              const struct lock_chk_class *class,
                              enum lock_chk_flags flags) {
-    enforce(m->chk.initialized);
+    enforce(m->chk.initialized, UNINITIALIZED);
     enforce(m->owner == NULL);
     enforce(list_head_empty(&m->waiters.waiters));
     enforce(!spinlock_locked(&m->waiters.lock));
@@ -140,8 +140,8 @@ void mutex_simple_reinit_chk(struct mutex_simple *m,
 #endif /* DEBUG_LOCK_CHK */
 
 static void mutex_simple_sanity_check(void) {
-    enforce(irq_not_in_interrupt());
-    enforce(irql_get() <= IRQL_APC_LEVEL);
+    enforce(irq_not_in_interrupt(), INVALID_CONTEXT);
+    enforce(irql_get() <= IRQL_APC_LEVEL, INVALID_CONTEXT);
 }
 
 static bool try_acquire_simple_mutex(struct mutex_simple *m,

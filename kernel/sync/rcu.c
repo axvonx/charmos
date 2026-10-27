@@ -124,7 +124,7 @@ void rcu_read_lock(void) TSA_NO_ANALYSIS {
     assume(!irq_in_nmi(), "RCU read section in NMI context");
 
     uint32_t nesting = ca_read_once(t->rcu_nesting);
-    enforce(nesting != UINT32_MAX, "RCU nesting overflow");
+    enforce(nesting != UINT32_MAX, OVERFLOW, "RCU nesting");
 
     if (cc_likely(nesting != 0)) {
         ca_write_once(t->rcu_nesting, nesting + 1);
@@ -154,7 +154,7 @@ static void rcu_unregister_reader(struct thread *t) TSA_NO_ANALYSIS {
         t->rcu_blocked_seq = 0;
 
         if (bseq != 0 && bseq == leaf->gp_seq) {
-            enforce(leaf->blocked_count != 0, "RCU blocked reader underflow");
+            enforce(leaf->blocked_count != 0, UNDERFLOW, "RCU blocked_count");
             leaf->blocked_count--;
             rcu_propagate_done(leaf, bseq, irql);
         } else {
@@ -171,7 +171,7 @@ void rcu_read_unlock(void) TSA_NO_ANALYSIS {
         return;
 
     uint32_t nesting = ca_read_once(t->rcu_nesting);
-    enforce(nesting != 0, "RCU nesting underflow");
+    enforce(nesting != 0, UNDERFLOW, "RCU nesting");
 
     if (cc_likely(nesting > 1)) {
         ca_write_once(t->rcu_nesting, nesting - 1);
@@ -245,7 +245,7 @@ void rcu_note_irq_exit(void) TSA_NO_ANALYSIS {
     if (!rcu_global.ready)
         return;
 
-    enforce(irq_in_interrupt());
+    enforce(irq_in_interrupt(), INVALID_CONTEXT);
     struct thread *t = thread_get_current();
 
     /* Just report when the interrupted context isn't holding an unregistered
@@ -279,7 +279,7 @@ void rcu_idle_enter(void) {
     if (!rcu_global.ready)
         return;
 
-    enforce(!irqs_enabled());
+    enforce(!irqs_enabled(), INVALID_CONTEXT);
 
     atomic_store_release(&rcu_global.cpus[smp_id(TOPC_IFLAG)].idle, true);
 }
@@ -474,7 +474,7 @@ static uint64_t rcu_gp_start(struct list_head *batch) TSA_NO_ANALYSIS {
     atomic_store_rlx(&rcu_global.gp_requests, 0);
 
     uint64_t prev = atomic_load_rlx(&rcu_global.gp_seq);
-    enforce(prev != UINT64_MAX, "RCU GP seq wrap");
+    enforce(prev != UINT64_MAX, OVERFLOW, "RCU GP seq");
     uint64_t seq = prev + 1;
 
 #ifdef TEST_ENABLED
@@ -593,8 +593,8 @@ static void rcu_gp_worker(void *unused_arg) {
 void rcu_synchronize(void) {
     struct thread *t = thread_get_current();
 
-    enforce(!irq_in_interrupt() && !irq_in_nmi());
-    enforce(irql_get() <= IRQL_APC_LEVEL);
+    enforce(!irq_in_interrupt() && !irq_in_nmi(), INVALID_CONTEXT);
+    enforce(irql_get() <= IRQL_APC_LEVEL, INVALID_CONTEXT);
     enforce(!t || t->rcu_nesting == 0);
     enforce(!rcu_global.ready || t != rcu_global.worker);
 
@@ -622,7 +622,8 @@ static void rcu_build_tree(void) {
 
     do {
         n = DIV_ROUND_UP(n, RCU_FANOUT);
-        enforce(levels < RCU_MAX_LEVELS, "RCU tree deeper than RCU_MAX_LEVELS");
+        enforce(levels < RCU_MAX_LEVELS, CAPACITY_EXCEEDED,
+                "RCU tree deeper than RCU_MAX_LEVELS");
         counts[levels++] = n;
     } while (n > 1);
 

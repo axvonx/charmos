@@ -280,12 +280,12 @@ void workqueues_permanent_init(void) {
         global.workqueues[i] =
             workqueue_create_full(&attrs, /* fmt = */ NULL, /* args = */ NULL);
         if (!global.workqueues[i])
-            panic("Failed to spawn permanent workqueue");
+            panic(INIT_FAILED, "permanent workqueue");
 
         global.workqueues[i]->core = i;
 
         if (!workqueue_spawn_permanent_worker(global.workqueues[i]))
-            panic("Failed to spawn initial worker on workqueue %ld", i);
+            panic(INIT_FAILED, "initial worker on workqueue %ld", i);
     }
 }
 

@@ -18,7 +18,7 @@ const char *err_facility_to_str(enum err e) {
     uint16_t pref = ERR_GET_FACILITY(e);
     uint16_t del = ERR_GET_DELTA(e);
     enforce(pref && del);
-    struct err_facility *this = enforce(facility_for(pref));
+    struct err_facility *this = enforce(facility_for(pref), NOT_FOUND);
     if (this->to_str)
         return this->to_str(del);
 
@@ -27,7 +27,7 @@ const char *err_facility_to_str(enum err e) {
 
 void err_facilities_init(void) {
     enforce(__ekernel_err_facilities - __skernel_err_facilities <= UINT16_MAX,
-            "too many?");
+            CAPACITY_EXCEEDED, "err facility count");
 
     /* Simple: 1 + index in array, keeps it sorted, avoids 0 */
     for (struct err_facility *f = __skernel_err_facilities;

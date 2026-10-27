@@ -102,12 +102,12 @@ clock_evdev_for_cpu(struct clock_evdev_group *cedg, cpu_id_t cpu) {
         if (iter->bound_to_cpu == cpu) {
 
             /* sanity check */
-            enforce(!found, "only one CED per CEDG per CPU allowed");
+            enforce(!found, DUPLICATE, "only one CED per CEDG per CPU allowed");
             found = iter;
         }
     }
 
-    return enforce(found);
+    return enforce(found, NOT_FOUND);
 }
 
 void clock_evdev_group_unregister(struct clock_evdev_group *cedg);

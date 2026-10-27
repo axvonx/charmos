@@ -72,7 +72,7 @@ static void mutex_chk_state_init(struct mutex *mtx,
 }
 
 void mutex_set_chk_flags(struct mutex *mtx, enum lock_chk_flags flags) {
-    enforce(mtx->chk.initialized);
+    enforce(mtx->chk.initialized, UNINITIALIZED);
     enforce(!mutex_locked(mtx));
     enforce(!atomic_load_rlx(&mtx->chk.used));
     enforce((flags & ~LOCK_CHKD_FULL) == 0);
@@ -81,7 +81,7 @@ void mutex_set_chk_flags(struct mutex *mtx, enum lock_chk_flags flags) {
 
 void mutex_reinit_chk(struct mutex *mtx, const struct lock_chk_class *class,
                       enum lock_chk_flags flags) {
-    enforce(mtx->chk.initialized);
+    enforce(mtx->chk.initialized, UNINITIALIZED);
     enforce(!mutex_locked(mtx));
     mutex_init_chk_full(mtx, class, flags);
 }
@@ -179,14 +179,14 @@ static bool mutex_owner_running(struct mutex *mutex) {
 }
 
 static void mutex_sanity_check(void) {
-    enforce(irq_not_in_interrupt());
-    enforce(irql_get() <= IRQL_APC_LEVEL);
+    enforce(irq_not_in_interrupt(), INVALID_CONTEXT);
+    enforce(irql_get() <= IRQL_APC_LEVEL, INVALID_CONTEXT);
 }
 
 void mutex_lock_subclass_full(struct mutex *mutex, enum lock_subclass subclass,
                               const struct lock_chk_site *site)
     TSA_NO_ANALYSIS {
-    enforce(subclass < LOCK_CHK_MAX_SUBCLASSES);
+    enforce(subclass < LOCK_CHK_MAX_SUBCLASSES, CAPACITY_EXCEEDED);
     mutex_sanity_check();
 
     struct mutex_chk_acq_state chk_state;

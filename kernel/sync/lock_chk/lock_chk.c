@@ -25,7 +25,7 @@ CMDLINE_CHILDREN_DEFINE(
         .desc = "Panic when lock validator capacity is exhausted (alias)"));
 
 void lock_chk_init(void) {
-    enforce(bootstage_get() >= BOOTSTAGE_LATE);
+    enforce(bootstage_get() >= BOOTSTAGE_LATE, UNINITIALIZED);
     lock_chk_deep_activate();
     lock_debug_activate();
     atomic_store_release(&lock_chk_global.state, LOCK_CHK_ACTIVE);
@@ -41,7 +41,7 @@ void lock_chk_note_use(struct lock_chk_lock *lock, enum lock_op_flags flags) {
 
     bool manages_irql = (flags & LOCK_OP_IRQ_MASK) != 0;
     bool raw = flags & LOCK_OP_RAW;
-    enforce(lock->initialized);
+    enforce(lock->initialized, UNINITIALIZED);
     enforce((lock->flags & ~LOCK_CHKD_FULL) == 0);
     if (manages_irql && !raw)
         enforce((lock->flags & LOCK_CHKD_THREAD) == 0 ||

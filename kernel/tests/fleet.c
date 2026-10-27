@@ -25,11 +25,11 @@ void *test_alloc(struct test_context *ctx, size_t size) {
     size_t total;
     if (cc_unlikely(
             ci_add_overflow(sizeof(struct test_alloc_node), size, &total)))
-        panic("test_alloc: allocation size overflow (%zu bytes)", size);
+        panic(OVERFLOW, "test_alloc: %zu bytes", size);
 
     struct test_alloc_node *a = valloc(total, ALLOC_ZERO);
     if (cc_unlikely(!a))
-        panic("test_alloc: OOM (%zu bytes)", size);
+        panic(OUT_OF_MEMORY, "test_alloc: %zu bytes", size);
 
     a->next = ctx->allocs;
     ctx->allocs = a;
@@ -162,7 +162,7 @@ struct test_fleet *test_fleet_init_full(struct test_context *ctx,
 
     struct test_fleet *f = vnew(f, ALLOC_ZERO);
     if (cc_unlikely(!f))
-        panic("test_fleet_init: OOM");
+        panic(OUT_OF_MEMORY, "test_fleet_init");
 
     once_token_init(&f->failed);
     f->ctx = ctx;

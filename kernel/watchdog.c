@@ -176,7 +176,7 @@ static void watchdog_buckets_inc_heartbeat(struct watchdog_buckets *buckets,
 }
 
 static void watchdog_do_percpu_heartbeat(time_ms_t now) {
-    enforce(PERCPU_READY(watchdog_percpu));
+    enforce(PERCPU_READY(watchdog_percpu), UNINITIALIZED);
 
     atomic_inc_rlx(&PERCPU_PTR(TOPC_IRQL, watchdog_percpu)->heartbeat_seq);
 
@@ -226,7 +226,8 @@ bool watchdog_count_heartbeats_at(const struct watchdog_buckets *buckets,
     if (!watchdog_buckets_snapshot(buckets, &snap))
         return false;
 
-    enforce(window_buckets && window_buckets <= WATCHDOG_NUM_BUCKETS);
+    enforce(window_buckets && window_buckets <= WATCHDOG_NUM_BUCKETS,
+            CAPACITY_EXCEEDED);
     enforce(bucket_interval_ms);
     enforce(expected_per_bucket);
 
@@ -290,7 +291,7 @@ not_ready:
 }
 
 static void watchdog_worker_timer_func(struct timer *t) {
-    enforce(irq_in_interrupt());
+    enforce(irq_in_interrupt(), INVALID_CONTEXT);
 
     struct watchdog_percpu *pcpu = PERCPU_PTR(TOPC_IRQ, watchdog_percpu);
     enum irql irql = spin_lock_high(&pcpu->callback_list.lock);
@@ -729,7 +730,7 @@ static enum irq_result watchdog_test_handler(struct irq_context *regs,
 
 /* We'll want to set up the master and all the workers */
 void watchdog_init(void) {
-    enforce(PERCPU_READY(watchdog_percpu));
+    enforce(PERCPU_READY(watchdog_percpu), UNINITIALIZED);
 
     for (int i = 0; i < WATCHDOG_STATE_MAX; i++) {
         cpu_mask_init(&watchdog_master.cpu_masks[i], global.core_count);
@@ -802,7 +803,7 @@ void watchdog_pet(void) {
         struct watchdog_percpu *this = PERCPU_PTR(TOPC_NONE, watchdog_percpu);
         /* The caller must make sure we cannot be preempted */
         if (this->pets_enabled) {
-            enforce(irql_get() >= IRQL_DISPATCH_LEVEL);
+            enforce(irql_get() >= IRQL_DISPATCH_LEVEL, INVALID_CONTEXT);
             atomic_inc_rlx(&this->pets);
         }
     }
@@ -813,7 +814,7 @@ void watchdog_anti_pet(void) {
         struct watchdog_percpu *this = PERCPU_PTR(TOPC_NONE, watchdog_percpu);
         /* The caller must make sure we cannot be preempted */
         if (this->pets_enabled) {
-            enforce(irql_get() >= IRQL_DISPATCH_LEVEL);
+            enforce(irql_get() >= IRQL_DISPATCH_LEVEL, INVALID_CONTEXT);
             atomic_inc_rlx(&this->anti_pets);
         }
     }

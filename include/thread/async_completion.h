@@ -80,7 +80,7 @@ static inline void async_prepare(
     if (type == ASYNC_COMPLETION_APC) {
         apc_init(&ac->apc, async_apc_callback_internal, ac, NULL);
         ac->thread = thread_get_current();
-        enforce(thread_getref(ac->thread));
+        enforce(thread_getref(ac->thread), STALE_REFERENCE);
     }
 
     ac->callback = cb;

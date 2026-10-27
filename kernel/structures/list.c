@@ -31,18 +31,20 @@ void list_add_check(const struct list_node *new, const struct list_node *prev,
               next);
 
     if (cc_unlikely(prev->next != next))
-        panic("list_add corruption: prev %p ->next should be next %p, was %p",
+        panic(CORRUPTION, "list_add: prev %p ->next should be next %p, was %p",
               prev, next, prev->next);
 
     if (cc_unlikely(next->prev != prev))
-        panic("list_add corruption: next %p ->prev should be prev %p, was %p",
+        panic(CORRUPTION, "list_add: next %p ->prev should be prev %p, was %p",
               next, prev, next->prev);
 
     if (cc_unlikely(new == prev || new == next))
-        panic("list_add: double add of %p (prev %p, next %p)", new, prev, next);
+        panic(DUPLICATE, "list_add: double add of %p (prev %p, next %p)", new,
+              prev, next);
 
     if (cc_unlikely(list_node_looks_linked(new)))
-        panic("list_add: %p is already linked (next %p, prev %p) -- adding it "
+        panic(DUPLICATE,
+              "list_add: %p is already linked (next %p, prev %p) -- adding it "
               "to %p would unlink it; swapped arguments?",
               new, new->next, new->prev, next);
 }
@@ -56,11 +58,11 @@ void list_del_check(const struct list_node *entry) {
               entry->next, entry->prev);
 
     if (cc_unlikely(entry->prev->next != entry))
-        panic("list_del corruption: %p ->prev %p ->next should be %p, was %p",
+        panic(CORRUPTION, "list_del: %p ->prev %p ->next should be %p, was %p",
               entry, entry->prev, entry, entry->prev->next);
 
     if (cc_unlikely(entry->next->prev != entry))
-        panic("list_del corruption: %p ->next %p ->prev should be %p, was %p",
+        panic(CORRUPTION, "list_del: %p ->next %p ->prev should be %p, was %p",
               entry, entry->next, entry, entry->next->prev);
 }
 
@@ -72,20 +74,21 @@ void list_splice_check(const struct list_node *list,
               prev, next);
 
     if (cc_unlikely(prev->next != next || next->prev != prev))
-        panic("list_splice corruption at destination: prev %p ->next %p, "
-              "next %p ->prev %p",
+        panic(CORRUPTION,
+              "list_splice: destination prev %p ->next %p, next %p ->prev %p",
               prev, prev->next, next, next->prev);
 
     const struct list_node *first = list->next;
     const struct list_node *last = list->prev;
 
     if (cc_unlikely(first == NULL || last == NULL))
-        panic("list_splice: source %p is not initialised (next %p, prev %p)",
+        panic(UNINITIALIZED,
+              "list_splice: source %p is not initialised (next %p, prev %p)",
               list, first, last);
 
     if (cc_unlikely(first->prev != list || last->next != list))
-        panic("list_splice corruption at source %p: first %p ->prev %p, "
-              "last %p ->next %p",
+        panic(CORRUPTION,
+              "list_splice: source %p first %p ->prev %p, last %p ->next %p",
               list, first, first->prev, last, last->next);
 }
 #endif /* DEBUG_LIST */

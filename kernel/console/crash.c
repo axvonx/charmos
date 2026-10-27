@@ -963,7 +963,7 @@ static struct crash_unwind_node *
 unwind_node_alloc(struct thread *t, enum crash_unwind_type type) {
     struct list_node *n = list_head_pop_back(&t->crash_data.unwind.free_list);
     if (!n)
-        panic("ran out of nodes");
+        panic(CAPACITY_EXCEEDED, "unwind node pool");
 
     struct crash_unwind_node *node =
         container_of(n, struct crash_unwind_node, list);
@@ -1040,7 +1040,7 @@ static void crash_unwind_node_remove(struct crash_unwind_node_data *data,
     }
 
 out:
-    enforce(found, "Likely double remove");
+    enforce(found, BAD_FREE, "unwind node not in use");
 }
 
 static void unwind_rcu(struct crash_unwind_node_data *d) TSA_NO_ANALYSIS {

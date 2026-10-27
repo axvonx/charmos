@@ -323,7 +323,7 @@ void cc_mem_io *xhci_map_mmio(uint8_t bus, uint8_t slot, uint8_t func) {
 struct xhci_device *xhci_device_create(void cc_mem_io *mmio) {
     struct xhci_device *dev = vnew(dev, ALLOC_ZERO);
     if (cc_unlikely(!dev))
-        panic("Could not allocate space for XHCI device");
+        panic(OUT_OF_MEMORY, "XHCI device");
 
     struct xhci_cap_regs cc_mem_io *cap = mmio;
     struct xhci_op_regs cc_mem_io  *op  = mmio + cap->cap_length;

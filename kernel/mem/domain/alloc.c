@@ -297,7 +297,7 @@ static paddr_t alloc_with_locality(size_t pages, bool flexible_locality,
     }
 
     if (!best)
-        panic("Unreachable! Domains should have zonelists!");
+        unreachable("domain has no zonelist");
 
     /* Try best first */
     paddr_t ret = alloc_from_remote_domain(best, pages);

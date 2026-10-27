@@ -9,7 +9,7 @@ static struct reaper_thread **reapers = NULL;
 static atomic_size_t reaped_threads = ATOMIC_VAR_INIT(0);
 
 void reaper_enqueue(struct thread *t) {
-    enforce(reapers);
+    enforce(reapers, UNINITIALIZED);
     size_t d = domain_local_id(TOPC_NONE);
     locked_list_add(&reapers[d]->list, &t->reaper_list);
     semaphore_post(&reapers[d]->sem);

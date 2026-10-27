@@ -96,7 +96,7 @@ static void isr_standard_entry(irq_t vector, struct irq_registers *irq_regs) {
     uint8_t scratch_buf[EXCEPTION_SYNC_CB_SCRATCH_BUFFER_SIZE] = {0};
 
     if (!is_exception)
-        enforce(old != IRQL_HIGH_LEVEL);
+        enforce(old != IRQL_HIGH_LEVEL, INVALID_CONTEXT);
 
     struct irq_context irq_ctx = {.irq_entered_irql = old,
                                   .irq_stack_scratch_buf = scratch_buf,
@@ -160,7 +160,7 @@ static void isr_standard_entry(irq_t vector, struct irq_registers *irq_regs) {
             curr->preemptions++;
 #endif
 
-        enforce(old != IRQL_DISPATCH_LEVEL);
+        enforce(old != IRQL_DISPATCH_LEVEL, INVALID_CONTEXT);
         scheduler_yield();
     }
 }
@@ -186,7 +186,8 @@ void irq_register(char *name, uint8_t vector, irq_handler_t handler, void *ctx,
     me->enabled = true;
 
     if (was && !(flags & IRQ_FLAG_SHARED))
-        panic("need to be shared to have many, registered by %s", me->name);
+        panic(DUPLICATE, "need to be shared to have many, registered by %s",
+              me->name);
 
     struct irq_action *act = nofail_vnew(act, ALLOC_ZERO);
 
@@ -207,7 +208,7 @@ void irq_set_chip(uint8_t vec, struct irq_chip *chip, void *data) {
     enum irql irql = spin_lock(&irq_table_lock);
 
     if (irq_table[vec].chip && chip)
-        panic("IRQ chip %u exists", vec);
+        panic(DUPLICATE, "IRQ chip %u exists", vec);
 
     irq_table[vec].chip = chip;
     irq_table[vec].chip_data = data;
@@ -304,7 +305,7 @@ void irq_vector_enable(irq_t irq) {
 static void exception_sync_cbs_init(void) {
     struct exception_sync_cb *esc;
     linker_section_for_each_object(esc, exception_sync_cbs) {
-        enforce(exception_cbs[esc->vector].vector == 0);
+        enforce(exception_cbs[esc->vector].vector == 0, DUPLICATE);
         exception_cbs[esc->vector] = *esc;
     }
 }

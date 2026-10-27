@@ -314,7 +314,7 @@ static inline uint32_t smp_ctx_add(enum topology_caller c, uint32_t one,
                                    uint32_t mask) {
     struct core *cpu = smp_core(c);
     if (cc_unlikely((cpu->ctx & mask) == mask))
-        panic("smp_ctx field overflow, mask %#x, smp_ctx %#x", mask, cpu->ctx);
+        panic(OVERFLOW, "smp_ctx mask %#x, ctx %#x", mask, cpu->ctx);
 
     cpu->ctx += one;
     return cpu->ctx;
@@ -324,7 +324,7 @@ static inline uint32_t smp_ctx_sub(enum topology_caller c, uint32_t one,
                                    uint32_t mask) {
     struct core *cpu = smp_core(c);
     if (cc_unlikely((cpu->ctx & mask) == 0))
-        panic("smp_ctx field underflow, mask %#x, smp_ctx %#x", mask, cpu->ctx);
+        panic(UNDERFLOW, "smp_ctx mask %#x, ctx %#x", mask, cpu->ctx);
 
     cpu->ctx -= one;
     return cpu->ctx;
