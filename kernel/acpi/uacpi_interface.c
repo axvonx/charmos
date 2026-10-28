@@ -16,6 +16,8 @@
 #include <sync/mutex_simple.h>
 #include <sync/spinlock.h>
 #include <thread/thread.h>
+#include <types/freq.h>
+#include <types/types.h>
 #include <uacpi/event.h>
 #include <uacpi/platform/arch_helpers.h>
 #include <uacpi/status.h>
@@ -23,9 +25,6 @@
 #include <uacpi/uacpi.h>
 
 #include "uacpi/kernel_api.h"
-#include <types/freq.h>
-#include <types/types.h>
-
 #include "uacpi/log.h"
 #include "uacpi/namespace.h"
 

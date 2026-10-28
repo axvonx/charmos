@@ -1,5 +1,6 @@
-#include "sch/tests/test_internal.h"
 #include <sync/event.h>
+
+#include "sch/tests/test_internal.h"
 
 static struct event lock_two_release;
 

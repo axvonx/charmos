@@ -1,4 +1,3 @@
-#include "sync/tests/test_internal.h"
 #include <asm.h>
 #include <sync/lock_chk.h>
 #include <sync/lock_chk_assert.h>
@@ -10,6 +9,8 @@
 #include <test/test.h>
 #include <thread/thread.h>
 #include <time/spin_sleep.h>
+
+#include "sync/tests/test_internal.h"
 
 #ifdef DEBUG_LOCK_CHK
 #include "sync/lock_chk/internal.h"

@@ -1,5 +1,6 @@
-#include "internal.h"
 #include <mem/address_range.h>
+
+#include "internal.h"
 
 #ifdef DEBUG_SLAB_DEEP
 static const char *slab_addr_region(vaddr_t a) {

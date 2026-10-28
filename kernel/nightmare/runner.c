@@ -1,7 +1,6 @@
 #ifdef TEST_NIGHTMARE_ENABLED
-#include "internal.h"
-
 #include <asm.h>
+#include <charmos_commit.h>
 #include <console/panic.h>
 #include <console/printf.h>
 #include <global.h>
@@ -16,9 +15,7 @@
 #include <thread/thread.h>
 #include <time/time.h>
 
-#ifndef CHARMOS_COMMIT
-#define CHARMOS_COMMIT "unknown"
-#endif
+#include "internal.h"
 
 #define NIGHTMARE_MIB MIB(1)
 #define NIGHTMARE_DEFAULT_DURATION_MS 1000

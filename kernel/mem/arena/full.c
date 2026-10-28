@@ -1,5 +1,6 @@
-#include "internal.h"
 #include <math/range.h>
+
+#include "internal.h"
 
 /* All the 'full' wrappers */
 

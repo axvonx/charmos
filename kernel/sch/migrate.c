@@ -1,5 +1,6 @@
-#include "internal.h"
 #include <thread/apc.h>
+
+#include "internal.h"
 
 /* file implements `thread_migrate`.
  *

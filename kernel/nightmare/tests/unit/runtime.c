@@ -1,7 +1,8 @@
-#include "nightmare/internal.h"
 #include <sch/sched.h>
 #include <test/test.h>
 #include <thread/thread.h>
+
+#include "nightmare/internal.h"
 
 #if defined(TEST_ENABLED) && defined(TEST_NIGHTMARE_SMOKE)
 TEST_GROUP_DEFINE(nightmare);

@@ -1,9 +1,9 @@
-#include "tests/test_internal.h"
-
 #include <sch/irql.h>
 #include <sync/once_token.h>
 #include <test/sync.h>
 #include <time/spin_sleep.h>
+
+#include "tests/test_internal.h"
 
 TEST_GROUP_DEFINE(harness_sync);
 

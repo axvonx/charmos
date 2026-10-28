@@ -41,8 +41,13 @@ endif ()
 if (CHARMOS_COMMIT STREQUAL "")
     set(CHARMOS_COMMIT "unknown")
 endif ()
-target_compile_definitions(kernel PRIVATE CHARMOS_COMMIT="${CHARMOS_COMMIT}"
-                                          CHARMOS_SOURCE_ROOT="${CHARMOS_SOURCE_ROOT}")
+
+# Put the commit in a little header since putting it in a compiler flag
+# would need to rebuild every TU, every commit. kernel/nightmare/runner.c includes this
+configure_file(${CMAKE_SOURCE_DIR}/cmake/charmos_commit.h.in
+               ${CMAKE_BINARY_DIR}/generated/charmos_commit.h @ONLY)
+target_include_directories(kernel PRIVATE ${CMAKE_BINARY_DIR}/generated)
+target_compile_definitions(kernel PRIVATE CHARMOS_SOURCE_ROOT="${CHARMOS_SOURCE_ROOT}")
 
 include(emulation)
 

@@ -1,8 +1,9 @@
-#include "sync/tests/test_internal.h"
 #include <acpi/lapic.h>
 #include <irq/ipi.h>
 #include <irq/irq.h>
 #include <mem/nofail.h>
+
+#include "sync/tests/test_internal.h"
 
 TEST_GROUP_DEFINE(rcu, .intensity_desc = {
                            .curve = SCALE_PIECEWISE_LOG,

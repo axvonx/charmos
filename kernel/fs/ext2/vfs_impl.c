@@ -112,7 +112,7 @@ static uint32_t ext2_to_vfs_flags(uint32_t ext2_flags) {
 }
 TEST_EXPORT(ext2_to_vfs_flags);
 
-static uint32_t vfs_to_ext2_flags(uint32_t vfs_flags) {
+static cc_unused uint32_t vfs_to_ext2_flags(uint32_t vfs_flags) {
     uint32_t ext2_flags = 0;
 
     if (vfs_flags & VFS_NODE_APPENDONLY)

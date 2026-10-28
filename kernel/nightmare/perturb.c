@@ -1,6 +1,4 @@
 #ifdef TEST_NIGHTMARE_ENABLED
-#include "internal.h"
-
 #include <cmdline.h>
 #include <global.h>
 #include <nightmare/perturb.h>
@@ -10,6 +8,8 @@
 #include <test/perturb.h>
 #include <thread/thread.h>
 #include <time/time.h>
+
+#include "internal.h"
 
 /* Scheduler rounds quiesce waits give before failing */
 #define NIGHTMARE_QUIESCE_MIN_ROUNDS 8

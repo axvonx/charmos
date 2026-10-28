@@ -1,5 +1,6 @@
-#include "mem/slab/tests/test_internal.h"
 #include <mem/elcm.h>
+
+#include "mem/slab/tests/test_internal.h"
 
 TEST_DEFINE_SMOKE(slab, elcm_params) {
     struct elcm_params params = {

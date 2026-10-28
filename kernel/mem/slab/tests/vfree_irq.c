@@ -1,7 +1,8 @@
-#include "mem/slab/tests/test_internal.h"
 #include <acpi/lapic.h>
 #include <irq/ipi.h>
 #include <irq/irq.h>
+
+#include "mem/slab/tests/test_internal.h"
 
 #define VFREE_IRQ_TEST_SPIN_MASK 0x3f
 static void **vfree_irq_allocs = NULL;

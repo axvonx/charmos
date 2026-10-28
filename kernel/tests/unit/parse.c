@@ -1,6 +1,7 @@
-#include "tests/test_internal.h"
 #include <math/units.h>
 #include <parse.h>
+
+#include "tests/test_internal.h"
 
 TEST_GROUP_DEFINE(parse);
 

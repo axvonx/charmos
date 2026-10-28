@@ -1,6 +1,6 @@
-#include "sync/tests/test_internal.h"
-
 #include <sync/seqlock.h>
+
+#include "sync/tests/test_internal.h"
 
 LOCK_CHK_CLASS_DEFINE_LOCAL(lock_reinit_class);
 static MUTEX_SIMPLE_DEFINE(static_simple_mutex);

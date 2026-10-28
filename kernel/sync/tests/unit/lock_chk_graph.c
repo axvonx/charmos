@@ -1,6 +1,3 @@
-#include "sync/lock_chk/internal.h"
-#include "sync/tests/test_internal.h"
-
 #ifdef DEBUG_LOCK_CHK
 
 #include <sync/mutex.h>
@@ -8,6 +5,9 @@
 #include <sync/qspinlock.h>
 #include <sync/rwlock.h>
 #include <sync/spinlock.h>
+
+#include "sync/lock_chk/internal.h"
+#include "sync/tests/test_internal.h"
 
 LOCK_CHK_CLASS_DEFINE_LOCAL(graph_test_class_a);
 LOCK_CHK_CLASS_DEFINE_LOCAL(graph_test_class_b);

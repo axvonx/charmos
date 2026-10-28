@@ -210,6 +210,7 @@ bool thread_wait_satisfy(struct thread_wait_block *b,
     /* Has to be a block in the thread's storage */
     enforce(t->active_wait_blocks);
     enforce(b->state != THREAD_WAIT_BLOCK_SATISFIED);
+    enforce(b == &t->active_wait_blocks[key]);
 
     bool curr = key < t->wait_block_count && b == &t->active_wait_blocks[key];
 

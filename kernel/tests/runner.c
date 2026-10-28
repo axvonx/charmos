@@ -1,3 +1,4 @@
+#ifdef TEST_ENABLED
 #include <colors.h>
 #include <console/panic.h>
 #include <console/printf.h>
@@ -1027,7 +1028,6 @@ static void tests_set_intensities(void) {
 }
 
 void tests_run(void) {
-#ifdef TEST_ENABLED
     tests_resolve_imports();
     tests_check_duplicate_names();
     tests_setup_groups();
@@ -1089,5 +1089,5 @@ void tests_run(void) {
         ndjson_bye(code, all_ok ? "tests passed" : "tests failed");
         qemu_exit(code);
     }
-#endif
 }
+#endif

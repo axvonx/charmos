@@ -1,7 +1,8 @@
-#include "sync/tests/test_internal.h"
 #include <mem/nofail.h>
 #include <sync/condvar.h>
 #include <sync/semaphore.h>
+
+#include "sync/tests/test_internal.h"
 
 TEST_GROUP_DEFINE(condvar);
 TEST_GROUP_DEFINE(semaphore);
@@ -88,7 +89,7 @@ TEST_DEFINE_UNIT(condvar, timeout_no_lost_wake) {
 
 TEST_DEFINE_UNIT(semaphore, timedwait_standard) {
     struct semaphore s;
-    semaphore_init(&s, 1, false);
+    semaphore_init(&s, 1);
 
     TEST_ASSERT(semaphore_timedwait(&s, 50));
     TEST_ASSERT_EQ(s.count, 0);

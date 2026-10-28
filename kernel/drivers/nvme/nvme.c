@@ -159,7 +159,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
     if (!nvme->workqueue)
         panic(OUT_OF_MEMORY, "workqueue");
 
-    semaphore_init(&nvme->sem, 0, SEMAPHORE_INIT_IRQ_DISABLE);
+    semaphore_init(&nvme->sem, 0);
     nvme_work_enqueue(nvme, &nvme->work);
     workqueue_kick(nvme->workqueue);
 

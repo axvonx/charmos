@@ -781,7 +781,7 @@ void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
     xhci_info("Device at %p, offset is %zu", dev,
               offsetof(struct xhci_request, list));
 
-    semaphore_init(&dev->sem, 0, SEMAPHORE_INIT_IRQ_DISABLE);
+    semaphore_init(&dev->sem, 0);
     spinlock_init(&dev->lock);
     thread_spawn("xhci_worker", xhci_worker, .arg = dev);
 

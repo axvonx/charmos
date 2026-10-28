@@ -1,3 +1,4 @@
+#include <mem/alloc.h>
 #include <mem/nofail.h>
 #include <mem/slab.h>
 #include <sch/periodic_work.h>
@@ -5,7 +6,6 @@
 #include <smp/percpu.h>
 
 #include "internal.h"
-#include <mem/alloc.h>
 
 static void scheduler_percpu_work_ctor(struct scheduler_periodic_work_percpu *,
                                        cpu_id_t);

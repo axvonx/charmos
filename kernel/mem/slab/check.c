@@ -1,5 +1,6 @@
-#include "internal.h"
 #include <math/bit.h>
+
+#include "internal.h"
 
 #define slab_check_assert_return_false(statement)                              \
     do {                                                                       \

@@ -1,4 +1,5 @@
 #include <asm.h>
+#include <flanterm/src/flanterm_backends/fb.h>
 #include <global.h>
 #include <limine.h>
 #include <limits.h>
@@ -11,7 +12,6 @@
 
 #include "console/printf.h"
 #include "flanterm/src/flanterm.h"
-#include <flanterm/src/flanterm_backends/fb.h>
 
 #undef snprintf
 #undef vsnprintf

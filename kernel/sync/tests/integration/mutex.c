@@ -1,6 +1,6 @@
-#include "sync/tests/test_internal.h"
-
 #include <test/fleet.h>
+
+#include "sync/tests/test_internal.h"
 
 #define MUTEX_REPORT_PROBLEMS()                                                \
     test_info("Mutex tests are encountering problems and will be skipped");    \

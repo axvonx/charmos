@@ -5,31 +5,15 @@
 #include <thread/thread_types.h>
 
 LOCK_CHK_CLASS_DEFINE_LOCAL(semaphore_irq);
-LOCK_CHK_CLASS_DEFINE_LOCAL(semaphore_disp);
 
-void semaphore_init(struct semaphore *s, int value, bool irq_disable) {
+void semaphore_init(struct semaphore *s, int value) {
     s->count = value;
-    s->irq_disable = irq_disable;
-    if (irq_disable) {
-        spinlock_init_chk(&s->lock, LOCK_CHK_CLASS(semaphore_irq),
-                          LOCK_CHKD_FULL);
-    } else {
-        spinlock_init_chk(&s->lock, LOCK_CHK_CLASS(semaphore_disp),
-                          LOCK_CHKD_FULL);
-    }
+    spinlock_init_chk(&s->lock, LOCK_CHK_CLASS(semaphore_irq), LOCK_CHKD_FULL);
     condvar_init(&s->cv);
 }
 
-static enum irql
-semaphore_lock_internal(struct semaphore *sem) TSA_NO_ANALYSIS {
-    if (sem->irq_disable)
-        return spin_lock_high(&sem->lock);
-
-    return spin_lock(&sem->lock);
-}
-
 void semaphore_wait(struct semaphore *s) TSA_NO_ANALYSIS {
-    enum irql irql = semaphore_lock_internal(s);
+    enum irql irql = spin_lock_high(&s->lock);
 
     while (s->count == 0)
         condvar_wait(&s->cv, &s->lock, irql, &irql);
@@ -40,7 +24,7 @@ void semaphore_wait(struct semaphore *s) TSA_NO_ANALYSIS {
 
 bool semaphore_timedwait(struct semaphore *s,
                          time_ms_t timeout_ms) TSA_NO_ANALYSIS {
-    enum irql irql = semaphore_lock_internal(s);
+    enum irql irql = spin_lock_high(&s->lock);
 
     while (s->count == 0) {
         enum wake_reason wr =
@@ -58,7 +42,7 @@ bool semaphore_timedwait(struct semaphore *s,
 }
 
 void semaphore_post(struct semaphore *s) TSA_NO_ANALYSIS {
-    enum irql irql = semaphore_lock_internal(s);
+    enum irql irql = spin_lock_high(&s->lock);
 
     s->count++;
 
@@ -68,7 +52,7 @@ void semaphore_post(struct semaphore *s) TSA_NO_ANALYSIS {
 }
 
 void semaphore_postn(struct semaphore *s, int n) TSA_NO_ANALYSIS {
-    enum irql irql = semaphore_lock_internal(s);
+    enum irql irql = spin_lock_high(&s->lock);
 
     s->count += n;
     for (int i = 0; i < n; i++)

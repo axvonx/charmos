@@ -1,6 +1,6 @@
-#include "sync/tests/test_internal.h"
-
 #include <test/fleet.h>
+
+#include "sync/tests/test_internal.h"
 
 TEST_GROUP_DEFINE(qspinlock);
 

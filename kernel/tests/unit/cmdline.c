@@ -1,7 +1,8 @@
-#include "cmdline/internal.h"
-#include "tests/test_internal.h"
 #include <cmdline.h>
 #include <math/units.h>
+
+#include "cmdline/internal.h"
+#include "tests/test_internal.h"
 
 TEST_GROUP_DEFINE(cmdline);
 

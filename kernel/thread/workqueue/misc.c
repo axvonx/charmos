@@ -1,5 +1,6 @@
-#include "internal.h"
 #include <global.h>
+
+#include "internal.h"
 
 struct workqueue *workqueue_least_loaded_queue_except(int64_t except_core_num) {
     uint64_t minimum_load = UINT64_MAX;

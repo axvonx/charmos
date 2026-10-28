@@ -257,8 +257,8 @@ struct daemon *daemon_create_full(struct daemon_attributes *attrs,
 
     refcount_init(&daemon->refcount, 1);
     spinlock_init(&daemon->lock);
-    semaphore_init(&daemon->bg_sem, 0, SEMAPHORE_INIT_NORMAL);
-    semaphore_init(&daemon->ts_sem, 0, SEMAPHORE_INIT_NORMAL);
+    semaphore_init(&daemon->bg_sem, 0);
+    semaphore_init(&daemon->ts_sem, 0);
 
     list_head_init(&daemon->timesharing_threads);
     daemon->timesharing_work = timesharing_work;

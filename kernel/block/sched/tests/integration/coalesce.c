@@ -1,5 +1,6 @@
-#include "block/sched/tests/test_internal.h"
 #include <mem/nofail.h>
+
+#include "block/sched/tests/test_internal.h"
 
 TEST_GROUP_DEFINE(bio_sched, .intensity_desc = {
                                  .curve = SCALE_PIECEWISE_LOG,

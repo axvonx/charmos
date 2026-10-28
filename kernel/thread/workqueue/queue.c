@@ -1,5 +1,6 @@
-#include "internal.h"
 #include <thread/thread.h>
+
+#include "internal.h"
 
 static void signal_callback(struct thread *t) {
     if (t) {

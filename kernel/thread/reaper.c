@@ -24,7 +24,7 @@ void reaper_init(void) {
             nofail(valloc_from_domain(i, sizeof(struct reaper_thread)));
 
         locked_list_init(&reapers[i]->list, LOCKED_LIST_INIT_IRQ_DISABLE);
-        semaphore_init(&reapers[i]->sem, 1, SEMAPHORE_INIT_IRQ_DISABLE);
+        semaphore_init(&reapers[i]->sem, 1);
         reapers[i]->thread = nofail(thread_spawn(
             "reaper_thread", reaper_thread_main, .private = reapers[i],
             .allowed_cpus = global.domains[i]->cpu_mask));

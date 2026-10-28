@@ -3,6 +3,7 @@
 #include <irq/ipi.h>
 #include <irq/irq.h>
 #include <math/min_max.h>
+#include <mem/alloc.h>
 #include <mem/nofail.h>
 #include <pit.h>
 #include <smp/core.h>
@@ -14,7 +15,6 @@
 #include <watchdog.h>
 
 #include "watchdog/internal.h"
-#include <mem/alloc.h>
 
 #define watchdog_master_log(lvl, fmt, ...)                                     \
     log(LOG_SITE(watchdog_master), LOG_HANDLE(watchdog_master), lvl, fmt,      \

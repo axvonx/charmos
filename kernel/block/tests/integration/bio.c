@@ -1,8 +1,8 @@
-#include "block/tests/test_internal.h"
-
 #include <mem/nofail.h>
 #include <thread/thread.h>
 #include <time/time.h>
+
+#include "block/tests/test_internal.h"
 
 /* The completion has to reach the driver's worker thread and back, so the
  * budget is loose */

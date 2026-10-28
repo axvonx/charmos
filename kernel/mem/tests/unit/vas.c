@@ -1,7 +1,8 @@
-#include "mem/tests/test_internal.h"
-#include "mem/vas_internal.h"
 #include <asm.h>
 #include <compiler/intrinsic.h>
+
+#include "mem/tests/test_internal.h"
+#include "mem/vas_internal.h"
 TEST_GROUP_DEFINE(vas);
 
 #define TEST_VAS_BASE 0x700000000000ULL

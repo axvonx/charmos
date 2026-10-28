@@ -301,7 +301,7 @@ void domain_buddies_init(void) {
     for (size_t i = 0; i < domain_count; i++) {
         struct domain_buddy *dbd = &global.domain_buddies[i];
         domain_buddy_init(dbd);
-        semaphore_init(&dbd->worker.sema, 0, SEMAPHORE_INIT_NORMAL);
+        semaphore_init(&dbd->worker.sema, 0);
         dbd->worker.domain = dbd;
         atomic_store_rlx(&dbd->worker.enqueued, false);
         dbd->worker.stop = false;

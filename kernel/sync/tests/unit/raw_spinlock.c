@@ -1,7 +1,7 @@
-#include "sync/tests/test_internal.h"
-
 #include <asm.h>
 #include <sync/raw_spinlock.h>
+
+#include "sync/tests/test_internal.h"
 
 TEST_GROUP_DEFINE(raw_spinlock);
 

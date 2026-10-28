@@ -364,7 +364,7 @@ static bool rcu_work_pending(void) {
 }
 
 /* This runs at PASSIVE so callbacks can do whatever */
-static void rcu_run_batch(struct list_head *batch, uint64_t seq) {
+static cc_unused void rcu_run_batch(struct list_head *batch, uint64_t seq) {
     struct rcu_cb *cb, *tmp;
     list_for_each_entry_safe(cb, tmp, batch, list) {
         list_node_delete_init(&cb->list);
@@ -690,7 +690,7 @@ void rcu_init(void) {
     atomic_store_rlx(&rcu_global.gp_completed, 1);
     atomic_store_rlx(&rcu_global.gp_requests, 0);
 
-    semaphore_init(&rcu_global.sem, 0, SEMAPHORE_INIT_NORMAL);
+    semaphore_init(&rcu_global.sem, 0);
 
     rcu_build_tree();
 

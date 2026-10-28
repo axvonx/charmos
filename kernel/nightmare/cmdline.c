@@ -1,9 +1,9 @@
-#include "internal.h"
-
 #include <cmdline.h>
 #include <math/range.h>
 #include <string.h>
 #include <time/time.h>
+
+#include "internal.h"
 
 /* This is a necessary evil, as the command line will
  * pass in nanoseconds, and we map to milliseconds in the config

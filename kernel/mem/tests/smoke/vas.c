@@ -1,5 +1,6 @@
-#include "mem/tests/test_internal.h"
 #include <mem/address_range.h>
+
+#include "mem/tests/test_internal.h"
 
 ADDRESS_RANGE_DEFINE(vas_test_map, .flags = ADDRESS_RANGE_DYNAMIC,
                      .size = PAGE_2MB, .align = PAGE_SIZE);

@@ -1,6 +1,3 @@
-#include "sync/lock_chk/internal.h"
-#include "sync/tests/test_internal.h"
-
 #ifdef DEBUG_LOCK_CHK
 
 #include <sync/lock_chk_assert.h>
@@ -12,6 +9,9 @@
 #include <test/fleet.h>
 #include <test/sync.h>
 #include <time/spin_sleep.h>
+
+#include "sync/lock_chk/internal.h"
+#include "sync/tests/test_internal.h"
 
 LOCK_CHK_CLASS_DEFINE_LOCAL(assert_spin_class);
 LOCK_CHK_CLASS_DEFINE_LOCAL(assert_qspin_class);

@@ -33,7 +33,7 @@ static void init_scheduler_boot(struct scheduler *sched) {
     list_head_init(&pcpu->perms.blocklist);
     pcpu->scheduler = sched;
     pcpu->active_mapping = NULL;
-    semaphore_init(&pcpu->switch_semaphore, 1, SEMAPHORE_INIT_IRQ_DISABLE);
+    semaphore_init(&pcpu->switch_semaphore, 1);
 
     struct rt_scheduler *rts = nofail_vnew(rts, ALLOC_ZERO);
 

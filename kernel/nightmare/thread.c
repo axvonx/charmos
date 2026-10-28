@@ -1,8 +1,8 @@
-#include "internal.h"
-
 #include <nightmare/record.h>
 #include <sch/sched.h>
 #include <thread/thread.h>
+
+#include "internal.h"
 
 #ifdef TEST_NIGHTMARE_ENABLED
 void nightmare_publish_stop(enum test_stop reason) {

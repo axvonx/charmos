@@ -1,9 +1,9 @@
-#include "internal.h"
-
 #include <console/printf.h>
 #include <math/hash.h>
 #include <nightmare/record.h>
 #include <stdarg.h>
+
+#include "internal.h"
 
 #ifdef TEST_NIGHTMARE_ENABLED
 static uint64_t fnv1a_string(uint64_t hash, const char *str) {

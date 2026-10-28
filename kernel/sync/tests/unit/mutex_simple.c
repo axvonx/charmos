@@ -1,5 +1,6 @@
-#include "sync/tests/test_internal.h"
 #include <sync/mutex_simple.h>
+
+#include "sync/tests/test_internal.h"
 
 TEST_GROUP_DEFINE(mutex_simple);
 

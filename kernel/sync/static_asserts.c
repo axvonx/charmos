@@ -1,4 +1,3 @@
-#include "sync/rwlock_internal.h"
 #include <sync/lock_chk.h>
 #include <sync/mutex.h>
 #include <sync/qspinlock.h>
@@ -6,6 +5,8 @@
 #include <sync/rwlock.h>
 #include <sync/spinlock.h>
 #include <test/static_assert.h>
+
+#include "sync/rwlock_internal.h"
 
 /* verification of lock word sizes and bitfield not overlapping */
 static_assert_size(struct raw_spinlock, 1);

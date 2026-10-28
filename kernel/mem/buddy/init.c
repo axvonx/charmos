@@ -1,5 +1,6 @@
 #include <compiler/intrinsic.h>
 #include <console/printf.h>
+#include <limine.h>
 #include <math/align.h>
 #include <math/bit.h>
 #include <math/units.h>
@@ -13,7 +14,6 @@
 #include <string.h>
 
 #include "internal.h"
-#include <limine.h>
 
 static bool pfn_usable_from_memmap(uint64_t pfn) {
     uint64_t addr = pfn * PAGE_SIZE;

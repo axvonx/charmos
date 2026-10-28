@@ -205,7 +205,10 @@ void k_sch_main(void *nop) {
     nightmare_run();
 #endif
 
+#ifdef TEST_ENABLED
     tests_run();
+#endif
+
     bootstage_advance(BOOTSTAGE_COMPLETE);
 
 #ifdef TEST_ENABLED

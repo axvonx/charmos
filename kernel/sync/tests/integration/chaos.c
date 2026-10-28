@@ -1,5 +1,6 @@
-#include "sync/tests/test_internal.h"
 #include <mem/nofail.h>
+
+#include "sync/tests/test_internal.h"
 
 struct chaos_state {
     struct thread_wait_header wait;

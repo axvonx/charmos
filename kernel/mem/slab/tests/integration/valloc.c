@@ -1,5 +1,6 @@
-#include "mem/slab/tests/test_internal.h"
 #include <mem/nofail.h>
+
+#include "mem/slab/tests/test_internal.h"
 
 #define MT_ALLOC_TIMES 1024
 

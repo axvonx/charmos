@@ -1,4 +1,5 @@
 #include <console/printf.h>
+#include <err.h>
 #include <fs/vfs.h>
 #include <log.h>
 #include <mem/alloc.h>
@@ -6,7 +7,6 @@
 #include <string.h>
 
 #include "fs/detect.h"
-#include <err.h>
 
 static struct vfs_mount **mount_table = NULL;
 static uint64_t mount_table_count = 0;

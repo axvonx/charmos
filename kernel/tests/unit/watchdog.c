@@ -1,7 +1,7 @@
-#include "watchdog/internal.h"
-
 #include <string.h>
 #include <test/test.h>
+
+#include "watchdog/internal.h"
 
 TEST_GROUP_DEFINE(watchdog);
 

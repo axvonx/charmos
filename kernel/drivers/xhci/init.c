@@ -342,9 +342,9 @@ struct xhci_device *xhci_device_create(void cc_mem_io *mmio) {
     dev->op_regs     = op;
     dev->ports       = cap->hcs_params1 & 0xff;
     list_head_init(&dev->devices);
-    semaphore_init(&dev->port_disconnect, 0, SEMAPHORE_INIT_IRQ_DISABLE);
-    semaphore_init(&dev->port_connect, 0, SEMAPHORE_INIT_IRQ_DISABLE);
-    semaphore_init(&dev->sem, 0, SEMAPHORE_INIT_IRQ_DISABLE);
+    semaphore_init(&dev->port_disconnect, 0);
+    semaphore_init(&dev->port_connect, 0);
+    semaphore_init(&dev->sem, 0);
 
     for (uint32_t i = 0; i < XHCI_PORT_COUNT; i++) {
         struct xhci_port *p = &dev->port_info[i];

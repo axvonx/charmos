@@ -1,12 +1,13 @@
-#include "mem/tests/test_internal.h"
 #include <math/units.h>
+
+#include "mem/tests/test_internal.h"
 
 TEST_DEFINE_UNIT(mem, valloc_zero_large_reuse) {
     const size_t size = KIB(64);
     for (uint32_t iteration = 0; iteration < 32; iteration++) {
         uint8_t *buffer = valloc(size, ALLOC_ZERO,
-                                  .behavior = ALLOC_BEHAVIOR_NORMAL |
-                                              ALLOC_BEHAVIOR_FLAG_MINIMAL);
+                                 .behavior = ALLOC_BEHAVIOR_NORMAL |
+                                             ALLOC_BEHAVIOR_FLAG_MINIMAL);
         TEST_ASSERT_NONNULL(buffer);
         bool zero = true;
         for (size_t i = 0; i < size; i++)

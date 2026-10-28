@@ -1,7 +1,4 @@
 #pragma once
-#include <test/test.h>
-
-#include "mem/slab/internal.h"
 #include <crypto/prng.h>
 #include <mem/alloc.h>
 #include <mem/elcm.h>
@@ -16,6 +13,9 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <test/test.h>
 #include <thread/thread.h>
+
+#include "mem/slab/internal.h"
 
 TEST_GROUP_EXTERN(slab);
