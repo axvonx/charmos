@@ -29,14 +29,14 @@
         __auto_type _v = (val);                                                \
         if (cc_unlikely(_v < 0 && !PP_OVERLOAD(ERR_IS_MATCH,                   \
                                                __VA_ARGS__)(_v, __VA_ARGS__))) \
-            panic("unhandled error: %s", errno_to_str(_v));                    \
+            panic("unhandled error: %s", err_to_str(_v));                      \
         _v;                                                                    \
     })
 
 /* When this enum err is negated, i.e. becomes positive, the upper 16 bits
  * indicate the *facility*. With 0, it's just one of these, but if it's > 0,
  * it came from a specific subsystem that defined a struct err_facility */
-enum err {
+enum cc_must_check err {
     ERR_OK = 0,          // Success
     ERR_UNKNOWN = -1,    // Unknown or unspecified error
     ERR_NO_MEM = -2,     // Out of memory
@@ -99,15 +99,12 @@ struct err_facility {
     LINKER_SECTION_OBJECT(struct err_facility, err_facilities)                 \
     __err_facility_##n = {.name = #n, __VA_ARGS__}
 
-/* Used as a return value to reduce signature length noise */
-#define err_checked enum err cc_warn_unused_result
-
 LINKER_SECTION_EXTERN(struct err_facility, err_facilities);
 
 const char *err_facility_to_str(enum err err);
 void err_facilities_init(void);
 
-STRINGIFY_DECLARE(errno_to_str, enum err) {
+STRINGIFY_DECLARE_ENUM(err) {
     switch (stringify_in) {
     case ERR_OK: return "No error";
     case ERR_UNKNOWN: return "Unknown error";

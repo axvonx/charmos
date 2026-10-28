@@ -128,7 +128,7 @@ static void kvm_pv_window_send(const uint64_t win[2], uint32_t min,
         return;
 
     log_msg_once(LOG_WARN, "KVM PV IPI failed (%s), using x2APIC clusters",
-                 errno_to_str(e));
+                 err_to_str(e));
     atomic_store_release(&ipi_backend, IPI_BACKEND_X2APIC_CLUSTER);
 
     struct x2apic_cluster_acc acc = {0};

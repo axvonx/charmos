@@ -189,7 +189,7 @@ struct workqueue *workqueue_create_default(const char *fmt, ...) {
 
 static void mark_worker_exit(struct thread *t) {
     if (t) {
-        struct worker *worker = t->private;
+        struct workqueue_worker *worker = t->private;
         worker->next_action = WORKER_NEXT_ACTION_EXIT;
     }
 }
@@ -229,14 +229,15 @@ void workqueue_kick(struct workqueue *queue) {
     condvar_signal(&queue->queue_cv);
 }
 
-struct worker *workqueue_spawn_permanent_worker(struct workqueue *queue) {
+struct workqueue_worker *
+workqueue_spawn_permanent_worker(struct workqueue *queue) {
     struct thread *thread = worker_create(queue->attrs.worker_cpu_mask,
                                           queue->attrs.worker_niceness);
 
     if (!thread)
         return NULL;
 
-    struct worker *worker = vnew(worker, ALLOC_ZERO);
+    struct workqueue_worker *worker = vnew(worker, ALLOC_ZERO);
     if (!worker)
         return NULL;
 

@@ -63,21 +63,20 @@ void *arena_alloc_aligned_full(struct arena *a, size_t size, size_t align,
     return NULL;
 }
 
-err_checked arena_free_full(struct arena *a, void *ptr,
-                            struct alloc_params ap) {
+enum err arena_free_full(struct arena *a, void *ptr, struct alloc_params ap) {
     cc_ignore(a, ptr, ap);
     check_ptr(free);
     return ERR_OK;
 }
 
-err_checked arena_free_aligned_full(struct arena *a, void *ptr, size_t align,
-                                    struct alloc_params ap) {
+enum err arena_free_aligned_full(struct arena *a, void *ptr, size_t align,
+                                 struct alloc_params ap) {
     cc_ignore(ptr, align, ap);
     check_ptr(free_aligned);
     return ERR_OK;
 }
 
-err_checked arena_clear_full(struct arena *a, struct arena_params *p) {
+enum err arena_clear_full(struct arena *a, struct arena_params *p) {
     cc_ignore(a, p);
     return ERR_OK;
 }
@@ -90,12 +89,12 @@ void arena_reset_full(struct arena *a, struct arena_params *p) {
     cc_ignore(a, p);
 }
 
-err_checked arena_set_tag_full(struct arena *a, void *ptr, arena_tag_t tag) {
+enum err arena_set_tag_full(struct arena *a, void *ptr, arena_tag_t tag) {
     cc_ignore(a, ptr, tag);
     return ERR_OK;
 }
 
-err_checked arena_set_budget_full(struct arena *a, struct arena_budget b) {
+enum err arena_set_budget_full(struct arena *a, struct arena_budget b) {
     cc_ignore(a, b);
     return ERR_OK;
 }
@@ -152,7 +151,7 @@ bool arena_identity_eq_full(struct arena *a, struct arena *b) {
     return false;
 }
 
-err_checked arena_on_hook_full(struct arena *a, enum arena_hook_type hook) {
+enum err arena_on_hook_full(struct arena *a, enum arena_hook_type hook) {
     cc_ignore(a, hook);
     return ERR_OK;
 }

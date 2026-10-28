@@ -50,14 +50,14 @@ static inline void workqueue_putref(struct workqueue *queue) {
 /* Regardless of if we use static workers or not this will
  * always be the list of workers we have */
 static inline void workqueue_add_worker(struct workqueue *wq,
-                                        struct worker *wker) {
+                                        struct workqueue_worker *wker) {
     enum irql irql = spin_lock_high(&wq->worker_lock);
     list_head_push_front(&wq->workers, &wker->list_node);
     spin_unlock(&wq->worker_lock, irql);
 }
 
 static inline void workqueue_remove_worker(struct workqueue *wq,
-                                           struct worker *worker) {
+                                           struct workqueue_worker *worker) {
     enum irql irql = spin_lock_high(&wq->worker_lock);
     list_node_delete_init(&worker->list_node);
     spin_unlock(&wq->worker_lock, irql);
@@ -81,13 +81,14 @@ static inline size_t workqueue_idlers(struct workqueue *wq) {
 
 bool workqueue_try_spawn_worker(struct workqueue *queue);
 bool workqueue_dequeue_task(struct workqueue *queue, struct work **out);
-void workqueue_link_thread_and_worker(struct worker *worker,
+void workqueue_link_thread_and_worker(struct workqueue_worker *worker,
                                       struct thread *thread);
 bool workqueue_spawn_worker_internal(struct workqueue *queue);
 struct workqueue *workqueue_least_loaded_queue_except(int64_t except_core_num);
 struct workqueue *workqueue_get_least_loaded(void);
 struct workqueue *workqueue_get_least_loaded_remote(void);
-struct worker *workqueue_spawn_permanent_worker(struct workqueue *queue);
+struct workqueue_worker *
+workqueue_spawn_permanent_worker(struct workqueue *queue);
 struct workqueue *workqueue_create_full(struct workqueue_attributes *attrs,
                                         const char *fmt, va_list args);
 enum thread_request_decision workqueue_request_callback(struct thread *t,

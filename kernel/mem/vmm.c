@@ -298,7 +298,7 @@ void vmm_init(struct limine_memmap_response *memmap,
 
         e = vmm_map_page(virt, kernel_phys_start + i, .page_flags = flags);
         if (e < 0)
-            panic(INIT_FAILED, "mapping kernel: %s", errno_to_str(e));
+            panic(INIT_FAILED, "mapping kernel: %s", err_to_str(e));
     }
 
 #ifdef DEBUG_ASAN
@@ -354,7 +354,7 @@ void vmm_init(struct limine_memmap_response *memmap,
                 phys += PAGE_SIZE;
             }
             if (e < 0)
-                panic(INIT_FAILED, "mapping kernel: %s", errno_to_str(e));
+                panic(INIT_FAILED, "mapping kernel: %s", err_to_str(e));
         }
     }
 

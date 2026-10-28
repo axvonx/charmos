@@ -5,8 +5,9 @@
 
 #include "internal.h"
 
-static enum wake_reason worker_wait(struct workqueue *wq, struct worker *w,
-                                    enum irql irql, enum irql *out)
+static enum wake_reason worker_wait(struct workqueue *wq,
+                                    struct workqueue_worker *w, enum irql irql,
+                                    enum irql *out)
     TSA_CALLER_HOLDS(&wq->lock) {
     enum wake_reason sig;
 
@@ -38,7 +39,7 @@ static enum wake_reason worker_wait(struct workqueue *wq, struct worker *w,
     return sig;
 }
 
-static inline bool worker_should_exit(const struct worker *worker,
+static inline bool worker_should_exit(const struct workqueue_worker *worker,
                                       enum wake_reason signal) {
     if (worker->next_action == WORKER_NEXT_ACTION_EXIT)
         return true;
@@ -53,18 +54,19 @@ static inline bool worker_should_exit(const struct worker *worker,
     return false;
 }
 
-static void worker_reset(struct worker *worker) {
-    memset(worker, 0, sizeof(struct worker));
+static void worker_reset(struct workqueue_worker *worker) {
+    memset(worker, 0, sizeof(struct workqueue_worker));
 }
 
-static void worker_destroy(struct workqueue *queue, struct worker *worker) {
+static void worker_destroy(struct workqueue *queue,
+                           struct workqueue_worker *worker) {
     if (queue->attrs.flags & WORKQUEUE_FLAG_STATIC_WORKERS) {
         enum irql irql = spin_lock_high(&queue->worker_array_lock);
 
         bool found = false;
 
         for (size_t i = 0; i < queue->attrs.max_workers; i++) {
-            struct worker *maybe = &queue->worker_array[i];
+            struct workqueue_worker *maybe = &queue->worker_array[i];
             if (maybe == worker) {
                 found = true;
                 worker_reset(worker);
@@ -83,8 +85,9 @@ static void worker_destroy(struct workqueue *queue, struct worker *worker) {
     }
 }
 
-static void worker_exit(struct workqueue *queue, struct worker *worker,
-                        enum irql irql) TSA_RELEASES_SPIN(&queue->lock) {
+static void worker_exit(struct workqueue *queue,
+                        struct workqueue_worker *worker, enum irql irql)
+    TSA_RELEASES_SPIN(&queue->lock) {
     worker->present = false;
     worker->idle = false;
     worker->should_exit = true;
@@ -106,7 +109,7 @@ static void worker_exit(struct workqueue *queue, struct worker *worker,
 void worker_main(void *unused) TSA_NO_ANALYSIS {
     cc_ignore(unused);
 
-    struct worker *w = thread_get_current()->private;
+    struct workqueue_worker *w = thread_get_current()->private;
     struct workqueue *queue = w->workqueue;
     enforce(w);
 

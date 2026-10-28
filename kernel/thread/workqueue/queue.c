@@ -4,7 +4,8 @@
 
 static void signal_callback(struct thread *t) {
     if (t) {
-        ((struct worker *) (t->private))->next_action = WORKER_NEXT_ACTION_RUN;
+        ((struct workqueue_worker *) (t->private))->next_action =
+            WORKER_NEXT_ACTION_RUN;
     }
 }
 

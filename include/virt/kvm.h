@@ -14,5 +14,5 @@ bool kvm_has_feature(uint32_t feature);
  * returning other errors too.
  *
  * TODO: Consider error facility*/
-err_checked kvm_hypercall4(uint64_t nr, uint64_t a0, uint64_t a1, uint64_t a2,
-                           uint64_t a3, uint64_t *out);
+enum err kvm_hypercall4(uint64_t nr, uint64_t a0, uint64_t a1, uint64_t a2,
+                        uint64_t a3, uint64_t *out);

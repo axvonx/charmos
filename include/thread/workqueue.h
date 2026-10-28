@@ -40,7 +40,10 @@ enum worker_next_action {
     WORKER_NEXT_ACTION_EXIT,
 };
 
-struct worker {
+/* Named workqueue_worker, since struct worker
+ * will be a separate mechanism
+ * for new workqueue */
+struct workqueue_worker {
     struct thread *thread;       /* Assoc. thread. */
     struct workqueue *workqueue; /* Assoc. wq */
 
@@ -173,7 +176,7 @@ struct workqueue {
 
     struct list_head workers;
     struct list_head works;
-    struct worker *worker_array; /* if STATIC_WORKER is needed */
+    struct workqueue_worker *worker_array; /* if STATIC_WORKER is needed */
 
     atomic_uint64_t head;
     atomic_uint64_t tail;

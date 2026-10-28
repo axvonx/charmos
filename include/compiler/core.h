@@ -23,6 +23,7 @@
 #define cc_maybe_unused __attribute__((unused))
 #define cc_warn_unused_result __attribute__((warn_unused_result))
 #define cc_nodiscard __attribute__((warn_unused_result))
+#define cc_must_check [[nodiscard]]
 #define cc_packed __attribute__((__packed__))
 #define cc_aligned(x) __attribute__((aligned(x)))
 #define cc_cache_aligned __attribute__((aligned(64)))

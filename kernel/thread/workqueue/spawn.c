@@ -24,7 +24,7 @@ static time_ms_t get_inactivity_timeout(struct workqueue *queue) {
     return min;
 }
 
-void workqueue_link_thread_and_worker(struct worker *worker,
+void workqueue_link_thread_and_worker(struct workqueue_worker *worker,
                                       struct thread *thread) {
     worker->present = true;
     worker->timeout_ran = true;
@@ -41,7 +41,7 @@ static void release_spawner(struct workqueue *p) {
     atomic_flag_clear_release(&p->spawner_flag_internal);
 }
 
-static void worker_init(struct workqueue *queue, struct worker *w,
+static void worker_init(struct workqueue *queue, struct workqueue_worker *w,
                         struct thread *t) {
     list_node_init(&w->list_node);
     w->thread = t;
@@ -69,10 +69,11 @@ static void workqueue_enqueue_thread(struct workqueue *queue,
     }
 }
 
-static struct worker *workqueue_worker_create(struct workqueue *queue) {
+static struct workqueue_worker *
+workqueue_worker_create(struct workqueue *queue) {
     if (queue->attrs.flags & WORKQUEUE_FLAG_STATIC_WORKERS) {
         enum irql irql = spin_lock_high(&queue->worker_array_lock);
-        struct worker *ret = NULL;
+        struct workqueue_worker *ret = NULL;
         for (size_t i = 0; i < queue->attrs.max_workers; i++) {
             if (queue->worker_array[i].thread == NULL) {
                 ret = &queue->worker_array[i];
@@ -84,12 +85,13 @@ static struct worker *workqueue_worker_create(struct workqueue *queue) {
         spin_unlock(&queue->worker_array_lock, irql);
         return ret;
     } else {
-        struct worker *w = vnew(w, ALLOC_ZERO);
+        struct workqueue_worker *w = vnew(w, ALLOC_ZERO);
         return w;
     }
 }
 
-static void workqueue_init_new_worker(struct workqueue *queue, struct worker *w,
+static void workqueue_init_new_worker(struct workqueue *queue,
+                                      struct workqueue_worker *w,
                                       struct thread *t) {
     w->inactivity_check_period = get_inactivity_timeout(queue);
 
@@ -103,7 +105,7 @@ bool workqueue_spawn_worker_internal(struct workqueue *queue) {
     if (!claim_spawner(queue))
         return false;
 
-    struct worker *w = workqueue_worker_create(queue);
+    struct workqueue_worker *w = workqueue_worker_create(queue);
     if (!w)
         goto fail;
 

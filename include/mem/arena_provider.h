@@ -476,16 +476,15 @@ struct arena {
 };
 
 /* A wrapper around e^(x - n) where n is scale, and x is used */
-err_checked
-arena_budget_prio_scale(sz_b_t used, int scale,
-                        ALLOC_PRIORITY_BITMAP_DECLARE(prio_map_out));
+enum err arena_budget_prio_scale(sz_b_t used, int scale,
+                                 ALLOC_PRIORITY_BITMAP_DECLARE(prio_map_out));
 
 /* Arena strategies call into this with their fully formed descriptors */
 struct arena *arena_create_full(struct arena_seg_desc *seg_descs,
                                 size_t seg_count);
 struct arena_seg arena_seg_lookup(struct arena *a, uint16_t seg_id);
 struct arena_seg arena_seg_for_idx(struct arena *a, uint16_t idx);
-err_checked arena_desc_register(struct arena_desc *d);
+enum err arena_desc_register(struct arena_desc *d);
 struct arena_desc *arena_desc_lookup(enum arena_strategy strat);
 
 /* NOTE: with no segments, this is UB */
@@ -515,20 +514,20 @@ void *arena_alloc_aligned_full(struct arena *a, size_t size, size_t align,
                                struct alloc_params ap) cw_alloc(2)
     cc_warn_unused_result;
 
-err_checked arena_free_full(struct arena *a, void *ptr, struct alloc_params ap);
+enum err arena_free_full(struct arena *a, void *ptr, struct alloc_params ap);
 
-err_checked arena_free_aligned_full(struct arena *a, void *ptr, size_t align,
-                                    struct alloc_params ap);
+enum err arena_free_aligned_full(struct arena *a, void *ptr, size_t align,
+                                 struct alloc_params ap);
 
-err_checked arena_clear_full(struct arena *a, struct arena_params *p);
+enum err arena_clear_full(struct arena *a, struct arena_params *p);
 
 void arena_destroy_full(struct arena *a, struct arena_params *p);
 
 void arena_reset_full(struct arena *a, struct arena_params *p);
 
-err_checked arena_set_tag_full(struct arena *a, void *ptr, arena_tag_t tag);
+enum err arena_set_tag_full(struct arena *a, void *ptr, arena_tag_t tag);
 
-err_checked arena_set_budget_full(struct arena *a, struct arena_budget b);
+enum err arena_set_budget_full(struct arena *a, struct arena_budget b);
 
 size_t arena_qry_size_full(struct arena *a, void *p);
 
@@ -552,7 +551,7 @@ arena_identity_t arena_get_identity_full(struct arena *a,
 
 bool arena_identity_eq_full(struct arena *a, struct arena *b);
 
-err_checked arena_on_hook_full(struct arena *a, enum arena_hook_type hook);
+enum err arena_on_hook_full(struct arena *a, enum arena_hook_type hook);
 
 bool arena_is_empty_full(struct arena *a);
 
