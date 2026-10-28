@@ -31,11 +31,11 @@ static void condvar_timeout_race_worker(void *arg) {
 
     for (size_t i = 0; i < 3000 && !atomic_load(&race->stop); i++) {
         enum irql irql = spin_lock(&race->lock);
-        enum wake_reason reason =
+        enum condvar_wake_reason reason =
             condvar_wait_timeout(&race->cv, &race->lock, 0, irql, &irql);
         spin_unlock(&race->lock, irql);
 
-        if (reason != WAKE_REASON_TIMEOUT)
+        if (reason != CONDVAR_WAKE_REASON_TIMEOUT)
             atomic_store(&race->wrong_reason, true);
         atomic_inc(&race->completed);
     }

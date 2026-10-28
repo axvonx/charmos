@@ -126,7 +126,7 @@ TEST_DEFINE_UNIT(cmdline, extraction_helpers) {
     TEST_ASSERT(cmdline_extract_bool(&vb, &b_val) == ERR_OK && b_val == true);
 
     struct cmdline_value vfx = {.type = CMDLINE_TYPE_FX, .fx = FX(0.5)};
-    fx32_32_t fx_val = 0;
+    fx32_32_t fx_val = FX_ZERO;
     TEST_ASSERT(cmdline_extract_fx(&vfx, &fx_val) == ERR_OK &&
                 fx_val == FX(0.5));
 

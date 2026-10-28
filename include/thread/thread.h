@@ -408,6 +408,8 @@ struct thread {
     uint32_t total_apcs_ran;    /* Total APCs executed on a given thread */
 #endif
 
+    enum thread_identity identity;
+
     /* Misc. private field for whatever needs it */
     void *private;
 };
@@ -480,7 +482,7 @@ void thread_unboost_self(enum thread_prio_class class);
 void thread_enqueue(struct thread *t);
 void thread_enqueue_on_core(struct thread *t, uint64_t core_id);
 
-struct wroost_kicks cc_warn_unused_result
+struct wroost_kicks cc_must_check
 thread_recompute_prio_class_locked(struct thread *t);
 
 /* Dry run: see what the new prio would be, don't set anything */

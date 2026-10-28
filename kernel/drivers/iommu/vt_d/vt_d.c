@@ -200,7 +200,7 @@ static enum iommu_error vtd_passthrough_all_devices(struct vtd_unit *u) {
     vtd_iq_submit(u, IOTLB_INVAL_DESC_GLOBAL);
     vtd_iq_flush(u);
 
-    vtd_info("passthrough identity domain installed for all devices (dom=%u "
+    vtd_info("passthrough identity domain installed for all devices (dom=%d "
              "sl=0x%lx)",
              domain_id, sl_phys);
     return IOMMU_ERR_OK;

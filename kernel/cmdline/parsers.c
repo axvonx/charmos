@@ -52,7 +52,7 @@ enum err cmdline_parse_bool(void *write_to, const char *text) {
 }
 
 enum err cmdline_parse_fx(void *write_to, const char *text) {
-    fx32_32_t val = 0;
+    fx32_32_t val = FX_ZERO;
     if (!parse_is_fx(text, &val))
         return ERR_INVAL;
     *(fx32_32_t *) write_to = val;

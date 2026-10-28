@@ -64,7 +64,7 @@ TEST_DEFINE_INTEGRATION(bio, async_submit, TEST_INTENSITY(1, 1, 16),
         time_ms_t start = time_get_ms();
         while (!atomic_load(&done)) {
             if (time_get_ms() - start >= BIO_COMPLETE_TIMEOUT_MS) {
-                test_err("request %llu never completed: %u ms elapsed, "
+                test_err("request %llu never completed: %d ms elapsed, "
                          "status still %d",
                          (unsigned long long) i, BIO_COMPLETE_TIMEOUT_MS,
                          bio->status);

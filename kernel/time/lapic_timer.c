@@ -155,7 +155,8 @@ static struct clock_evdev *lapic_clock_evdev_create(cpu_id_t core_id) {
     /* ready LAPIC divider and vector */
     lapic_write(LAPIC_REG_TIMER_DIV, 0b0011);
 
-    lapic_evdev_change_state(ced, CLOCK_EVDEV_STATE_ONESHOT_STOPPED);
+    enforce(lapic_evdev_change_state(ced, CLOCK_EVDEV_STATE_ONESHOT_STOPPED) ==
+            ERR_OK);
     return ced;
 }
 

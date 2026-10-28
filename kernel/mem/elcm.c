@@ -37,7 +37,7 @@ static fx32_32_t pow2_proximity(size_t n) {
     fx32_32_t dist_fx = fx_from_int(dist);
     fx32_32_t span_fx = fx_from_int(span);
 
-    return FX_ONE - fx_div(dist_fx, span_fx);
+    return fx_sub(FX_ONE, fx_div(dist_fx, span_fx));
 }
 
 /* The closer to `min`, the closer to 1 the output will be
@@ -53,14 +53,14 @@ static fx32_32_t log_clamped_scale_factor(size_t min, size_t max, size_t n) {
     fx32_32_t f_max = fx_from_int(max);
     fx32_32_t f_min = fx_from_int(min);
     fx32_32_t f_n = fx_from_int(n);
-    fx32_32_t f_range = f_max - f_min;
+    fx32_32_t f_range = fx_sub(f_max, f_min);
 
     /* Clamp to [1, e] */
-    fx32_32_t range = FX_E - FX_ONE;
-    fx32_32_t n_scaled = fx_mul(fx_div(f_n - f_min, f_range), range);
+    fx32_32_t range = fx_sub(FX_E, FX_ONE);
+    fx32_32_t n_scaled = fx_mul(fx_div(fx_sub(f_n, f_min), f_range), range);
 
     /* Log range is [0, 1] */
-    return fx_ln(FX_E - n_scaled);
+    return fx_ln(fx_sub(FX_E, n_scaled));
 }
 
 /*
@@ -84,7 +84,7 @@ static fx32_32_t candidate_score(const struct elcm_candidate *c, size_t mind,
     size_t n = mind + maxd - c->distance;
     fx32_32_t scale = log_clamped_scale_factor(mind, maxd, n);
 
-    return fx_mul(FX_ONE - wastage_scaled, scale);
+    return fx_mul(fx_sub(FX_ONE, wastage_scaled), scale);
 }
 
 static int cmp_wastage_desc(const void *a, const void *b) {
@@ -216,7 +216,8 @@ create_candidate_for_pages(struct elcm_params *params, size_t pages) {
     size_t total_bytes = pages * page_size;
     size_t wasted = total_bytes > used_bytes ? total_bytes - used_bytes : 0;
     fx32_32_t wastage =
-        total_bytes ? fx_div(fx_from_int(wasted), fx_from_int(total_bytes)) : 0;
+        total_bytes ? fx_div(fx_from_int(wasted), fx_from_int(total_bytes))
+                    : FX_ZERO;
 
     return (struct elcm_candidate){
         .pages = pages,
@@ -228,7 +229,7 @@ create_candidate_for_pages(struct elcm_params *params, size_t pages) {
         .obj_size = obj_size,
         .obj_alignment = obj_alignment,
         .distance = 0,
-        .score_value = 0,
+        .score_value = FX_ZERO,
     };
 }
 
@@ -308,7 +309,7 @@ enum err elcm(struct elcm_params *params) {
                 .obj_size = obj_size,
                 .obj_alignment = obj_alignment,
                 .distance = 0,
-                .score_value = 0,
+                .score_value = FX_ZERO,
             };
 
             if (i > max_pages_seen)
@@ -364,7 +365,7 @@ enum err elcm(struct elcm_params *params) {
 
             fx32_32_t score_part = fx_div(s, FX(2.0));
             fx32_32_t prox_part = fx_div(fx_mul(prox, s), FX(2.0));
-            candidates[i].score_value = score_part + prox_part;
+            candidates[i].score_value = fx_add(score_part, prox_part);
         } else {
             candidates[i].score_value = s;
         }

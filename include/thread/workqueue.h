@@ -246,16 +246,13 @@ void workqueue_free(struct workqueue *queue);
 enum workqueue_error workqueue_enqueue(struct workqueue *queue,
                                        struct work *work);
 
-enum workqueue_error workqueue_add(struct work *work) cc_warn_unused_result;
+enum workqueue_error workqueue_add(struct work *work) cc_must_check;
 
-enum workqueue_error workqueue_add_remote(struct work *work)
-    cc_warn_unused_result;
+enum workqueue_error workqueue_add_remote(struct work *work) cc_must_check;
 
-enum workqueue_error workqueue_add_local(struct work *work)
-    cc_warn_unused_result;
+enum workqueue_error workqueue_add_local(struct work *work) cc_must_check;
 
-enum workqueue_error workqueue_add_fast(struct work *work)
-    cc_warn_unused_result;
+enum workqueue_error workqueue_add_fast(struct work *work) cc_must_check;
 
 void work_execute(struct work *cc_nonnull_ptr task);
 bool workqueue_should_spawn_worker(struct workqueue *queue);

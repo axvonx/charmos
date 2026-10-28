@@ -392,7 +392,7 @@ static inline void qspinlock_init_chk_full(struct qspinlock *lock,
 #define qspin_init(...) qspinlock_init(__VA_ARGS__)
 #define qspin_init_chk(...) qspinlock_init_chk(__VA_ARGS__)
 
-static inline cc_warn_unused_result bool
+static inline cc_must_check bool
 qspin_trylock_physical(struct qspinlock *lock) TSA_NO_ANALYSIS {
     uint32_t expected = 0;
     return atomic_cas_strong(&lock->val, &expected, Q_SPIN_LOCKED_VAL,
@@ -425,10 +425,11 @@ static inline bool qspin_is_locked(const struct qspinlock *lock) {
 #define QSPINLOCK_ASSERT_HELD_RAW(l)                                           \
     enforce(qspin_is_locked(l), "qspinlock not locked")
 
-static inline cc_warn_unused_result bool
-qspin_trylock_raw_full(struct qspinlock *lock, enum lock_subclass sc,
-                       const struct lock_chk_site *site)
-    TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
+static inline
+    cc_must_check bool qspin_trylock_raw_full(struct qspinlock *lock,
+                                              enum lock_subclass sc,
+                                              const struct lock_chk_site *site)
+        TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
     enum lock_op_flags flags =
         LOCK_OP_RAW | LOCK_OP_IRQ_NONE | LOCK_OP_KIND_TRY;
     qspinlock_note_use(lock, flags);
@@ -501,7 +502,7 @@ static inline void qspin_unlock_full(struct qspinlock *lock, enum irql old_irql,
     irql_lower(old_irql);
 }
 
-static inline cc_warn_unused_result enum irql
+static inline cc_must_check enum irql
 qspin_lock_full(struct qspinlock *lock, enum lock_subclass sc,
                 const struct lock_chk_site *site)
     TSA_ACQUIRES_SPIN(lock) TSA_NO_ANALYSIS {
@@ -536,7 +537,7 @@ qspin_lock_full(struct qspinlock *lock, enum lock_subclass sc,
     return irql;
 }
 
-static inline cc_warn_unused_result enum irql
+static inline cc_must_check enum irql
 qspin_lock_high_full(struct qspinlock *lock, enum lock_subclass sc,
                      const struct lock_chk_site *site)
     TSA_ACQUIRES_SPIN(lock) TSA_NO_ANALYSIS {
@@ -565,7 +566,7 @@ qspin_lock_high_full(struct qspinlock *lock, enum lock_subclass sc,
     return irql;
 }
 
-static inline cc_warn_unused_result bool
+static inline cc_must_check bool
 qspin_trylock_full(struct qspinlock *lock, enum irql *out,
                    enum lock_subclass sc, const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES_SPIN(true, lock) TSA_NO_ANALYSIS {
@@ -601,7 +602,7 @@ qspin_trylock_full(struct qspinlock *lock, enum irql *out,
     return false;
 }
 
-static inline cc_warn_unused_result bool
+static inline cc_must_check bool
 qspin_trylock_high_full(struct qspinlock *lock, enum irql *out,
                         enum lock_subclass sc, const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES_SPIN(true, lock) TSA_NO_ANALYSIS {

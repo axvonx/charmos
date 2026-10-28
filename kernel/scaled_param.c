@@ -46,22 +46,23 @@ static size_t linear_interp(size_t a, size_t b, fx32_32_t t) {
 
 static size_t scale_log(fx32_32_t value, size_t min_val, size_t def_val,
                         size_t max_val) {
-    value = fx_clamp(value, 0, FX_ONE);
+    value = fx_clamp(value, FX_ZERO, FX_ONE);
     if (value == FX_HALF)
         return def_val;
     if (value < FX_HALF)
-        return geom_interp(min_val, def_val, value << 1);
-    return geom_interp(def_val, max_val, (value - FX_HALF) << 1);
+        return geom_interp(min_val, def_val, (fx32_32_t) (value << 1));
+    return geom_interp(def_val, max_val, (fx32_32_t) ((value - FX_HALF) << 1));
 }
 
 static size_t scale_linear(fx32_32_t value, size_t min_val, size_t def_val,
                            size_t max_val) {
-    value = fx_clamp(value, 0, FX_ONE);
+    value = fx_clamp(value, FX_ZERO, FX_ONE);
     if (value == FX_HALF)
         return def_val;
     if (value < FX_HALF)
-        return linear_interp(min_val, def_val, value << 1);
-    return linear_interp(def_val, max_val, (value - FX_HALF) << 1);
+        return linear_interp(min_val, def_val, (fx32_32_t) (value << 1));
+    return linear_interp(def_val, max_val,
+                         (fx32_32_t) ((value - FX_HALF) << 1));
 }
 
 static size_t scale_core_multiplier(fx32_32_t value, size_t min_val,

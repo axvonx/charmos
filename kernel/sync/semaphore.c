@@ -27,9 +27,9 @@ bool semaphore_timedwait(struct semaphore *s,
     enum irql irql = spin_lock_high(&s->lock);
 
     while (s->count == 0) {
-        enum wake_reason wr =
+        enum condvar_wake_reason wr =
             condvar_wait_timeout(&s->cv, &s->lock, timeout_ms, irql, &irql);
-        if (wr == WAKE_REASON_TIMEOUT && s->count == 0) {
+        if (wr == CONDVAR_WAKE_REASON_TIMEOUT && s->count == 0) {
             spin_unlock(&s->lock, irql);
             return false;
         }
@@ -41,17 +41,7 @@ bool semaphore_timedwait(struct semaphore *s,
     return true;
 }
 
-void semaphore_post(struct semaphore *s) TSA_NO_ANALYSIS {
-    enum irql irql = spin_lock_high(&s->lock);
-
-    s->count++;
-
-    condvar_signal(&s->cv);
-
-    spin_unlock(&s->lock, irql);
-}
-
-void semaphore_postn(struct semaphore *s, int n) TSA_NO_ANALYSIS {
+void semaphore_post_full(struct semaphore *s, int n) TSA_NO_ANALYSIS {
     enum irql irql = spin_lock_high(&s->lock);
 
     s->count += n;

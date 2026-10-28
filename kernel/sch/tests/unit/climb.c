@@ -7,7 +7,7 @@ TEST_GROUP_DEFINE(climb, .intensity_desc = {
 
 TEST_DEFINE_UNIT(climb, pressure_cubic_curve, TEST_INTENSITY(20, 100, 1000)) {
     /* Pressure p = 0 -> boost target = 0 */
-    TEST_ASSERT_EQ_S(TEST_CALL(climb_pressure_to_boost_target)(0), 0);
+    TEST_ASSERT_EQ_S(TEST_CALL(climb_pressure_to_boost_target)(FX_ZERO), 0);
 
     size_t steps = ctx->intensity_val ? ctx->intensity_val : 100;
 
@@ -31,7 +31,7 @@ TEST_DEFINE_UNIT(climb, pressure_cubic_curve, TEST_INTENSITY(20, 100, 1000)) {
 
 static struct climb_thread_data climb_keyed(int32_t periods,
                                             climb_pressure_t direct) {
-    struct climb_thread_data cts = {0};
+    struct climb_thread_data cts = {};
     cts.pressure_periods = periods;
     cts.direct_pressure = direct;
     rbt_init_node(&cts.climb_node);
@@ -48,7 +48,7 @@ TEST_DEFINE_UNIT(climb, tree_key_orders_by_pressure,
                  TEST_INTENSITY(8, 64, 4096)) {
     size_t steps = ctx->intensity_val ? ctx->intensity_val : 64;
 
-    struct climb_thread_data prev = climb_keyed(1, 0);
+    struct climb_thread_data prev = climb_keyed(1, FX_ZERO);
     for (size_t i = 1; i <= steps; i++) {
         climb_pressure_t p = fx_div(fx_from_int(i), fx_from_int(steps));
         struct climb_thread_data curr = climb_keyed(1, p);
@@ -59,7 +59,7 @@ TEST_DEFINE_UNIT(climb, tree_key_orders_by_pressure,
     }
 
     /* the two values that used to collide */
-    struct climb_thread_data zero = climb_keyed(1, 0);
+    struct climb_thread_data zero = climb_keyed(1, FX_ZERO);
     struct climb_thread_data full = climb_keyed(1, CLIMB_PRESSURE_MAX);
     TEST_ASSERT_LT_S(climb_cmp(&zero, &full), 0);
 
@@ -96,21 +96,21 @@ TEST_DEFINE_UNIT(climb, tree_key_comparator_is_consistent,
 }
 
 TEST_DEFINE_UNIT(climb, tree_key_trades_periods_against_pressure) {
-    struct climb_thread_data waited = climb_keyed(3, 0);
+    struct climb_thread_data waited = climb_keyed(3, FX_ZERO);
     struct climb_thread_data pressured = climb_keyed(1, CLIMB_PRESSURE_MAX);
 
     /* two extra periods == one full pressure point */
     TEST_ASSERT_EQ_S(climb_cmp(&waited, &pressured), 0);
 
     /* one more period breaks the tie towards the thread that waited */
-    struct climb_thread_data waited_longer = climb_keyed(4, 0);
+    struct climb_thread_data waited_longer = climb_keyed(4, FX_ZERO);
     TEST_ASSERT_GT_S(climb_cmp(&waited_longer, &pressured), 0);
 
     struct climb_thread_data decaying = climb_keyed(-1, CLIMB_PRESSURE_MAX);
     struct climb_thread_data active = climb_keyed(1, CLIMB_PRESSURE_MAX);
     TEST_ASSERT_LT_S(climb_cmp(&decaying, &active), 0);
 
-    struct climb_thread_data fresh = climb_keyed(1, 0);
+    struct climb_thread_data fresh = climb_keyed(1, FX_ZERO);
     TEST_ASSERT_EQ_S(climb_cmp(&decaying, &fresh), 0);
 
     return TEST_SUCCESS;

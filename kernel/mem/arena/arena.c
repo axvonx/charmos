@@ -131,7 +131,7 @@ struct arena *arena_create_full(struct arena_seg_desc *seg_descs,
         }
 
         if (seg_descs[i].size >= ARENA_SEG_MAX_SIZE)
-            enforce(seg_descs[i].large, "large segment id %u must set .large",
+            enforce(seg_descs[i].large, "large segment id %d must set .large",
                     seg_descs[i].id);
 
         enforce(!bitmap_test_and_set(seen_id_bitmap, seg_descs[i].id),

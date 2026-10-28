@@ -369,7 +369,7 @@ static bool parse_range_internal(const char *str, uint64_t *start,
     }
 
     if (!parsed) {
-        fx32_32_t fx_s = 0, fx_f = 0;
+        fx32_32_t fx_s = FX_ZERO, fx_f = FX_ZERO;
         if (parse_fx_internal(left_buf, &fx_s) &&
             parse_fx_internal(right_str, &fx_f)) {
             s = (uint64_t) fx_s;

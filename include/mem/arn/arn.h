@@ -21,36 +21,35 @@
 
 /* Alloc/free core */
 #define ARN_SIG_alloc                                                          \
-    void *, cc_warn_unused_result, return,                                     \
-        (size_t size, struct alloc_params ap), (size, ap)
+    void *, cc_must_check, return, (size_t size, struct alloc_params ap),      \
+        (size, ap)
 #define ARN_SIG_realloc                                                        \
-    void *, cc_warn_unused_result, return,                                     \
+    void *, cc_must_check, return,                                             \
         (void *ptr, size_t size, struct alloc_params ap), (ptr, size, ap)
 #define ARN_SIG_alloc_special                                                  \
-    void *, cc_warn_unused_result, return,                                     \
+    void *, cc_must_check, return,                                             \
         (struct arena_params * p, struct alloc_params ap), (p, ap)
 #define ARN_SIG_alloc_aligned                                                  \
-    void *, cc_warn_unused_result, return,                                     \
+    void *, cc_must_check, return,                                             \
         (size_t size, size_t align, struct alloc_params ap), (size, align, ap)
 #define ARN_SIG_free                                                           \
-    enum err, cc_warn_unused_result, return,                                   \
-        (void *ptr, struct alloc_params ap), (ptr, ap)
+    enum err, cc_must_check, return, (void *ptr, struct alloc_params ap),      \
+        (ptr, ap)
 #define ARN_SIG_free_aligned                                                   \
-    enum err, cc_warn_unused_result, return,                                   \
+    enum err, cc_must_check, return,                                           \
         (void *ptr, size_t align, struct alloc_params ap), (ptr, align, ap)
 
 /* Lifecycle, cleanup */
 #define ARN_SIG_clear                                                          \
-    enum err, cc_warn_unused_result, return, (struct arena_params * p), (p)
+    enum err, cc_must_check, return, (struct arena_params * p), (p)
 #define ARN_SIG_destroy void, , , (struct arena_params * p), (p)
 #define ARN_SIG_reset void, , , (struct arena_params * p), (p)
 
 /* Tag, budget, query */
 #define ARN_SIG_set_tag                                                        \
-    enum err, cc_warn_unused_result, return, (void *ptr, arena_tag_t tag),     \
-        (ptr, tag)
+    enum err, cc_must_check, return, (void *ptr, arena_tag_t tag), (ptr, tag)
 #define ARN_SIG_set_budget                                                     \
-    enum err, cc_warn_unused_result, return, (struct arena_budget b), (b)
+    enum err, cc_must_check, return, (struct arena_budget b), (b)
 #define ARN_SIG_qry_size size_t, , return, (void *p), (p)
 #define ARN_SIG_qry_tag arena_tag_t, , return, (void *p), (p)
 #define ARN_SIG_qry_trace stack_handle_t, , return, (void *p), (p)
@@ -69,7 +68,7 @@
 
 /* Other misc. things */
 #define ARN_SIG_on_hook                                                        \
-    enum err, cc_warn_unused_result, return, (enum arena_hook_type hook), (hook)
+    enum err, cc_must_check, return, (enum arena_hook_type hook), (hook)
 #define ARN_SIG_is_empty bool, , return, (), ()
 #define ARN_SIG_getref bool, , return, (), ()
 #define ARN_SIG_putref void, , , (), ()

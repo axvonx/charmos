@@ -177,7 +177,7 @@ void smp_dump_core(struct core *c) {
     log_msg(LOG_INFO, "  Widths: issue=%u retire=%u", cap->issue_width,
             cap->retire_width);
 
-    log_msg(LOG_INFO, "  Scores: perf=%u energy=%u", cap->perf_score,
+    log_msg(LOG_INFO, "  Scores: perf=%d energy=%u", cap->perf_score,
             cap->energy_score);
 
     dump_cpu_features(cap->feature_bits);

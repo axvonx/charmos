@@ -50,7 +50,12 @@ set(KERNEL_WARNINGS
     -Werror=int-in-bool-context
     -Werror=implicit-fallthrough
     -Werror=undef
-    -Werror=strict-prototypes)
+    -Werror=strict-prototypes
+    -Werror=unused-result
+    -Werror=unused-value
+    -Werror=vla
+    -Werror=missing-prototypes
+    -Werror=format-signedness)
 
 if (DEBUG_ASAN)
     set(KERNEL_FRAME_LIMIT 16384)
@@ -118,7 +123,19 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
         -Werror=builtin-declaration-mismatch
         -Werror=enum-int-mismatch
         -Werror=duplicated-cond
-        -Werror=logical-op)
+        -Werror=logical-op
+        -Werror=duplicated-branches
+        -Werror=shadow=local
+        -Werror=dangling-pointer=2
+        -Werror=use-after-free=3
+        -Werror=array-bounds=2
+        -Werror=alloca
+        -Werror=trampolines
+        -Werror=calloc-transposed-args
+        -Werror=unterminated-string-initialization
+        -Werror=strict-flex-arrays
+        -Werror=format-overflow=2
+        -Werror=format-truncation=2)
 endif ()
 
 if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
@@ -133,6 +150,13 @@ if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
     # assume() is an unevaluated assumption without DEBUG_ASSUME, side effects
     # in its condition would silently vanish
     list(APPEND KERNEL_WARNINGS -Werror=assume)
+    list(
+        APPEND
+        KERNEL_WARNINGS
+        -Werror=comma
+        -Werror=conditional-uninitialized
+        -Werror=loop-analysis
+        -Werror=tautological-value-range-compare)
 endif ()
 
 # for double free / use-after-free / wrong-free comptime detection
@@ -180,11 +204,7 @@ if (CHARMOS_GCC_ANALYZER AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
         -Wno-analyzer-mismatching-deallocation)      #  1 / 1
 endif ()
 
-set(KERNEL_WARNINGS_RELEASE -Wunused -Wvla)
-
-if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
-    list(APPEND KERNEL_WARNINGS_RELEASE -Wshadow=local -Wlogical-op -Wduplicated-cond -Wduplicated-branches)
-endif ()
+set(KERNEL_WARNINGS_RELEASE "")
 
 string(REPLACE ";" " " KERNEL_WARNINGS_RELEASE_STR "${KERNEL_WARNINGS_RELEASE}")
 

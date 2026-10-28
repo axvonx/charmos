@@ -531,6 +531,9 @@ struct slab_domain {
     struct slab_domain_bucket aggregate;
 };
 
+/* Bounds the GC's per-size-class stack arrays, checked at init */
+#define SLAB_SIZES_MAX 64
+
 struct slab_globals {
     bool domains_enabled;
     struct vas *vas;

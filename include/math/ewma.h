@@ -15,7 +15,7 @@ static inline void ewma_init(struct ewma *e, fx32_32_t alpha) {
 }
 
 static inline fx32_32_t ewma_update(struct ewma *e, fx32_32_t new) {
-    fx32_32_t p1 = fx_mul(e->ewma, FX_ONE - e->alpha);
+    fx32_32_t p1 = fx_mul(e->ewma, fx_sub(FX_ONE, e->alpha));
     fx32_32_t p2 = fx_mul(new, e->alpha);
-    return (e->ewma = p1 + p2);
+    return (e->ewma = fx_add(p1, p2));
 }

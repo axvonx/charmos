@@ -26,7 +26,8 @@ static void print_device_scopes(const uint8_t *ptr, const uint8_t *end) {
         size_t path_entries = (sc->length - 6) / 2;
         const uint8_t *path = ptr + sizeof(*sc);
         for (size_t i = 0; i < path_entries; i++)
-            printf(" %02x.%x", path[i * 2] >> 3, path[i * 2] & 0x7);
+            printf(" %02x.%x", (unsigned) (path[i * 2] >> 3),
+                   (unsigned) (path[i * 2] & 0x7));
 
         if (sc->type == ACPI_DSS_IOAPIC ||
             sc->type == ACPI_DSS_MSI_CAPABLE_HPET)

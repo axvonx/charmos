@@ -36,7 +36,7 @@
 /* When this enum err is negated, i.e. becomes positive, the upper 16 bits
  * indicate the *facility*. With 0, it's just one of these, but if it's > 0,
  * it came from a specific subsystem that defined a struct err_facility */
-enum cc_must_check err {
+enum cc_nodiscard err {
     ERR_OK = 0,          // Success
     ERR_UNKNOWN = -1,    // Unknown or unspecified error
     ERR_NO_MEM = -2,     // Out of memory

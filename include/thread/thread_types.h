@@ -29,6 +29,12 @@ typedef uint8_t thread_act_reason_t; /* Polymorphic type:
 #define THREAD_STACKS_HEAP_START 0xFFFFF10000000000ULL
 #define THREAD_STACKS_HEAP_END 0xFFFFF20000000000ULL
 
+/* For figuring out where ->private goes, debug */
+enum thread_identity {
+    THREAD_IDENTITY_NONE,
+    THREAD_IDENTITY_WORKER,
+};
+
 enum thread_state : uint8_t {
     THREAD_STATE_IDLE_THREAD, /* Specifically the idle thread */
     THREAD_STATE_READY,   /* Thread is ready to run but not currently running */
@@ -118,13 +124,6 @@ enum thread_block_reason : uint8_t {
 
 enum thread_sleep_reason : uint8_t {
     THREAD_SLEEP_REASON_MANUAL = 7,
-};
-
-/* Used in condvars, totally separate from thread_resume_reason */
-enum wake_reason {
-    WAKE_REASON_NONE = 0,    /* No reason specified */
-    WAKE_REASON_SIGNAL = 1,  /* Signal from something */
-    WAKE_REASON_TIMEOUT = 2, /* Timeout */
 };
 
 struct thread_class_donation {

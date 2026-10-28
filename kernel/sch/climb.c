@@ -45,8 +45,8 @@ struct climb_budget {
 };
 
 #define CLIMB_EWMA(val, target)                                                \
-    (fx_mul(CLIMB_BOOST_EWMA_ALPHA, val) +                                     \
-     fx_mul(FX_ONE - CLIMB_BOOST_EWMA_ALPHA, fx_from_int(target)))
+    fx_add(fx_mul(CLIMB_BOOST_EWMA_ALPHA, val),                                \
+           fx_mul(fx_sub(FX_ONE, CLIMB_BOOST_EWMA_ALPHA), target))
 
 static inline struct rbt *climb_tree_local(void) {
     return &smp_core_scheduler()->climb_threads;
@@ -102,9 +102,9 @@ TEST_EXPORT(climb_pressure_to_boost_target);
  */
 static inline climb_pressure_t
 climb_thread_total_pressure(struct climb_thread_data *cts) {
-    return fx_clamp(cts->direct_pressure +
-                        fx_mul(cts->indirect_pressure, CLIMB_INDIRECT_WEIGHT),
-                    0, CLIMB_PRESSURE_MAX);
+    return fx_clamp(fx_add(cts->direct_pressure, fx_mul(cts->indirect_pressure,
+                                                        CLIMB_INDIRECT_WEIGHT)),
+                    FX_ZERO, CLIMB_PRESSURE_MAX);
 }
 
 /*
@@ -116,7 +116,7 @@ static void update_fields(struct climb_thread_data *cts) {
     int32_t target = climb_pressure_to_boost_target(p);
 
     /* EWMA */
-    cts->boost_ewma = CLIMB_EWMA(cts->boost_ewma, target);
+    cts->boost_ewma = CLIMB_EWMA(cts->boost_ewma, fx_from_int(target));
     cts->wanted_boost = fx_to_int(cts->boost_ewma);
     cts->pressure_ewma = CLIMB_EWMA(cts->pressure_ewma, p);
 }
@@ -126,8 +126,7 @@ climb_pressure_t climb_thread_applied_pressure(struct thread *t) {
 }
 
 climb_pressure_t climb_thread_compute_pressure_to_apply(struct thread *t) {
-    return CLIMB_PRESSURE_THREAD_BASE + climb_thread_applied_pressure(t);
-    ;
+    return fx_add(CLIMB_PRESSURE_THREAD_BASE, climb_thread_applied_pressure(t));
 }
 
 /*
@@ -136,7 +135,7 @@ climb_pressure_t climb_thread_compute_pressure_to_apply(struct thread *t) {
 static inline climb_pressure_t climb_accumulate(climb_pressure_t p,
                                                 climb_pressure_t delta,
                                                 climb_pressure_t max) {
-    return p + fx_mul(delta, (max - p));
+    return fx_add(p, fx_mul(delta, fx_sub(max, p)));
 }
 
 /*
@@ -144,7 +143,7 @@ static inline climb_pressure_t climb_accumulate(climb_pressure_t p,
  */
 static inline climb_pressure_t
 climb_pressure_scale_indirect(climb_pressure_t direct) {
-    climb_pressure_t scale = FX_ONE - direct;
+    climb_pressure_t scale = fx_sub(FX_ONE, direct);
     return fx_max(scale, CLIMB_INDIRECT_MIN_SCALE);
 }
 
@@ -180,7 +179,7 @@ static void apply_handle_pressures(struct thread *t, struct climb_handle *ch) {
         climb_pressure_t newp =
             climb_accumulate(old, delta, CLIMB_DIRECT_PRESSURE_MAX);
 
-        ch->applied_pressure_internal = newp - old;
+        ch->applied_pressure_internal = fx_sub(newp, old);
         enforce(newp - old);
         climb_info("Applying pressure %ld to %p", newp - old, cts);
         cts->direct_pressure = newp;
@@ -199,7 +198,7 @@ static void apply_handle_pressures(struct thread *t, struct climb_handle *ch) {
     climb_pressure_t newp =
         climb_accumulate(old, scaled_delta, CLIMB_INDIRECT_PRESSURE_MAX);
 
-    ch->applied_pressure_internal = newp - old;
+    ch->applied_pressure_internal = fx_sub(newp, old);
     enforce(newp - old);
     climb_info("Applying pressure %ld to %p", newp - old, cts);
     cts->indirect_pressure = newp;
@@ -266,7 +265,7 @@ static void remove_handle(struct thread *t, struct climb_handle *ch) {
         cts->indirect_pressure -= ch->applied_pressure_internal;
     }
 
-    ch->applied_pressure_internal = 0;
+    ch->applied_pressure_internal = FX_ZERO;
     list_node_delete_init(&ch->list);
 
     climb_info("Remove handle on %p (thread %p), %zu left", cts, t,
@@ -510,7 +509,7 @@ static void maybe_remove_node(struct rbt *tree, struct climb_thread_data *cts,
 
 static struct climb_summary
 summarize_and_advance(struct rbt *tree, struct climb_drop_batch *drop) {
-    struct climb_summary ret = {0};
+    struct climb_summary ret = {};
     struct climb_thread_data *iter;
     struct rbt_node *node, *tmp;
 
@@ -562,11 +561,11 @@ void climb_thread_init(struct thread *t) {
     cts->wanted_boost = 0;
     cts->pressure_periods = 0;
     list_head_init(&cts->handles);
-    cts->direct_pressure = 0;
-    cts->indirect_pressure = 0;
+    cts->direct_pressure = FX_ZERO;
+    cts->indirect_pressure = FX_ZERO;
     rbt_init_node(&cts->climb_node);
     struct climb_handle *ch = &cts->handle;
-    ch->applied_pressure_internal = 0;
+    ch->applied_pressure_internal = FX_ZERO;
     ch->kind = CLIMB_PRESSURE_INDIRECT;
 
 #ifdef DEBUG_CLIMB

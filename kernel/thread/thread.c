@@ -146,8 +146,9 @@ static void *thread_allocate_stack(size_t pages) {
     for (size_t i = 0; i < pages; i++) {
         vaddr_t virt = virt_base + (i * PAGE_SIZE);
         paddr_t phys = enforce(pmm_alloc_page(), OUT_OF_MEMORY);
-        vmm_map_page(virt, phys,
-                     .page_flags = PAGE_PRESENT | PAGE_WRITE | PAGE_XD);
+        enforce(vmm_map_page(virt, phys,
+                             .page_flags = PAGE_PRESENT | PAGE_WRITE |
+                                           PAGE_XD) == ERR_OK);
     }
     return (void *) virt_base;
 }
@@ -322,7 +323,6 @@ err:
     return NULL;
 }
 
-/* TODO: This funny business is not needed with RCU */
 void thread_set_joinable(struct thread *t) {
     enforce(!(thread_get_flags(t) & THREAD_FLAG_JOINABLE));
     enforce(refcount_inc(&t->refcount), STALE_REFERENCE);

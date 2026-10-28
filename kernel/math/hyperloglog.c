@@ -103,7 +103,7 @@ fx32_32_t hyperloglog_estimate(struct hyperloglog *hll) {
         fx32_32_t ratio = fx_div(estimate, two_32);
 
         if (ratio < FX(1.0))
-            estimate = fx_mul(-two_32, fx_ln(FX(1.0) - ratio));
+            estimate = fx_mul(fx_neg(two_32), fx_ln(fx_sub(FX(1.0), ratio)));
     }
 
     return estimate;

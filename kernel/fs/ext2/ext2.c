@@ -54,7 +54,9 @@ struct vfs_node *ext2_g_mount(struct partition *p) {
     if (!ext2_read_superblock(p, sblock))
         goto err;
 
-    ext2_mount(p, fs, sblock, n);
+    if (ext2_mount(p, fs, sblock, n) != ERR_OK)
+        goto err;
+
     return n;
 
 err:

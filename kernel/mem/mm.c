@@ -84,9 +84,8 @@ void mm_activate(struct mm *mm) {
 }
 
 enum err mm_map_page(struct mm *mm, vaddr_t va, paddr_t pa, uint64_t pflags) {
-    vmm_map_page_user(vmm_phys_to_pml4(mm->pml4), va, pa, .page_flags = pflags,
-                      .vmm_flags = VMM_FLAG_USER);
-    return ERR_OK;
+    return vmm_map_page_user(vmm_phys_to_pml4(mm->pml4), va, pa,
+                             .page_flags = pflags, .vmm_flags = VMM_FLAG_USER);
 }
 
 struct mm *mm_alloc(void) {

@@ -151,7 +151,7 @@ static void slab_gc_recycle(struct slab_domain *domain, struct slab *slab,
     struct slab_caches *caches = slab_gc_pick_caches(domain, slab);
 
     /* Gather totals */
-    size_t free_per_order[slab_global.num_sizes];
+    size_t free_per_order[SLAB_SIZES_MAX];
     size_t total_free = slab_gc_get_total_free_for(caches, free_per_order);
     size_t original_order = slab->parent_cache->order;
 
@@ -258,8 +258,7 @@ static inline size_t slab_gc_get_max_unfit_slabs(size_t target,
 size_t slab_gc_run(struct slab_gc *gc, enum slab_gc_flags flags) {
     enum irql irql = spin_lock(&gc->lock);
 
-    size_t slabs_recycled[slab_global.num_sizes];
-    memset(slabs_recycled, 0, sizeof(size_t) * slab_global.num_sizes);
+    size_t slabs_recycled[SLAB_SIZES_MAX] = {};
     size_t target = slab_gc_derive_target_gc_slabs(gc, flags);
     size_t threshold = slab_gc_derive_threshold_score(gc, flags);
     size_t max_unfit = slab_gc_get_max_unfit_slabs(target, flags);

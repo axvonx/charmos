@@ -364,7 +364,7 @@ static bool rcu_work_pending(void) {
 }
 
 /* This runs at PASSIVE so callbacks can do whatever */
-static cc_unused void rcu_run_batch(struct list_head *batch, uint64_t seq) {
+static void rcu_run_batch(struct list_head *batch, uint64_t cc_unused seq) {
     struct rcu_cb *cb, *tmp;
     list_for_each_entry_safe(cb, tmp, batch, list) {
         list_node_delete_init(&cb->list);

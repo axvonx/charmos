@@ -32,10 +32,10 @@ bool thread_join_timeout(struct thread *t, time_ms_t timeout_ms,
 
     enum irql irql = spin_lock(&t->join_lock);
     while (thread_get_state(t) != THREAD_STATE_ZOMBIE) {
-        enum wake_reason r = condvar_wait_timeout(&t->join_cv, &t->join_lock,
-                                                  timeout_ms, irql, &irql);
+        enum condvar_wake_reason r = condvar_wait_timeout(
+            &t->join_cv, &t->join_lock, timeout_ms, irql, &irql);
 
-        if (r == WAKE_REASON_TIMEOUT &&
+        if (r == CONDVAR_WAKE_REASON_TIMEOUT &&
             thread_get_state(t) != THREAD_STATE_ZOMBIE) {
             spin_unlock(&t->join_lock, irql);
             /* caller must retry the join or detach */

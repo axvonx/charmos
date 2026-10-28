@@ -20,7 +20,7 @@ TEST_DEFINE_UNIT(watchdog, frozen_window_missing_heartbeats) {
 
     size_t heartbeats = SIZE_MAX;
     size_t expected = SIZE_MAX;
-    fx32_32_t score = -1;
+    fx32_32_t score = (fx32_32_t) -1;
     bool ready = watchdog_count_heartbeats_at(&buckets, 8, 19000, 1000, 20,
                                               &heartbeats, &expected, &score);
 
@@ -37,7 +37,7 @@ TEST_DEFINE_UNIT(watchdog, current_window_recent_heartbeats) {
 
     size_t heartbeats = SIZE_MAX;
     size_t expected = SIZE_MAX;
-    fx32_32_t score = -1;
+    fx32_32_t score = (fx32_32_t) -1;
     bool ready = watchdog_count_heartbeats_at(&buckets, 8, 10000, 1000, 20,
                                               &heartbeats, &expected, &score);
 

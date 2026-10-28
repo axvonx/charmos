@@ -18,8 +18,7 @@ static inline void raw_spinlock_init(struct raw_spinlock *lock) {
     atomic_store_rlx(&lock->state, 0);
 }
 
-static inline cc_warn_unused_result bool
-raw_spin_trylock(struct raw_spinlock *lock)
+static inline cc_must_check bool raw_spin_trylock(struct raw_spinlock *lock)
     TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
     uint8_t expected = 0;
     return atomic_cas_strong(&lock->state, &expected, 1, mo_acquire, mo_rlx);
@@ -42,8 +41,7 @@ static inline void raw_spin_unlock(struct raw_spinlock *lock)
 }
 
 /* whether interrupts were enabled on entry */
-static inline cc_warn_unused_result bool
-raw_spin_lock_high(struct raw_spinlock *lock)
+static inline cc_must_check bool raw_spin_lock_high(struct raw_spinlock *lock)
     TSA_ACQUIRES_IRQS_LOCK(lock) TSA_NO_ANALYSIS {
     bool irqs_were_enabled = irq_disable_save();
     raw_spin_lock(lock);

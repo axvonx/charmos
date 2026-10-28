@@ -82,5 +82,5 @@ fx32_32_t fuzzy_substr_conf(const char *pattern, const char *text,
     fx32_32_t max_len = fx_from_int(p_len);
     fx32_32_t dist = fx_div(fx_from_int(best_dist), max_len);
 
-    return FX_ONE - dist;
+    return fx_sub(FX_ONE, dist);
 }

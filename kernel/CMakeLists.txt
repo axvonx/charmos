@@ -125,6 +125,18 @@ endif ()
 # flanterm relies on comment-style fallthrough
 set_property(SOURCE ${FLANTERM_SOURCES} APPEND PROPERTY COMPILE_OPTIONS -Wno-implicit-fallthrough)
 
+# Sanitizer hooks are called by compiler instrumentation, nothing includes them
+set_property(SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/mem/asan.c ${CMAKE_CURRENT_SOURCE_DIR}/ubsan.c
+             APPEND PROPERTY COMPILE_OPTIONS -Wno-missing-prototypes)
+
+# Vendored code isn't held to the stricter kernel warnings
+set_property(SOURCE ${UACPI_SOURCES} APPEND PROPERTY COMPILE_OPTIONS -Wno-format-signedness)
+if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
+    set_property(SOURCE ${UACPI_SOURCES} APPEND PROPERTY COMPILE_OPTIONS -Wno-conditional-uninitialized)
+    set_property(SOURCE ${FLANTERM_SOURCES} APPEND PROPERTY COMPILE_OPTIONS
+                 -Wno-tautological-value-range-compare)
+endif ()
+
 target_sources(kernel PRIVATE ${SYMS_SOURCE} ${UACPI_SOURCES})
 
 target_include_directories(kernel PRIVATE ${UACPI_INCLUDES})

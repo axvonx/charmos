@@ -23,7 +23,8 @@ static atomic_uint32_t threads_left = WQ_2_THREADS;
 
 static void enqueue_thread(void *arg) {
     cc_ignore(arg);
-    struct work works[wq_2_items_per_thread];
+    struct work *works =
+        enforce(vnews(works, wq_2_items_per_thread), OUT_OF_MEMORY);
 
     for (size_t i = 0; i < wq_2_items_per_thread; i++) {
         for (uint64_t j = 0; j < 500; j++)
@@ -38,6 +39,7 @@ static void enqueue_thread(void *arg) {
         while (work_active(&works[i]))
             cpu_pause();
 
+    vfree(works);
     atomic_dec(&threads_left);
 }
 

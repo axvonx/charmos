@@ -326,8 +326,9 @@ static inline void ext2_fs_unlock(struct ext2_fs *fs, enum irql i)
 
 static inline void ext2_prefetch_block(struct ext2_fs *fs, uint32_t block) {
     uint32_t lba = ext2_block_to_lba(fs, block);
-    bcache_prefetch_async(fs->drive, lba, fs->block_size,
-                          fs->sectors_per_block);
+    /* Best effort, a failed prefetch just means a later sync read */
+    (void) bcache_prefetch_async(fs->drive, lba, fs->block_size,
+                                 fs->sectors_per_block);
 }
 
 static inline void ext2_inode_lock(struct ext2_full_inode *ino)

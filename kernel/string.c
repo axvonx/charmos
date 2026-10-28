@@ -298,69 +298,6 @@ char *strpbrk(const char *s, const char *accept) {
     return NULL;
 }
 
-char *strstr(const char *haystack, const char *needle) {
-    if (!*needle)
-        return (char *) haystack;
-    size_t nlen = strlen(needle);
-    size_t hlen = strlen(haystack);
-    if (nlen > hlen)
-        return NULL;
-
-    /* KMP failure table */
-    int64_t table[nlen];
-    table[0] = -1;
-    int64_t k = -1;
-    for (size_t i = 1; i < nlen; i++) {
-        while (k >= 0 && needle[k + 1] != needle[i])
-            k = table[k];
-        if (needle[k + 1] == needle[i])
-            k++;
-        table[i] = k;
-    }
-
-    int64_t q = -1;
-    for (size_t i = 0; i < hlen; i++) {
-        while (q >= 0 && needle[q + 1] != haystack[i])
-            q = table[q];
-        if (needle[q + 1] == haystack[i])
-            q++;
-        if (q == (int64_t) nlen - 1)
-            return (char *) (haystack + i - nlen + 1);
-    }
-    return NULL;
-}
-
-char *strcasestr(const char *haystack, const char *needle) {
-    if (!*needle)
-        return (char *) haystack;
-    size_t nlen = strlen(needle);
-    size_t hlen = strlen(haystack);
-    if (nlen > hlen)
-        return NULL;
-
-    int64_t table[nlen];
-    table[0] = -1;
-    int64_t k = -1;
-    for (size_t i = 1; i < nlen; i++) {
-        while (k >= 0 && tolower(needle[k + 1]) != tolower(needle[i]))
-            k = table[k];
-        if (tolower(needle[k + 1]) == tolower(needle[i]))
-            k++;
-        table[i] = k;
-    }
-
-    int64_t q = -1;
-    for (size_t i = 0; i < hlen; i++) {
-        while (q >= 0 && tolower(needle[q + 1]) != tolower(haystack[i]))
-            q = table[q];
-        if (tolower(needle[q + 1]) == tolower(haystack[i]))
-            q++;
-        if (q == (int64_t) nlen - 1)
-            return (char *) (haystack + i - nlen + 1);
-    }
-    return NULL;
-}
-
 static char *strnstr_internal(const char *haystack, const char *needle,
                               size_t len, bool ignore_case) {
     size_t nlen = strlen(needle);
@@ -385,6 +322,14 @@ char *strnstr(const char *haystack, const char *needle, size_t len) {
 
 char *strncasestr(const char *haystack, const char *needle, size_t len) {
     return strnstr_internal(haystack, needle, len, true);
+}
+
+char *strstr(const char *haystack, const char *needle) {
+    return strnstr_internal(haystack, needle, SIZE_MAX, false);
+}
+
+char *strcasestr(const char *haystack, const char *needle) {
+    return strnstr_internal(haystack, needle, SIZE_MAX, true);
 }
 
 char *strtok(char *str, const char *delim) {

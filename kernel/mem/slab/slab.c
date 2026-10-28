@@ -738,6 +738,7 @@ void slab_allocator_init(void) {
 
     simple_free(slab_global.vas, staging, total_input * sizeof(*staging));
 
+    enforce(out <= SLAB_SIZES_MAX, "%zu slab sizes, raise SLAB_SIZES_MAX", out);
     slab_global.num_sizes = out;
     slab_global.class_sizes =
         simple_alloc(slab_global.vas,

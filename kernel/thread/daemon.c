@@ -335,7 +335,7 @@ void daemon_destroy(struct daemon *daemon) {
         scheduler_yield();
 
     /* Wakes up everyone, and they'll read daemon->state == DESTROYING */
-    semaphore_postn(&daemon->ts_sem, total_ts_workers(daemon));
+    semaphore_post(&daemon->ts_sem, total_ts_workers(daemon));
 
     /* handle if existing, post once */
     if (bg_present(daemon))
@@ -377,7 +377,7 @@ void daemon_wake_all_idle_timesharing_workers(struct daemon *daemon) {
     if (daemon_needs_spawn_worker(daemon))
         daemon_spawn_worker(daemon);
 
-    semaphore_postn(&daemon->ts_sem, idle_ts_workers(daemon));
+    semaphore_post(&daemon->ts_sem, idle_ts_workers(daemon));
 }
 
 void daemon_print(struct daemon *daemon) {
@@ -390,7 +390,8 @@ void daemon_print(struct daemon *daemon) {
            atomic_load_rlx(&attrs->idle_timesharing_threads));
     printf("                  .timesharing_threads = %zu\n",
            atomic_load_rlx(&attrs->timesharing_threads));
-    printf("                  .flags = 0b%b\n", attrs->flags);
+    /* hex, clang 23 checks %b as signed against C23 */
+    printf("                  .flags = 0x%x\n", attrs->flags);
     printf("             }\n");
     printf("    .state = %s\n",
            daemon_state_str(atomic_load_rlx(&daemon->state)));

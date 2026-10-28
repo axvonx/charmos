@@ -48,7 +48,9 @@ TEST_DEFINE_INTEGRATION(mem, tlb_shootdown_sync,
 
     /* Remap under them */
     vmm_unmap(va, PAGE_SIZE);
-    vmm_map_page((vaddr_t) va, p2, .page_flags = PAGE_PRESENT | PAGE_WRITE);
+    TEST_ASSERT_EQ_S(
+        vmm_map_page((vaddr_t) va, p2, .page_flags = PAGE_PRESENT | PAGE_WRITE),
+        ERR_OK);
     *(volatile uint64_t *) va = 0xBBBBBBBBBBBBBBBB;
 
     /* Sync shootdown -- must complete on all cores before returning */

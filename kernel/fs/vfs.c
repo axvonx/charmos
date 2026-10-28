@@ -80,7 +80,8 @@ struct vfs_node *vfs_finddir(struct vfs_node *node, const char *fname) {
 
     struct vfs_dirent ent = {0};
 
-    node->ops->finddir(node, fname, &ent);
+    if (node->ops->finddir(node, fname, &ent) != ERR_OK)
+        return NULL;
 
     struct vfs_node *found = ent.node;
 

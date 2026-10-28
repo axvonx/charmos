@@ -318,7 +318,8 @@ paddr_t domain_alloc(size_t pages, enum alloc_flags flags) {
     paddr_t ret = 0x0;
 
     /* We only care about INTERLEAVED at the buddy allocator level */
-    if (ALLOC_FLAG_CLASS(flags) == ALLOC_FLAG_CLASS_INTERLEAVED) {
+    if (ALLOC_FLAG_CLASS(flags) ==
+        ALLOC_FLAG_CLASS(ALLOC_FLAG_CLASS_INTERLEAVED)) {
         ret = alloc_interleaved(pages);
         goto done;
     }

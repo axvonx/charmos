@@ -326,7 +326,7 @@ static inline void spinlock_policy_set_internal(struct spinlock *lock,
 
 #endif /* DEBUG_LOCK_CHK */
 
-static inline cc_warn_unused_result bool
+static inline cc_must_check bool
 spin_trylock_physical(struct spinlock *lock) TSA_NO_ANALYSIS {
     return raw_spin_trylock(&lock->raw);
 }
@@ -352,7 +352,7 @@ static inline void spinlock_restore_interrupts(bool enabled) TSA_RELEASES_IRQS {
     irq_restore(enabled);
 }
 
-static inline cc_warn_unused_result bool
+static inline cc_must_check bool
 spin_trylock_raw_full(struct spinlock *lock, enum lock_subclass sc,
                       const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES(true, lock) TSA_NO_ANALYSIS {
@@ -422,7 +422,7 @@ static inline void spin_unlock_full(struct spinlock *lock, enum irql old,
     irql_lower(old);
 }
 
-static inline cc_warn_unused_result enum irql
+static inline cc_must_check enum irql
 spin_lock_full(struct spinlock *lock, enum lock_subclass sc,
                const struct lock_chk_site *site)
     TSA_ACQUIRES_SPIN(lock) TSA_NO_ANALYSIS {
@@ -456,7 +456,7 @@ spin_lock_full(struct spinlock *lock, enum lock_subclass sc,
     return irql;
 }
 
-static inline cc_warn_unused_result enum irql
+static inline cc_must_check enum irql
 spin_lock_high_full(struct spinlock *lock, enum lock_subclass sc,
                     const struct lock_chk_site *site)
     TSA_ACQUIRES_SPIN(lock) TSA_NO_ANALYSIS {
@@ -484,7 +484,7 @@ spin_lock_high_full(struct spinlock *lock, enum lock_subclass sc,
     return irql;
 }
 
-static inline cc_warn_unused_result bool
+static inline cc_must_check bool
 spin_trylock_full(struct spinlock *lock, enum irql *out, enum lock_subclass sc,
                   const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES_SPIN(true, lock) TSA_NO_ANALYSIS {
@@ -521,7 +521,7 @@ spin_trylock_full(struct spinlock *lock, enum irql *out, enum lock_subclass sc,
     return false;
 }
 
-static inline cc_warn_unused_result bool
+static inline cc_must_check bool
 spin_trylock_high_full(struct spinlock *lock, enum irql *out,
                        enum lock_subclass sc, const struct lock_chk_site *site)
     TSA_TRY_ACQUIRES_SPIN(true, lock) TSA_NO_ANALYSIS {

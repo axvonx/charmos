@@ -440,6 +440,9 @@ enum err ext2_vfs_readdir(struct vfs_node *node, struct vfs_dirent *out,
     if (!node || !out)
         return ERR_INVAL;
 
+    if (index > UINT32_MAX)
+        return ERR_NO_ENT;
+
     struct ext2_full_inode *full_inode = node->fs_node_data;
 
     struct ext2_fs *fs = node->fs_data;
@@ -448,7 +451,7 @@ enum err ext2_vfs_readdir(struct vfs_node *node, struct vfs_dirent *out,
     if (cc_unlikely(!ext2_out))
         return ERR_NO_MEM;
 
-    enum err e = ext2_readdir(fs, full_inode, ext2_out, index);
+    enum err e = ext2_readdir(fs, full_inode, ext2_out, (uint32_t) index);
 
     if (ERR_IS_FATAL(e))
         return e;
@@ -481,7 +484,9 @@ enum err ext2_vfs_rename(struct vfs_node *old_parent, const char *old_name,
     if (!this_inode)
         return ERR_NO_ENT;
 
-    ext2_unlink_file(fs, old_node, old_name, false, false);
+    enum err e = ext2_unlink_file(fs, old_node, old_name, false, false);
+    if (e != ERR_OK)
+        return e;
 
     return ext2_link_file(fs, new_node, this_inode, new_name, ftype, true);
 }
@@ -564,9 +569,13 @@ enum err ext2_vfs_read(struct vfs_node *n, void *buf, uint64_t size,
     if (!n || !buf)
         return ERR_INVAL;
 
+    /* ext2 sizes are 32 bit, nothing lives past 4 GiB */
+    if (offset > UINT32_MAX)
+        return ERR_OVERFLOW;
+
     struct ext2_fs *fs = n->fs_data;
     struct ext2_full_inode *node = n->fs_node_data;
-    return ext2_read_file(fs, node, offset, buf, size);
+    return ext2_read_file(fs, node, (uint32_t) offset, buf, size);
 }
 
 enum err ext2_vfs_write(struct vfs_node *n, const void *buf, uint64_t size,
@@ -574,9 +583,13 @@ enum err ext2_vfs_write(struct vfs_node *n, const void *buf, uint64_t size,
     if (!n || !buf)
         return ERR_INVAL;
 
+    if (offset > UINT32_MAX || size > UINT32_MAX - offset)
+        return ERR_OVERFLOW;
+
     struct ext2_fs *fs = n->fs_data;
     struct ext2_full_inode *node = n->fs_node_data;
-    enum err e = ext2_write_file(fs, node, offset, buf, size);
+    enum err e =
+        ext2_write_file(fs, node, (uint32_t) offset, buf, (uint32_t) size);
 
     if (e != ERR_OK)
         return e;
@@ -606,9 +619,12 @@ enum err ext2_vfs_truncate(struct vfs_node *n, uint64_t length) {
     if (!n)
         return ERR_INVAL;
 
+    if (length > UINT32_MAX)
+        return ERR_OVERFLOW;
+
     struct ext2_fs *fs = n->fs_data;
     struct ext2_full_inode *node = n->fs_node_data;
-    return ext2_truncate_file(fs, node, length);
+    return ext2_truncate_file(fs, node, (uint32_t) length);
 }
 
 enum err ext2_vfs_unlink(struct vfs_node *n, const char *name) {

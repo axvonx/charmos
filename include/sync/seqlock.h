@@ -34,7 +34,6 @@
 struct seqcount {
     atomic_uint32_t sequence;
 };
-typedef struct seqcount seqcount_t;
 
 #define SEQCOUNT_INIT                                                          \
     (struct seqcount) {                                                        \
@@ -105,7 +104,6 @@ struct seqlock {
     struct seqcount seqcount;
     struct spinlock lock;
 };
-typedef struct seqlock seqlock_t;
 
 static inline void seqlock_init_chk_full(struct seqlock *sl,
                                          const struct lock_chk_class *class,
@@ -169,7 +167,7 @@ static inline uint32_t seq_read_raw(const struct seqlock *sl) {
     return seqcount_read_raw(&sl->seqcount);
 }
 
-static inline cc_warn_unused_result enum irql seq_write_lock(struct seqlock *sl)
+static inline cc_must_check enum irql seq_write_lock(struct seqlock *sl)
     TSA_ACQUIRES_SPIN(&sl->lock) {
     enum irql irql = spin_lock(&sl->lock);
     seqcount_begin_write(&sl->seqcount);
@@ -177,8 +175,8 @@ static inline cc_warn_unused_result enum irql seq_write_lock(struct seqlock *sl)
 }
 
 /* Writer APIs */
-static inline cc_warn_unused_result enum irql
-seq_write_lock_high(struct seqlock *sl) TSA_ACQUIRES_SPIN(&sl->lock) {
+static inline cc_must_check enum irql seq_write_lock_high(struct seqlock *sl)
+    TSA_ACQUIRES_SPIN(&sl->lock) {
     enum irql irql = spin_lock_high(&sl->lock);
     seqcount_begin_write(&sl->seqcount);
     return irql;
@@ -204,8 +202,8 @@ static inline void seq_write_unlock_raw(struct seqlock *sl)
 }
 
 /* Trylock */
-static inline cc_warn_unused_result bool seq_try_write_lock(struct seqlock *sl,
-                                                            enum irql *out)
+static inline cc_must_check bool seq_try_write_lock(struct seqlock *sl,
+                                                    enum irql *out)
     TSA_TRY_ACQUIRES(true, &sl->lock) {
     if (spin_trylock(&sl->lock, out)) {
         seqcount_begin_write(&sl->seqcount);
@@ -214,8 +212,8 @@ static inline cc_warn_unused_result bool seq_try_write_lock(struct seqlock *sl,
     return false;
 }
 
-static inline cc_warn_unused_result bool
-seq_try_write_lock_high(struct seqlock *sl, enum irql *out)
+static inline cc_must_check bool seq_try_write_lock_high(struct seqlock *sl,
+                                                         enum irql *out)
     TSA_TRY_ACQUIRES(true, &sl->lock) {
     if (spin_trylock_high(&sl->lock, out)) {
         seqcount_begin_write(&sl->seqcount);
@@ -224,8 +222,8 @@ seq_try_write_lock_high(struct seqlock *sl, enum irql *out)
     return false;
 }
 
-static inline cc_warn_unused_result bool
-seq_try_write_lock_raw(struct seqlock *sl) TSA_TRY_ACQUIRES(true, &sl->lock) {
+static inline cc_must_check bool seq_try_write_lock_raw(struct seqlock *sl)
+    TSA_TRY_ACQUIRES(true, &sl->lock) {
     if (spin_trylock_raw(&sl->lock)) {
         seqcount_begin_write(&sl->seqcount);
         return true;

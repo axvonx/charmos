@@ -243,7 +243,7 @@ static inline void scheduler_force_resched(struct scheduler *sched) {
     ipi_send(sched->core_id, IRQ_SCHEDULER);
 }
 
-static inline bool cc_warn_unused_result
+static inline bool cc_must_check
 scheduler_try_force_resched(struct scheduler *sched) {
     scheduler_mark_core_needs_resched(global.cores[sched->core_id], true);
     return ipi_send_try(sched->core_id, IRQ_SCHEDULER);

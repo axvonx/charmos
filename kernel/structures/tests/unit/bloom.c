@@ -61,3 +61,23 @@ TEST_DEFINE_UNIT(bloom, counter_saturation, TEST_INTENSITY(16, 20, 64)) {
     cbf_destroy(cbf);
     return TEST_SUCCESS;
 }
+
+TEST_DEFINE_UNIT(bloom, estimated_fpr) {
+    struct counting_bloom_filter *cbf = cbf_create(50, FX(0.05));
+    TEST_ASSERT_NONNULL(cbf);
+
+    /* (1 - e^0)^k */
+    TEST_ASSERT_EQ(cbf_estimated_fpr(cbf), FX_ZERO);
+
+    char key[16];
+    for (size_t i = 0; i < 50; i++) {
+        snprintf(key, sizeof(key), "key_%zu", i);
+        cbf_add(cbf, key);
+    }
+
+    fx32_32_t fpr = cbf_estimated_fpr(cbf);
+    TEST_ASSERT(fpr > FX(0.02) && fpr < FX(0.08));
+
+    cbf_destroy(cbf);
+    return TEST_SUCCESS;
+}

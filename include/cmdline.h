@@ -330,7 +330,9 @@ struct cmdline_schema {
         struct cmdline_entry *__e = cmdline_lookup(key);                       \
         if (__e && (__e->status == CMDLINE_ENTRY_FOUND ||                      \
                     __e->status == CMDLINE_ENTRY_DEFAULTED)) {                 \
-            CMDLINE_EXTRACT(&__e->value, __out);                               \
+            type __cmdl_v = __out;                                             \
+            if (CMDLINE_EXTRACT(&__e->value, __cmdl_v) == ERR_OK)              \
+                __out = __cmdl_v;                                              \
         }                                                                      \
         __out;                                                                 \
     })

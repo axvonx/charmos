@@ -306,9 +306,11 @@ void vmm_init(struct limine_memmap_response *memmap,
          addr += PAGE_SIZE) {
         uint64_t shadow_addr = ASAN_SHADOW_OFFSET + (addr >> ASAN_SHADOW_SCALE);
         shadow_addr = PAGE_ALIGN_DOWN(shadow_addr);
-        vmm_map_page(shadow_addr, dummy_phys,
-                     .page_flags = PAGE_PRESENT | PAGE_WRITE,
-                     .vmm_flags = VMM_FLAG_MODIFY_LEAF);
+        enum err e = vmm_map_page(shadow_addr, dummy_phys,
+                                  .page_flags = PAGE_PRESENT | PAGE_WRITE,
+                                  .vmm_flags = VMM_FLAG_MODIFY_LEAF);
+        if (e < 0)
+            panic(INIT_FAILED, "mapping ASAN shadow: %s", err_to_str(e));
     }
 #endif
 

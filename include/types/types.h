@@ -67,7 +67,7 @@ typedef int32_t nice_t;
 typedef uint32_t thread_prio_t;
 
 /* Other types */
-typedef int64_t fx32_32_t;
+ct_strong_int_full(fx32_32, FX32_32, int64_t, INT64_MIN, INT64_MAX);
 typedef ptrdiff_t ssize_t;
 
 /* Larger types */
@@ -145,9 +145,6 @@ ct_assert_same_size(any_fn_t, uintptr_t);
 
 #define THREAD_PRIO_MAX UINT32_MAX
 #define THREAD_PRIO_MIN 0
-
-#define FX32_32_MAX INT64_MAX
-#define FX32_32_MIN INT64_MIN
 
 #define NICE_MAX 19
 #define NICE_MIN -20

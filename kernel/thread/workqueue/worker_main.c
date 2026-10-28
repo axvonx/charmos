@@ -5,11 +5,11 @@
 
 #include "internal.h"
 
-static enum wake_reason worker_wait(struct workqueue *wq,
-                                    struct workqueue_worker *w, enum irql irql,
-                                    enum irql *out)
+static enum condvar_wake_reason worker_wait(struct workqueue *wq,
+                                            struct workqueue_worker *w,
+                                            enum irql irql, enum irql *out)
     TSA_CALLER_HOLDS(&wq->lock) {
-    enum wake_reason sig;
+    enum condvar_wake_reason sig;
 
     atomic_inc(&wq->idle_workers);
 
@@ -28,7 +28,7 @@ static enum wake_reason worker_wait(struct workqueue *wq,
 
     atomic_dec(&wq->idle_workers);
 
-    if (sig == WAKE_REASON_TIMEOUT && !ignore_timeouts(wq)) {
+    if (sig == CONDVAR_WAKE_REASON_TIMEOUT && !ignore_timeouts(wq)) {
         w->timeout_ran = true;
         if (!w->idle) {
             w->idle = true;
@@ -40,14 +40,15 @@ static enum wake_reason worker_wait(struct workqueue *wq,
 }
 
 static inline bool worker_should_exit(const struct workqueue_worker *worker,
-                                      enum wake_reason signal) {
+                                      enum condvar_wake_reason signal) {
     if (worker->next_action == WORKER_NEXT_ACTION_EXIT)
         return true;
 
     const time_ms_t timeout = worker->inactivity_check_period;
 
     /* We don't mark `idle` if timeouts are to be ignored */
-    if (!worker->is_permanent && worker->idle && signal == WAKE_REASON_TIMEOUT)
+    if (!worker->is_permanent && worker->idle &&
+        signal == CONDVAR_WAKE_REASON_TIMEOUT)
         if (time_get_ms() - worker->start_idle >= timeout)
             return true;
 
@@ -137,7 +138,8 @@ void worker_main(void *unused) TSA_NO_ANALYSIS {
                     workqueue_spawn_worker_internal(queue);
             }
 
-            enum wake_reason signal = worker_wait(queue, w, irql, &irql);
+            enum condvar_wake_reason signal =
+                worker_wait(queue, w, irql, &irql);
 
             if (worker_should_exit(w, signal))
                 worker_exit(queue, w, irql);

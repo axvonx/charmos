@@ -77,8 +77,12 @@ static inline size_t ar_end(struct address_range *ar) {
     return ar->base + ar->size;
 }
 
+static struct address_range *ar_from_node(struct rbt_node *rn) {
+    return container_of(rn, struct address_range, rbt_node_internal);
+}
+
 static size_t ar_get_data(struct rbt_node *rn) {
-    return container_of(rn, struct address_range, rbt_node_internal)->base;
+    return ar_from_node(rn)->base;
 }
 
 static int32_t ar_cmp(const struct rbt_node *a, const struct rbt_node *b) {
@@ -242,35 +246,22 @@ void address_ranges_print(void) {
     size_t count = __ekernel_address_ranges - __skernel_address_ranges;
     ar_info("%zu address ranges:", count);
 
-    struct address_range *ranges[count];
-    size_t i = 0;
-    struct rbt_node *rn;
-    rbt_for_each(rn, &ar_tree) {
-        ranges[i++] = container_of(rn, struct address_range, rbt_node_internal);
-    }
-
-    for (size_t a = 0; a < i; a++) {
-        for (size_t b = a + 1; b < i; b++) {
-            if (ranges[b]->base > ranges[a]->base) {
-                struct address_range *tmp = ranges[a];
-                ranges[a] = ranges[b];
-                ranges[b] = tmp;
-            }
-        }
-    }
-
     printf("\n");
     printf("%-*s       %s\n", AR_COL_ADDR, "  address", "region");
 
-    if (i > 0) {
-        vaddr_t top_end = ranges[0]->base + ranges[0]->size;
+    /* Highest first, the tree is keyed by base */
+    struct rbt_node *top = rbt_last(&ar_tree);
+    if (top) {
+        struct address_range *ar = ar_from_node(top);
+        vaddr_t top_end = ar->base + ar->size;
         if ((vaddr_t) ADDRESS_RANGE_KERNEL_END > top_end)
             ar_print_gap((vaddr_t) ADDRESS_RANGE_KERNEL_END - top_end,
                          ADDRESS_RANGE_KERNEL_END);
     }
 
-    for (size_t k = 0; k < i; k++) {
-        struct address_range *ar = ranges[k];
+    struct address_range *bottom = NULL;
+    for (struct rbt_node *rn = top; rn; rn = rbt_prev(rn)) {
+        struct address_range *ar = ar_from_node(rn);
         vaddr_t end = ar->base + ar->size;
         char szbuf[32];
         format_size(szbuf, sizeof(szbuf), ar->size);
@@ -281,15 +272,18 @@ void address_ranges_print(void) {
         printf("%-*s │ X │ %s: %-*s\n", AR_COL_ADDR, "", ar->name,
                (int) (AR_COL_ADDR - name_len - 2), szbuf);
 
-        if (k + 1 < i) {
-            vaddr_t next_end = ranges[k + 1]->base + ranges[k + 1]->size;
+        struct rbt_node *next_rn = rbt_prev(rn);
+        if (next_rn) {
+            struct address_range *next = ar_from_node(next_rn);
+            vaddr_t next_end = next->base + next->size;
             if (ar->base > next_end)
                 ar_print_gap(ar->base - next_end, ar->base);
         }
+        bottom = ar;
     }
 
-    if (i > 0) {
-        vaddr_t bot_base = ranges[i - 1]->base;
+    if (bottom) {
+        vaddr_t bot_base = bottom->base;
         if (bot_base > (vaddr_t) ADDRESS_RANGE_KERNEL_START)
             ar_print_gap(bot_base - (vaddr_t) ADDRESS_RANGE_KERNEL_START,
                          bot_base);

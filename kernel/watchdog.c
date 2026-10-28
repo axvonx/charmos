@@ -285,7 +285,7 @@ not_ready:
         *out_expected = 0;
 
     if (out_score)
-        *out_score = 0;
+        *out_score = FX_ZERO;
 
     return false;
 }
@@ -528,15 +528,15 @@ static void watchdog_master_process_critical(time_ms_t now) {
                    WATCHDOG_CRITICAL_TESTS_FACTOR);
         fx32_32_t pet_part =
             fx_mul(watchdog_pets_score(pets), WATCHDOG_CRITICAL_PETS_FACTOR);
-        fx32_32_t total = test_part + pet_part;
+        fx32_32_t total = fx_add(test_part, pet_part);
         enforce(total < FX_ONE);
 
         if (total == 0) {
             watchdog_enter_suspect(i);
         } else {
             /* map it from [0, 1] -> [warn_score, 1] */
-            fx32_32_t mapped =
-                fx_map(total, 0, FX_ONE, config.master_critical_score, FX_ONE);
+            fx32_32_t mapped = fx_map(total, FX_ZERO, FX_ONE,
+                                      config.master_critical_score, FX_ONE);
 
             enforce(IN_RANGE(mapped, config.master_critical_score, FX_ONE));
             mcpu->lockup_score = mapped;
@@ -569,7 +569,7 @@ static void watchdog_enter_critical(struct watchdog_master_cpu *mcpu,
 static void watchdog_enter_normal(struct watchdog_master_cpu *mcpu) {
     ewma_init(&mcpu->lockup_ewma, WATCHDOG_EWMA_ALPHA);
     watchdog_cpu_demote(mcpu->id, WATCHDOG_STATE_NORMAL);
-    mcpu->lockup_score = 0;
+    mcpu->lockup_score = FX_ZERO;
 }
 
 static void watchdog_master_process_suspect(time_ms_t now) {

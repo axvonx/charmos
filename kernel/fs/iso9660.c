@@ -236,7 +236,7 @@ void iso9660_read_and_print_file(struct iso9660_fs *fs, const char *name) {
         return;
     }
 
-    printf("Contents of '%s':\n%.*s\n", name, rec->size_le, (char *) buf);
+    printf("Contents of '%s':\n%.*s\n", name, (int) rec->size_le, (char *) buf);
 
     vfree(buf);
     vfree(rec);

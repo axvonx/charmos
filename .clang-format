@@ -21,7 +21,7 @@ AttributeMacros:
   - cc_noreturn
   - cc_unused
   - cc_unused
-  - cc_warn_unused_result
+  - cc_must_check
   - cc_nodiscard
   - cc_packed
   - cc_aligned

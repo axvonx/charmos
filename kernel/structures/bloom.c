@@ -81,7 +81,8 @@ struct counting_bloom_filter *cbf_create(size_t capacity,
     fx32_32_t ln2sq = FX(0.48045301391);
 
     size_t num_counters = fx_to_int(fx_ceil(fx_div(
-        fx_mul(-fx_from_int(capacity), fx_ln(false_positive_rate)), ln2sq)));
+        fx_mul(fx_neg(fx_from_int(capacity)), fx_ln(false_positive_rate)),
+        ln2sq)));
 
     size_t num_hashes = fx_to_int(fx_ceil(
         fx_mul(fx_div(fx_from_int(num_counters), fx_from_int(capacity)), ln2)));
@@ -175,8 +176,7 @@ fx32_32_t cbf_estimated_fpr(const struct counting_bloom_filter *cbf) {
     if (!cbf || cbf->num_counters == 0)
         return FX_ONE;
 
-    fx32_32_t exp =
-        fx_from_int(-(int64_t) cbf->num_hashes * (int64_t) cbf->live_elements /
-                    (int64_t) cbf->num_counters);
-    return fx_pow_i32(FX_ONE - fx_exp(exp), fx_from_int(cbf->num_hashes));
+    fx32_32_t exp = fx_neg(
+        FX_FROM_RATIO(cbf->num_hashes * cbf->live_elements, cbf->num_counters));
+    return fx_pow_i32(fx_sub(FX_ONE, fx_exp(exp)), (int) cbf->num_hashes);
 }

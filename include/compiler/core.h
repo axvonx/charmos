@@ -21,9 +21,8 @@
 #define cc_noreturn __attribute__((noreturn))
 #define cc_unused __attribute__((unused))
 #define cc_maybe_unused __attribute__((unused))
-#define cc_warn_unused_result __attribute__((warn_unused_result))
-#define cc_nodiscard __attribute__((warn_unused_result))
-#define cc_must_check [[nodiscard]]
+#define cc_must_check __attribute__((warn_unused_result))
+#define cc_nodiscard [[nodiscard]]
 #define cc_packed __attribute__((__packed__))
 #define cc_aligned(x) __attribute__((aligned(x)))
 #define cc_cache_aligned __attribute__((aligned(64)))
@@ -425,6 +424,13 @@
 
 #define ct_assert_nonempty_str(s)                                              \
     static_assert(sizeof(s) > 1, "empty string: " #s)
+
+#define ct_strong_int_full(stem, STEM, base, min_, max_)                       \
+    typedef enum : base {                                                      \
+        STEM##_ZERO = 0,                                                       \
+        STEM##_MIN = (min_),                                                   \
+        STEM##_MAX = (max_),                                                   \
+    } stem##_t
 
 #define ct_strong_int(stem, STEM, base, max_)                                  \
     typedef enum : base {                                                      \

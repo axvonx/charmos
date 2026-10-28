@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <types/types.h>
 
-#define FX_ZERO ((fx32_32_t) 0)
+#define FX_ZERO FX32_32_ZERO
 #define FX_ONE ((fx32_32_t) (1LL << 32))
 #define FX_HALF ((fx32_32_t) (1LL << 31))
 
@@ -28,6 +28,10 @@ static inline fx32_32_t fx_add(fx32_32_t a, fx32_32_t b) {
 
 static inline fx32_32_t fx_sub(fx32_32_t a, fx32_32_t b) {
     return (fx32_32_t) (a - b);
+}
+
+static inline fx32_32_t fx_neg(fx32_32_t a) {
+    return (fx32_32_t) -a;
 }
 
 static inline fx32_32_t fx_mul(fx32_32_t a, fx32_32_t b) {
@@ -114,39 +118,40 @@ static inline fx32_32_t fx_pow_i32(fx32_32_t base, int exp) {
 
 static inline fx32_32_t fx_sqrt(fx32_32_t x) {
     if (x <= 0)
-        return 0;
+        return FX_ZERO;
     fx32_32_t r = x;
     for (int i = 0; i < 8; i++) {
-        r = (r + fx_div(x, (fx32_32_t) r)) >> 1;
+        r = (fx32_32_t) ((r + fx_div(x, r)) >> 1);
     }
     return r;
 }
 
 /* Use two's complement to branchlessly floor for both signs */
 static inline fx32_32_t fx_ceil(fx32_32_t x) {
-    return ALIGN_UP(x, FX_ONE);
+    return (fx32_32_t) ALIGN_UP(x, FX_ONE);
 }
 
 static inline fx32_32_t fx_floor(fx32_32_t x) {
-    return ALIGN_DOWN(x, FX_ONE);
+    return (fx32_32_t) ALIGN_DOWN(x, FX_ONE);
 }
 
 static inline fx32_32_t fx_map(fx32_32_t value, fx32_32_t from_low,
                                fx32_32_t from_high, fx32_32_t to_low,
                                fx32_32_t to_high) {
-    fx32_32_t dist = value - from_low;
-    fx32_32_t to_range = to_high - to_low;
-    fx32_32_t from_range = from_high - from_low;
-    fx32_32_t num = to_low + fx_mul(dist, to_range);
+    fx32_32_t dist = fx_sub(value, from_low);
+    fx32_32_t to_range = fx_sub(to_high, to_low);
+    fx32_32_t from_range = fx_sub(from_high, from_low);
+    fx32_32_t num = fx_add(to_low, fx_mul(dist, to_range));
     return fx_div(num, from_range);
 }
 
 static inline fx32_32_t fx_lerp(fx32_32_t a, fx32_32_t b, fx32_32_t t) {
-    return a + fx_mul(t, b - a);
+    return fx_add(a, fx_mul(t, fx_sub(b, a)));
 }
 
 static inline fx32_32_t fx_round_up(fx32_32_t x, fx32_32_t multiple) {
-    return fx_mul(fx_div(x + multiple - FX_ONE, multiple), multiple);
+    return fx_mul(fx_div(fx_sub(fx_add(x, multiple), FX_ONE), multiple),
+                  multiple);
 }
 
 static inline fx32_32_t fx_round_down(fx32_32_t x, fx32_32_t multiple) {

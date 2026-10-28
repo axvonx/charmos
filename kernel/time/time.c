@@ -50,7 +50,7 @@ void time_print_unix(time_s_t timestamp) {
     uint32_t minute = timestamp / 60;
     uint32_t second = timestamp % 60;
 
-    printf("%04d-%02d-%02d %02d:%02d:%02d", year, month + 1, day, hour, minute,
+    printf("%04u-%02u-%02u %02u:%02u:%02u", year, month + 1, day, hour, minute,
            second);
 }
 void time_print_current(void) {

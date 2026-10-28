@@ -500,19 +500,17 @@ void arena_dumpster_add_bin(struct arena_dumpster *dumpster,
          __seg_idx++)
 
 void *arena_alloc_full(struct arena *a, size_t size, struct alloc_params ap)
-    cw_alloc(2) cc_warn_unused_result;
+    cw_alloc(2) cc_must_check;
 
 void *arena_realloc_full(struct arena *a, void *ptr, size_t size,
-                         struct alloc_params ap) cw_alloc(3)
-    cc_warn_unused_result;
+                         struct alloc_params ap) cw_alloc(3) cc_must_check;
 
 void *arena_alloc_special_full(struct arena *a, struct arena_params *p,
-                               struct alloc_params ap) cw_alloc()
-    cc_warn_unused_result;
+                               struct alloc_params ap) cw_alloc() cc_must_check;
 
 void *arena_alloc_aligned_full(struct arena *a, size_t size, size_t align,
                                struct alloc_params ap) cw_alloc(2)
-    cc_warn_unused_result;
+    cc_must_check;
 
 enum err arena_free_full(struct arena *a, void *ptr, struct alloc_params ap);
 

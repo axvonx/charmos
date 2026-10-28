@@ -186,9 +186,8 @@ int tolower(int c) cc_constfn;
 #define strndup vstrndup
 #endif
 
-char *cc_nullable strdup(const char *str) cw_alloc() cc_warn_unused_result;
-char *cc_nullable strndup(const char *str, size_t n) cw_alloc()
-    cc_warn_unused_result;
+char *cc_nullable strdup(const char *str) cw_alloc() cc_must_check;
+char *cc_nullable strndup(const char *str, size_t n) cw_alloc() cc_must_check;
 int strcasecmp(const char *s1, const char *s2) cc_pure cc_nonnull(1, 2);
 int strncasecmp(const char *s1, const char *s2, size_t n) cc_pure
 cc_nonnull(1, 2);

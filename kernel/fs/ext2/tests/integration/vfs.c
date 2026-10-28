@@ -31,7 +31,7 @@ TEST_DEFINE_INTEGRATION(ext2, stat, TEST_INTENSITY(1, 1, 16),
 
     struct vfs_stat empty_stat = {0};
     struct vfs_stat stat_out = {0};
-    node->ops->stat(node, &stat_out);
+    TEST_ASSERT_EQ_S(node->ops->stat(node, &stat_out), ERR_OK);
 
     /* this should return something */
     TEST_ASSERT_NE(memcmp(&stat_out, &empty_stat, sizeof(struct vfs_stat)), 0);

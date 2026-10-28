@@ -422,7 +422,7 @@ static void make_cap_fail(const struct lock_chk_ctx *ctx,
 
     if (ctx->fault->report != NULL)
         snprintf(ctx->fault->report->msg, sizeof(ctx->fault->report->msg),
-                 "dependency edges %u/%u", ctx->graph->edge_count,
+                 "dependency edges %d/%d", ctx->graph->edge_count,
                  LOCK_CHK_MAX_EDGES);
 }
 

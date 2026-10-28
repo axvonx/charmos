@@ -9,28 +9,28 @@ TEST_GROUP_DEFINE(fixed, .intensity_desc = {
  * those cases more because _mul/_div work on absolute values and reapply
  * sign at end, and _ceil/_floor round by masking */
 
-#define FX_QUARTER (FX_ONE / 4)
+#define FX_QUARTER ((fx32_32_t) (FX_ONE / 4))
 #define FX_EPS ((fx32_32_t) 1)
 
 static bool fx_near(fx32_32_t a, fx32_32_t b, fx32_32_t tol) {
-    fx32_32_t d = a - b;
-    return abs(d) <= tol;
+    fx32_32_t d = fx_sub(a, b);
+    return abs((int64_t) d) <= tol;
 }
 
 TEST_DEFINE_UNIT(fixed, mul_identity) {
     static const fx32_32_t vals[] = {
-        0,        FX_ONE,    -FX_ONE,  FX_HALF,   -FX_HALF,
+        FX_ZERO,  FX_ONE,    FX(-1.0), FX_HALF,   FX(-0.5),
         FX(3.25), FX(-3.25), FX(1000), FX(-1000), FX(0.001),
     };
 
     for (size_t i = 0; i < TEST_ARRAY_LEN(vals); i++) {
         fx32_32_t x = vals[i];
 
-        TEST_ASSERT_EQ(fx_mul(x, 0), 0);
-        TEST_ASSERT_EQ(fx_mul(0, x), 0);
+        TEST_ASSERT_EQ(fx_mul(x, FX_ZERO), 0);
+        TEST_ASSERT_EQ(fx_mul(FX_ZERO, x), 0);
         TEST_ASSERT_EQ(fx_mul(x, FX_ONE), x);
         TEST_ASSERT_EQ(fx_mul(FX_ONE, x), x);
-        TEST_ASSERT_EQ(fx_mul(x, -FX_ONE), -x);
+        TEST_ASSERT_EQ(fx_mul(x, fx_neg(FX_ONE)), -x);
 
         for (size_t j = 0; j < TEST_ARRAY_LEN(vals); j++)
             TEST_ASSERT_EQ(fx_mul(x, vals[j]), fx_mul(vals[j], x));
@@ -62,7 +62,7 @@ TEST_DEFINE_UNIT(fixed, mul_signs) {
 
 TEST_DEFINE_UNIT(fixed, div_identity) {
     static const fx32_32_t vals[] = {
-        FX_ONE, -FX_ONE, FX_HALF, -FX_HALF, FX(3.25), FX(-3.25), FX(1000),
+        FX_ONE, FX(-1.0), FX_HALF, FX(-0.5), FX(3.25), FX(-3.25), FX(1000),
     };
 
     for (size_t i = 0; i < TEST_ARRAY_LEN(vals); i++) {
@@ -70,8 +70,8 @@ TEST_DEFINE_UNIT(fixed, div_identity) {
 
         TEST_ASSERT_EQ(fx_div(x, x), FX_ONE);
         TEST_ASSERT_EQ(fx_div(x, FX_ONE), x);
-        TEST_ASSERT_EQ(fx_div(0, x), 0);
-        TEST_ASSERT_EQ_S(fx_div(x, -x), -FX_ONE);
+        TEST_ASSERT_EQ(fx_div(FX_ZERO, x), 0);
+        TEST_ASSERT_EQ_S(fx_div(x, fx_neg(x)), -FX_ONE);
     }
 
     return TEST_SUCCESS;
@@ -89,7 +89,7 @@ TEST_DEFINE_UNIT(fixed, div_standard, TEST_INTENSITY(16, 64, 1024)) {
     /* Round trip, allowing for truncation each of two ops contributes */
     for (int64_t d = 1; d <= (int64_t) iters; d++) {
         fx32_32_t q = fx_div(FX_ONE, fx_from_int(d));
-        TEST_ASSERT(fx_near(fx_mul(q, fx_from_int(d)), FX_ONE, 64));
+        TEST_ASSERT(fx_near(fx_mul(q, fx_from_int(d)), FX_ONE, (fx32_32_t) 64));
     }
 
     return TEST_SUCCESS;
@@ -97,8 +97,8 @@ TEST_DEFINE_UNIT(fixed, div_standard, TEST_INTENSITY(16, 64, 1024)) {
 
 /* Masking fractional bits rounds toward -inf both +/- */
 TEST_DEFINE_UNIT(fixed, floor_ceil_standard) {
-    TEST_ASSERT_EQ(fx_floor(0), 0);
-    TEST_ASSERT_EQ(fx_ceil(0), 0);
+    TEST_ASSERT_EQ(fx_floor(FX_ZERO), 0);
+    TEST_ASSERT_EQ(fx_ceil(FX_ZERO), 0);
 
     TEST_ASSERT_EQ(fx_floor(FX_ONE), FX_ONE);
     TEST_ASSERT_EQ(fx_ceil(FX_ONE), FX_ONE);
@@ -113,8 +113,8 @@ TEST_DEFINE_UNIT(fixed, floor_ceil_standard) {
 }
 
 TEST_DEFINE_UNIT(fixed, floor_ceil_signs) {
-    TEST_ASSERT_EQ_S(fx_floor(-FX_HALF), -FX_ONE);
-    TEST_ASSERT_EQ(fx_ceil(-FX_HALF), 0);
+    TEST_ASSERT_EQ_S(fx_floor(fx_neg(FX_HALF)), -FX_ONE);
+    TEST_ASSERT_EQ(fx_ceil(fx_neg(FX_HALF)), 0);
 
     TEST_ASSERT_EQ_S(fx_floor(FX(-1.5)), FX(-2.0));
     TEST_ASSERT_EQ_S(fx_ceil(FX(-1.5)), FX(-1.0));
@@ -131,7 +131,8 @@ TEST_DEFINE_UNIT(fixed, floor_ceil_invariant, TEST_INTENSITY(4, 16, 256)) {
         bound = 1;
     for (int64_t n = -bound; n <= bound; n++) {
         for (int64_t f = 0; f < 4; f++) {
-            fx32_32_t x = fx_from_int(n) + (fx32_32_t) (f * (FX_ONE / 4));
+            fx32_32_t x =
+                fx_add(fx_from_int(n), (fx32_32_t) (f * (FX_ONE / 4)));
 
             fx32_32_t lo = fx_floor(x);
             fx32_32_t hi = fx_ceil(x);
@@ -153,7 +154,7 @@ TEST_DEFINE_UNIT(fixed, pow_i32_standard) {
     TEST_ASSERT_EQ(fx_pow_i32(FX(2.0), 10), FX(1024.0));
     TEST_ASSERT_EQ(fx_pow_i32(FX(0.5), 2), FX_QUARTER);
 
-    TEST_ASSERT_EQ(fx_pow_i32(0, 0), FX_ONE);
+    TEST_ASSERT_EQ(fx_pow_i32(FX_ZERO, 0), FX_ONE);
     TEST_ASSERT_EQ(fx_pow_i32(FX(-3.0), 0), FX_ONE);
 
     TEST_ASSERT_EQ(fx_pow_i32(FX(-2.0), 2), FX(4.0));
@@ -170,7 +171,7 @@ TEST_DEFINE_UNIT(fixed, pow_i32_negative_exponent) {
     for (int e = 1; e <= 8; e++) {
         fx32_32_t pos = fx_pow_i32(FX(2.0), e);
         fx32_32_t neg = fx_pow_i32(FX(2.0), -e);
-        TEST_ASSERT(fx_near(fx_mul(pos, neg), FX_ONE, 64));
+        TEST_ASSERT(fx_near(fx_mul(pos, neg), FX_ONE, (fx32_32_t) 64));
     }
 
     return TEST_SUCCESS;
@@ -182,18 +183,19 @@ TEST_DEFINE_UNIT(fixed, sqrt_standard) {
     for (size_t i = 0; i < TEST_ARRAY_LEN(roots); i++) {
         int64_t r = roots[i];
         fx32_32_t got = fx_sqrt(fx_from_int(r * r));
-        TEST_ASSERT(fx_near(got, fx_from_int(r), FX_ONE / 1024));
+        TEST_ASSERT(fx_near(got, fx_from_int(r), (fx32_32_t) (FX_ONE / 1024)));
     }
 
     TEST_ASSERT_EQ(fx_sqrt(FX_QUARTER), FX_HALF);
-    TEST_ASSERT(fx_near(fx_sqrt(FX(2.0)), FX(1.41421356), FX_ONE / 1024));
+    TEST_ASSERT(
+        fx_near(fx_sqrt(FX(2.0)), FX(1.41421356), (fx32_32_t) (FX_ONE / 1024)));
 
     return TEST_SUCCESS;
 }
 
 TEST_DEFINE_UNIT(fixed, sqrt_edge) {
-    TEST_ASSERT_EQ(fx_sqrt(0), 0);
-    TEST_ASSERT_EQ(fx_sqrt(-FX_ONE), 0);
+    TEST_ASSERT_EQ(fx_sqrt(FX_ZERO), 0);
+    TEST_ASSERT_EQ(fx_sqrt(fx_neg(FX_ONE)), 0);
     TEST_ASSERT_EQ(fx_sqrt(FX_ONE), FX_ONE);
 
     return TEST_SUCCESS;
@@ -208,17 +210,17 @@ TEST_DEFINE_UNIT(fixed, conversion_roundtrip,
     /* fx_to_int truncates toward -inf, same as mask */
     TEST_ASSERT_EQ(fx_to_int(FX_HALF), 0);
     TEST_ASSERT_EQ(fx_to_int(FX(1.9)), 1);
-    TEST_ASSERT_EQ_S(fx_to_int(-FX_HALF), -1);
+    TEST_ASSERT_EQ_S(fx_to_int(fx_neg(FX_HALF)), -1);
 
     return TEST_SUCCESS;
 }
 
 TEST_DEFINE_UNIT(fixed, clamp_standard) {
-    TEST_ASSERT_EQ(fx_clamp(FX(5.0), 0, FX_ONE), FX_ONE);
-    TEST_ASSERT_EQ(fx_clamp(FX(-5.0), 0, FX_ONE), 0);
-    TEST_ASSERT_EQ(fx_clamp(FX_HALF, 0, FX_ONE), FX_HALF);
-    TEST_ASSERT_EQ(fx_clamp(0, 0, FX_ONE), 0);
-    TEST_ASSERT_EQ(fx_clamp(FX_ONE, 0, FX_ONE), FX_ONE);
+    TEST_ASSERT_EQ(fx_clamp(FX(5.0), FX_ZERO, FX_ONE), FX_ONE);
+    TEST_ASSERT_EQ(fx_clamp(FX(-5.0), FX_ZERO, FX_ONE), 0);
+    TEST_ASSERT_EQ(fx_clamp(FX_HALF, FX_ZERO, FX_ONE), FX_HALF);
+    TEST_ASSERT_EQ(fx_clamp(FX_ZERO, FX_ZERO, FX_ONE), 0);
+    TEST_ASSERT_EQ(fx_clamp(FX_ONE, FX_ZERO, FX_ONE), FX_ONE);
 
     return TEST_SUCCESS;
 }

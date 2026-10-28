@@ -102,7 +102,7 @@ static void lock_chk_do_graph_fail(enum lock_chk_result result,
         fault->capacity_pool = "nodes";
         fault->capacity_used = LOCK_CHK_MAX_NODES;
         fault->capacity_limit = LOCK_CHK_MAX_NODES;
-        lock_chk_fail(fault, "%s %p (nodes %u/%u)",
+        lock_chk_fail(fault, "%s %p (nodes %d/%d)",
                       lock_chk_type_to_str(request->lock.type),
                       request->lock.instance, LOCK_CHK_MAX_NODES,
                       LOCK_CHK_MAX_NODES);
@@ -141,7 +141,7 @@ lock_chk_do_validation_fail(enum lock_chk_result result,
         fail.capacity_pool = "per-thread held";
         fail.capacity_used = LOCK_CHK_MAX_HELD_LOCKS;
         fail.capacity_limit = LOCK_CHK_MAX_HELD_LOCKS;
-        lock_chk_fail(&fail, "%s %p (per-thread held %u/%u)",
+        lock_chk_fail(&fail, "%s %p (per-thread held %d/%d)",
                       lock_chk_type_to_str(request->lock.type),
                       request->lock.instance, LOCK_CHK_MAX_HELD_LOCKS,
                       LOCK_CHK_MAX_HELD_LOCKS);
@@ -151,7 +151,7 @@ lock_chk_do_validation_fail(enum lock_chk_result result,
     }
 
     fail.kind = LOCK_CHK_FAIL_UNINITIALIZED;
-    lock_chk_fail(&fail, "%s %p (subclass %u >= %u)",
+    lock_chk_fail(&fail, "%s %p (subclass %u >= %d)",
                   lock_chk_type_to_str(request->lock.type),
                   request->lock.instance, request->subclass,
                   LOCK_CHK_MAX_SUBCLASSES);

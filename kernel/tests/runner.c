@@ -419,17 +419,17 @@ static void tests_apply_filters(void) {
 
     if (filter->value.type == CMDLINE_TYPE_STRING) {
         char *filter_one;
-        CMDLINE_EXTRACT(&filter->value, filter_one);
+        enforce(CMDLINE_EXTRACT(&filter->value, filter_one) == ERR_OK);
         test_filter_enable(filter_one);
     } else {
         enforce(filter->value.type == CMDLINE_TYPE_LIST);
         struct cmdline_list list;
-        CMDLINE_EXTRACT(&filter->value, list);
+        enforce(CMDLINE_EXTRACT(&filter->value, list) == ERR_OK);
         struct cmdline_value val;
         cmdline_list_for_each(val, &list) {
             enforce(val.type == CMDLINE_TYPE_STRING);
             char *filter_one;
-            CMDLINE_EXTRACT(&val, filter_one);
+            enforce(CMDLINE_EXTRACT(&val, filter_one) == ERR_OK);
             test_filter_enable(filter_one);
         }
     }

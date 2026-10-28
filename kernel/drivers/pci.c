@@ -58,7 +58,10 @@ static void init_device(struct pci_device *dev) {
         dev->device.driver_data = dev;
 
         if (class && subclass && prog_if && vendor) {
-            d->driver.probe(&dev->device);
+            enum err e = d->driver.probe(&dev->device);
+            if (e != ERR_OK)
+                pci_log(LOG_WARN, "Probe failed for %02x:%02x.%x: %s", dev->bus,
+                        dev->dev, dev->function, err_to_str(e));
         }
     }
 }

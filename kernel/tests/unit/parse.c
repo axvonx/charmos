@@ -160,7 +160,7 @@ TEST_DEFINE_UNIT(parse, range_and_mac) {
 }
 
 TEST_DEFINE_UNIT(parse, numbers_and_fx) {
-    fx32_32_t fx = 0;
+    fx32_32_t fx = FX_ZERO;
     TEST_ASSERT(parse_is_fx("0.5", &fx) && fx == FX(0.5));
     TEST_ASSERT(parse_is_fx("1.25", &fx) && fx == FX(1.25));
     TEST_ASSERT(parse_is_fx("-2.5", &fx) && fx == FX(-2.5));

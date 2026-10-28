@@ -30,7 +30,7 @@ LOG_HANDLE_EXTERN(slab_flags);
                "alignment must be a nonzero power of two")
 
 void *cc_nullable valloc_new(size_t size, struct alloc_params params)
-    cw_alloc(1) cc_warn_unused_result ALLOC_PARAMS_CONTRACT(params)
+    cw_alloc(1) cc_must_check ALLOC_PARAMS_CONTRACT(params)
         ALLOC_SIZE_CONTRACT(size);
 void vfree_new(void *ptr, enum alloc_behavior behavior);
 
@@ -42,28 +42,26 @@ void vfree_aligned_full(void *ptr, enum alloc_behavior behavior)
 
 void *cc_nullable valloc_from_domain(domain_id_t domain, size_t size)
     cw_alloc(2) cc_dealloc(vfree_full, 1) cc_dealloc(vfree_defer_irq, 1)
-    cc_owner_returns(valloc, 2) cc_warn_unused_result;
+    cc_owner_returns(valloc, 2) cc_must_check;
 
 void *cc_nullable valloc_full(size_t size, struct alloc_params params)
     cw_alloc(1) cc_dealloc(vfree_full, 1) cc_dealloc(vfree_defer_irq, 1)
-    cc_owner_returns(valloc, 1)
-        cc_warn_unused_result ALLOC_PARAMS_CONTRACT(params)
-            ALLOC_SIZE_CONTRACT(size);
+    cc_owner_returns(valloc, 1) cc_must_check ALLOC_PARAMS_CONTRACT(params)
+        ALLOC_SIZE_CONTRACT(size);
 
 void *cc_nullable vrealloc_full(void *ptr, size_t size,
                                 struct alloc_params params) cc_alloc_size(2)
-cc_warn_unused_result ALLOC_PARAMS_CONTRACT(params);
+cc_must_check ALLOC_PARAMS_CONTRACT(params);
 size_t vsize(void *ptr);
 
 void *cc_nullable valloc_aligned_full(size_t size, size_t align,
                                       struct alloc_params params) cw_alloc(1, 2)
     cc_dealloc(vfree_aligned_full, 1) cc_owner_returns(valloc_aligned, 1)
-        cc_warn_unused_result ALLOC_PARAMS_CONTRACT(params)
-            ALLOC_SIZE_CONTRACT(size) ALLOC_ALIGN_CONTRACT(align);
+        cc_must_check ALLOC_PARAMS_CONTRACT(params) ALLOC_SIZE_CONTRACT(size)
+            ALLOC_ALIGN_CONTRACT(align);
 
 void *cc_nullable valloc_pages(size_t page_count, enum alloc_flags flags)
-    cw_alloc()
-        cc_warn_unused_result ct_precond(ALLOC_FLAGS_VALID(flags),
-                                         "alloc flags set unavailable bits")
-            ALLOC_SIZE_CONTRACT(page_count);
+    cw_alloc() cc_must_check ct_precond(ALLOC_FLAGS_VALID(flags),
+                                        "alloc flags set unavailable bits")
+        ALLOC_SIZE_CONTRACT(page_count);
 bool valloc_ptr_in_slab_validate(void *ptr);

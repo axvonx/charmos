@@ -14,8 +14,9 @@ void *simple_alloc(struct vas *space, size_t size) {
     for (size_t i = 0; i < pages; i++) {
         vaddr_t virt = virt_base + (i * PAGE_SIZE);
         paddr_t phys = enforce(pmm_alloc_page(), OUT_OF_MEMORY);
-        vmm_map_page(virt, phys,
-                     .page_flags = PAGE_PRESENT | PAGE_WRITE | PAGE_XD);
+        enforce(vmm_map_page(virt, phys,
+                             .page_flags = PAGE_PRESENT | PAGE_WRITE |
+                                           PAGE_XD) == ERR_OK);
     }
 
     memset((void *) virt_base, 0, size);

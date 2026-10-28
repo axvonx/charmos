@@ -585,7 +585,7 @@ void timer_base_reprogram_hardware(cpu_id_t cpu) {
         (next_us > now_us) ? US_TO_NS(next_us - now_us) : ced->min_delta_ns;
 
     delta_ns = CLAMP(delta_ns, ced->min_delta_ns, ced->max_delta_ns);
-    ced->set_next_event(ced, delta_ns);
+    enforce(ced->set_next_event(ced, delta_ns) == ERR_OK);
     irql_lower(outer);
 }
 
@@ -616,7 +616,7 @@ static void timers_init(cpu_id_t cpu) {
     struct clock_evdev *ced = clock_evdev_for_cpu(cedg, cpu);
     this->active_evdev = ced;
     if (ced->change_state)
-        ced->change_state(ced, CLOCK_EVDEV_STATE_ONESHOT);
+        enforce(ced->change_state(ced, CLOCK_EVDEV_STATE_ONESHOT) == ERR_OK);
 }
 
 void timers_init_bsp(void) {

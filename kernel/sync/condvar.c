@@ -8,7 +8,7 @@ static void condvar_prepare_wait(struct condvar *cv) {
                             THREAD_BLOCK_REASON_MANUAL);
 }
 
-static enum wake_reason
+static enum condvar_wake_reason
 condvar_finish_wait(struct spinlock *lock, enum irql irql, enum irql *out,
                     bool timed, time_ms_t timeout_ms) TSA_NO_ANALYSIS {
     enum irql sirql = irql_get();
@@ -17,16 +17,18 @@ condvar_finish_wait(struct spinlock *lock, enum irql irql, enum irql *out,
     struct thread_wait_result result =
         timed ? thread_wait_complete_timeout(timeout_ms)
               : thread_wait_complete();
-    enum wake_reason reason = result.reason == THREAD_WAKE_REASON_SLEEP_TIMEOUT
-                                  ? WAKE_REASON_TIMEOUT
-                                  : WAKE_REASON_SIGNAL;
+    enum condvar_wake_reason reason =
+        result.reason == THREAD_WAKE_REASON_SLEEP_TIMEOUT
+            ? CONDVAR_WAKE_REASON_TIMEOUT
+            : CONDVAR_WAKE_REASON_SIGNAL;
 
     *out = sirql == IRQL_HIGH_LEVEL ? spin_lock_high(lock) : spin_lock(lock);
     return reason;
 }
 
-enum wake_reason condvar_wait(struct condvar *cv, struct spinlock *lock,
-                              enum irql irql, enum irql *out) TSA_NO_ANALYSIS {
+enum condvar_wake_reason condvar_wait(struct condvar *cv, struct spinlock *lock,
+                                      enum irql irql,
+                                      enum irql *out) TSA_NO_ANALYSIS {
     condvar_prepare_wait(cv);
     return condvar_finish_wait(lock, irql, out, false, 0);
 }
@@ -63,9 +65,11 @@ void condvar_broadcast(struct condvar *cv) {
     condvar_broadcast_callback(cv, nop_callback);
 }
 
-enum wake_reason condvar_wait_timeout(struct condvar *cv, struct spinlock *lock,
-                                      time_ms_t timeout_ms, enum irql irql,
-                                      enum irql *out) TSA_NO_ANALYSIS {
+enum condvar_wake_reason condvar_wait_timeout(struct condvar *cv,
+                                              struct spinlock *lock,
+                                              time_ms_t timeout_ms,
+                                              enum irql irql,
+                                              enum irql *out) TSA_NO_ANALYSIS {
     condvar_prepare_wait(cv);
     return condvar_finish_wait(lock, irql, out, true, timeout_ms);
 }

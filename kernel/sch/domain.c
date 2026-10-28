@@ -113,7 +113,7 @@ static void scheduler_domains_dump(void) {
 
             grp->capacity = cpu_mask_popcount(&grp->cpus);
             printf(
-                "  Group %zu: CPUs = %s Idle = %s Parent = %d Capacity = %d\n",
+                "  Group %zu: CPUs = %s Idle = %s Parent = %d Capacity = %u\n",
                 g, buf1, buf2, grp->parent_index, grp->capacity);
         }
 

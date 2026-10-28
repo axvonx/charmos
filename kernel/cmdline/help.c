@@ -37,7 +37,7 @@ static void validate_default_range(const struct cmdline_entry *e,
     enum cmdline_type t = cmdline_entry_effective_type(e);
 
     if (t == CMDLINE_TYPE_FX) {
-        fx32_32_t val = 0;
+        fx32_32_t val = FX_ZERO;
         if (!parse_is_fx(e->default_val, &val) ||
             val < (fx32_32_t) e->range.low || val > (fx32_32_t) e->range.hi)
             panic("cmdline entry '%s' default value '%s' out of range", name,

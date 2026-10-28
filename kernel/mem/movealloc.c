@@ -3,6 +3,7 @@
 #include <mem/domain.h>
 #include <mem/hhdm.h>
 #include <mem/movealloc.h>
+#include <mem/nofail.h>
 #include <mem/pmm.h>
 #include <mem/vmm.h>
 #include <string.h>
@@ -46,7 +47,7 @@ void movealloc_full(domain_id_t new_domain, void *ptr, struct vmm_request rq) {
     size_t size = vsize(ptr);
     size_t pages = PAGES_NEEDED_FOR(size);
     vaddr_t aligned_down = PAGE_ALIGN_DOWN(ptr);
-    paddr_t phys_addrs[pages];
+    paddr_t *phys_addrs = nofail_vnews(phys_addrs, pages);
 
     struct vmm_request remap_rq = rq;
     remap_rq.page_flags = PAGE_WRITE | PAGE_PRESENT;
@@ -64,7 +65,7 @@ void movealloc_full(domain_id_t new_domain, void *ptr, struct vmm_request rq) {
         void *pvaddr = (void *) vaddr;
         void *pnew_virt = (void *) new_virt;
         memcpy(pnew_virt, pvaddr, PAGE_SIZE);
-        vmm_map_page_full(vaddr, new_phys, remap_rq);
+        enforce(vmm_map_page_full(vaddr, new_phys, remap_rq) == ERR_OK);
         enforce(vmm_get_phys_full(vaddr, rq) == new_phys);
 
         phys_addrs[i] = paddr;
@@ -73,6 +74,7 @@ void movealloc_full(domain_id_t new_domain, void *ptr, struct vmm_request rq) {
     for (size_t i = 0; i < pages; i++) {
         pmm_free_page(phys_addrs[i]);
     }
+    vfree(phys_addrs);
 
     change_slab_backing_page(ptr);
 }

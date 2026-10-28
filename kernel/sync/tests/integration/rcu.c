@@ -83,8 +83,8 @@ TEST_DEFINE_INTEGRATION(rcu, mt_readers_during_replace,
     initial->value = 42;
     rcu_assign_pointer(shared_ptr, initial);
 
-    struct thread *readers[NUM_RCU_READERS];
-    memset(readers, 0, sizeof(readers));
+    struct thread **readers = vnews(readers, NUM_RCU_READERS, ALLOC_ZERO);
+    TEST_ASSERT_NONNULL(readers);
     for (uint64_t i = 0; i < NUM_RCU_READERS; i++)
         readers[i] = thread_spawn("rcu_reader_test", rcu_reader_thread,
                                   .joinable = true);
@@ -96,6 +96,7 @@ TEST_DEFINE_INTEGRATION(rcu, mt_readers_during_replace,
         if (readers[i])
             thread_join(readers[i]);
     }
+    vfree(readers);
 
     if (writer)
         thread_join(writer);
@@ -234,10 +235,10 @@ TEST_DEFINE_INTEGRATION(rcu, mt_stress, TEST_INTENSITY(200, 2000, 10000)) {
     initial->value = 42;
     rcu_assign_pointer(stress_shared, initial);
 
-    struct thread *readers[STRESS_NUM_READERS];
-    struct thread *writers[STRESS_NUM_WRITERS];
-    memset(readers, 0, sizeof(readers));
-    memset(writers, 0, sizeof(writers));
+    struct thread **readers = vnews(readers, STRESS_NUM_READERS, ALLOC_ZERO);
+    struct thread **writers = vnews(writers, STRESS_NUM_WRITERS, ALLOC_ZERO);
+    TEST_ASSERT_NONNULL(readers);
+    TEST_ASSERT_NONNULL(writers);
 
     for (uint32_t i = 0; i < STRESS_NUM_READERS; ++i) {
         readers[i] = thread_spawn(("rcu_stread_%u", i), rcu_stress_reader,
@@ -272,6 +273,8 @@ TEST_DEFINE_INTEGRATION(rcu, mt_stress, TEST_INTENSITY(200, 2000, 10000)) {
         if (writers[i])
             thread_join(writers[i]);
     }
+    vfree(readers);
+    vfree(writers);
 
     if (reclaimer)
         thread_join(reclaimer);

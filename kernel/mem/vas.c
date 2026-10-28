@@ -15,6 +15,7 @@
 static cpu_id_t vas_cpu_id(void) {
     if (global.current_bootstage < BOOTSTAGE_MID_MP)
         return 0;
+
     return smp_id(TOPC_IRQL);
 }
 
@@ -22,6 +23,7 @@ static enum irql vas_enter(void) TSA_ACQUIRES(IRQL_RAISED) TSA_NO_ANALYSIS {
     if (global.current_bootstage >= BOOTSTAGE_MID_MP &&
         (irq_in_interrupt() || irq_in_nmi()))
         panic(INVALID_CONTEXT, "used from hardware interrupt context");
+
     return irql_raise(IRQL_DISPATCH_LEVEL);
 }
 

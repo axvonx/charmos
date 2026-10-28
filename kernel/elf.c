@@ -37,9 +37,10 @@ uint64_t elf_load(const void *elf_data) {
 
         for (uint64_t va = va_start; va < va_end; va += 0x1000) {
             uint64_t phys = pmm_alloc_page();
-            vmm_map_page(va, phys,
-                         .page_flags =
-                             PAGE_PRESENT | PAGE_USER_ALLOWED | PAGE_WRITE);
+            enforce(vmm_map_page(va, phys,
+                                 .page_flags = PAGE_PRESENT |
+                                               PAGE_USER_ALLOWED |
+                                               PAGE_WRITE) == ERR_OK);
         }
     }
 
@@ -97,8 +98,9 @@ void elf_map(uintptr_t user_pml4_phys, void *elf_data) {
                        (uint8_t *) elf_data + file_pos, to_copy);
             }
 
-            vmm_map_page_user(vmm_phys_to_pml4(user_pml4_phys), vaddr, phys,
-                              .page_flags = flags, .vmm_flags = VMM_FLAG_USER);
+            enforce(vmm_map_page_user(vmm_phys_to_pml4(user_pml4_phys), vaddr,
+                                      phys, .page_flags = flags,
+                                      .vmm_flags = VMM_FLAG_USER) == ERR_OK);
         }
     }
 }
@@ -111,10 +113,10 @@ uintptr_t map_user_stack(uintptr_t user_pml4_phys) {
         if (!phys)
             panic(OUT_OF_MEMORY, "user stack");
 
-        vmm_map_page_user(vmm_phys_to_pml4(user_pml4_phys), v, phys,
-                          .page_flags =
-                              PAGE_WRITE | PAGE_USER_ALLOWED | PAGE_PRESENT,
-                          .vmm_flags = VMM_FLAG_USER);
+        enforce(vmm_map_page_user(vmm_phys_to_pml4(user_pml4_phys), v, phys,
+                                  .page_flags = PAGE_WRITE | PAGE_USER_ALLOWED |
+                                                PAGE_PRESENT,
+                                  .vmm_flags = VMM_FLAG_USER) == ERR_OK);
     }
 
     return USER_STACK_TOP - 0x2000;

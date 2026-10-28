@@ -3,7 +3,7 @@
 #include <compiler/core.h>
 #include <compiler/intrinsic.h>
 
-#define cw_alloc_0() cc_malloc_like cc_warn_unused_result
+#define cw_alloc_0() cc_malloc_like cc_must_check
 #define cw_alloc_1(sz) cw_alloc_0() cc_alloc_size(sz)
 #define cw_alloc_2(sz, align) cw_alloc_1(sz) cc_alloc_align(align)
 

@@ -298,7 +298,7 @@ void xhci_detect_usb3_ports(struct xhci_device *dev) {
 
                 for (uint8_t i = start; i < start + portcount; i++) {
                     dev->port_info[i].usb3 = major >= 3;
-                    xhci_info("Port %u detected as USB%u", i + 1, major);
+                    xhci_info("Port %d detected as USB%u", i + 1, major);
                 }
             }
         }
@@ -426,7 +426,7 @@ enum usb_error xhci_port_init(struct xhci_port *p) {
         if (!(xhci_read_portsc(dev, port) & PORTSC_CCS))
             xhci_trace("address_device aborted: port %u departed", port);
         else
-            xhci_warn("address_device failed on port %u: %d", port, err);
+            xhci_warn("address_device failed on port %u: %u", port, err);
         xhci_trace("disable_slot sent");
         xhci_disable_slot(dev, slot_id);
         xhci_trace("disable_slot returned");

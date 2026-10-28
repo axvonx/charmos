@@ -111,7 +111,7 @@ TEST_DEFINE_INTEGRATION(sched, migrate_target_kicks_idle, .min_cores = 4) {
 
     TEST_ASSERT_MSG(!stranded,
                     "thread migrated cpu %ld -> idle cpu %ld stranded on its "
-                    "runqueue for %u ms without a kick",
+                    "runqueue for %d ms without a kick",
                     (long) from, (long) dst, MIGRATE_KICK_STRAND_MS);
 
     TEST_ASSERT_MSG(latency <= MIGRATE_KICK_MAX_MS,

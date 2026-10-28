@@ -55,7 +55,7 @@ bool lock_debug_spin_push(struct lock_chk_lock *lock, enum irql prev_irql,
         fail.capacity_pool = "shallow spin stack";
         fail.capacity_used = LOCK_CHK_MAX_SPIN_DEPTH;
         fail.capacity_limit = LOCK_CHK_MAX_SPIN_DEPTH;
-        lock_chk_fail(&fail, "%s %p (shallow spin stack %u/%u)",
+        lock_chk_fail(&fail, "%s %p (shallow spin stack %d/%d)",
                       lock_chk_type_to_str(lock->type), lock->instance,
                       LOCK_CHK_MAX_SPIN_DEPTH, LOCK_CHK_MAX_SPIN_DEPTH);
         atomic_store_release(&lock_chk_global.debug, LOCK_CHK_DEGRADED);

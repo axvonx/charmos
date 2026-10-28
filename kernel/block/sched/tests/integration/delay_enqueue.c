@@ -109,7 +109,7 @@ TEST_DEFINE_INTEGRATION(bio_sched, delay_enqueue,
 
     char *m2 = valloc(100);
     TEST_ASSERT_NONNULL(m2);
-    snprintf(m2, 100, "Runs is %d, test_runs is %zu", atomic_load(&runs),
+    snprintf(m2, 100, "Runs is %u, test_runs is %zu", atomic_load(&runs),
              test_runs);
     test_info("%s", m2);
     TEST_ASSERT_LE(atomic_load(&runs), test_runs);

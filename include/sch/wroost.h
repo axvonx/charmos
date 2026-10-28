@@ -300,7 +300,7 @@ size_t wroost_kick(struct wroost_kicks *kicks);
 bool wroost_merge_kicks(struct wroost_percpu_data *pcd,
                         struct wroost_kicks *kicks);
 
-struct wroost_kicks cc_warn_unused_result
+struct wroost_kicks cc_must_check
 wroost_post_prio_change_locked(struct thread *t, enum thread_prio_class old,
                                enum thread_prio_class new);
 

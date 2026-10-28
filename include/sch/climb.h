@@ -130,6 +130,6 @@ climb_handle_init(struct climb_handle *ch, struct climb_source *cs,
         ch->pressure = cs->base;
 
     ch->kind = k;
-    ch->applied_pressure_internal = 0;
+    ch->applied_pressure_internal = FX_ZERO;
     return ch;
 }
