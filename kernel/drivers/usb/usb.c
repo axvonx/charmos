@@ -6,7 +6,6 @@
 #include <mem/vmm.h>
 #include <sch/sched.h>
 #include <string.h>
-#include <thread/io_wait.h>
 #include <thread/thread.h>
 
 #include "internal.h"
@@ -20,56 +19,28 @@ LOG_SITE_DEFINE_PRINT(usb, .enabled_mask = LOG_SITE_LEVEL(LOG_ERROR));
 LOG_HANDLE_DEFINE_PRINT(usb);
 
 enum usb_error usb_transfer_sync(enum usb_error (*fn)(struct usb_request *),
-                                 struct usb_request   *request,
-                                 struct io_wait_token *tok) {
+                                 struct usb_request *request) {
     request->complete = usb_wake_waiter;
     request->context  = NULL;
+    event_init(&request->event, EVENT_NOTIFICATION, false);
 
-    enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
+    enum irql      irql = irql_raise(IRQL_DISPATCH_LEVEL);
+    enum usb_error ret  = fn(request);
+    irql_lower(irql);
 
-    struct io_wait_token iowt = IO_WAIT_TOKEN_EMPTY;
-
-    if (tok && io_wait_token_active(tok))
-        io_wait_end(tok, IO_WAIT_END_NO_OP);
-
-    /* Begin it regardless */
-    if (tok) {
-        io_wait_begin(tok, &request->wait);
-    } else {
-        io_wait_begin(&iowt, &request->wait);
-    }
-
-    enum usb_error ret = fn(request);
     if (ret != USB_OK) {
         usb_warn("ret != USB_OK");
-
-        /* Always end it */
-        if (tok) {
-            io_wait_end(tok, IO_WAIT_END_NO_OP);
-        } else {
-            io_wait_end(&iowt, IO_WAIT_END_NO_OP);
-        }
-
-        irql_lower(irql);
         return ret;
     }
 
-    irql_lower(irql);
-
-    io_wait_complete(tok ? tok : &iowt);
-
-    /* Only end if the wait is local OR it was fatal */
-    if (!tok) {
-        io_wait_end(&iowt, IO_WAIT_END_NO_OP);
-    } else if (tok && request->status != USB_OK) {
-        io_wait_end(tok, IO_WAIT_END_NO_OP);
-    }
+    event_wait(&request->event, THREAD_WAIT_UNINTERRUPTIBLE,
+               THREAD_BLOCK_REASON_IO);
 
     return request->status;
 }
 
 void usb_wake_waiter(struct usb_request *rq) {
-    io_wait_signal(&rq->wait);
+    event_set_full(&rq->event, THREAD_WAKE_REASON_BLOCKING_IO, NULL);
 }
 
 void usb_destroy(struct usb_request *rq) {
@@ -116,9 +87,8 @@ enum usb_error usb_get_string_descriptor(struct usb_device *dev,
         .dev    = dev,
     };
 
-    struct io_wait_token tok = IO_WAIT_TOKEN_EMPTY;
-    if ((err = usb_transfer_sync(ctrl->ops->submit_control_transfer, &req,
-                                 &tok)) != USB_OK) {
+    if ((err = usb_transfer_sync(ctrl->ops->submit_control_transfer, &req)) !=
+        USB_OK) {
         vfree_aligned(desc);
         return err;
     }
@@ -126,7 +96,6 @@ enum usb_error usb_get_string_descriptor(struct usb_device *dev,
     uint8_t bLength = desc[0];
     if (bLength < 2) {
         vfree_aligned(desc);
-        io_wait_end(&tok, IO_WAIT_END_YIELD);
         return USB_ERR_INVALID_ARGUMENT;
     }
 
@@ -137,7 +106,6 @@ enum usb_error usb_get_string_descriptor(struct usb_device *dev,
     out[out_idx] = '\0';
 
     vfree_aligned(desc);
-    io_wait_end(&tok, IO_WAIT_END_YIELD);
     return err;
 }
 
@@ -163,8 +131,8 @@ enum usb_error usb_get_device_descriptor(struct usb_device *dev) {
     };
 
     enum usb_error err;
-    if ((err = usb_transfer_sync(ctrl->ops->submit_control_transfer, &request,
-                                 NULL)) != USB_OK) {
+    if ((err = usb_transfer_sync(ctrl->ops->submit_control_transfer,
+                                 &request)) != USB_OK) {
         vfree_aligned(desc);
         return err;
     }
@@ -301,10 +269,9 @@ enum usb_error usb_parse_config_descriptor(struct usb_device *dev) {
         .dev    = dev,
     };
 
-    enum usb_error       err;
-    struct io_wait_token iowt = IO_WAIT_TOKEN_EMPTY;
-    if ((err = usb_transfer_sync(ctrl->ops->submit_control_transfer, &request,
-                                 &iowt)) != USB_OK) {
+    enum usb_error err;
+    if ((err = usb_transfer_sync(ctrl->ops->submit_control_transfer,
+                                 &request)) != USB_OK) {
         vfree_aligned(desc);
         return err;
     }
@@ -315,10 +282,9 @@ enum usb_error usb_parse_config_descriptor(struct usb_device *dev) {
     uint16_t total_len = cdesc->total_length;
     setup.length       = total_len;
 
-    if ((err = usb_transfer_sync(ctrl->ops->submit_control_transfer, &request,
-                                 NULL)) != USB_OK) {
+    if ((err = usb_transfer_sync(ctrl->ops->submit_control_transfer,
+                                 &request)) != USB_OK) {
         vfree_aligned(desc);
-        io_wait_end(&iowt, IO_WAIT_END_YIELD);
         return err;
     }
 
@@ -326,13 +292,11 @@ enum usb_error usb_parse_config_descriptor(struct usb_device *dev) {
                                          dev->config_str,
                                          sizeof(dev->config_str))) != USB_OK) {
         vfree_aligned(desc);
-        io_wait_end(&iowt, IO_WAIT_END_YIELD);
         return err;
     }
 
     err = setup_config_descriptor(dev, desc, desc + total_len);
     vfree_aligned(desc);
-    io_wait_end(&iowt, IO_WAIT_END_YIELD);
     return err;
 }
 
@@ -358,8 +322,8 @@ enum usb_error usb_set_configuration(struct usb_device *dev) {
     };
 
     enum usb_error err;
-    if ((err = usb_transfer_sync(ctrl->ops->submit_control_transfer, &request,
-                                 NULL)) != USB_OK) {
+    if ((err = usb_transfer_sync(ctrl->ops->submit_control_transfer,
+                                 &request)) != USB_OK) {
         return err;
     }
 

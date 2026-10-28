@@ -19,7 +19,6 @@
 #include <time/spin_sleep.h>
 
 #include "internal.h"
-#include <thread/io_wait.h>
 #include <thread/thread.h>
 
 static enum bio_request_status nvme_to_bio_status(uint16_t status_word) {
@@ -70,7 +69,7 @@ static void nvme_process_one(struct nvme_device  *dev,
         if (req->on_complete)
             req->on_complete(req);
         if (has_waiter)
-            io_wait_signal(&req->wait);
+            event_set_full(&req->evt, THREAD_WAKE_REASON_BLOCKING_IO, NULL);
     }
 }
 

@@ -11,14 +11,12 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <structures/sll.h>
-#include <thread/io_wait.h>
 #include <thread/workqueue.h>
 
 #include "internal.h"
 #include <thread/thread.h>
 
-typedef bool (*sync_fn)(struct block_device *, uint64_t, uint8_t *, uint16_t,
-                        struct io_wait_token *iowt);
+typedef bool (*sync_fn)(struct block_device *, uint64_t, uint8_t *, uint16_t);
 typedef bool (*async_fn)(struct block_device *, struct nvme_request *);
 
 static void enqueue_request(struct nvme_device *dev, struct nvme_request *req) {
@@ -173,8 +171,7 @@ static bool rw_send_command(struct block_device *disk, struct nvme_request *req,
 }
 
 static bool rw_sync(struct block_device *disk, uint64_t lba, uint8_t *buffer,
-                    uint16_t count, async_fn function,
-                    struct io_wait_token *iowt) {
+                    uint16_t count, async_fn function) {
     struct nvme_request req = {0};
     req.lba                 = lba;
     req.buffer              = buffer;
@@ -182,23 +179,18 @@ static bool rw_sync(struct block_device *disk, uint64_t lba, uint8_t *buffer,
     req.remaining_parts     = 1;
     list_node_init(&req.list_node);
 
-    enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
+    event_init(&req.evt, EVENT_NOTIFICATION, false);
     req.has_waiter = true;
 
-    if (io_wait_token_active(iowt))
-        io_wait_end(iowt, IO_WAIT_END_NO_OP);
-
-    io_wait_begin(iowt, &req.wait);
-
-    if (!function(disk, &req)) {
-        thread_wait_cancel();
-        irql_lower(irql);
-        return false;
-    }
+    enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
+    bool      sent = function(disk, &req);
     irql_lower(irql);
 
+    if (!sent)
+        return false;
+
     /* Go run something else now */
-    io_wait_complete(iowt);
+    event_wait(&req.evt, THREAD_WAIT_UNINTERRUPTIBLE, THREAD_BLOCK_REASON_IO);
 
     return !req.status;
 }
@@ -208,22 +200,17 @@ static bool rw_wrapper(struct block_device *disk, uint64_t lba, uint8_t *buf,
     struct nvme_device *nvme = (struct nvme_device *) disk->driver_data;
     uint64_t max_sectors     = nvme->max_transfer_size / disk->sector_size;
     enforce(max_sectors > 0 && max_sectors <= UINT16_MAX, CAPACITY_EXCEEDED);
-    struct io_wait_token iowt = IO_WAIT_TOKEN_EMPTY;
 
     while (cnt > 0) {
         uint16_t chunk = (uint16_t) MIN(cnt, max_sectors);
-        if (!function(disk, lba, buf, chunk, &iowt)) {
-            io_wait_end(&iowt, IO_WAIT_END_YIELD);
+        if (!function(disk, lba, buf, chunk))
             return false;
-        }
 
         lba += chunk;
         buf += chunk * disk->sector_size;
         cnt -= chunk;
     }
 
-    /* Reset priority after boost */
-    io_wait_end(&iowt, IO_WAIT_END_YIELD);
     return true;
 }
 
@@ -257,15 +244,13 @@ static bool rw_async_wrapper(struct block_device *disk,
 }
 
 static bool nvme_read_sector(struct block_device *disk, uint64_t lba,
-                             uint8_t *buffer, uint16_t count,
-                             struct io_wait_token *i) {
-    return rw_sync(disk, lba, buffer, count, nvme_read_sector_async, i);
+                             uint8_t *buffer, uint16_t count) {
+    return rw_sync(disk, lba, buffer, count, nvme_read_sector_async);
 }
 
 static bool nvme_write_sector(struct block_device *disk, uint64_t lba,
-                              uint8_t *buffer, uint16_t count,
-                              struct io_wait_token *i) {
-    return rw_sync(disk, lba, buffer, count, nvme_write_sector_async, i);
+                              uint8_t *buffer, uint16_t count) {
+    return rw_sync(disk, lba, buffer, count, nvme_write_sector_async);
 }
 
 bool nvme_read_sector_wrapper(struct block_device *disk, uint64_t lba,

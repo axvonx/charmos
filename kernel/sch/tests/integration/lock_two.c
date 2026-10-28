@@ -1,15 +1,16 @@
 #include "sch/tests/test_internal.h"
-#include <sync/completion.h>
+#include <sync/event.h>
 
-static struct completion lock_two_release;
+static struct event lock_two_release;
 
 static void lock_two_parked(void *arg) {
     cc_ignore(arg);
-    completion_wait(&lock_two_release);
+    event_wait(&lock_two_release, THREAD_WAIT_UNINTERRUPTIBLE,
+               THREAD_BLOCK_REASON_MANUAL);
 }
 
 TEST_DEFINE_INTEGRATION(sched, lock_two_runqueues_irql, .min_cores = 2) {
-    completion_init(&lock_two_release, COMPLETION_INIT_NORMAL);
+    event_init(&lock_two_release, EVENT_NOTIFICATION, false);
 
     struct thread *t0 = thread_spawn("lock_two_0", lock_two_parked, .on_cpu = 0,
                                      .pinned = true, .joinable = true);
@@ -40,7 +41,7 @@ TEST_DEFINE_INTEGRATION(sched, lock_two_runqueues_irql, .min_cores = 2) {
     scheduler_release_two_locks(rq_a, rq_b, irql_a, irql_b);
     TEST_ASSERT_EQ(irql_get(), entry);
 
-    complete_all(&lock_two_release);
+    event_set(&lock_two_release);
     thread_join(t0);
     thread_join(t1);
 

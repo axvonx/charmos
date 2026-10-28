@@ -5,9 +5,9 @@
 #include <block/sched.h>
 #include <compiler/core.h>
 #include <stdint.h>
+#include <sync/event.h>
 #include <sync/semaphore.h>
 #include <sync/spinlock.h>
-#include <thread/wait.h>
 #include <thread/workqueue.h>
 
 /* NOTE: offsets and sizes asserted in kernel/drivers/nvme/layout.c */
@@ -94,7 +94,7 @@ struct nvme_request {
 
     void (*on_complete)(struct nvme_request *);
     struct nvme_bio_data *bio_data;
-    struct thread_wait_header wait;
+    struct event evt;
     bool has_waiter;
 
     void *user_data;

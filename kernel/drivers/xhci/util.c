@@ -70,7 +70,7 @@ void xhci_controller_enable_ints(struct xhci_device *dev) {
 void xhci_wake_waiter(struct xhci_device *dev, struct xhci_request *req) {
     xhci_trace("wake waiter for %s", xhci_request_command_type_str(req->type));
     cc_ignore(dev);
-    io_wait_signal(&req->wait);
+    event_set_full(&req->event, THREAD_WAKE_REASON_BLOCKING_IO, NULL);
 }
 
 void xhci_cleanup(struct xhci_device *dev, struct xhci_request *req) {
@@ -188,7 +188,7 @@ void xhci_reset_slot(struct usb_device *dev) {
         .num_trbs = 1,
     };
 
-    xhci_send_command_and_block(xdev, &cmd, NULL);
+    xhci_send_command_and_block(xdev, &cmd);
 
     xhci_trace("our status was %u", request.status);
 }

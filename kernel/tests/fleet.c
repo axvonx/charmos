@@ -135,7 +135,8 @@ static void test_fleet_worker_main(void *arg) {
     struct test_conc_worker *base = self - self->index;
     struct test_fleet *f = container_of(base, struct test_fleet, workers[0]);
 
-    completion_wait(&f->conc.start);
+    event_wait(&f->conc.start, THREAD_WAIT_UNINTERRUPTIBLE,
+               THREAD_BLOCK_REASON_MANUAL);
     atomic_inc_release(&f->started);
 
     if (!test_conc_must_stop(&f->conc)) {
@@ -341,7 +342,7 @@ void test_fleet_start_all(struct test_fleet *f) {
         test_liveness_start(&f->liveness, &f->conc, f->opts.soft_ms,
                             TEST_ON_STALL_REPORT);
 
-    complete_all(&f->conc.start);
+    event_set(&f->conc.start);
 }
 
 #define TEST_FLEET_DUMP_ARMS 8

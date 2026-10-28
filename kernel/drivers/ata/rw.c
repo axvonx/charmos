@@ -7,15 +7,13 @@
 #include <stdint.h>
 #include <structures/sll.h>
 #include <sync/lock_chk_assert.h>
-#include <thread/io_wait.h>
 #include <thread/thread.h>
 #include <time/spin_sleep.h>
 #include <tsa.h>
 
 static void ide_start_next_locked(struct ide_channel *chan)
     TSA_CALLER_HOLDS(&chan->lock);
-typedef bool (*sync_fn)(struct ata_drive *, uint64_t, uint8_t *, uint8_t,
-                        struct io_wait_token *);
+typedef bool (*sync_fn)(struct ata_drive *, uint64_t, uint8_t *, uint8_t);
 
 static enum bio_request_status translate_status(uint8_t status, uint8_t error) {
     if ((status & STATUS_ERR) == 0) {
@@ -91,7 +89,7 @@ next_request:
     }
 
     if (req->has_waiter) {
-        io_wait_signal(&req->wait);
+        event_set_full(&req->evt, THREAD_WAKE_REASON_BLOCKING_IO, NULL);
     } else if (req->trigger_completion && req->on_complete) {
         req->on_complete(req);
     }
@@ -159,18 +157,16 @@ static void submit_async(struct ata_drive *d, struct ide_request *req) {
     spin_unlock(&d->channel.lock, irql);
 }
 
-static inline void submit_and_wait(struct ata_drive *d, struct ide_request *req,
-                                   struct io_wait_token *token) {
+static inline void submit_and_wait(struct ata_drive   *d,
+                                   struct ide_request *req) {
     enum irql irql = spin_lock(&req->lock);
 
-    if (io_wait_token_active(token))
-        io_wait_end(token, IO_WAIT_END_NO_OP);
-
-    io_wait_begin(token, &req->wait);
-
+    event_init(&req->evt, EVENT_NOTIFICATION, false);
     req->has_waiter = true;
     submit_async(d, req);
     spin_unlock(&req->lock, irql);
+
+    event_wait(&req->evt, THREAD_WAIT_UNINTERRUPTIBLE, THREAD_BLOCK_REASON_IO);
 }
 
 static struct ide_request *request_init(uint64_t lba, uint8_t *buffer,
@@ -220,11 +216,10 @@ bool ide_submit_bio_async(struct block_device *disk, struct bio_request *bio) {
 }
 
 static bool rw_sync(struct ata_drive *d, uint64_t lba, uint8_t *b, uint8_t cnt,
-                    bool write, struct io_wait_token *tk) {
+                    bool write) {
     struct ide_request *req = request_init(lba, b, cnt, write);
 
-    submit_and_wait(d, req, tk);
-    io_wait_complete(tk);
+    submit_and_wait(d, req);
 
     bool ret = !req->status;
 
@@ -236,11 +231,9 @@ static bool rw_sync_wrapper(struct block_device *d, uint64_t lba, uint8_t *buf,
                             uint64_t cnt, sync_fn function) {
     struct ata_drive *ide = d->driver_data;
 
-    struct io_wait_token tok = IO_WAIT_TOKEN_EMPTY;
-
     while (cnt > 0) {
         uint8_t chunk = (cnt >= 256) ? 0 : (uint8_t) cnt;
-        function(ide, lba, buf, chunk, &tok);
+        function(ide, lba, buf, chunk);
 
         uint64_t sectors = (chunk == 0) ? 256 : chunk;
         lba += sectors;
@@ -248,18 +241,17 @@ static bool rw_sync_wrapper(struct block_device *d, uint64_t lba, uint8_t *buf,
         cnt -= sectors;
     }
 
-    io_wait_end(&tok, IO_WAIT_END_YIELD);
     return true;
 }
 
 static bool ide_read_sector(struct ata_drive *d, uint64_t lba, uint8_t *b,
-                            uint8_t count, struct io_wait_token *tok) {
-    return rw_sync(d, lba, b, count, false, tok);
+                            uint8_t count) {
+    return rw_sync(d, lba, b, count, false);
 }
 
 static bool ide_write_sector(struct ata_drive *d, uint64_t lba, uint8_t *b,
-                             uint8_t count, struct io_wait_token *tok) {
-    return rw_sync(d, lba, b, count, true, tok);
+                             uint8_t count) {
+    return rw_sync(d, lba, b, count, true);
 }
 
 bool ide_read_sector_wrapper(struct block_device *d, uint64_t lba, uint8_t *buf,

@@ -29,6 +29,7 @@
 #include <thread/thread_types.h>
 #include <thread/wait.h>
 #include <time/time.h>
+#include <time/timer.h>
 #include <types/refcount.h>
 #include <types/types.h>
 
@@ -297,7 +298,6 @@ struct thread {
      * highest class with a boost). remember to
      * thread_recompute_prio_class_locked after changing things */
     uint8_t class_floors[THREAD_PRIO_CLASS_COUNT];
-    bool io_class_boost; /* has an URGENT boost*/
 
     /* Activity data */
     struct thread_activity_data activity_data;
@@ -342,7 +342,15 @@ struct thread {
     struct thread_wait_block *active_wait_blocks;
 
     size_t wait_block_count;
-    uint64_t wait_epoch;
+
+    /* Every new wait bumps this, and it gets updated under wait_lock.
+     *
+     * While any block of the wait remains linked, the wait header's lock
+     * prevents this from changing, since waits can't end, and new ones
+     * can't start, without unlinking the respective block.
+     *
+     */
+    atomic_uint64_t wait_epoch;
     uint16_t wait_key;
 
     enum thread_wait_status wait_status;
@@ -353,8 +361,10 @@ struct thread {
 
     atomic(enum thread_wait_type) wait_type;
 
-    struct condvar_with_cb cv_cb_object; /* wait object */
-    struct list_head io_wait_tokens;     /* list of tokens */
+    struct timer wait_timer;   /* for thread_wait_complete_timeout */
+    uint64_t wait_timer_epoch; /* epoch the armed timer could end */
+
+    struct list_head io_wait_tokens; /* list of tokens. NOTE: deprecated */
 
     struct turnstile *turnstile;           /* my turnstile */
     atomic(struct turnstile *) blocked_ts; /* what am I blocked on */
@@ -466,10 +476,6 @@ void thread_migrate(struct thread *t, size_t dest_core);
 
 void thread_boost_self(enum thread_prio_class class);
 void thread_unboost_self(enum thread_prio_class class);
-
-struct wroost_kicks cc_warn_unused_result
-thread_io_boost_locked(struct thread *t);
-void thread_io_unboost_self(void);
 
 void thread_enqueue(struct thread *t);
 void thread_enqueue_on_core(struct thread *t, uint64_t core_id);

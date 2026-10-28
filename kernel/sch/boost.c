@@ -238,31 +238,6 @@ void thread_unboost_self(enum thread_prio_class class) {
     wroost_kick(&kicks);
 }
 
-struct wroost_kicks thread_io_boost_locked(struct thread *t) {
-    SPINLOCK_ASSERT_HELD(&t->pi_lock);
-
-    if (!t->io_class_boost) {
-        t->io_class_boost = true;
-        thread_class_floor_inc_locked(t, THREAD_PRIO_CLASS_URGENT);
-    }
-
-    return thread_recompute_prio_class_locked(t);
-}
-
-void thread_io_unboost_self(void) {
-    struct thread *curr = thread_get_current();
-
-    spin_guard_high(&curr->pi_lock);
-
-    if (curr->io_class_boost) {
-        curr->io_class_boost = false;
-        thread_class_floor_dec_locked(curr, THREAD_PRIO_CLASS_URGENT);
-
-        /* Unboost won't need to re-IPI */
-        cc_discard(thread_recompute_prio_class_locked(curr));
-    }
-}
-
 void thread_remove_boost(void) {
     climb_handle_remove(&thread_get_current()->climb_data.handle);
 }

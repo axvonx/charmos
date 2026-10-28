@@ -1,5 +1,6 @@
-#include "thread/tests/test_internal.h"
 #include <thread/io_wait.h>
+
+#include "thread/tests/test_internal.h"
 
 TEST_GROUP_DEFINE(wait_block);
 
@@ -9,7 +10,8 @@ TEST_DEFINE_UNIT(wait_block, caller_storage_wait_any) {
     struct thread_wait_block blocks[6];
     for (size_t i = 0; i < 6; i++) {
         thread_wait_header_init(&headers[i]);
-        objects[i] = (struct thread_wait_object){&headers[i], &headers[i]};
+        objects[i] = (struct thread_wait_object){.header = &headers[i],
+                                                 .object = &headers[i]};
     }
     thread_wait_prepare(objects, 6, blocks, THREAD_WAIT_UNINTERRUPTIBLE,
                         THREAD_BLOCK_REASON_MANUAL);
@@ -22,32 +24,6 @@ TEST_DEFINE_UNIT(wait_block, caller_storage_wait_any) {
                                                : THREAD_WAIT_BLOCK_INACTIVE);
     }
     TEST_ASSERT_EQ(thread_wait_complete().key, 4);
-    return TEST_SUCCESS;
-}
-
-TEST_DEFINE_UNIT(wait_block, io_boost_and_cancel) {
-    struct thread_wait_header request;
-    struct io_wait_token token = IO_WAIT_TOKEN_EMPTY;
-    struct thread *t = thread_get_current();
-    enum thread_prio_class base = t->base_prio_class;
-
-    io_wait_begin(&token, &request);
-    io_wait_signal(&request);
-    io_wait_complete(&token);
-    TEST_ASSERT_EQ((enum thread_prio_class) t->perceived_prio_class,
-                   THREAD_PRIO_CLASS_URGENT);
-    TEST_ASSERT(io_wait_token_active(&token));
-    TEST_ASSERT(list_head_empty(&request.waiters));
-    io_wait_end(&token, IO_WAIT_END_NO_OP);
-    TEST_ASSERT_EQ((enum thread_prio_class) t->perceived_prio_class, base);
-    TEST_ASSERT(!io_wait_token_active(&token));
-
-    /* Submission failed before yield and cancellation must restore RUNNING */
-    io_wait_begin(&token, &request);
-    io_wait_end(&token, IO_WAIT_END_NO_OP);
-    TEST_ASSERT(list_head_empty(&request.waiters));
-    TEST_ASSERT_EQ(thread_get_state(t), THREAD_STATE_RUNNING);
-    TEST_ASSERT_NULL(t->active_wait_blocks);
     return TEST_SUCCESS;
 }
 
@@ -75,7 +51,8 @@ TEST_DEFINE_UNIT(wait_block, mt_wait_any) {
     atomic_uint wins = 0;
     for (size_t i = 0; i < 2; i++) {
         thread_wait_header_init(&headers[i]);
-        objects[i] = (struct thread_wait_object){&headers[i], &headers[i]};
+        objects[i] = (struct thread_wait_object){.header = &headers[i],
+                                                 .object = &headers[i]};
         racers[i] = (struct wait_racer){&headers[i], &go, &wins};
         wakers[i] = thread_spawn("wait_racer", race_satisfy, .arg = &racers[i],
                                  .joinable = true);
@@ -107,7 +84,8 @@ static void satisfy_during_apc(struct apc_context *ac, void *arg) {
     struct apc_wait_case *c = arg;
     struct thread *t = thread_get_current();
     enum irql irql = spin_lock_high(&t->wait_lock);
-    if (t->active_wait_blocks != t->wait_blocks || t->wait_epoch != c->epoch ||
+    if (t->active_wait_blocks != t->wait_blocks ||
+        atomic_load_rlx(&t->wait_epoch) != c->epoch ||
         t->wait_blocks[0].state != THREAD_WAIT_BLOCK_ACTIVE || t->alert_pending)
         atomic_store(&c->lost_registration, true);
     spin_unlock(&t->wait_lock, irql);
@@ -122,7 +100,7 @@ static void apc_waiter(void *arg) {
     struct apc_wait_case *c = arg;
     thread_wait_prepare_one(&c->header, c, THREAD_WAIT_INTERRUPTIBLE,
                             THREAD_BLOCK_REASON_MANUAL);
-    c->epoch = thread_get_current()->wait_epoch;
+    c->epoch = atomic_load_rlx(&thread_get_current()->wait_epoch);
     atomic_store(&c->armed, true);
     thread_wait_complete();
 }
@@ -175,7 +153,7 @@ TEST_DEFINE_UNIT(wait_block, stale_timeout_cannot_satisfy_next_wait) {
     thread_wait_header_init(&header);
     thread_wait_prepare_one(&header, &header, THREAD_WAIT_UNINTERRUPTIBLE,
                             THREAD_BLOCK_REASON_MANUAL);
-    uint64_t old_epoch = t->wait_epoch;
+    uint64_t old_epoch = atomic_load_rlx(&t->wait_epoch);
     thread_wait_cancel();
     thread_wait_prepare_one(&header, &header, THREAD_WAIT_UNINTERRUPTIBLE,
                             THREAD_BLOCK_REASON_MANUAL);
@@ -186,35 +164,5 @@ TEST_DEFINE_UNIT(wait_block, stale_timeout_cannot_satisfy_next_wait) {
     struct thread_wait_result result = thread_wait_complete();
     TEST_ASSERT(!stale_won);
     TEST_ASSERT_EQ(result.reason, THREAD_WAKE_REASON_SLEEP_MANUAL);
-    return TEST_SUCCESS;
-}
-
-TEST_DEFINE_UNIT(wait_block, alert_wait_any_and_single_permit) {
-    struct thread *t = thread_get_current();
-    struct thread_wait_header headers[2];
-    struct thread_wait_object objects[2];
-    for (size_t i = 0; i < 2; i++) {
-        thread_wait_header_init(&headers[i]);
-        objects[i] = (struct thread_wait_object){&headers[i], &headers[i]};
-    }
-    thread_alert(t);
-    thread_alert(t);
-    thread_wait_prepare(objects, 2, NULL, THREAD_WAIT_INTERRUPTIBLE,
-                        THREAD_BLOCK_REASON_MANUAL);
-    struct thread_wait_result first = thread_wait_complete();
-    TEST_ASSERT_EQ(first.status, THREAD_WAIT_ALERTED);
-    TEST_ASSERT_EQ(first.key, THREAD_WAIT_KEY_NONE);
-    TEST_ASSERT(list_head_empty(&headers[0].waiters));
-    TEST_ASSERT(list_head_empty(&headers[1].waiters));
-
-    thread_wait_prepare(objects, 2, NULL, THREAD_WAIT_INTERRUPTIBLE,
-                        THREAD_BLOCK_REASON_MANUAL);
-    bool still_waiting = !t->wait_done;
-    thread_alert(t);
-    struct thread_wait_result second = thread_wait_complete();
-    TEST_ASSERT(still_waiting); /* The two earlier alerts coalesced */
-    TEST_ASSERT_EQ(second.status, THREAD_WAIT_ALERTED);
-    TEST_ASSERT(list_head_empty(&headers[0].waiters));
-    TEST_ASSERT(list_head_empty(&headers[1].waiters));
     return TEST_SUCCESS;
 }

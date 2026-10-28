@@ -1,16 +1,13 @@
 #include "sync/tests/test_internal.h"
 #include <mem/nofail.h>
-#include <sync/completion.h>
 #include <sync/condvar.h>
 #include <sync/semaphore.h>
 
 TEST_GROUP_DEFINE(condvar);
 TEST_GROUP_DEFINE(semaphore);
-TEST_GROUP_DEFINE(completion);
 
 struct timed_helper_args {
     struct semaphore *sem;
-    struct completion *comp;
     time_ms_t delay_ms;
 };
 
@@ -18,18 +15,6 @@ static void timed_sem_poster(void *arg) {
     struct timed_helper_args *a = arg;
     sleep_spin_ms(a->delay_ms);
     semaphore_post(a->sem);
-}
-
-static void timed_comp_signaler(void *arg) {
-    struct timed_helper_args *a = arg;
-    sleep_spin_ms(a->delay_ms);
-    complete(a->comp);
-}
-
-static void timed_comp_all_signaler(void *arg) {
-    struct timed_helper_args *a = arg;
-    sleep_spin_ms(a->delay_ms);
-    complete_all(a->comp);
 }
 
 struct condvar_timeout_race {
@@ -125,45 +110,5 @@ TEST_DEFINE_UNIT(semaphore, timedwait_standard) {
     TEST_ASSERT(semaphore_timedwait(&s, 200));
     TEST_ASSERT_EQ(s.count, 0);
 
-    return TEST_SUCCESS;
-}
-
-TEST_DEFINE_UNIT(completion, wait_timeout_standard) {
-    struct completion c;
-    completion_init(&c, false);
-
-    time_ms_t t0 = time_get_ms();
-    TEST_ASSERT(!completion_wait_timeout(&c, 30));
-    time_ms_t elapsed = time_get_ms() - t0;
-    TEST_ASSERT_GE(elapsed, 25);
-
-    struct timed_helper_args a = {
-        .comp = &c,
-        .delay_ms = 20,
-    };
-    struct thread *t =
-        nofail(thread_create("comp_signaler", timed_comp_signaler, .arg = &a));
-    thread_enqueue(t);
-
-    TEST_ASSERT(completion_wait_timeout(&c, 200));
-    TEST_ASSERT(!completion_done(&c));
-
-    struct thread *t2 =
-        nofail(thread_create("comp_all", timed_comp_all_signaler, .arg = &a));
-    thread_enqueue(t2);
-
-    TEST_ASSERT(completion_wait_timeout(&c, 200));
-    TEST_ASSERT(completion_done(&c));
-
-    return TEST_SUCCESS;
-}
-
-TEST_DEFINE_UNIT(completion, static_init) {
-    struct completion c = COMPLETION_INIT(c, COMPLETION_INIT_NORMAL);
-    TEST_ASSERT(list_head_empty(&c.cv.waiters.waiters));
-    TEST_ASSERT(!completion_try_wait(&c));
-    complete(&c);
-    TEST_ASSERT(completion_try_wait(&c));
-    TEST_ASSERT(!completion_try_wait(&c));
     return TEST_SUCCESS;
 }

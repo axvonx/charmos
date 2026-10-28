@@ -146,8 +146,7 @@ static enum usb_error usb_keyboard_get_descriptor(struct usb_device *dev,
         .dev    = dev,
     };
 
-    return usb_transfer_sync(dev->host->ops->submit_control_transfer, &req,
-                             NULL);
+    return usb_transfer_sync(dev->host->ops->submit_control_transfer, &req);
 }
 
 static void usb_kbd_worker(void *arg) {
@@ -155,7 +154,7 @@ static void usb_kbd_worker(void *arg) {
 
     while (true) {
         enum usb_error ret = usb_transfer_sync(
-            kbd->dev->host->ops->submit_interrupt_transfer, &kbd->req, NULL);
+            kbd->dev->host->ops->submit_interrupt_transfer, &kbd->req);
         if (ret != USB_OK)
             break;
 

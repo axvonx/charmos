@@ -9,12 +9,11 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <structures/list.h>
-#include <thread/wait.h>
+#include <sync/event.h>
 #include <types/refcount.h>
 struct usb_controller;
 struct usb_device;
 struct usb_request;
-struct io_wait_token;
 
 /* Defines generic USB constants, functions, and structures */
 
@@ -364,7 +363,7 @@ struct usb_device {
 };
 
 struct usb_request {
-    struct thread_wait_header wait;
+    struct event event;
     struct usb_device *dev;
     struct usb_endpoint *ep;
     enum usb_transfer_type type;
@@ -412,8 +411,7 @@ enum usb_error usb_init_device(struct usb_device *dev);
 void usb_try_bind_driver(struct usb_device *dev);
 uint8_t usb_construct_rq_bitmap(uint8_t transfer, uint8_t type, uint8_t recip);
 enum usb_error usb_transfer_sync(enum usb_error (*fn)(struct usb_request *),
-                                 struct usb_request *request,
-                                 struct io_wait_token *tok);
+                                 struct usb_request *request);
 void usb_print_device(struct usb_device *dev);
 struct usb_interface_descriptor *usb_find_interface(struct usb_device *dev,
                                                     uint8_t class,

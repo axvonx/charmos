@@ -36,7 +36,8 @@ static void nightmare_perturb_finding(const char *kind, const char *msg) {
 
 void nightmare_thread_main(void *arg) {
     struct test_conc_worker *worker = arg;
-    completion_wait(&nightmare_runtime.conc.start);
+    event_wait(&nightmare_runtime.conc.start, THREAD_WAIT_UNINTERRUPTIBLE,
+               THREAD_BLOCK_REASON_MANUAL);
 
     if (!nightmare_must_stop()) {
         if (worker->index < nightmare_runtime.ctx.worker_count) {
@@ -65,7 +66,8 @@ void nightmare_thread_main(void *arg) {
 
 void nightmare_heartbeat_main(void *arg) {
     cc_ignore(arg);
-    completion_wait(&nightmare_runtime.conc.start);
+    event_wait(&nightmare_runtime.conc.start, THREAD_WAIT_UNINTERRUPTIBLE,
+               THREAD_BLOCK_REASON_MANUAL);
 
     time_ms_t next = time_get_ms() + nightmare_runtime.stat_interval_ms;
     do {

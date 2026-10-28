@@ -7,8 +7,8 @@
 #include <stdint.h>
 #include <structures/list.h>
 #include <structures/locked_list.h>
+#include <sync/event.h>
 #include <sync/semaphore.h>
-#include <thread/wait.h>
 #include <thread/workqueue.h>
 #include <types/types.h>
 struct usb_controller;
@@ -699,7 +699,7 @@ struct xhci_command {
 };
 
 struct xhci_request {
-    struct thread_wait_header wait;
+    struct event event;
     /* Tied back to the USB request */
     enum xhci_request_command_type type;
     enum xhci_request_list list_owner;

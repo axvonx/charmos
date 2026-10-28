@@ -5,8 +5,8 @@
 #include <log.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <sync/event.h>
 #include <sync/spinlock.h>
-#include <thread/wait.h>
 #include <types/types.h>
 
 #define IDE_CMD_TIMEOUT_MS 5000    // Read/write sector
@@ -80,7 +80,7 @@ struct ide_request {
     void *user_data;
 
     bool trigger_completion;
-    struct thread_wait_header wait;
+    struct event evt;
     bool has_waiter;
     struct ide_request *next;
     struct spinlock lock;

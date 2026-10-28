@@ -1,8 +1,8 @@
 #pragma once
-
 #include <structures/list.h>
 #include <sync/spinlock.h>
 #include <thread/thread_types.h>
+#include <time/time.h>
 
 #define THREAD_WAIT_BLOCK_SYNC 0
 #define THREAD_NUM_WAIT_BLOCKS 4
@@ -28,19 +28,24 @@ struct thread_wait_block {
      * something like Windows' MAXIMUM_WAIT_OBJECTS, so we can go for
      * a singularly linked list, save 8 bytes, at the cost of an
      * absolute maximum + maybe minor slowdowns (?) */
-    struct list_node object_link;
+    struct list_node obj_node;
     struct thread *thread;
     void *object;
     uint16_t key;
     enum thread_wait_block_state state;
     struct thread_wait_header *header;
-    uint64_t epoch;
 };
-ct_assert_struct_size_eq(thread_wait_block, 56);
+ct_assert_struct_size_eq(thread_wait_block, 48);
 
 struct thread_wait_object {
     struct thread_wait_header *header;
     void *object;
+
+    /* Optional function. This runs under header->lock right before
+     * we link the wait block, and if it returns true,
+     * the wait is satisfied at registration time and any
+     * remaining objects never get linked */
+    bool (*try_acquire)(void *object);
 };
 
 struct thread_wait_result {
@@ -72,14 +77,28 @@ bool thread_wait_satisfy(struct thread_wait_block *block,
                          enum thread_resume_reason reason,
                          void (*callback)(struct thread *));
 
-/* For callbacks that took a snapshot of the epoch */
+/* For callbacks that took a snapshot of thread->wait_epoch */
 bool thread_wait_satisfy_epoch(struct thread_wait_block *block, uint64_t epoch,
                                enum thread_resume_reason reason,
-                               void (*callback)(struct thread *));
+                               void (*cb)(struct thread *));
 
-struct thread *thread_wait_header_satisfy(struct thread_wait_header *header,
+struct thread *thread_wait_header_satisfy(struct thread_wait_header *hdr,
                                           enum thread_resume_reason reason,
-                                          void (*callback)(struct thread *));
+                                          void (*cb)(struct thread *));
+
+/* Like thread_wait_header_satisfy, but if nothing remains
+ * to satisfy, empty_locked runs under hdr->lock */
+struct thread *thread_wait_header_satisfy_one(struct thread_wait_header *hdr,
+                                              enum thread_resume_reason reason,
+                                              void (*cb)(struct thread *),
+                                              void (*empty_locked)(void *),
+                                              void *arg);
+
+/* Satisfies the waiters linked when before_locked runs, under hdr->lock */
+size_t thread_wait_header_satisfy_all(struct thread_wait_header *hdr,
+                                      enum thread_resume_reason reason,
+                                      void (*callback)(struct thread *),
+                                      void (*before_locked)(void *), void *arg);
 
 /* Alert is a "level-triggered" singular event. We only end interruptible
  * waits with alerts, but otherwise, the alert will merely pend until
@@ -89,4 +108,6 @@ void thread_park(void);
 
 /* The actual "go wait" action, yield and whatnot */
 struct thread_wait_result thread_wait_complete(void);
+
+struct thread_wait_result thread_wait_complete_timeout(time_ms_t timeout_ms);
 void thread_wait_cancel(void);

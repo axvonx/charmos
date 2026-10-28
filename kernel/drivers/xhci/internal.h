@@ -5,7 +5,6 @@
 #include <drivers/usb/xhci.h>
 #include <sch/sched.h>
 #include <string.h>
-#include <thread/io_wait.h>
 #include <thread/thread.h>
 
 #define XHCI_PORTSC_CHANGE_MASK                                                \
@@ -188,39 +187,19 @@ static inline void xhci_clear_usbsts_ei(struct xhci_device *dev) {
                   mmio_read_32(&dev->op_regs->usbsts) | XHCI_USBSTS_EI);
 }
 
-static inline bool xhci_send_command_and_block(struct xhci_device   *dev,
-                                               struct xhci_command  *cmd,
-                                               struct io_wait_token *iot) {
+static inline bool xhci_send_command_and_block(struct xhci_device  *dev,
+                                               struct xhci_command *cmd) {
+    event_init(&cmd->request->event, EVENT_NOTIFICATION, false);
+
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
-
-    struct io_wait_token tok = IO_WAIT_TOKEN_EMPTY;
-    if (iot && io_wait_token_active(iot))
-        io_wait_end(iot, IO_WAIT_END_NO_OP);
-
-    if (iot) {
-        io_wait_begin(iot, &cmd->request->wait);
-    } else {
-        io_wait_begin(&tok, &cmd->request->wait);
-    }
-
-    if (!xhci_send_command(dev, cmd)) {
-        if (iot) {
-            io_wait_end(iot, IO_WAIT_END_NO_OP);
-        } else {
-            io_wait_end(&tok, IO_WAIT_END_NO_OP);
-        }
-
-        irql_lower(irql);
-        return false;
-    }
-
+    bool      sent = xhci_send_command(dev, cmd);
     irql_lower(irql);
 
-    io_wait_complete(iot ? iot : &tok);
+    if (!sent)
+        return false;
 
-    if (!iot)
-        io_wait_end(&tok, IO_WAIT_END_YIELD);
-
+    event_wait(&cmd->request->event, THREAD_WAIT_UNINTERRUPTIBLE,
+               THREAD_BLOCK_REASON_IO);
     return true;
 }
 

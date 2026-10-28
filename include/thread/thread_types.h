@@ -49,6 +49,7 @@ enum thread_wait_type : uint8_t {
 enum thread_wait_status : uint8_t {
     THREAD_WAIT_SATISFIED,
     THREAD_WAIT_ALERTED,
+    THREAD_WAIT_TIMED_OUT,
 };
 
 /* thread_flags: 32 bit bitflags:

@@ -311,7 +311,7 @@ static bool nightmare_spawn_threads(void) {
 
 fail:
     nightmare_publish_stop(TEST_STOP_FAIL);
-    complete_all(&nightmare_runtime.conc.start);
+    event_set(&nightmare_runtime.conc.start);
     for (size_t i = created; i > 0; i--) {
         struct thread *th =
             atomic_load_acq(&nightmare_runtime.conc.workers[i - 1].th);
@@ -566,7 +566,7 @@ void nightmare_run(void) {
 
     if (!nightmare_liveness_start(config.stall_threshold_ms, config.on_stall))
         nightmare_panic("could not start liveness detector");
-    complete_all(&nightmare_runtime.conc.start);
+    event_set(&nightmare_runtime.conc.start);
     nightmare_join_threads();
     nightmare_liveness_stop();
     nightmare_publish_stop(TEST_STOP_BUDGET);

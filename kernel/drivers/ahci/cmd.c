@@ -15,7 +15,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-#include <thread/io_wait.h>
 #include <thread/thread.h>
 #include <time/spin_sleep.h>
 
@@ -46,7 +45,7 @@ static void ahci_process_completions(struct ahci_device *dev, uint32_t port) {
             if (req->on_complete)
                 req->on_complete(req);
             if (has_waiter)
-                io_wait_signal(&req->wait);
+                event_set_full(&req->evt, THREAD_WAKE_REASON_BLOCKING_IO, NULL);
         }
     }
 

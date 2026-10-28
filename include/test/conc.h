@@ -8,7 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stringify.h>
-#include <sync/completion.h>
+#include <sync/event.h>
 #include <time/time.h>
 #include <types/types.h>
 #include <watchdog.h>
@@ -94,7 +94,7 @@ struct test_conc {
     atomic(struct thread *) aux;
 
     /* For telling all the workers 'go!' */
-    struct completion start;
+    struct event start;
 };
 
 struct test_liveness_state {

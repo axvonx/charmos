@@ -4,20 +4,19 @@
 #include <compiler/core.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <sync/completion.h>
-#include <sync/completion_latch.h>
 #include <sync/condvar.h>
+#include <sync/event_latch.h>
 #include <sync/spinlock.h>
 #include <time/time.h>
 #include <tsa.h>
 
-/* Just a wrapper around completion_latch. Someday we could
+/* Just a wrapper around event_latch. Someday we could
  *
  * TODO: add metadata and tracking around this.
  *
- * But we only really need a completion_latch for "correctness" */
+ * But we only really need an event_latch for "correctness" */
 struct test_latch {
-    struct completion_latch cl;
+    struct event_latch el;
 };
 
 /* This effectively serves as the
@@ -37,25 +36,25 @@ bool test_phase_wait(struct test_phase *p, uint32_t expected,
                      time_ms_t timeout_ms) TSA_MAY_SLEEP;
 
 static inline void test_latch_init(struct test_latch *l) {
-    completion_latch_init(&l->cl, 1, COMPLETION_INIT_NORMAL);
+    event_latch_init(&l->el, 1);
 }
 
 static inline void test_latch_set(struct test_latch *l) {
-    completion_latch_count_down(&l->cl);
+    event_latch_count_down(&l->el);
 }
 
 static inline bool test_latch_test(const struct test_latch *l) {
-    return completion_latch_is_ready(&l->cl);
+    return event_latch_is_ready(&l->el);
 }
 
 static inline bool test_latch_wait_timeout(struct test_latch *l,
                                            time_ms_t timeout_ms) TSA_MAY_SLEEP {
-    return completion_latch_wait_timeout(&l->cl, timeout_ms);
+    return event_latch_wait_timeout(&l->el, timeout_ms);
 }
 
 static inline bool test_latch_spin_timeout(struct test_latch *l,
                                            time_ms_t timeout_ms) {
-    return once_latch_spin_timeout(&l->cl.latch, timeout_ms);
+    return once_latch_spin_timeout(&l->el.latch, timeout_ms);
 }
 
 static inline void test_phase_init(struct test_phase *p) {

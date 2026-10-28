@@ -4,7 +4,7 @@
 #include <nightmare/nightmare.h>
 #include <nightmare/perturb.h>
 #include <stringify.h>
-#include <sync/completion.h>
+#include <sync/event.h>
 #include <test/conc.h>
 #include <thread/queue.h>
 #include <time/timer.h>

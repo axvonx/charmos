@@ -106,7 +106,7 @@ enum usb_error xhci_address_device(struct xhci_port *p, uint8_t slot_id,
     };
 
     spin_unlock(&xhci->lock, irql);
-    bool ret = xhci_send_command_and_block(xhci, &cmd, NULL);
+    bool ret = xhci_send_command_and_block(xhci, &cmd);
 
     vfree_aligned(input_ctx);
 
@@ -220,7 +220,7 @@ static enum usb_error xhci_configure_device_endpoints(struct usb_device *usb) {
         .num_trbs = 1,
     };
 
-    bool ret = xhci_send_command_and_block(xhci, &cmd, NULL);
+    bool ret = xhci_send_command_and_block(xhci, &cmd);
 
     vfree_aligned(input_ctx);
     if (!ret)

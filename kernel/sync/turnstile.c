@@ -193,7 +193,7 @@ static bool turnstile_snapshot_wait(struct thread *thread,
     if (valid) {
         wait->ts = atomic_load_acq(&thread->blocked_ts);
         wait->lock_obj = block[THREAD_WAIT_BLOCK_SYNC].object;
-        wait->epoch = block[THREAD_WAIT_BLOCK_SYNC].epoch;
+        wait->epoch = atomic_load_rlx(&thread->wait_epoch);
         valid = wait->ts != NULL;
     }
 

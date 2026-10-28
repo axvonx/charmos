@@ -70,7 +70,7 @@ void xhci_nop(struct xhci_device *dev) {
         .num_trbs = 1,
     };
 
-    xhci_send_command_and_block(dev, &cmd, NULL);
+    xhci_send_command_and_block(dev, &cmd);
 }
 
 uint8_t xhci_enable_slot(struct xhci_device *dev) {
@@ -95,7 +95,7 @@ uint8_t xhci_enable_slot(struct xhci_device *dev) {
         .num_trbs = 1,
     };
 
-    xhci_send_command_and_block(dev, &cmd, NULL);
+    xhci_send_command_and_block(dev, &cmd);
 
     return TRB_SLOT(request.return_control);
 }

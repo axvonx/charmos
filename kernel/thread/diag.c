@@ -48,7 +48,7 @@ void thread_diag_record_arm(struct thread *t, const char *site, void *ra,
         newest->block_count == t->wait_block_count &&
         newest->wait_type == (uint8_t) type &&
         newest->state == (uint8_t) state && newest->reason == reason) {
-        newest->last_epoch = t->wait_epoch;
+        newest->last_epoch = atomic_load_rlx(&t->wait_epoch);
         newest->last_ms = time_get_ms();
         newest->repeats++;
         return;
@@ -60,8 +60,8 @@ void thread_diag_record_arm(struct thread *t, const char *site, void *ra,
     e->site = site;
     e->ra = ra;
     e->object = object;
-    e->first_epoch = t->wait_epoch;
-    e->last_epoch = t->wait_epoch;
+    e->first_epoch = atomic_load_rlx(&t->wait_epoch);
+    e->last_epoch = e->first_epoch;
     e->repeats = 1;
     e->last_ms = time_get_ms();
     e->state = (uint8_t) state;

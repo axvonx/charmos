@@ -34,7 +34,7 @@ void test_conc_init(struct test_conc *c, struct test_conc_worker *workers,
     atomic_store_rlx(&c->aux, NULL);
     c->workers = workers;
     c->worker_count = worker_count;
-    completion_init(&c->start, COMPLETION_INIT_NORMAL);
+    event_init(&c->start, EVENT_NOTIFICATION, false);
     atomic_store_release(&c->active, false);
 }
 

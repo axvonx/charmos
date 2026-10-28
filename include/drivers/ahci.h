@@ -7,6 +7,7 @@
 #include <math/bit.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <sync/event.h>
 #include <thread/thread.h>
 
 #define AHCI_CMD_TIMEOUT_MS 5000    // Data commands (read/write)
@@ -265,7 +266,7 @@ LOG_SITE_EXTERN(ahci);
     log(LOG_SITE(ahci), LOG_HANDLE(ahci), log_level, fmt, ##__VA_ARGS__)
 
 struct ahci_request {
-    struct thread_wait_header wait;
+    struct event evt;
     bool has_waiter;
     uint32_t port;
     uint32_t slot;

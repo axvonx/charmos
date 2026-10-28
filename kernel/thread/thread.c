@@ -205,7 +205,6 @@ static struct thread *thread_init(struct thread *thread,
     thread->niceness = 0;
     thread->perceived_prio_class = params->base_prio_class;
     memset(thread->class_floors, 0, sizeof(thread->class_floors));
-    thread->io_class_boost = false;
     atomic_init(&thread->state, THREAD_STATE_READY);
     thread->regs.r12 = (uint64_t) entry;
     thread->regs.r13 = (uint64_t) params->arg;
@@ -260,7 +259,7 @@ struct thread *thread_create_full(char *cc_nonnull_ptr name,
                                   thread_entry_fn_t entry,
                                   struct thread_create_params *params,
                                   va_list args) {
-    enforce_precond(name);
+    enforce_precond(name, "thread name must be provided");
     struct thread *new_thread = vnew(new_thread, ALLOC_ZERO);
     if (cc_unlikely(!new_thread))
         goto err;
