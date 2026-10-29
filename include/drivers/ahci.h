@@ -1,14 +1,14 @@
 /* @title: AHCI */
 #pragma once
+#include <atomic.h>
 #include <block/block.h>
-#include <block/sched.h>
 #include <compiler/core.h>
+#include <irq/irq.h>
 #include <log.h>
 #include <math/bit.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <sync/event.h>
-#include <thread/thread.h>
+#include <sync/spinlock_types.h>
+#include <types/types.h>
 
 #define AHCI_CMD_TIMEOUT_MS 5000    // Data commands (read/write)
 #define AHCI_IDENT_TIMEOUT_MS 10000 // Identify, flush cache, etc.

@@ -1,5 +1,6 @@
 #include <asm.h>
 #include <sync/raw_spinlock.h>
+#include <tsa.h>
 
 #include "sync/tests/test_internal.h"
 

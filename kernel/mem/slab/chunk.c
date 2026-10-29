@@ -1,13 +1,19 @@
 #include <compiler/core.h>
 #include <compiler/intrinsic.h>
+#include <container_of.h>
 #include <math/align.h>
 #include <math/bit.h>
 #include <math/range.h>
-#include <math/units.h>
 #include <mem/asan.h>
-#include <mem/hhdm.h>
-#include <mem/pmm.h>
+#include <mem/fixed_size_alloc.h>
+#include <mem/page.h>
 #include <mem/vas.h>
+#include <sch/irql.h>
+#include <string.h>
+#include <structures/list.h>
+#include <structures/rbt.h>
+#include <sync/spinlock.h>
+#include <tsa.h>
 
 #include "internal.h"
 

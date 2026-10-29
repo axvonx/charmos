@@ -5,12 +5,12 @@
 #include <linker/symbols.h>
 #include <log.h>
 #include <math/bit.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <string.h>
 #include <structures/list.h>
 #include <sync/event.h>
+#include <sync/lock_general.h>
 #include <types/refcount.h>
+#include <types/types.h>
 struct usb_controller;
 struct usb_device;
 struct usb_request;

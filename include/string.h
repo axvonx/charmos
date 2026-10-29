@@ -1,9 +1,8 @@
 #pragma once
 #include <compiler/core.h>
 #include <compiler/wrapper.h>
-#include <stdarg.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <string.h>
+#include <types/types.h>
 void *memcpy(void *dest, const void *src, size_t n) cc_access(write_only, 1, 3)
 cc_access(read_only, 2, 3) cc_nonnull(1, 2) cc_returns_nonnull;
 

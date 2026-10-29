@@ -1,9 +1,9 @@
 #include <drivers/mmio.h>
+#include <math/range.h>
 #include <mem/address_range.h>
 #include <mem/nofail.h>
 #include <mem/page.h>
 #include <mem/vas.h>
-#include <mem/vmm.h>
 
 static struct vas *mmio_vas_space = NULL;
 ADDRESS_RANGE_DEFINE(mmio, .align = PAGE_1GB, .flags = ADDRESS_RANGE_DYNAMIC,

@@ -2,8 +2,7 @@
 #pragma once
 #include <compiler/core.h>
 #include <enforce.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <types/types.h>
 
 #define IN_RANGE(x, min, max)                                                  \
     ({                                                                         \

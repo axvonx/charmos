@@ -2,10 +2,7 @@
 #pragma once
 #include <compiler/core.h>
 #include <console/term.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 /* Compose a report as a stream of lines, all statically allocated
  * with no locks taken, primarily useful for panicking */

@@ -1,15 +1,19 @@
-#include <asm.h>
+#include <colors.h>
 #include <compiler/core.h>
-#include <drivers/pci.h>
+#include <drivers/mmio.h>
+#include <drivers/usb/usb.h>
 #include <drivers/usb/xhci.h>
 #include <math/bit.h>
 #include <mem/alloc.h>
 #include <mem/page.h>
 #include <mem/vmm.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <sch/irql.h>
 #include <string.h>
+#include <sync/event.h>
+#include <sync/spinlock.h>
+#include <thread/thread_types.h>
 #include <time/spin_sleep.h>
+#include <types/types.h>
 
 #include "internal.h"
 

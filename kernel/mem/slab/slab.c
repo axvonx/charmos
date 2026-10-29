@@ -120,10 +120,12 @@
  *
  */
 
+#include <atomic.h>
 #include <compiler/core.h>
 #include <compiler/intrinsic.h>
-#include <console/printf.h>
+#include <console/panic.h>
 #include <enforce.h>
+#include <log.h>
 #include <math/align.h>
 #include <math/arith.h>
 #include <math/bit.h>
@@ -133,20 +135,27 @@
 #include <mem/address_range.h>
 #include <mem/alloc.h>
 #include <mem/asan.h>
+#include <mem/demand_page.h>
 #include <mem/domain.h>
+#include <mem/page.h>
+#include <mem/page_alloc.h>
 #include <mem/pmm.h>
 #include <mem/simple_alloc.h>
 #include <mem/slab.h>
 #include <mem/vas.h>
 #include <mem/vmm.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
-#include <smp/core.h>
 #include <stack_depot.h>
 #include <static_call.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
+#include <structures/list.h>
+#include <structures/rbt.h>
 #include <sync/spinlock.h>
+#include <topo/core.h>
+#include <topo/domain.h>
+#include <topo/global.h>
+#include <types/types.h>
 
 #include "internal.h"
 #include "mem/domain/internal.h"
@@ -1081,7 +1090,7 @@ static struct slab_cache *slab_search_for_cache(struct slab_domain *dom,
     struct domain *d = domain_alloc_pick_best_domain(dom->domain, /*pages=*/1,
                                                      search_distance, flexible);
 
-    struct slab_domain *sd = global.domains[d->id]->slab_domain;
+    struct slab_domain *sd = topo_global.domains[d->id]->slab_domain;
     struct slab_caches *sc =
         pageable ? sd->caches[p_type] : sd->caches[np_type];
 
@@ -1322,7 +1331,8 @@ void *valloc_from_domain(domain_id_t domain, size_t size) {
 
     size_t index = slab_size_to_index(size);
     struct slab_caches *cs =
-        global.domains[domain]->slab_domain->caches[SLAB_TYPE_NONPAGEABLE_ZERO];
+        topo_global.domains[domain]
+            ->slab_domain->caches[SLAB_TYPE_NONPAGEABLE_ZERO];
     struct slab_cache *c = &cs->caches[index];
     void *ret =
         slab_alloc(c, /*handle=*/NULL,
@@ -1392,7 +1402,7 @@ static void vfree_pages(void *ptr, enum alloc_behavior behavior) {
      * the allocation had come from. */
     struct slab_domain *owner = header->domain;
 
-    owner = owner ? owner : global.domains[0]->slab_domain;
+    owner = owner ? owner : topo_global.domains[0]->slab_domain;
 
     /* these pages don't turn into slabs and thus don't get added
      * into the slab caches. instead, we just directly free it to

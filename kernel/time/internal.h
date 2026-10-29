@@ -2,9 +2,10 @@
 #include <structures/bitmap.h>
 #include <structures/hlist.h>
 #include <structures/locked_list.h>
+#include <sync/spinlock_types.h>
+#include <thread/dpc.h>
 #include <time/clock.h>
 #include <time/clock_evdev.h>
-#include <time/time.h>
 
 enum timer_base_type {
     TIMER_BASE_LOCAL,

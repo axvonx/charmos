@@ -1,6 +1,6 @@
 /* @title: GUID Partition Table */
 #include <compiler/core.h>
-#include <stdint.h>
+#include <types/types.h>
 #pragma once
 
 struct gpt_header {

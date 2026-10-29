@@ -3,15 +3,37 @@
 #include <asm.h>
 #include <atomic.h>
 #include <console/panic.h>
-#include <console/printf.h>
 #include <enforce.h>
 #include <irq/irq.h>
-#include <smp/core.h>
-#include <smp/percpu.h>
+#include <sch/irql.h>
 #include <string.h>
+#include <sync/lock_chk.h>
+#include <sync/lock_chk_types.h>
 #include <thread/thread.h>
+#include <topo/core.h>
+#include <topo/percpu.h>
+#include <topo/topology.h>
 
 #include "internal.h"
+
+struct lock_chk_acq_req lock_chk_acq_req_make(struct lock_chk_lock *lock,
+                                              const struct lock_chk_site *site,
+                                              enum lock_chk_mode mode,
+                                              enum lock_subclass subclass,
+                                              enum lock_op_flags flags) {
+    return (struct lock_chk_acq_req){
+        .map = &lock->map,
+        .lock = lock_chk_id_of(lock),
+        .site = site,
+        .mode = mode,
+        .prev_irql = irql_get(),
+        .subclass = subclass,
+        .op_flags = flags,
+        .irqs_enabled = irqs_enabled(),
+        .in_irq = irq_in_interrupt(),
+        .in_nmi = irq_in_nmi(),
+    };
+}
 
 PERCPU_DEFINE(uint8_t, lock_chk_recursion_depth);
 

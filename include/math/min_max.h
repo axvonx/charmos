@@ -3,7 +3,7 @@
 #include <compiler/core.h>
 #include <compiler/intrinsic.h>
 #include <enforce.h>
-#include <stdbool.h>
+#include <types/types.h>
 
 #define abs(N)                                                                 \
     ({                                                                         \

@@ -1,10 +1,8 @@
 /* @title: Page Zeroer Subsystem */
 #pragma once
 #include <math/ewma.h>
-#include <math/fixed.h>
 #include <mem/buddy.h>
 #include <thread/daemon.h>
-#include <thread/workqueue.h>
 #include <types/types.h>
 
 /* Notes on the page zeroer architecture:

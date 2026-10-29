@@ -1,6 +1,10 @@
+#include <math/fixed.h>
 #include <sch/sched.h>
+#include <structures/list.h>
 #include <thread/io_wait.h>
 #include <thread/thread.h>
+#include <thread/thread_types.h>
+#include <thread/wait.h>
 
 void io_wait_begin(struct io_wait_token *out,
                    struct thread_wait_header *request) {

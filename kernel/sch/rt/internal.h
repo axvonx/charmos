@@ -1,6 +1,12 @@
+#include <atomic.h>
+#include <console/panic.h>
 #include <sch/irql.h>
 #include <sch/rt_sched.h>
+#include <sch/rt_sched_types.h>
+#include <structures/rbt.h>
 #include <sync/spinlock.h>
+#include <tsa.h>
+#include <types/refcount.h>
 
 /* Globally, we keep track of RT_SCHEDULER_SLOTS_PER_THREAD of these. */
 struct rt_slot {

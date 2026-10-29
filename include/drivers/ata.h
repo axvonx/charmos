@@ -2,11 +2,10 @@
 #pragma once
 #include <block/block.h>
 #include <compiler/core.h>
+#include <irq/irq.h>
 #include <log.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <sync/event.h>
-#include <sync/spinlock.h>
+#include <sync/spinlock_types.h>
 #include <types/types.h>
 
 #define IDE_CMD_TIMEOUT_MS 5000    // Read/write sector

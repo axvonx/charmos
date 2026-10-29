@@ -1,10 +1,8 @@
 /* @title: Block I/O Requests */
 #pragma once
-#include <atomic.h>
 #include <container_of.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <structures/list.h>
+#include <types/types.h>
 
 /* urgent requests bypass the bio_scheduler,
  * they get submitted immediately */

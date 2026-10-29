@@ -1,12 +1,12 @@
 #include <acpi/hpet.h>
 #include <asm.h>
+#include <boot/global.h>
+#include <bootstage.h>
 #include <console/printf.h>
-#include <sch/sched.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <time/date_time.h>
 #include <time/time.h>
 #include <time/tsc.h>
+#include <types/types.h>
 
 #include "internal.h"
 
@@ -121,7 +121,7 @@ uint32_t time_get_unix(void) {
 }
 
 time_ns_t time_get_ns(void) {
-    if (global.current_bootstage < BOOTSTAGE_MID_MP)
+    if (boot_global.stage < BOOTSTAGE_MID_MP)
         return hpet_timestamp_ns();
 
     return timekeeper_get_ns();
@@ -132,7 +132,7 @@ time_ms_t time_get_ms(void) {
 }
 
 bool time_try_get_ms(time_ms_t *out) {
-    if (global.current_bootstage < BOOTSTAGE_MID_MP) {
+    if (boot_global.stage < BOOTSTAGE_MID_MP) {
         *out = NS_TO_MS(hpet_timestamp_ns());
         return true;
     }
@@ -146,7 +146,7 @@ bool time_try_get_ms(time_ms_t *out) {
 }
 
 time_us_t time_get_us(void) {
-    if (global.current_bootstage < BOOTSTAGE_MID_MP)
+    if (boot_global.stage < BOOTSTAGE_MID_MP)
         return hpet_timestamp_us();
 
     return timekeeper_get_us();

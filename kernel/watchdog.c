@@ -1,17 +1,32 @@
+#include <acpi/ioapic.h>
 #include <acpi/lapic.h>
+#include <asm.h>
+#include <atomic.h>
 #include <cmdline.h>
 #include <irq/ipi.h>
 #include <irq/irq.h>
+#include <log.h>
+#include <math/ewma.h>
+#include <math/fixed.h>
 #include <math/min_max.h>
+#include <math/range.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
 #include <pit.h>
-#include <smp/core.h>
-#include <smp/percpu.h>
+#include <sch/irql.h>
 #include <string.h>
+#include <structures/cpu_mask.h>
+#include <structures/list.h>
+#include <structures/locked_list.h>
 #include <sync/seqlock.h>
+#include <sync/spinlock.h>
 #include <thread/dpc.h>
 #include <time/time.h>
+#include <time/timer.h>
+#include <topo/core.h>
+#include <topo/global.h>
+#include <topo/percpu.h>
+#include <topo/topology.h>
 #include <watchdog.h>
 
 #include "watchdog/internal.h"
@@ -642,7 +657,7 @@ static void watchdog_master_process_stall(void) {
     if (watchdog_master.tick < WATCHDOG_STALL_GRACE_TICKS)
         return;
 
-    for (cpu_id_t i = 0; i < global.core_count; i++) {
+    for (cpu_id_t i = 0; i < topo_global.cpu_count; i++) {
         struct watchdog_master_cpu *mcpu = &watchdog_master.cpus[i];
         struct watchdog_percpu *pcpu = PERCPU_PTR_FOR(watchdog_percpu, i);
 
@@ -733,14 +748,14 @@ void watchdog_init(void) {
     enforce(PERCPU_READY(watchdog_percpu), UNINITIALIZED);
 
     for (int i = 0; i < WATCHDOG_STATE_MAX; i++) {
-        cpu_mask_init(&watchdog_master.cpu_masks[i], global.core_count);
+        cpu_mask_init(&watchdog_master.cpu_masks[i], topo_global.cpu_count);
     }
 
-    cpu_mask_init(&watchdog_master.scratch_mask, global.core_count);
+    cpu_mask_init(&watchdog_master.scratch_mask, topo_global.cpu_count);
 
     cpu_mask_set_all(&watchdog_master.cpu_masks[WATCHDOG_STATE_NORMAL]);
     watchdog_master.cpus =
-        nofail_vnews(watchdog_master.cpus, global.core_count, ALLOC_ZERO);
+        nofail_vnews(watchdog_master.cpus, topo_global.cpu_count, ALLOC_ZERO);
 
     watchdog_global.critical_test_irq = irq_alloc_entry();
     irq_register("watchdog_test", watchdog_global.critical_test_irq,
@@ -752,7 +767,7 @@ void watchdog_init(void) {
     irq_register("watchdog_pet", IRQ_NMI, watchdog_pet_nmi_handler, NULL,
                  IRQ_FLAG_SHARED);
 
-    for (cpu_id_t i = 0; i < global.core_count; i++) {
+    for (cpu_id_t i = 0; i < topo_global.cpu_count; i++) {
         watchdog_master.cpus[i].id = i;
         watchdog_master.cpus[i].state = WATCHDOG_STATE_NORMAL;
         ewma_init(&watchdog_master.cpus[i].lockup_ewma, WATCHDOG_EWMA_ALPHA);
@@ -784,7 +799,7 @@ void watchdog_start(void) {
             ? NS_TO_MS(config.master_stall_timeout) / tick_ms
             : 0;
 
-    for (cpu_id_t i = 0; i < global.core_count; i++) {
+    for (cpu_id_t i = 0; i < topo_global.cpu_count; i++) {
         watchdog_master.cpus[i].last_seen_heartbeat = 0;
         watchdog_master.cpus[i].last_progress_tick = 0;
     }

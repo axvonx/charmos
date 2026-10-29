@@ -1,6 +1,10 @@
+#include <atomic.h>
+#include <nightmare/nightmare.h>
 #include <sch/sched.h>
+#include <test/conc.h>
 #include <test/test.h>
 #include <thread/thread.h>
+#include <thread/wait.h>
 
 #include "nightmare/internal.h"
 

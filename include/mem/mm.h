@@ -2,6 +2,7 @@
 #pragma once
 #include <compiler/wrapper.h>
 #include <mem/vma_range.h>
+#include <structures/cpu_mask_types.h>
 #include <structures/rbit.h>
 #include <sync/rwlock.h>
 #include <types/refcount.h>

@@ -1,4 +1,6 @@
 #include "structures/tests/test_internal.h"
+#include <mem/alloc.h>
+#include <scaled_param.h>
 
 TEST_GROUP_DEFINE(rbit, .intensity_desc = {
                             .curve = SCALE_PIECEWISE_LOG,

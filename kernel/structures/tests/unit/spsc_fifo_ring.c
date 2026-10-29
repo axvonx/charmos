@@ -1,4 +1,5 @@
 #include "structures/tests/test_internal.h"
+#include <string.h>
 
 TEST_GROUP_DEFINE(spsc_fifo_ring);
 

@@ -1,14 +1,18 @@
 #pragma once
 #include <compiler/core.h>
 #include <math/bit.h>
-#include <math/min_max.h>
 #include <mem/bitmap.h>
 #include <mem/buddy.h>
+#include <mem/global.h>
+#include <mem/hhdm.h>
 #include <mem/page.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <sync/spinlock.h>
 #include <types/types.h>
+
+struct buddy_globals {
+    struct buddy_free_area buddy_free_area[BUDDY_MAX_ORDER];
+};
+
+extern struct buddy_globals buddy_global;
 
 #define PAGE_TO_BUDDY_PAGE(p) ((struct buddy_page *) (p))
 #define BUDDY_PAGE_TO_PAGE(p) ((struct page *) (p))
@@ -84,10 +88,10 @@ static inline bool page_pfn_allocated_in_boot_bitmap(pfn_t pfn) {
 }
 
 static inline bool buddy_page_pfn_free(pfn_t pfn) {
-    if (pfn >= global.last_pfn)
+    if (pfn >= mem_global.last_pfn)
         return false;
 
-    struct page *p = &global.page_array[pfn];
+    struct page *p = &mem_global.page_array[pfn];
 
     return buddy_page_is_free((struct buddy_page *) p);
 }

@@ -1,14 +1,17 @@
-#include <console/printf.h>
-#include <global.h>
 #include <log.h>
 #include <mem/alloc.h>
+#include <mem/movealloc.h>
 #include <mem/nofail.h>
 #include <mem/numa.h>
 #include <mem/page.h>
 #include <sch/sched.h>
-#include <smp/domain.h>
-#include <stdbool.h>
+#include <structures/cpu_mask.h>
+#include <structures/rbt.h>
 #include <sync/spinlock.h>
+#include <topo/domain.h>
+#include <topo/global.h>
+#include <topo/topology.h>
+#include <types/types.h>
 
 LOG_SITE_DEFINE_PRINT(domain);
 LOG_HANDLE_DEFINE_PRINT(domain);
@@ -23,28 +26,29 @@ LOG_HANDLE_DEFINE_PRINT(domain);
 #define domain_trace(fmt, ...) domain_log(LOG_TRACE, fmt, ##__VA_ARGS__)
 
 static void init_global_domain(uint64_t domain_count) {
-    global.domain_count = domain_count;
-    global.domains = nofail_vnews(global.domains, domain_count, ALLOC_ZERO);
+    topo_global.domain_count = domain_count;
+    topo_global.domains =
+        nofail_vnews(topo_global.domains, domain_count, ALLOC_ZERO);
 
     for (size_t i = 0; i < domain_count; i++) {
 
         /* We align this up to the page so that they can all be
          * migrated later on to pages on each domain... */
-        global.domains[i] = nofail(valloc_pages(
+        topo_global.domains[i] = nofail(valloc_pages(
             PAGES_NEEDED_FOR(sizeof(struct domain)), ALLOC_FLAGS_ZERO));
 
-        global.domains[i]->id = i;
+        topo_global.domains[i]->id = i;
     }
 }
 
 /* Map 1:1 with NUMA nodes */
 static void construct_domains_from_numa_nodes(void) {
-    init_global_domain(global.numa_node_count);
-    for (size_t i = 0; i < global.numa_node_count; i++) {
-        struct numa_node *nn = &global.numa_nodes[i];
-        struct domain *cd = global.domains[i];
+    init_global_domain(topo_global.numa_node_count);
+    for (size_t i = 0; i < topo_global.numa_node_count; i++) {
+        struct numa_node *nn = &topo_global.numa_nodes[i];
+        struct domain *cd = topo_global.domains[i];
         cd->num_cores = cpu_mask_popcount(&nn->cpus);
-        cpu_mask_init(&cd->cpu_mask, global.core_count);
+        cpu_mask_init(&cd->cpu_mask, topo_global.cpu_count);
         cpu_mask_copy(&cd->cpu_mask, &nn->cpus);
         cd->associated_node = nn;
         cd->cores = nofail_vnews(cd->cores, cd->num_cores, ALLOC_ZERO);
@@ -52,8 +56,8 @@ static void construct_domains_from_numa_nodes(void) {
 }
 
 static void construct_domains_from_cores(void) {
-    size_t domain_count = global.core_count / CORES_PER_DOMAIN;
-    size_t remainder = global.core_count % CORES_PER_DOMAIN;
+    size_t domain_count = topo_global.cpu_count / CORES_PER_DOMAIN;
+    size_t remainder = topo_global.cpu_count % CORES_PER_DOMAIN;
 
     if (remainder > 0)
         domain_count++; /* one extra for leftover cores */
@@ -61,7 +65,7 @@ static void construct_domains_from_cores(void) {
     init_global_domain(domain_count);
 
     for (size_t i = 0; i < domain_count; i++) {
-        struct domain *cd = global.domains[i];
+        struct domain *cd = topo_global.domains[i];
 
         cd->associated_node = NULL;
 
@@ -71,11 +75,11 @@ static void construct_domains_from_cores(void) {
             cores_this_domain = remainder; /* last one gets leftovers */
 
         cd->num_cores = cores_this_domain;
-        cpu_mask_init(&cd->cpu_mask, global.core_count);
+        cpu_mask_init(&cd->cpu_mask, topo_global.cpu_count);
 
         for (size_t j = 0; j < cores_this_domain; j++) {
             size_t core_index = i * CORES_PER_DOMAIN + j;
-            if (core_index >= global.core_count)
+            if (core_index >= topo_global.cpu_count)
                 break;
 
             cpu_mask_set(&cd->cpu_mask, core_index);
@@ -85,10 +89,10 @@ static void construct_domains_from_cores(void) {
 }
 
 void domain_dump(void) {
-    domain_info("Domains (%zu total)", global.domain_count);
+    domain_info("Domains (%zu total)", topo_global.domain_count);
 
-    for (size_t i = 0; i < global.domain_count; i++) {
-        struct domain *cd = global.domains[i];
+    for (size_t i = 0; i < topo_global.domain_count; i++) {
+        struct domain *cd = topo_global.domains[i];
         if (cd->associated_node) {
             domain_info(" Domain %zu: Cores = %zu, NUMA node = %zu", i,
                         cd->num_cores, cd->associated_node->topo->id);
@@ -113,36 +117,38 @@ void domain_dump(void) {
  * groups of CORES_PER_DOMAIN
  * and construct domains from them. */
 void domain_init(void) {
-    if (global.numa_node_count > 1) {
+    if (topo_global.numa_node_count > 1) {
         construct_domains_from_numa_nodes();
     } else {
         construct_domains_from_cores();
     }
 
     /* NOTE: This is THE exception that we make */
-    global.cores[0]->domain = global.domains[0]; // NOLINT(*ArrayBound)
+    assume(topo_global.domain_count > 0); /* both constructors make >= 1 */
+    topo_global.cores[0]->domain =
+        topo_global.domains[0]; // NOLINT(*ArrayBound)
 }
 
 static void construct_domains_after_smp(void) {
-    if (global.numa_node_count > 1) {
-        for (size_t i = 0; i < global.domain_count; i++) {
-            struct domain *cd = global.domains[i];
-            struct numa_node *nn = &global.numa_nodes[i];
+    if (topo_global.numa_node_count > 1) {
+        for (size_t i = 0; i < topo_global.domain_count; i++) {
+            struct domain *cd = topo_global.domains[i];
+            struct numa_node *nn = &topo_global.numa_nodes[i];
             struct cpu_mask nm = nn->cpus;
             size_t j;
             size_t k = 0;
             cpu_mask_for_each(j, nm) {
-                cd->cores[k++] = global.cores[j];
+                cd->cores[k++] = topo_global.cores[j];
             }
         }
     } else {
         size_t core_index = 0;
-        for (size_t i = 0; i < global.domain_count; i++) {
-            struct domain *cd = global.domains[i];
+        for (size_t i = 0; i < topo_global.domain_count; i++) {
+            struct domain *cd = topo_global.domains[i];
 
             for (size_t j = 0; j < cd->num_cores; j++) {
-                global.cores[core_index]->domain = cd;
-                cd->cores[j] = global.cores[core_index++];
+                topo_global.cores[core_index]->domain = cd;
+                cd->cores[j] = topo_global.cores[core_index++];
             }
         }
     }
@@ -150,8 +156,8 @@ static void construct_domains_after_smp(void) {
 
 void domain_init_after_smp(void) {
     construct_domains_after_smp();
-    for (size_t i = 0; i < global.domain_count; i++) {
-        struct domain *domain = global.domains[i];
+    for (size_t i = 0; i < topo_global.domain_count; i++) {
+        struct domain *domain = topo_global.domains[i];
 
         for (size_t j = 0; j < domain->num_cores; j++) {
             domain->cores[j]->domain_cpu_id = j;
@@ -171,7 +177,7 @@ struct cpu_mask *domain_create_cpu_mask(struct domain *domain) {
     if (!ret)
         goto err;
 
-    cpu_mask_init(ret, global.core_count);
+    cpu_mask_init(ret, topo_global.cpu_count);
 
     domain_set_cpu_mask(ret, domain);
 
@@ -185,8 +191,8 @@ err:
 
 static void domains_move(void *a, void *b) {
     cc_ignore(a, b);
-    for (size_t i = 0; i < global.domain_count; i++) {
-        struct domain *domain = global.domains[i];
+    for (size_t i = 0; i < topo_global.domain_count; i++) {
+        struct domain *domain = topo_global.domains[i];
         movealloc(domain->id, domain);
     }
 }
@@ -200,8 +206,8 @@ bool domain_idle(struct domain *domain) {
 }
 
 numa_node_t numa_node_for_cpu(cpu_id_t cpu) {
-    for (numa_node_t i = 0; i < global.numa_node_count; i++) {
-        struct numa_node *nn = &global.numa_nodes[i];
+    for (numa_node_t i = 0; i < topo_global.numa_node_count; i++) {
+        struct numa_node *nn = &topo_global.numa_nodes[i];
         if (cpu_mask_test(&nn->cpus, cpu))
             return i;
     }

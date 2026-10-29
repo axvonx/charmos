@@ -3,10 +3,9 @@
 #include <math/hash.h>
 #include <math/min_max.h>
 #include <mem/alloc.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
 #include <structures/bloom.h>
+#include <types/types.h>
 
 static uint64_t murmur_mix64(uint64_t k) {
     k ^= k >> 33;

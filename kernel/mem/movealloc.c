@@ -1,33 +1,41 @@
-#include <global.h>
+#include <boot/global.h>
+#include <bootstage.h>
+#include <console/panic.h>
+#include <err.h>
 #include <mem/alloc.h>
 #include <mem/domain.h>
 #include <mem/hhdm.h>
 #include <mem/movealloc.h>
 #include <mem/nofail.h>
+#include <mem/page.h>
 #include <mem/pmm.h>
 #include <mem/vmm.h>
 #include <string.h>
-#include <thread/dpc.h>
+#include <structures/list.h>
+#include <structures/rbt.h>
+#include <topo/global.h>
 
 #include "mem/slab/internal.h"
+
+static struct movealloc_callback_chain movealloc_chain;
 
 extern struct movealloc_callback_node __skernel_movealloc_callbacks[];
 extern struct movealloc_callback_node __ekernel_movealloc_callbacks[];
 
 static void movealloc_init_chain(void) {
-    list_head_init(&global.movealloc_chain.list);
+    list_head_init(&movealloc_chain.list);
     struct movealloc_callback_node *start = __skernel_movealloc_callbacks;
     struct movealloc_callback_node *end = __ekernel_movealloc_callbacks;
     for (struct movealloc_callback_node *n = start; n < end; n++) {
         list_node_init(&n->list);
-        list_head_push_back(&global.movealloc_chain.list, &n->list);
+        list_head_push_back(&movealloc_chain.list, &n->list);
     }
 }
 
 void movealloc_exec_all(void) {
     movealloc_init_chain();
     struct list_node *iter;
-    list_for_each(iter, &global.movealloc_chain.list) {
+    list_for_each(iter, &movealloc_chain.list) {
         struct movealloc_callback_node *node =
             movealloc_callback_node_from_list_node(iter);
         node->callback(node->a, node->b);
@@ -40,10 +48,10 @@ static void change_slab_backing_page(void *ptr) {
 }
 
 void movealloc_full(domain_id_t new_domain, void *ptr, struct vmm_request rq) {
-    if (global.current_bootstage >= BOOTSTAGE_COMPLETE)
+    if (boot_global.stage >= BOOTSTAGE_COMPLETE)
         panic(INVALID_CONTEXT, "movealloc after boot completes");
 
-    struct domain *d = global.domains[new_domain];
+    struct domain *d = topo_global.domains[new_domain];
     size_t size = vsize(ptr);
     size_t pages = PAGES_NEEDED_FOR(size);
     vaddr_t aligned_down = PAGE_ALIGN_DOWN(ptr);

@@ -1,0 +1,2 @@
+#pragma once
+#define CHARMOS_COMMIT "@CHARMOS_COMMIT@"

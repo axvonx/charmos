@@ -1,8 +1,8 @@
 /* @title: Static Call */
 #pragma once
 #include <compiler/atomic.h>
-#include <stdint.h>
 #include <text_patch.h>
+#include <types/types.h>
 
 #define STATIC_CALL_DEFINE(name, default_fn)                                   \
     extern typeof(default_fn) name##_trampoline;                               \

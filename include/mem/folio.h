@@ -1,12 +1,12 @@
 /* @title: Folio */
 #pragma once
+#include <asm.h>
 #include <atomic.h>
 #include <compiler/core.h>
 #include <math/bit.h>
 #include <mem/alloc.h>
 #include <mem/hhdm.h>
 #include <mem/page.h>
-#include <sch/irql.h>
 #include <structures/list.h>
 #include <types/refcount.h>
 #include <types/types.h>

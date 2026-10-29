@@ -1,10 +1,8 @@
 #include <console/panic.h>
-#include <console/printf.h>
 #include <enforce.h>
 #include <mem/alloc.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <structures/rbt.h>
+#include <types/types.h>
 
 #ifdef DEBUG_RBT
 

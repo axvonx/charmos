@@ -1,6 +1,6 @@
 /* @title: TSS */
 #pragma once
-#include <stdint.h>
+#include <types/types.h>
 
 struct __attribute__((aligned)) tss {
     uint32_t reserved0;

@@ -1,6 +1,5 @@
 #include <colors.h>
 #include <console/panic_scene.h>
-#include <console/term.h>
 
 const char *const panic_scene[] = {
     "\033[38;5;17;48;5;17m"

@@ -1,6 +1,6 @@
 /* @title: Nightmare machine records */
 #pragma once
-#include <stdint.h>
+#include <types/types.h>
 
 struct nightmare_boot_record {
     const char *test;

@@ -1,10 +1,18 @@
+#include <container_of.h>
 #include <log.h>
+#include <math/fixed.h>
 #include <math/min_max.h>
 #include <sch/climb.h>
+#include <sch/global.h>
+#include <sch/irql.h>
 #include <sch/periodic_work.h>
 #include <sch/sched.h>
+#include <structures/list.h>
+#include <structures/rbt.h>
+#include <sync/spinlock.h>
 #include <test/export.h>
 #include <thread/thread.h>
+#include <tsa.h>
 
 #include "internal.h"
 
@@ -578,8 +586,8 @@ void climb_thread_init(struct thread *t) {
 
 void climb_post_migrate_hook(struct thread *t, size_t old_cpu, size_t new_cpu) {
     /* Locks are already held */
-    struct scheduler *old = global.schedulers[old_cpu];
-    struct scheduler *new = global.schedulers[new_cpu];
+    struct scheduler *old = sch_global.schedulers[old_cpu];
+    struct scheduler *new = sch_global.schedulers[new_cpu];
 
     if (!rbt_has_node(&old->climb_threads, &t->climb_data.climb_node)) {
         enforce(t->climb_data.on_climb_tree == false, CORRUPTION,

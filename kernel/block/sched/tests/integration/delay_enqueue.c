@@ -1,6 +1,17 @@
+#include <asm.h>
+#include <atomic.h>
+#include <block/bio.h>
+#include <fs/global.h>
+#include <math/min_max.h>
+#include <math/range.h>
+#include <mem/alloc.h>
+#include <mem/page.h>
+#include <structures/list.h>
+#include <time/time.h>
+
 #include "block/sched/tests/test_internal.h"
 
-#define EXT2_ROOT struct vfs_node *root = global.root_node
+#define EXT2_ROOT struct vfs_node *root = fs_global.root_node
 
 static cc_unused bool done2 = false;
 static uint64_t avg_complete_time[BIO_SCHED_LEVELS] = {0};

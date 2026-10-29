@@ -1,6 +1,6 @@
 #include <math/fixed.h>
-#include <math/hash.h>
 #include <math/hyperloglog.h>
+#include <math/min_max.h>
 #include <mem/alloc.h>
 
 /* Notes on naming: all HLL_ and hll_ prefixed functions are INTERNAL,

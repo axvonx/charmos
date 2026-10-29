@@ -1,3 +1,5 @@
+#include <err.h>
+#include <math/range.h>
 #include <mem/page.h>
 #include <mem/pmm.h>
 #include <mem/simple_alloc.h>

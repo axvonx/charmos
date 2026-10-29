@@ -1,7 +1,21 @@
+#include <atomic.h>
 #include <compiler/intrinsic.h>
+#include <container_of.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
+#include <sch/wroost.h>
+#include <string.h>
+#include <structures/list.h>
+#include <sync/spinlock.h>
 #include <thread/apc.h>
 #include <thread/thread.h>
+#include <thread/thread_diag.h>
+#include <thread/thread_types.h>
+#include <thread/wait.h>
+#include <time/time.h>
+#include <time/timer.h>
+#include <topo/core.h>
+#include <topo/topology.h>
 
 #include "sch/internal.h"
 

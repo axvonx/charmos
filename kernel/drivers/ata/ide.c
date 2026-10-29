@@ -2,19 +2,20 @@
 #include <acpi/lapic.h>
 #include <asm.h>
 #include <block/bcache.h>
+#include <block/bio.h>
 #include <block/block.h>
 #include <block/sched.h>
 #include <compiler/core.h>
-#include <console/printf.h>
+#include <console/panic.h>
 #include <drivers/ata.h>
-#include <irq/idt.h>
+#include <irq/irq.h>
+#include <log.h>
 #include <math/bit.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
-#include <smp/core.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <time/spin_sleep.h>
+#include <topo/core.h>
+#include <types/types.h>
 
 LOG_SITE_DEFINE_PRINT(ide);
 LOG_HANDLE_DEFINE_PRINT(ide);

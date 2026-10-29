@@ -1,7 +1,6 @@
 /* @title: GDT */
 #include <compiler/core.h>
-#include <stdalign.h>
-#include <stdint.h>
+#include <types/types.h>
 
 struct gdt_entry {
     uint16_t limit_low;

@@ -1,16 +1,15 @@
 #include <asm.h>
 #include <enforce.h>
-#include <irq/idt.h>
+#include <sch/global.h>
 #include <sch/sched.h>
-#include <smp/core.h>
-#include <smp/smp.h>
 #include <sync/rcu.h>
-#include <thread/dpc.h>
 #include <thread/workqueue.h>
+#include <topo/core.h>
+#include <topo/smp.h>
 
 void scheduler_idle_main(void *nop) {
     cc_ignore(nop);
-    struct scheduler *sched = global.schedulers[smp_id_raw()];
+    struct scheduler *sched = sch_global.schedulers[smp_id_raw()];
 
     bool woken = false;
 

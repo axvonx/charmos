@@ -1,11 +1,23 @@
+#include <asm.h>
 #include <cmdline.h>
+#include <err.h>
 #include <irq/ipi.h>
 #include <irq/irq.h>
 #include <math/min_max.h>
-#include <mem/alloc.h>
-#include <smp/percpu.h>
+#include <sch/irql.h>
+#include <structures/bitmap.h>
+#include <structures/hlist.h>
+#include <structures/locked_list.h>
+#include <sync/spinlock.h>
+#include <thread/dpc.h>
+#include <time/clock_evdev.h>
 #include <time/names.h>
+#include <time/time.h>
 #include <time/timer.h>
+#include <topo/core.h>
+#include <topo/percpu.h>
+#include <topo/topology.h>
+#include <tsa.h>
 
 #include "internal.h"
 

@@ -1,6 +1,18 @@
 /* Scheduler load balancing policy */
+#include <atomic.h>
 #include <mem/numa.h>
-#include <smp/domain.h>
+#include <sch/domain.h>
+#include <sch/global.h>
+#include <sch/sched.h>
+#include <structures/list.h>
+#include <structures/rbt.h>
+#include <sync/spinlock.h>
+#include <thread/thread.h>
+#include <thread/thread_types.h>
+#include <time/time.h>
+#include <topo/domain.h>
+#include <topo/global.h>
+#include <topo/topology.h>
 
 #include "internal.h"
 
@@ -166,17 +178,18 @@ static size_t migrate_from_prio_class(struct scheduler *to,
 }
 
 size_t scheduler_try_push_to_idle_core(struct scheduler *sched) {
-    if (!global.scheduler_domains[TOPOLOGY_LEVEL_MACHINE])
+    if (!sch_global.scheduler_domains[TOPOLOGY_LEVEL_MACHINE])
         return 0;
 
-    int32_t other_cpu_id = scheduler_push_target(global.cores[sched->core_id]);
+    int32_t other_cpu_id =
+        scheduler_push_target(topo_global.cores[sched->core_id]);
     if (other_cpu_id < 0)
         return 0;
 
-    struct core *this_core = global.cores[sched->core_id];
-    struct core *other_core = global.cores[other_cpu_id];
+    struct core *this_core = topo_global.cores[sched->core_id];
+    struct core *other_core = topo_global.cores[other_cpu_id];
 
-    struct scheduler *other = global.schedulers[other_cpu_id];
+    struct scheduler *other = sch_global.schedulers[other_cpu_id];
 
     /* we trylock to avoid spinning as this is called from the hotpath and can
      * also have a circular dependency deadlock/starvation chance... */

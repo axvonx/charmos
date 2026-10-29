@@ -2,10 +2,9 @@
 #include <atomic.h>
 #include <block/bio.h>
 #include <err.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <sync/mutex.h>
-#include <sync/spinlock.h>
+#include <sync/spinlock_types.h>
+#include <tsa.h>
 #include <types/refcount.h>
 #include <types/types.h>
 

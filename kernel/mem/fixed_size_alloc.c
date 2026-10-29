@@ -1,11 +1,16 @@
-#include <global.h>
+#include <container_of.h>
 #include <math/align.h>
 #include <mem/alloc.h>
 #include <mem/fixed_size_alloc.h>
 #include <mem/hhdm.h>
 #include <mem/nofail.h>
+#include <mem/page.h>
 #include <mem/pmm.h>
+#include <sch/irql.h>
 #include <string.h>
+#include <structures/list.h>
+#include <sync/spinlock.h>
+#include <types/refcount.h>
 
 static inline size_t fixed_size_header_size(struct fixed_size_range *fsr) {
     return ALIGN_UP(sizeof(struct fixed_size_page_hdr), fsr->attrs.obj_align);

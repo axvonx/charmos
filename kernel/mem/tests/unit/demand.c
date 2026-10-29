@@ -1,3 +1,6 @@
+#include <structures/rbt.h>
+#include <topo/global.h>
+
 #include "mem/tests/test_internal.h"
 
 #define DP_PAGES 16
@@ -56,7 +59,7 @@ static bool dp_verify(atomic_uint64_t **bufs, size_t nbuf, size_t pages,
 static void dp_spawn(struct thread **t, size_t nthreads, struct dp_worker *w,
                      bool single_core) {
     for (size_t i = 0; i < nthreads; i++) {
-        uint64_t core = single_core ? 0 : (i % global.core_count);
+        uint64_t core = single_core ? 0 : (i % topo_global.cpu_count);
         t[i] = enforce(thread_spawn("dp_hammer", dp_hammer, .arg = w,
                                     .on_cpu = core, .joinable = true,
                                     .pinned = single_core));

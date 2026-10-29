@@ -1,17 +1,19 @@
 #include <block/block.h>
 #include <compiler/core.h>
 #include <console/printf.h>
+#include <err.h>
 #include <fs/detect.h>
 #include <fs/ext2.h>
 #include <fs/fat.h>
 #include <fs/gpt.h>
 #include <fs/iso9660.h>
 #include <fs/mbr.h>
+#include <log.h>
 #include <math/units.h>
 #include <mem/alloc.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <mem/page.h>
 #include <string.h>
+#include <types/types.h>
 
 LOG_HANDLE_DEFINE_PRINT(fs_detect);
 LOG_SITE_DEFINE_PRINT(fs_detect);

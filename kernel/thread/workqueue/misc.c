@@ -1,4 +1,6 @@
-#include <global.h>
+#include <thread/workqueue.h>
+#include <topo/core.h>
+#include <topo/global.h>
 
 #include "internal.h"
 
@@ -10,12 +12,13 @@ struct workqueue *workqueue_least_loaded_queue_except(int64_t except_core_num) {
     }
 
     /* There will always be a 'core 0 thread' */
-    struct workqueue *least_loaded = global.workqueues[0];
-    for (int64_t i = 0; i < (int64_t) global.core_count; i++) {
-        if (WORKQUEUE_NUM_WORKS(global.workqueues[i]) < minimum_load &&
+    struct workqueue *least_loaded = workqueue_global.workqueues[0];
+    for (int64_t i = 0; i < (int64_t) topo_global.cpu_count; i++) {
+        if (WORKQUEUE_NUM_WORKS(workqueue_global.workqueues[i]) <
+                minimum_load &&
             i != except_core_num) {
-            minimum_load = WORKQUEUE_NUM_WORKS(global.workqueues[i]);
-            least_loaded = global.workqueues[i];
+            minimum_load = WORKQUEUE_NUM_WORKS(workqueue_global.workqueues[i]);
+            least_loaded = workqueue_global.workqueues[i];
         }
     }
 

@@ -5,9 +5,11 @@
 #include <console/printf.h>
 #include <console/term.h>
 #include <enforce.h>
+#include <math/hash.h>
 #include <ndjson.h>
 #include <nightmare/nightmare.h>
 #include <string.h>
+#include <sync/lock_chk.h>
 
 #include "internal.h"
 

@@ -1,10 +1,18 @@
 #ifdef DEBUG_LOCK_CHK
 
+#include <atomic.h>
 #include <enforce.h>
 #include <irq/irq.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <math/hash.h>
+#include <sch/irql.h>
 #include <string.h>
+#include <structures/hlist.h>
+#include <structures/list.h>
+#include <sync/lock_chk.h>
+#include <sync/lock_chk_types.h>
+#include <sync/lock_general.h>
+#include <sync/raw_spinlock.h>
+#include <types/types.h>
 
 #include "internal.h"
 

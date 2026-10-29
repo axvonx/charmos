@@ -3,8 +3,6 @@
 #include <enforce.h>
 #include <math/align.h>
 #include <math/min_max.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <types/types.h>
 
 #define FX_ZERO FX32_32_ZERO

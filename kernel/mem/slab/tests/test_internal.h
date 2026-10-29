@@ -9,12 +9,10 @@
 #include <mem/vmm.h>
 #include <sch/sched.h>
 #include <stack_depot.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <string.h>
 #include <test/test.h>
 #include <thread/thread.h>
+#include <types/types.h>
 
 #include "mem/slab/internal.h"
 

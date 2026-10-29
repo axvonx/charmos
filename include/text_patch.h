@@ -2,8 +2,8 @@
 #pragma once
 #include <asm.h>
 #include <math/bit.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <tsa.h>
+#include <types/types.h>
 
 #define CR0_WP BIT(16)
 

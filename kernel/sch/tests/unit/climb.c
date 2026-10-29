@@ -1,4 +1,9 @@
 #include "sch/tests/test_internal.h"
+#include <math/fixed.h>
+#include <scaled_param.h>
+#include <sch/climb.h>
+#include <structures/rbt.h>
+#include <test/export.h>
 
 TEST_GROUP_DEFINE(climb, .intensity_desc = {
                              .curve = SCALE_PIECEWISE_LOG,

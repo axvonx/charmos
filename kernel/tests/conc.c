@@ -1,9 +1,14 @@
+#include <atomic.h>
+#include <container_of.h>
+#include <crypto/prng.h>
 #include <sch/sched.h>
-#include <smp/core.h>
+#include <sync/event.h>
 #include <test/conc.h>
 #include <thread/thread.h>
 #include <thread/wait.h>
 #include <time/time.h>
+#include <topo/percpu.h>
+#include <watchdog.h>
 
 #if defined(TEST_ENABLED) || defined(TEST_NIGHTMARE_ENABLED)
 

@@ -1,7 +1,7 @@
-#include <nightmare/record.h>
-#include <sch/sched.h>
 
 #include "internal.h"
+#include <nightmare/nightmare.h>
+#include <test/conc.h>
 
 #ifdef TEST_NIGHTMARE_ENABLED
 struct test_liveness_state nightmare_liveness;

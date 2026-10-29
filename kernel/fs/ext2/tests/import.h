@@ -1,6 +1,6 @@
 #pragma once
-#include <stdint.h>
 #include <test/export.h>
+#include <types/types.h>
 
 TEST_IMPORT(uint32_t, ext2_to_vfs_flags, uint32_t ext2_flags);
 TEST_IMPORT(uint32_t, vfs_to_ext2_flags, uint32_t vfs_flags);

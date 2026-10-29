@@ -1,10 +1,9 @@
 /* @title: Device Structure */
 #pragma once
-#include <stddef.h>
-#include <stdint.h>
+#include <structures/list.h>
 #include <structures/rbt.h>
 #include <sync/mutex.h>
-#include <sync/spinlock.h>
+#include <sync/spinlock_types.h>
 #include <types/types.h>
 
 #define DEVICE_MAX_RESOURCES 8

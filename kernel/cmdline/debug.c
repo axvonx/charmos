@@ -1,4 +1,8 @@
+#include <cmdline.h>
+#include <console/crash.h>
+#include <log.h>
 #include <ndjson.h>
+#include <types/type_enum.h>
 
 #include "internal.h"
 

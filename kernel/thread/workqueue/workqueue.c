@@ -1,17 +1,29 @@
+#include <atomic.h>
 #include <compiler/core.h>
+#include <console/panic.h>
 #include <enforce.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
+#include <mem/page.h>
 #include <sch/sched.h>
-#include <smp/domain.h>
-#include <stdarg.h>
 #include <string.h>
+#include <structures/cpu_mask.h>
+#include <structures/list.h>
 #include <sync/condvar.h>
+#include <sync/lock_chk.h>
 #include <sync/spinlock.h>
 #include <thread/thread.h>
 #include <thread/workqueue.h>
+#include <topo/core.h>
+#include <topo/domain.h>
+#include <topo/global.h>
+#include <topo/topology.h>
+#include <types/refcount.h>
+#include <types/types.h>
 
 #include "internal.h"
+
+struct workqueue_globals workqueue_global = {0};
 
 LOCK_CHK_CLASS_DEFINE_LOCAL(workqueue_irq);
 LOCK_CHK_CLASS_DEFINE_LOCAL(workqueue_disp);
@@ -20,14 +32,14 @@ static struct workqueue *find_optimal_domain_wq(void) {
     struct core *pos;
 
     struct workqueue *optimal =
-        global.workqueues[(smp_id_raw() + 1) % global.core_count];
+        workqueue_global.workqueues[(smp_id_raw() + 1) % topo_global.cpu_count];
 
-    struct workqueue *local = global.workqueues[smp_id_raw()];
+    struct workqueue *local = workqueue_global.workqueues[smp_id_raw()];
 
     size_t least_loaded = WORKQUEUE_NUM_WORKS(optimal);
 
     domain_for_each_core_local(pos, TOPC_NONE) {
-        struct workqueue *queue = global.workqueues[pos->id];
+        struct workqueue *queue = workqueue_global.workqueues[pos->id];
         size_t load = WORKQUEUE_NUM_WORKS(queue);
 
         if (load < least_loaded && queue != local) {
@@ -50,7 +62,7 @@ enum workqueue_error workqueue_add(struct work *work) {
 }
 
 enum workqueue_error workqueue_add_local(struct work *work) {
-    struct workqueue *queue = global.workqueues[smp_id_raw()];
+    struct workqueue *queue = workqueue_global.workqueues[smp_id_raw()];
     return workqueue_enqueue(queue, work);
 }
 
@@ -162,7 +174,7 @@ struct workqueue *workqueue_create_internal(struct workqueue_attributes *attrs,
 
 struct workqueue *workqueue_create_default(const char *fmt, ...) {
     struct cpu_mask cmask;
-    cpu_mask_init(&cmask, global.core_count);
+    cpu_mask_init(&cmask, topo_global.cpu_count);
 
     cpu_mask_set_all(&cmask);
     struct workqueue_attributes attrs = {
@@ -258,14 +270,14 @@ workqueue_spawn_permanent_worker(struct workqueue *queue) {
 }
 
 void workqueues_permanent_init(void) {
-    int64_t num_workqueues = global.core_count;
-    global.workqueues =
-        nofail_vnews(global.workqueues, num_workqueues, ALLOC_ZERO);
+    int64_t num_workqueues = topo_global.cpu_count;
+    workqueue_global.workqueues =
+        nofail_vnews(workqueue_global.workqueues, num_workqueues, ALLOC_ZERO);
 
     for (int64_t i = 0; i < num_workqueues; i++) {
 
         struct cpu_mask mask;
-        cpu_mask_init(&mask, global.core_count);
+        cpu_mask_init(&mask, topo_global.cpu_count);
 
         cpu_mask_set(&mask, i);
 
@@ -278,14 +290,14 @@ void workqueues_permanent_init(void) {
             .worker_cpu_mask = mask,
         };
 
-        global.workqueues[i] =
+        workqueue_global.workqueues[i] =
             workqueue_create_full(&attrs, /* fmt = */ NULL, /* args = */ NULL);
-        if (!global.workqueues[i])
+        if (!workqueue_global.workqueues[i])
             panic(INIT_FAILED, "permanent workqueue");
 
-        global.workqueues[i]->core = i;
+        workqueue_global.workqueues[i]->core = i;
 
-        if (!workqueue_spawn_permanent_worker(global.workqueues[i]))
+        if (!workqueue_spawn_permanent_worker(workqueue_global.workqueues[i]))
             panic(INIT_FAILED, "initial worker on workqueue %ld", i);
     }
 }

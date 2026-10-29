@@ -1,7 +1,8 @@
 /* @title: Registry */
 #pragma once
+#include <colors.h>
 #include <log.h>
-#include <stdint.h>
+#include <types/types.h>
 
 struct block_device;
 void registry_register(struct block_device *disk);

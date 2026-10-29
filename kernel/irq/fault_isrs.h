@@ -1,4 +1,5 @@
 #include <console/crash.h>
+#include <console/global.h>
 #include <console/panic.h>
 
 #define MAKE_HANDLER(handler_name, message)                                    \
@@ -87,7 +88,7 @@ MAKE_HANDLER(double_fault, "DOUBLE FAULT");
 
 static enum irq_result panic_nmi_isr(struct irq_context *rsp, void *ctx) {
     cc_ignore(rsp, ctx);
-    if (atomic_load(&global.panicked)) {
+    if (atomic_load(&crash_global.panicked)) {
         if (crash_cpu_is_owner(smp_id_raw()))
             return IRQ_HANDLED;
 

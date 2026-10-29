@@ -1,4 +1,5 @@
 #include "structures/tests/test_internal.h"
+#include <err.h>
 
 TEST_GROUP_DEFINE(radix);
 

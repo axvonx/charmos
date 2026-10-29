@@ -1,9 +1,11 @@
-#include <atomic.h>
+#include <container_of.h>
+#include <sch/irql.h>
+#include <structures/list.h>
 #include <structures/pairing_heap.h>
 #include <structures/rbt.h>
-#include <thread/queue.h>
+#include <sync/spinlock_types.h>
 #include <thread/thread_types.h>
-#include <thread/wait.h>
+#include <thread/wait_types.h>
 
 #define TURNSTILE_WRITER_QUEUE 0
 #define TURNSTILE_READER_QUEUE 1
@@ -62,8 +64,6 @@ struct turnstile_hash_chain {
 
 #define TURNSTILE_OBJECT_HASH(obj)                                             \
     ((((uintptr_t) (obj) >> 3) * 2654435761u) & TURNSTILE_HASH_MASK)
-
-#define TURNSTILE_CHAIN(sobj) global.turnstiles[TURNSTILE_OBJECT_HASH(sobj)]
 
 struct turnstile_hash_table {
     struct turnstile_hash_chain heads[TURNSTILE_HASH_SIZE];

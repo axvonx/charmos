@@ -1,9 +1,11 @@
 #include <asm.h>
 #include <atomic.h>
 #include <cpuid_defs.h>
+#include <err.h>
 #include <math/bit.h>
 #include <string.h>
 #include <virt/kvm.h>
+#include <virt/kvm_para.h>
 
 enum kvm_state {
     KVM_STATE_UNKNOWN = 0,

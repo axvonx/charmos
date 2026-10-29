@@ -1,4 +1,5 @@
 #include "mem/slab/tests/test_internal.h"
+#include <mem/alloc.h>
 
 TEST_DEFINE_UNIT(slab, random_free_stress, TEST_INTENSITY(256, 2048, 32768),
                  .min_ram_mib = 8) {

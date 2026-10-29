@@ -1,20 +1,15 @@
 /* @title: Nightmare test harness */
 #pragma once
-#include <atomic.h>
 #include <cmdline.h>
 #include <compiler/core.h>
 #include <compiler/diagnostic.h>
-#include <crypto/prng.h>
 #include <enforce.h>
 #include <linker/symbols.h>
 #include <math/fixed.h>
 #include <scaled_param.h>
-#include <smp/percpu.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <string.h>
 #include <test/conc.h>
+#include <topo/percpu.h>
 #include <types/types.h>
 
 struct nightmare_ctx;

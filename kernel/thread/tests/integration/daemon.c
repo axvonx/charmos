@@ -1,3 +1,8 @@
+#include <scaled_param.h>
+#include <structures/cpu_mask.h>
+#include <structures/locked_list.h>
+#include <topo/global.h>
+
 #include "thread/tests/test_internal.h"
 
 TEST_GROUP_DEFINE(daemon, .intensity_desc = {
@@ -19,7 +24,7 @@ TEST_DEFINE_INTEGRATION(daemon, timesharing_worker) {
     atomic_store(&daemon_work_run, false);
 
     struct cpu_mask cmask;
-    cpu_mask_init(&cmask, global.core_count);
+    cpu_mask_init(&cmask, topo_global.cpu_count);
     cpu_mask_set_all(&cmask);
 
     struct daemon_attributes attrs = {

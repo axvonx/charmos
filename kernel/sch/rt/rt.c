@@ -1,10 +1,29 @@
+#include <atomic.h>
+#include <console/panic.h>
+#include <container_of.h>
+#include <log.h>
 #include <math/fixed.h>
+#include <math/range.h>
 #include <mem/alloc.h>
 #include <mem/numa.h>
+#include <sch/global.h>
+#include <sch/irql.h>
 #include <sch/rt_sched.h>
+#include <sch/rt_sched_types.h>
 #include <sch/sched.h>
-#include <smp/topology.h>
+#include <structures/cpu_mask.h>
+#include <structures/list.h>
+#include <structures/locked_list.h>
+#include <structures/rbt.h>
+#include <sync/semaphore.h>
 #include <sync/spinlock.h>
+#include <thread/thread.h>
+#include <thread/workqueue.h>
+#include <topo/core.h>
+#include <topo/domain.h>
+#include <topo/global.h>
+#include <topo/topology.h>
+#include <types/refcount.h>
 
 #include "internal.h"
 #include "sch/internal.h"
@@ -29,8 +48,8 @@ create_mapping(struct rt_scheduler_static *rts, rt_domain_id_t id) {
     if (!ret)
         return NULL;
 
-    cpu_mask_init(&ret->members, global.core_count);
-    cpu_mask_init(&ret->active, global.core_count);
+    cpu_mask_init(&ret->members, topo_global.cpu_count);
+    cpu_mask_init(&ret->active, topo_global.cpu_count);
 
     ret->id = id;
     ret->static_bptr = rts;
@@ -161,7 +180,7 @@ rt_load_scheduler_static(struct rt_scheduler_static *rts) {
         goto done;
     }
 
-    cpu_mask_init(rts->active_mask_internal, global.core_count);
+    cpu_mask_init(rts->active_mask_internal, topo_global.cpu_count);
 
     if ((err = rt_slots_init_for_scheduler(rts)) != RT_SCHEDULER_ERR_OK)
         goto done;
@@ -245,7 +264,7 @@ static ssize_t find_migration_target(struct thread *t) {
     size_t iter;
     enforce(cpu_mask_popcount(&t->allowed_cpus));
     cpu_mask_for_each(iter, t->allowed_cpus) {
-        struct rt_scheduler_percpu *pcpu = global.schedulers[iter]->rt;
+        struct rt_scheduler_percpu *pcpu = sch_global.schedulers[iter]->rt;
         struct rt_scheduler_static *rts = pcpu->active_mapping->static_bptr;
         if (is_compatible(rts, t))
             return iter;
@@ -261,7 +280,7 @@ static inline bool has_migration_target(struct thread *t) {
 static void send_to_compatible_cpu(struct thread *t) {
     size_t go_to = find_migration_target(t);
     struct rt_scheduler *next =
-        global.schedulers[go_to]->rt->active_mapping->rts;
+        sch_global.schedulers[go_to]->rt->active_mapping->rts;
     enum irql irql = spin_lock_high(&next->lock);
 
     /* TODO: Wrap around thread add/remove to better work with counters and
@@ -371,15 +390,15 @@ static struct rt_scheduler *get_new_rt_scheduler(domain_id_t domain) {
     if ((got = locked_list_pop_front(&rt_global.sch_pool[domain])))
         goto out;
 
-    if (global.numa_node_count > 1) {
-        struct numa_node *node = &global.numa_nodes[domain];
-        for (size_t i = 0; i < global.numa_node_count; i++) {
+    if (topo_global.numa_node_count > 1) {
+        struct numa_node *node = &topo_global.numa_nodes[domain];
+        for (size_t i = 0; i < topo_global.numa_node_count; i++) {
             uint8_t next = node->nodes_by_distance[i];
             if ((got = locked_list_pop_front(&rt_global.sch_pool[next])))
                 goto out;
         }
     } else {
-        for (size_t i = 0; i < global.domain_count; i++) {
+        for (size_t i = 0; i < topo_global.domain_count; i++) {
             if ((got = locked_list_pop_front(&rt_global.sch_pool[i])))
                 goto out;
         }
@@ -548,11 +567,11 @@ out:
 
 enum rt_scheduler_error
 rt_scheduler_switch_cpu(size_t cpu, struct rt_scheduler_static *into) {
-    struct rt_scheduler_percpu *pcpu = global.schedulers[cpu]->rt;
+    struct rt_scheduler_percpu *pcpu = sch_global.schedulers[cpu]->rt;
     semaphore_wait(&pcpu->switch_semaphore);
 
     enforce(!atomic_exchange(&pcpu->switch_into, into));
-    scheduler_force_resched(global.schedulers[cpu]);
+    scheduler_force_resched(sch_global.schedulers[cpu]);
 
     /* It will signal us now */
     semaphore_wait(&pcpu->switch_semaphore);

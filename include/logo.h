@@ -1,5 +1,4 @@
 /* @title: Logo */
-#include <colors.h>
 #pragma once
 
 extern const char *OS_LOGO;

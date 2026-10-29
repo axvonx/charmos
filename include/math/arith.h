@@ -1,8 +1,7 @@
 /* @title: Integer Arithmetic Functions */
 #pragma once
 #include <compiler/core.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 static inline cc_constfn size_t gcd(size_t a, size_t b) {
     while (b) {

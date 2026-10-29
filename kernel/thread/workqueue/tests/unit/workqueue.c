@@ -1,3 +1,11 @@
+#include <asm.h>
+#include <atomic.h>
+#include <mem/alloc.h>
+#include <scaled_param.h>
+#include <structures/cpu_mask.h>
+#include <structures/locked_list.h>
+#include <topo/global.h>
+
 #include "thread/workqueue/tests/test_internal.h"
 
 TEST_GROUP_DEFINE(workqueue, .intensity_desc = {
@@ -51,7 +59,7 @@ TEST_DEFINE_UNIT(workqueue, mt_enqueue_scaling,
     atomic_store(&threads_left, WQ_2_THREADS);
 
     struct cpu_mask mask;
-    cpu_mask_init(&mask, global.core_count);
+    cpu_mask_init(&mask, topo_global.cpu_count);
 
     cpu_mask_set_all(&mask);
 

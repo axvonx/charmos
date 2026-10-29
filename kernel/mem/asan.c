@@ -1,9 +1,9 @@
+#include "mem/slab/internal.h"
 #include <compiler/intrinsic.h>
 #include <console/crash.h>
 #include <console/term.h>
 #include <dbg.h>
 #include <enforce.h>
-#include <global.h>
 #include <math/align.h>
 #include <math/min_max.h>
 #include <mem/asan.h>
@@ -13,11 +13,9 @@
 #include <mem/vmm.h>
 #include <ndjson.h>
 #include <stack_depot.h>
-#include <stdint.h>
 #include <string.h>
 #include <sync/spinlock.h>
-
-#include "mem/slab/internal.h"
+#include <types/types.h>
 
 #ifdef DEBUG_ASAN
 LOG_SITE_DEFINE_PRINT(asan);

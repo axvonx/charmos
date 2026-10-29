@@ -1,4 +1,9 @@
+#include <asm.h>
+#include <fs/global.h>
+#include <mem/alloc.h>
 #include <mem/nofail.h>
+#include <mem/page.h>
+#include <scaled_param.h>
 #include <thread/thread.h>
 #include <time/time.h>
 
@@ -14,7 +19,7 @@ TEST_GROUP_DEFINE(bio, .intensity_desc = {
                            .unit = "ios",
                        });
 
-#define EXT2_ROOT struct vfs_node *root = global.root_node
+#define EXT2_ROOT struct vfs_node *root = fs_global.root_node
 
 static atomic_bool done = false;
 static void bio_callback(struct bio_request *req) {

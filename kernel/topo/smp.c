@@ -1,26 +1,39 @@
 #include <acpi/lapic.h>
+#include <asm.h>
+#include <atomic.h>
 #include <boot/gdt.h>
-#include <crypto/prng.h>
+#include <boot/global.h>
+#include <bootstage.h>
 #include <irq/idt.h>
 #include <irq/ipi.h>
+#include <irq/irq.h>
 #include <limine.h>
+#include <log.h>
 #include <math/bit.h>
+#include <math/fixed.h>
 #include <mem/alloc.h>
 #include <mem/domain.h>
 #include <mem/nofail.h>
-#include <mem/tlb.h>
+#include <sch/global.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
-#include <smp/domain.h>
-#include <smp/percpu.h>
-#include <smp/smp.h>
 #include <string.h>
+#include <structures/cpu_mask.h>
 #include <sync/once_latch.h>
 #include <sync/spinlock.h>
 #include <thread/dpc.h>
 #include <thread/thread.h>
 #include <time/lapic_timer.h>
 #include <time/time.h>
+#include <time/timer.h>
 #include <time/tsc.h>
+#include <topo/core.h>
+#include <topo/domain.h>
+#include <topo/global.h>
+#include <topo/percpu.h>
+#include <topo/smp.h>
+#include <topo/topology.h>
+#include <tsa.h>
 
 #include "mem/tlb_internal.h" /* for tlb_shootdown_cpu */
 
@@ -249,7 +262,7 @@ static void detect_cpu_capability(struct core *c) {
 }
 
 static struct core *setup_cpu(uint64_t cpu) {
-    struct core *c = global.cores[cpu];
+    struct core *c = topo_global.cores[cpu];
     enforce(c->id == cpu);
     c->self = c;
     c->current_irql = IRQL_PASSIVE_LEVEL;
@@ -264,7 +277,7 @@ static struct core *setup_cpu(uint64_t cpu) {
 
 static inline void set_core_awake(void) {
     if (atomic_inc_return_new_acq_rel(&cores_awake) ==
-        (global.core_count - 1)) {
+        (topo_global.cpu_count - 1)) {
         bootstage_advance(BOOTSTAGE_MID_MP);
     }
 }
@@ -282,7 +295,7 @@ static void smp_ap_wakeup(struct limine_mp_info *info) TSA_ACQUIRES_IRQS {
     setup_cpu(cpu);
 
     gdt_load();
-    wrmsr(MSR_GS_BASE, (uint64_t) global.cores[cpu]);
+    wrmsr(MSR_GS_BASE, (uint64_t) topo_global.cores[cpu]);
     idt_load();
 
     lapic_timer_init(cpu);
@@ -293,19 +306,19 @@ static void smp_ap_wakeup(struct limine_mp_info *info) TSA_ACQUIRES_IRQS {
 }
 
 void smp_init(void) {
-    for (size_t i = 0; i < global.core_count; i++) {
+    for (size_t i = 0; i < topo_global.cpu_count; i++) {
         size_t d = domain_for_cpu(i);
 
         if (i != 0) {
-            global.cores[i] =
+            topo_global.cores[i] =
                 nofail(valloc_from_domain(d, sizeof(struct core)));
 
-            memset(global.cores[i], 0, sizeof(struct core));
+            memset(topo_global.cores[i], 0, sizeof(struct core));
         }
 
-        global.cores[i]->id = i;
-        global.cores[i]->numa_node = numa_node_for_cpu(i);
-        global.cores[i]->domain = global.domains[d];
+        topo_global.cores[i]->id = i;
+        topo_global.cores[i]->numa_node = numa_node_for_cpu(i);
+        topo_global.cores[i]->domain = topo_global.domains[d];
     }
 }
 
@@ -318,8 +331,8 @@ void smp_timer_init(void) {
 
 void smp_wait_for_others_to_idle(void) {
     /* wait for them to enter idle threads */
-    size_t expected_idle = global.core_count - 1;
-    while (atomic_load(&global.idle_core_count) < expected_idle) {
+    size_t expected_idle = topo_global.cpu_count - 1;
+    while (atomic_load(&sch_global.idle_cpu_count) < expected_idle) {
         cpu_pause();
     }
 }
@@ -331,21 +344,21 @@ void smp_wake(struct limine_mp_response *mpr) {
             mpr->cpus[i]->goto_address = smp_ap_wakeup;
 
     smp_core(TOPC_NONE)->tsc_hz = tsc_calibrate();
-    if (global.core_count == 1)
+    if (topo_global.cpu_count == 1)
         return;
 
     tsc_sync_check_all_aps();
     /* wait for bootstage to progress, TODO: Find a better
      * way to do this, reading a volatile and NOT using
      * atomics here is problematic */
-    while (global.current_bootstage != BOOTSTAGE_MID_MP)
+    while (boot_global.stage != BOOTSTAGE_MID_MP)
         cpu_pause();
 }
 
 uint32_t *smp_apic_ids;
 
 static void smp_map_apic_ids(struct limine_mp_response *mpr) {
-    smp_apic_ids = nofail_vnews(smp_apic_ids, global.core_count);
+    smp_apic_ids = nofail_vnews(smp_apic_ids, topo_global.cpu_count);
     smp_apic_ids[0] = mpr->bsp_lapic_id;
 
     cpu_id_t next = 1;
@@ -356,7 +369,8 @@ static void smp_map_apic_ids(struct limine_mp_response *mpr) {
             continue;
         }
 
-        enforce(next < global.core_count, UNSUPPORTED, "limine lists no BSP");
+        enforce(next < topo_global.cpu_count, UNSUPPORTED,
+                "limine lists no BSP");
         info->extra_argument = next;
         smp_apic_ids[next++] = info->lapic_id;
     }
@@ -381,9 +395,10 @@ void smp_setup_bsp(struct limine_mp_response *mpr) {
     c->self = c;
     c->current_irql = IRQL_PASSIVE_LEVEL;
     wrmsr(MSR_GS_BASE, (uint64_t) c);
-    global.cores = nofail_vnews(global.cores, global.core_count, ALLOC_ZERO);
+    topo_global.cores =
+        nofail_vnews(topo_global.cores, topo_global.cpu_count, ALLOC_ZERO);
 
-    global.cores[0] = c;
+    topo_global.cores[0] = c;
     init_smt_info(c);
     detect_llc(&c->llc);
     detect_cpu_capability(c);
@@ -418,7 +433,7 @@ static void send_em_all_out(bool e) {
     }
 
     /* wait for everyone to change their tick state */
-    while (atomic_load(&tick_change_state) < (global.core_count - 1))
+    while (atomic_load(&tick_change_state) < (topo_global.cpu_count - 1))
         cpu_pause();
 }
 
@@ -456,7 +471,7 @@ void smp_boot_fence_raise(void) {
         ipi_send(i, IRQ_NOP);
     }
 
-    while (atomic_load_acq(&boot_fence_parked) < (global.core_count - 1))
+    while (atomic_load_acq(&boot_fence_parked) < (topo_global.cpu_count - 1))
         cpu_pause();
 }
 
@@ -481,7 +496,7 @@ void smp_boot_fence_park(void) {
 }
 
 struct core *smp_bsp(void) {
-    return global.cores[0];
+    return topo_global.cores[0];
 }
 
 void smp_caller_verify(enum topology_caller caller) {

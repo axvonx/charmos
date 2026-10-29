@@ -1,9 +1,20 @@
+#include <atomic.h>
+#include <container_of.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
+#include <structures/list.h>
+#include <structures/locked_list.h>
+#include <sync/semaphore.h>
+#include <sync/spinlock.h>
 #include <thread/daemon.h>
 #include <thread/reaper.h>
-#include <thread/workqueue.h>
+#include <thread/thread.h>
+#include <topo/domain.h>
+#include <topo/global.h>
+#include <topo/topology.h>
+#include <types/refcount.h>
 
 static struct reaper_thread **reapers = NULL;
 static atomic_size_t reaped_threads = ATOMIC_VAR_INIT(0);
@@ -16,7 +27,7 @@ void reaper_enqueue(struct thread *t) {
 }
 
 void reaper_init(void) {
-    size_t reaper_count = global.domain_count;
+    size_t reaper_count = topo_global.domain_count;
     reapers = nofail_vnews(reapers, reaper_count, ALLOC_ZERO);
 
     for (size_t i = 0; i < reaper_count; i++) {
@@ -27,7 +38,7 @@ void reaper_init(void) {
         semaphore_init(&reapers[i]->sem, 1);
         reapers[i]->thread = nofail(thread_spawn(
             "reaper_thread", reaper_thread_main, .private = reapers[i],
-            .allowed_cpus = global.domains[i]->cpu_mask));
+            .allowed_cpus = topo_global.domains[i]->cpu_mask));
     }
 }
 

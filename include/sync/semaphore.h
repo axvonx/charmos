@@ -1,7 +1,8 @@
 #pragma once
-#include <stdint.h>
-#include <sync/condvar.h>
-#include <sync/spinlock.h>
+#include <sync/condvar_types.h>
+#include <sync/spinlock_types.h>
+#include <tsa.h>
+#include <types/types.h>
 
 struct semaphore {
     int32_t count;

@@ -1,18 +1,19 @@
 #include <block/block.h>
-#include <console/printf.h>
+#include <console/panic.h>
 #include <drivers/ahci.h>
 #include <drivers/ata.h>
 #include <drivers/e1000.h>
-#include <drivers/nvme.h>
 #include <drivers/pci.h>
 #include <fs/detect.h>
+#include <fs/global.h>
 #include <fs/vfs.h>
-#include <global.h>
+#include <log.h>
 #include <mem/alloc.h>
 #include <registry.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
+#include <types/types.h>
+
+static struct block_device *root_node_disk;
 
 struct disk_node {
     struct block_device *disk;
@@ -111,7 +112,7 @@ void registry_setup(void) {
     ata_init(devices, count);
 
     log_info_global(LOG_HANDLE(vfs), "Attempting to find and mount root '%s'",
-                    global.root_partition);
+                    fs_global.root_partition);
 
     bool found_root = false;
     for (uint64_t i = 0; i < disk_count; i++) {
@@ -120,22 +121,22 @@ void registry_setup(void) {
         for (uint32_t j = 0; j < disk->partition_count; j++) {
             struct partition *p = &disk->partitions[j];
 
-            if (strcmp(p->name, global.root_partition) == 0) {
+            if (strcmp(p->name, fs_global.root_partition) == 0) {
                 struct vfs_node *root = p->mount(p);
                 if (!root)
                     panic(INIT_FAILED, "mounting root '%s'",
-                          global.root_partition);
-                global.root_node = root;
-                global.root_node_disk = disk;
+                          fs_global.root_partition);
+                fs_global.root_node = root;
+                root_node_disk = disk;
                 found_root = true;
             }
         }
     }
 
     if (!found_root)
-        panic(INIT_FAILED, "root '%s' not found", global.root_partition);
+        panic(INIT_FAILED, "root '%s' not found", fs_global.root_partition);
 
     log_info_global(
         LOG_HANDLE(vfs), "Root '%s' mounted - is a(n) %s filesystem",
-        global.root_partition, detect_fstr(global.root_node->fs_type));
+        fs_global.root_partition, detect_fstr(fs_global.root_node->fs_type));
 }

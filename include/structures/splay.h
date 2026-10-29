@@ -1,9 +1,7 @@
 /* @title: Splay tree */
 #pragma once
 #include <container_of.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 struct splay_node {
     struct splay_node *left;

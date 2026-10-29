@@ -5,9 +5,7 @@
 #include <compiler/wrapper.h>
 #include <enforce.h>
 #include <math/bit_api_internal.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 /* Must be a plain expression, not a statement,
  * due to use in enums and whatnot */

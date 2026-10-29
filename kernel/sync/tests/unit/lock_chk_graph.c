@@ -1,10 +1,14 @@
 #ifdef DEBUG_LOCK_CHK
 
+#include <sch/irql.h>
+#include <sync/lock_chk.h>
+#include <sync/lock_chk_types.h>
 #include <sync/mutex.h>
 #include <sync/mutex_simple.h>
 #include <sync/qspinlock.h>
 #include <sync/rwlock.h>
 #include <sync/spinlock.h>
+#include <thread/thread_types.h>
 
 #include "sync/lock_chk/internal.h"
 #include "sync/tests/test_internal.h"

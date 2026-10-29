@@ -1,11 +1,10 @@
 /* @title: Per-CPU dynamic objects */
 #pragma once
 #include <compiler/core.h>
-#include <global.h>
 #include <linker/symbols.h>
-#include <smp/core.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <math/min_max.h>
+#include <topo/core.h>
+#include <types/types.h>
 
 struct percpu_descriptor;
 typedef void (*percpu_descriptor_constructor)(void *, size_t);
@@ -28,7 +27,7 @@ LINKER_SECTION_EXTERN(struct percpu_descriptor, percpu_desc);
         void (*const __typed_ctor)(typeof(type_) *, size_t) = (ctor_);         \
         if (__typed_ctor != NULL)                                              \
             __typed_ctor((typeof(type_) *) inst, cpu);                         \
-        if (cpu == global.core_count - 1)                                      \
+        if (cpu == topo_global.cpu_count - 1)                                  \
             atomic_store(&__percpu_desc_##name_.ready, true);                  \
     }                                                                          \
     static LINKER_SECTION_OBJECT(struct percpu_descriptor, percpu_desc)        \
@@ -85,11 +84,11 @@ static inline
 #define PERCPU_WRITE(clr, name, val) (PERCPU_READ(clr, name) = (val))
 
 #define percpu_for_each_internal_3(var, cpu, name)                             \
-    for (cpu = 0; cpu < global.core_count; cpu++)                              \
+    for (cpu = 0; cpu < topo_global.cpu_count; cpu++)                          \
         for (var = PERCPU_PTR_FOR(name, cpu); var != NULL; var = NULL)
 
 #define percpu_for_each_internal_2(var, name)                                  \
-    for (cpu_id_t __percpu_idx = 0; __percpu_idx < global.core_count;          \
+    for (cpu_id_t __percpu_idx = 0; __percpu_idx < topo_global.cpu_count;      \
          __percpu_idx++)                                                       \
         for (var = PERCPU_PTR_FOR(name, __percpu_idx); var != NULL; var = NULL)
 

@@ -1,7 +1,7 @@
 /* @title: NUMA */
-#include <smp/topology.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <structures/cpu_mask_types.h>
+#include <topo/topology.h>
+#include <types/types.h>
 #pragma once
 
 struct numa_node {

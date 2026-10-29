@@ -1,6 +1,5 @@
 /* @title: LAPIC Timer */
 #pragma once
-#include <stdbool.h>
 #include <types/types.h>
 
 void lapic_timer_init(cpu_id_t core_id);

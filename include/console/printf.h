@@ -1,12 +1,9 @@
 #pragma once
-#include <colors.h>
 #include <compiler/core.h>
 #include <sch/irql.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <sync/spinlock.h>
+#include <sync/spinlock_types.h>
 #include <tsa.h>
+#include <types/types.h>
 
 struct printf_cursor;
 struct limine_framebuffer;

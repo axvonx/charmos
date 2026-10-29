@@ -5,6 +5,7 @@
 #include <mem/vas.h>
 #include <structures/list.h>
 #include <structures/rbt.h>
+#include <sync/spinlock_types.h>
 
 /* Byte-granular bins preserve bootstrap array allocs */
 #define VAS_BIN_COUNT 64

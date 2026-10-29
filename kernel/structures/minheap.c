@@ -1,5 +1,5 @@
-#include <console/panic.h>
 #include <mem/alloc.h>
+#include <sch/irql.h>
 #include <string.h>
 #include <structures/minheap.h>
 #include <sync/spinlock.h>

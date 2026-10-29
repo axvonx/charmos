@@ -1,4 +1,7 @@
 #include "crypto/tests/test_internal.h"
+#include <mem/alloc.h>
+#include <mem/alloc_param.h>
+#include <scaled_param.h>
 
 TEST_GROUP_DEFINE(chacha20, .intensity_desc = {
                                 .curve = SCALE_PIECEWISE_LOG,

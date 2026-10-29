@@ -1,10 +1,8 @@
 /* @title: DPCs */
 #pragma once
 #include <atomic.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <structures/cpu_mask.h>
+#include <structures/cpu_mask_types.h>
+#include <types/types.h>
 
 struct dpc;
 struct dpc_context;

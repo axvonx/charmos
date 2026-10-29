@@ -1,15 +1,14 @@
 #include <compiler/core.h>
-#include <console/panic.h>
-#include <console/printf.h>
+#include <err.h>
+#include <fs/detect.h>
 #include <fs/tmpfs.h>
 #include <fs/vfs.h>
 #include <math/align.h>
 #include <math/min_max.h>
 #include <mem/alloc.h>
 #include <mem/page.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
+#include <types/types.h>
 
 struct vfs_node *tmpfs_create_vfs_node(struct tmpfs_node *tnode);
 

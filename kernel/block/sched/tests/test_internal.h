@@ -5,12 +5,10 @@
 #include <fs/ext2.h>
 #include <fs/vfs.h>
 #include <mem/alloc.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <string.h>
 #include <test/test.h>
 #include <time/spin_sleep.h>
+#include <types/types.h>
 
 #include "fs/detect.h"
 

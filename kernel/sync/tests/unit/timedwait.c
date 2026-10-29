@@ -1,6 +1,9 @@
 #include <mem/nofail.h>
+#include <sch/irql.h>
 #include <sync/condvar.h>
 #include <sync/semaphore.h>
+#include <sync/spinlock.h>
+#include <time/time.h>
 
 #include "sync/tests/test_internal.h"
 

@@ -1,10 +1,14 @@
 /* @title: Simple Mutex */
 #pragma once
-#include <stdbool.h>
+#include <console/crash.h>
+#include <structures/list.h>
+#include <sync/lock_chk.h>
 #include <sync/lock_chk_types.h>
+#include <sync/lock_general.h>
 #include <sync/spinlock.h>
-#include <thread/wait.h>
+#include <thread/wait_types.h>
 #include <tsa.h>
+#include <types/types.h>
 
 struct TSA_CAPABILITY("mutex") mutex_simple {
     struct thread *owner;

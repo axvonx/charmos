@@ -1,7 +1,12 @@
+#include <container_of.h>
 #include <enforce.h>
 #include <mem/alloc.h>
+#include <sch/irql.h>
 #include <string.h>
 #include <structures/id_space.h>
+#include <structures/rbt.h>
+#include <sync/spinlock.h>
+#include <tsa.h>
 
 static size_t id_space_get_data(struct rbt_node *node) {
     return container_of(node, struct id_range, node)->start;

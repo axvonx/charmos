@@ -1,6 +1,9 @@
+#include <err.h>
 #include <math/units.h>
 #include <mem/elcm.h>
+#include <mem/page.h>
 #include <mem/slab.h>
+#include <structures/rbt.h>
 
 #include "internal.h"
 

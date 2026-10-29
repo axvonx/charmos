@@ -1,4 +1,6 @@
 #include "drivers/tests/test_internal.h"
+#include <math/bit.h>
+#include <scaled_param.h>
 
 TEST_GROUP_DEFINE(vtd, .intensity_desc = {
                            .curve = SCALE_PIECEWISE_LOG,

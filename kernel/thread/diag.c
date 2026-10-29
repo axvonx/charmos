@@ -1,7 +1,10 @@
+#include <atomic.h>
 #include <log.h>
 #include <math/min_max.h>
 #include <thread/thread.h>
 #include <thread/thread_diag.h>
+#include <thread/thread_types.h>
+#include <time/time.h>
 
 struct thread_diag *thread_diag(struct thread *t) {
     if (!t || !(thread_get_flags(t) & THREAD_FLAG_DIAG))

@@ -1,8 +1,6 @@
 /* @title: VFS */
 #include <err.h>
 #include <fs/detect.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <types/types.h>
 #pragma once
 

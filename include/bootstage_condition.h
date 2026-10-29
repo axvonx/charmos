@@ -3,7 +3,7 @@
 #include <bootstage.h>
 #include <compiler/core.h>
 #include <linker/symbols.h>
-#include <stdbool.h>
+#include <types/types.h>
 
 enum bootstage_condition {
     BOOTSTAGE_CONDITION_EQ,

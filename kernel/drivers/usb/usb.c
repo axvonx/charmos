@@ -1,12 +1,14 @@
+#include <atomic.h>
 #include <drivers/usb/usb.h>
 #include <log.h>
+#include <math/fixed.h>
 #include <mem/alloc.h>
 #include <mem/page.h>
-#include <mem/pmm.h>
-#include <mem/vmm.h>
-#include <sch/sched.h>
+#include <sch/irql.h>
 #include <string.h>
+#include <sync/event.h>
 #include <thread/thread.h>
+#include <thread/thread_types.h>
 
 #include "internal.h"
 

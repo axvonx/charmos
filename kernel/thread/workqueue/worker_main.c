@@ -1,7 +1,15 @@
+#include <atomic.h>
+#include <console/panic.h>
+#include <math/fixed.h>
 #include <mem/alloc.h>
-#include <sch/sched.h>
+#include <sch/irql.h>
 #include <string.h>
+#include <sync/condvar.h>
+#include <sync/spinlock.h>
 #include <thread/thread.h>
+#include <thread/workqueue.h>
+#include <time/time.h>
+#include <tsa.h>
 
 #include "internal.h"
 

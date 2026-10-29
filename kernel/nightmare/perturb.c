@@ -1,10 +1,13 @@
 #ifdef TEST_NIGHTMARE_ENABLED
+#include <atomic.h>
 #include <cmdline.h>
-#include <global.h>
+#include <math/range.h>
+#include <nightmare/nightmare.h>
 #include <nightmare/perturb.h>
 #include <nightmare/record.h>
 #include <sch/sched.h>
 #include <string.h>
+#include <test/conc.h>
 #include <test/perturb.h>
 #include <thread/thread.h>
 #include <time/time.h>

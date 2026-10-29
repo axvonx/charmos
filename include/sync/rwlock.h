@@ -2,15 +2,13 @@
 #pragma once
 #include <atomic.h>
 #include <compiler/core.h>
-#include <math/bit.h>
-#include <sch/irql.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <sync/lock_chk.h>
 #include <sync/lock_chk_types.h>
 #include <sync/lock_general.h>
 #include <sync/rwlock_types.h>
 #include <thread/thread_types.h>
 #include <tsa.h>
+#include <types/types.h>
 
 /* rwlock: pointer sized shared reader writer lock
  *

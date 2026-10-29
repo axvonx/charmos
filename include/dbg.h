@@ -1,9 +1,7 @@
 /* @title: Debugging */
 #pragma once
 #include <compiler/intrinsic.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 #define STACK_TRACE_MAX_DEPTH ((size_t) 64)
 

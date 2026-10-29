@@ -1,8 +1,7 @@
 /* @title: Hash Functions */
 #pragma once
 #include <compiler/core.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 /* Dan Bernstein's algorithm */
 static inline uint32_t hash_djb2(const void *key, size_t len) {

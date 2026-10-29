@@ -2,9 +2,8 @@
 #include <math/levenshtein.h>
 #include <math/min_max.h>
 #include <mem/alloc.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
+#include <types/types.h>
 
 static inline char fuzzy_fold_char(char c, bool ignore_case) {
     if (ignore_case && c >= 'A' && c <= 'Z')

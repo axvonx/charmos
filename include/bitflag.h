@@ -1,10 +1,8 @@
 /* @title: Bit flag macros */
 #pragma once
+#include <atomic.h>
 #include <compiler/core.h>
-#include <math/bit.h>
-#include <stdatomic.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 #include "bitflag_api_internal.h"
 

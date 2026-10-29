@@ -1,22 +1,24 @@
 /* @title: Tests */
 #pragma once
 #include <cmdline.h>
+#include <colors.h>
 #include <compiler/core.h>
 #include <compiler/diagnostic.h>
 #include <compiler/wrapper.h>
+#include <console/crash.h>
 #include <console/printf.h>
 #include <err.h>
 #include <fs/detect.h>
+#include <linker/symbols.h>
 #include <log.h>
 #include <math/fixed.h>
 #include <math/units.h>
 #include <mem/alloc.h>
 #include <mem/pmm.h>
 #include <scaled_param.h>
-#include <stdbool.h>
 #include <stringify.h>
-#include <sync/lock_general.h>
 #include <test/test_api_internal.h>
+#include <types/types.h>
 
 typedef void (*test_fn_t)(void);
 struct test_context;

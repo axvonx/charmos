@@ -1,6 +1,5 @@
 /* @title: Test API internal functions */
 #pragma once
-
 /* 1D piecewise-log */
 #define TEST_INTENSITY_LOG(min, def, max, unit_str)                            \
     .flags = TEST_FLAG_HONORS_INTENSITY, .intensity_desc = {                   \

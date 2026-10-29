@@ -1,26 +1,37 @@
+#include <asm.h>
+#include <atomic.h>
+#include <bootstage.h>
 #include <bootstage_condition.h>
+#include <colors.h>
 #include <compiler/intrinsic.h>
+#include <console/panic.h>
 #include <console/printf.h>
 #include <dbg.h>
+#include <irq/irq.h>
 #include <linker/symbol_table.h>
 #include <linker/symbols.h>
 #include <log.h>
+#include <math/fixed.h>
 #include <math/min_max.h>
 #include <math/range.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
+#include <mem/page.h>
 #include <mem/vmm.h>
 #include <ndjson.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
-#include <smp/core.h>
-#include <stdarg.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <string.h>
 #include <stringify.h>
+#include <structures/list.h>
 #include <structures/locked_list.h>
+#include <sync/spinlock.h>
 #include <thread/thread.h>
 #include <time/time.h>
+#include <topo/core.h>
+#include <tsa.h>
+#include <types/refcount.h>
+#include <types/types.h>
 
 NDJSON_DEFINE(log_message, NDJSON_SECTION_LOG, NDJSON_KIND_MESSAGE, 1,
               NDJSON_STR(site), NDJSON_STR(level), NDJSON_STR(msg),

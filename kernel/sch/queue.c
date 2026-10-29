@@ -1,13 +1,15 @@
 #include <atomic.h>
 #include <enforce.h>
-#include <irq/idt.h>
+#include <sch/global.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
-#include <smp/core.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <sync/lock_chk_assert.h>
+#include <structures/cpu_mask.h>
+#include <structures/list.h>
 #include <sync/spinlock.h>
+#include <thread/thread.h>
+#include <thread/thread_types.h>
+#include <time/time.h>
+#include <types/types.h>
 
 #include "internal.h"
 
@@ -85,7 +87,7 @@ void thread_enqueue(struct thread *t) {
 }
 
 void thread_enqueue_on_core(struct thread *t, uint64_t core_id) {
-    struct scheduler *s = global.schedulers[core_id];
+    struct scheduler *s = sch_global.schedulers[core_id];
     enum irql irql = spin_lock_high(&s->lock);
     scheduler_add_thread_locked(s, t);
     spin_unlock(&s->lock, irql);

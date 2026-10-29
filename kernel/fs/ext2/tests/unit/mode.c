@@ -1,4 +1,5 @@
 #include "fs/ext2/tests/test_internal.h"
+#include <test/export.h>
 
 /* ext2 file type is a 4 bit enumerated field in the top nibble of mode */
 struct ftype_case {

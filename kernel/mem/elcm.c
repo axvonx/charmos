@@ -1,13 +1,12 @@
 #include <compiler/core.h>
 #include <compiler/intrinsic.h>
 #include <enforce.h>
+#include <err.h>
 #include <math/align.h>
-#include <math/arith.h>
 #include <math/bit.h>
 #include <math/fixed.h>
 #include <math/range.h>
 #include <math/sort.h>
-#include <math/units.h>
 #include <mem/alloc.h>
 #include <mem/elcm.h>
 #include <mem/nofail.h>

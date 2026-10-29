@@ -1,8 +1,7 @@
 /* @title: Exponentially Weighted Moving Averages */
 #pragma once
 #include <math/fixed.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 struct ewma {
     fx32_32_t alpha;

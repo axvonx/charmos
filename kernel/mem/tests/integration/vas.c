@@ -1,3 +1,8 @@
+#include <structures/cpu_mask.h>
+#include <topo/core.h>
+#include <topo/global.h>
+#include <topo/topology.h>
+
 #include "mem/tests/test_internal.h"
 #include "mem/vas_internal.h"
 
@@ -98,7 +103,7 @@ TEST_DEFINE_INTEGRATION(vas, mt_import_query_and_reclaim, .min_cores = 2) {
     struct thread *threads[4] = {0};
     struct churn_worker workers[4] = {0};
     size_t thread_capacity = sizeof(threads) / sizeof(*threads);
-    size_t count = MIN(global.core_count, thread_capacity);
+    size_t count = MIN(topo_global.cpu_count, thread_capacity);
 
     TEST_ASSERT_NONNULL(vas);
     size_t started = 0;

@@ -1,16 +1,19 @@
 #include <block/bcache.h>
+#include <block/bio.h>
 #include <block/block.h>
 #include <block/sched.h>
-#include <console/panic.h>
+#include <err.h>
 #include <math/align.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <sync/lock_chk_assert.h>
+#include <mem/page.h>
+#include <sch/irql.h>
+#include <sync/lock_chk.h>
+#include <sync/mutex.h>
+#include <sync/spinlock.h>
 #include <thread/workqueue.h>
 #include <tsa.h>
+#include <types/types.h>
 
 static bool remove(struct bcache *cache, uint64_t key, uint64_t spb);
 

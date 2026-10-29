@@ -1,7 +1,9 @@
 #pragma once
-#include <sync/spinlock.h>
+#include <console/crash.h>
+#include <sch/irql.h>
+#include <sync/condvar_types.h>
+#include <sync/spinlock_types.h>
 #include <thread/wait.h>
-#include <time/timer.h>
 
 enum condvar_wake_reason {
     CONDVAR_WAKE_REASON_NONE = 0,    /* No reason specified */
@@ -10,10 +12,6 @@ enum condvar_wake_reason {
 };
 
 typedef void (*thread_action_callback)(struct thread *woke);
-
-struct condvar {
-    struct thread_wait_header waiters;
-};
 
 enum condvar_wake_reason condvar_wait(struct condvar *cv, struct spinlock *lock,
                                       enum irql irql, enum irql *out);

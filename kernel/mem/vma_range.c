@@ -4,9 +4,10 @@
 #include <mem/avc.h>
 #include <mem/fixed_size_alloc.h>
 #include <mem/mm.h>
+#include <mem/page.h>
 #include <mem/vma_range.h>
-#include <smp/perdomain.h>
 #include <structures/list.h>
+#include <structures/rbit.h>
 #include <types/refcount.h>
 
 FIXED_SIZE_RANGE_PERDOMAIN_DEFINE(vma_range,

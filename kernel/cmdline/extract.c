@@ -1,4 +1,10 @@
 #include "internal.h"
+#include <cmdline.h>
+#include <console/panic.h>
+#include <err.h>
+#include <math/bit.h>
+#include <structures/cpu_mask.h>
+#include <types/type_enum.h>
 
 enum err cmdline_extract_bool(struct cmdline_value *val, bool *out) {
     if (!val || !out)

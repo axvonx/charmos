@@ -1,14 +1,12 @@
 #pragma once
 #include <atomic.h>
+#include <cmdline.h>
 #include <console/crash.h>
 #include <nightmare/nightmare.h>
-#include <nightmare/perturb.h>
 #include <stringify.h>
-#include <sync/event.h>
 #include <test/conc.h>
-#include <thread/queue.h>
-#include <time/timer.h>
-#include <watchdog.h>
+#include <test/perturb.h>
+#include <time/timer_types.h>
 
 #define nightmare_panic(fmt, ...)                                              \
     do {                                                                       \

@@ -1,6 +1,6 @@
 #include <acpi/madt.h>
 #include <log.h>
-#include <stdint.h>
+#include <types/types.h>
 #include <uacpi/acpi.h>
 #include <uacpi/status.h>
 #include <uacpi/tables.h>

@@ -1,6 +1,7 @@
 /* @title: Topology generation */
 #pragma once
-#include <smp/pertopo.h>
+#include <topo/pertopo.h>
+#include <topo/topology.h>
 
 struct topo_gen_descriptor {
     struct pertopo_descriptor *descs[TOPOLOGY_LEVEL_MAX];
@@ -52,7 +53,7 @@ struct topo_gen_descriptor {
     for (enum topology_level __topo_gen_level = 0;                             \
          __topo_gen_level < TOPOLOGY_LEVEL_MAX; __topo_gen_level++)            \
         for (size_t __topo_gen_idx = 0;                                        \
-             __topo_gen_idx < global.topology.count[__topo_gen_level];         \
+             __topo_gen_idx < topo_global.topology.count[__topo_gen_level];    \
              __topo_gen_idx++)                                                 \
             for (var = (typeof(var)) __topo_gen_desc_##name                    \
                            .descs[__topo_gen_level]                            \
@@ -62,14 +63,16 @@ struct topo_gen_descriptor {
 #define topo_gen_for_each_internal_3(var, level, name)                         \
     for (level = 0; level < TOPOLOGY_LEVEL_MAX; level++)                       \
         for (size_t __topo_gen_idx = 0;                                        \
-             __topo_gen_idx < global.topology.count[level]; __topo_gen_idx++)  \
+             __topo_gen_idx < topo_global.topology.count[level];               \
+             __topo_gen_idx++)                                                 \
             for (var = (typeof(var)) __topo_gen_desc_##name.descs[level]       \
                            ->pertopo_ptrs[__topo_gen_idx];                     \
                  var != NULL; var = NULL)
 
 #define topo_gen_for_each_internal_4(var, level, node_id, name)                \
     for (level = 0; level < TOPOLOGY_LEVEL_MAX; level++)                       \
-        for (node_id = 0; node_id < global.topology.count[level]; node_id++)   \
+        for (node_id = 0; node_id < topo_global.topology.count[level];         \
+             node_id++)                                                        \
             for (var = (typeof(var)) __topo_gen_desc_##name.descs[level]       \
                            ->pertopo_ptrs[node_id];                            \
                  var != NULL; var = NULL)
@@ -78,13 +81,13 @@ struct topo_gen_descriptor {
 
 #define topo_gen_for_each_at_3(var, name, level)                               \
     for (size_t __topo_gen_idx = 0;                                            \
-         __topo_gen_idx < global.topology.count[level]; __topo_gen_idx++)      \
+         __topo_gen_idx < topo_global.topology.count[level]; __topo_gen_idx++) \
         for (var = (typeof(var)) __topo_gen_desc_##name.descs[level]           \
                        ->pertopo_ptrs[__topo_gen_idx];                         \
              var != NULL; var = NULL)
 
 #define topo_gen_for_each_at_4(var, node_id, name, level)                      \
-    for (node_id = 0; node_id < global.topology.count[level]; node_id++)       \
+    for (node_id = 0; node_id < topo_global.topology.count[level]; node_id++)  \
         for (var = (typeof(var)) __topo_gen_desc_##name.descs[level]           \
                        ->pertopo_ptrs[node_id];                                \
              var != NULL; var = NULL)

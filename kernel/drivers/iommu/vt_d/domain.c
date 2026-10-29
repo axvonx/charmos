@@ -1,7 +1,8 @@
 #include <drivers/iommu/vt_d.h>
-#include <global.h>
 #include <math/align.h>
 #include <mem/alloc.h>
+#include <sch/irql.h>
+#include <sync/spinlock.h>
 
 #include "internal.h"
 

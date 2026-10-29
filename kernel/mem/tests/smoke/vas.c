@@ -1,4 +1,7 @@
+#include <math/units.h>
 #include <mem/address_range.h>
+#include <mem/hhdm.h>
+#include <mem/vmm.h>
 
 #include "mem/tests/test_internal.h"
 

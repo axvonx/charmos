@@ -1,22 +1,22 @@
-#include <asm.h>
+#include <atomic.h>
 #include <block/bio.h>
 #include <block/block.h>
 #include <drivers/ahci.h>
-#include <drivers/ata.h>
 #include <drivers/mmio.h>
-#include <irq/idt.h>
+#include <irq/irq.h>
+#include <log.h>
 #include <math/align.h>
 #include <math/bit.h>
 #include <math/min_max.h>
 #include <math/units.h>
 #include <mem/alloc.h>
+#include <mem/page.h>
 #include <mem/vmm.h>
-#include <sch/sched.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
+#include <sync/event.h>
 #include <thread/thread.h>
-#include <time/spin_sleep.h>
+#include <thread/thread_types.h>
+#include <types/types.h>
 
 #define MAX_PRDT_ENTRY_SIZE MIB(4)
 

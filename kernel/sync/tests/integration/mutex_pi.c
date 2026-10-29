@@ -1,3 +1,7 @@
+#include <asm.h>
+#include <thread/thread_types.h>
+#include <topo/global.h>
+
 #include "sync/tests/test_internal.h"
 
 #define MUTEX_REPORT_PROBLEMS()                                                \
@@ -51,7 +55,7 @@ static void pi_ts_thread(void *nothing) {
 }
 
 TEST_DEFINE_INTEGRATION(mutex, pi_boost) {
-    if (global.core_count == 1) {
+    if (topo_global.cpu_count == 1) {
         return TEST_SKIP(TEST_SKIP_NONE);
     }
 

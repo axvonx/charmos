@@ -1,5 +1,9 @@
 #include <cmdline.h>
+#include <err.h>
+#include <math/bit.h>
+#include <math/fixed.h>
 #include <math/units.h>
+#include <time/time.h>
 
 #include "cmdline/internal.h"
 #include "tests/test_internal.h"

@@ -1,5 +1,10 @@
+#include <atomic.h>
+#include <sch/irql.h>
 #include <sync/event.h>
+#include <sync/spinlock.h>
 #include <thread/thread.h>
+#include <thread/thread_types.h>
+#include <thread/wait.h>
 
 struct event_set_ctx {
     struct event *e;

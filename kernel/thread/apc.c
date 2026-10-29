@@ -1,13 +1,20 @@
+#include <atomic.h>
 #include <compiler/core.h>
 #include <compiler/intrinsic.h>
+#include <console/panic.h>
 #include <enforce.h>
-#include <math/bit.h>
+#include <irq/irq.h>
 #include <mem/alloc.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
-#include <smp/core.h>
+#include <sync/spinlock.h>
 #include <thread/apc.h>
+#include <thread/apc_types.h>
 #include <thread/thread.h>
 #include <thread/thread_diag.h>
+#include <thread/thread_types.h>
+#include <topo/core.h>
+#include <types/refcount.h>
 
 #include "sch/internal.h"
 

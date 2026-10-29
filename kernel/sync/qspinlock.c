@@ -1,8 +1,12 @@
+#include <asm.h>
+#include <atomic.h>
 #include <compiler/core.h>
 #include <enforce.h>
-#include <smp/core.h>
-#include <smp/percpu.h>
+#include <sch/irql.h>
 #include <sync/qspinlock.h>
+#include <topo/core.h>
+#include <topo/percpu.h>
+#include <topo/topology.h>
 
 struct qnode {
     atomic(struct qnode *) next;

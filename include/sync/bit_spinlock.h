@@ -7,8 +7,8 @@
 #include <enforce.h>
 #include <math/bit.h>
 #include <sch/irql.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <tsa.h>
+#include <types/types.h>
 
 /* bit_spinlock: not an actual struct, but a series of macros for locking any
  * single bit within a byte, word, dword, and qword with comptime bounds check

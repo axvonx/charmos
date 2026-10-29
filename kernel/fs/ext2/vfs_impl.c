@@ -1,12 +1,18 @@
+#include <block/bcache.h>
+#include <block/block.h>
 #include <compiler/core.h>
+#include <err.h>
+#include <fs/detect.h>
 #include <fs/ext2.h>
 #include <fs/vfs.h>
+#include <math/align.h>
+#include <math/units.h>
 #include <mem/alloc.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
+#include <sync/spinlock.h>
 #include <test/export.h>
 #include <time/time.h>
+#include <types/types.h>
 
 // TODO: With all VFS impls, make sure to check these are on the same disk and
 // filesystem

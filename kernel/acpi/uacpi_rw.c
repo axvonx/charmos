@@ -3,8 +3,7 @@
 #include <console/printf.h>
 #include <drivers/pci.h>
 #include <mem/alloc.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <types/types.h>
 #include <uacpi/kernel_api.h>
 #include <uacpi/types.h>
 

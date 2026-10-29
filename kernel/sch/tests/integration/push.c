@@ -1,4 +1,10 @@
 #include "sch/tests/test_internal.h"
+#include <atomic.h>
+#include <mem/alloc.h>
+#include <mem/alloc_param.h>
+#include <sch/irql.h>
+#include <topo/core.h>
+#include <topo/topology.h>
 
 #define SCHED_PUSH_TEST_THREADS_MAX 1024
 

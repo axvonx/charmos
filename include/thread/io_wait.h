@@ -3,7 +3,8 @@
 
 /* NOTE: This file is now ARCHIVED. No one is suppose to go and start
  * using this, but I'm keeping it here simply as reference */
-#include <thread/wait.h>
+#include <structures/list.h>
+#include <thread/wait_types.h>
 
 struct io_wait_token {
     struct thread_wait_block block;

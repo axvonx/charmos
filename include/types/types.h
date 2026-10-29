@@ -2,6 +2,12 @@
 #pragma once
 #include <atomic.h>
 #include <compiler/core.h>
+
+/* The one place core C types come from: everything above the compiler/atomic
+ * base includes this instead of <std*.h> */
+#include <limits.h>
+#include <stdalign.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>

@@ -1,4 +1,9 @@
+#include <sch/irql.h>
+#include <structures/rbt.h>
+#include <sync/condvar.h>
+#include <sync/spinlock.h>
 #include <thread/thread.h>
+#include <thread/thread_types.h>
 
 static void join_check(struct thread *cc_nonnull_ptr t) {
     enforce_precond(t);

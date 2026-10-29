@@ -1,9 +1,12 @@
+#include <err.h>
 #include <mem/anon_vma.h>
 #include <mem/avc.h>
 #include <mem/fixed_size_alloc.h>
 #include <mem/vma_range.h>
-#include <smp/perdomain.h>
 #include <structures/list.h>
+#include <structures/rbit.h>
+#include <sync/rwlock.h>
+#include <thread/thread_types.h>
 #include <types/refcount.h>
 
 FIXED_SIZE_RANGE_PERDOMAIN_DEFINE(anon_vma, .obj_size = sizeof(struct anon_vma),

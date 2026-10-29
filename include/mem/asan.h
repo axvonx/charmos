@@ -2,9 +2,6 @@
 #include <err.h>
 #include <log.h>
 #include <math/bit.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <types/types.h>
 
 #define ASAN_SHADOW_SCALE 3ULL /* 1 shadow byte per 8 real bytes */

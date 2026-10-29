@@ -1,11 +1,10 @@
 #include <enforce.h>
-#include <global.h>
 #include <math/fixed.h>
 #include <math/min_max.h>
 #include <math/range.h>
 #include <scaled_param.h>
-#include <smp/core.h>
 #include <string.h>
+#include <topo/global.h>
 
 static size_t geom_interp(size_t a, size_t b, fx32_32_t t) {
     if (t <= 0)
@@ -68,7 +67,7 @@ static size_t scale_linear(fx32_32_t value, size_t min_val, size_t def_val,
 static size_t scale_core_multiplier(fx32_32_t value, size_t min_val,
                                     size_t def_val, size_t max_val) {
     size_t per_core = scale_linear(value, min_val, def_val, max_val);
-    return per_core * (global.core_count > 0 ? global.core_count : 1);
+    return per_core * (topo_global.cpu_count > 0 ? topo_global.cpu_count : 1);
 }
 
 static const scaling_fn_t scale_lut[SCALE_CURVE_MAX] = {

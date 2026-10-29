@@ -1,3 +1,6 @@
+#include <structures/rbt.h>
+#include <topo/global.h>
+
 #include "mem/tests/test_internal.h"
 
 #define DP_PAGES 16
@@ -56,7 +59,7 @@ static bool dp_verify(atomic_uint64_t **bufs, size_t nbuf, size_t pages,
 static void dp_spawn(struct thread **t, size_t nthreads, struct dp_worker *w,
                      bool single_core) {
     for (size_t i = 0; i < nthreads; i++) {
-        uint64_t core = single_core ? 0 : (i % global.core_count);
+        uint64_t core = single_core ? 0 : (i % topo_global.cpu_count);
         t[i] = enforce(thread_spawn("dp_hammer", dp_hammer, .arg = w,
                                     .on_cpu = core, .joinable = true,
                                     .pinned = single_core));
@@ -74,7 +77,7 @@ TEST_DEFINE_INTEGRATION(mem, mt_demand_single_buf,
                         .min_cores = 2, .min_ram_mib = 8) {
     const size_t pages = DP_PAGES, nbuf = 1;
     size_t nthreads =
-        MIN(ctx->intensity_val ? ctx->intensity_val : global.core_count,
+        MIN(ctx->intensity_val ? ctx->intensity_val : topo_global.cpu_count,
             DP_MAX_THREADS);
 
     atomic_uint64_t *bufs[1];
@@ -99,7 +102,7 @@ TEST_DEFINE_INTEGRATION(mem, mt_demand_multi_buf,
                         TEST_INTENSITY_CORES(1, 2, 4, "threads/core"),
                         .min_cores = 2, .min_ram_mib = 8) {
     const size_t pages = DP_PAGES;
-    size_t nbuf = MIN(global.core_count, DP_MAX_BUFS);
+    size_t nbuf = MIN(topo_global.cpu_count, DP_MAX_BUFS);
     size_t nthreads = MIN(ctx->intensity_val ? ctx->intensity_val : (2 * nbuf),
                           DP_MAX_THREADS); /* M > N */
 

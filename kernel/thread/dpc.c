@@ -1,12 +1,19 @@
+#include <asm.h>
 #include <atomic.h>
 #include <enforce.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
-#include <smp/core.h>
-#include <stdint.h>
+#include <structures/cpu_mask.h>
 #include <sync/once_latch.h>
 #include <thread/dpc.h>
+#include <topo/core.h>
+#include <topo/global.h>
+#include <topo/topology.h>
+#include <types/types.h>
+
+static struct dpc_cpu *dpc_data; /* per CPU, counted by topo_global.cpu_count */
 
 static struct dpc *dpc_steal_queue(struct dpc_queue *dq) {
     struct dpc *list = atomic_xchg_acq(&dq->head, NULL);
@@ -54,7 +61,7 @@ void dpc_drain_local(void) {
     enforce(irql_get() == IRQL_DISPATCH_LEVEL, INVALID_CONTEXT);
 
     size_t cpu = me->id;
-    struct dpc_cpu *dc = &global.dpc_data[cpu];
+    struct dpc_cpu *dc = &dpc_data[cpu];
 
 again:
     do {
@@ -101,7 +108,7 @@ bool dpc_enqueue_on_cpu(size_t cpu, struct dpc *cc_nonnull_ptr d) {
     if (atomic_xchg_acq_rel(&d->enqueued, true))
         return false;
 
-    struct dpc_cpu *dc = &global.dpc_data[cpu];
+    struct dpc_cpu *dc = &dpc_data[cpu];
 
     /* Clear next pointer then push via CAS loop */
     atomic_store_rlx(&d->next, NULL);
@@ -119,11 +126,10 @@ bool dpc_enqueue_local(struct dpc *d) {
 }
 
 void dpc_init_percpu(void) {
-    global.dpc_data =
-        nofail_vnews(global.dpc_data, global.core_count, ALLOC_ZERO);
+    dpc_data = nofail_vnews(dpc_data, topo_global.cpu_count, ALLOC_ZERO);
     size_t i;
     for_each_cpu_id(i) {
-        atomic_store_rlx(&global.dpc_data[i].queue.head, NULL);
+        atomic_store_rlx(&dpc_data[i].queue.head, NULL);
     }
 }
 

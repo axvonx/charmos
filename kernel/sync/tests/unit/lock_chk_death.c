@@ -1,14 +1,18 @@
-#include <asm.h>
+#include <sch/irql.h>
 #include <sync/lock_chk.h>
 #include <sync/lock_chk_assert.h>
+#include <sync/lock_chk_types.h>
 #include <sync/mutex.h>
 #include <sync/mutex_simple.h>
 #include <sync/qspinlock.h>
 #include <sync/rwlock.h>
+#include <sync/rwlock_types.h>
 #include <sync/spinlock.h>
 #include <test/test.h>
 #include <thread/thread.h>
+#include <thread/thread_types.h>
 #include <time/spin_sleep.h>
+#include <tsa.h>
 
 #include "sync/tests/test_internal.h"
 

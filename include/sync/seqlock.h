@@ -1,13 +1,15 @@
 /* @title: Sequence Lock */
 #pragma once
+#include <asm.h>
 #include <atomic.h>
 #include <compiler/atomic.h>
 #include <compiler/core.h>
 #include <enforce.h>
 #include <sch/irql.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <sync/lock_chk.h>
 #include <sync/spinlock.h>
+#include <tsa.h>
+#include <types/types.h>
 
 /* The naming here is rather... unpleasant, so it's worth specifying upfront:
  *

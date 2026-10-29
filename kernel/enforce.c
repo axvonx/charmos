@@ -1,7 +1,6 @@
 #include <console/crash.h>
-#include <console/printf.h>
-#include <stdarg.h>
 #include <string.h>
+#include <types/types.h>
 
 static cc_noreturn void impl_default(struct crash_payload pluh,
                                      const char *file, int line,

@@ -1,11 +1,16 @@
-#include <asm.h>
-#include <console/printf.h>
+#include <atomic.h>
 #include <drivers/mmio.h>
 #include <drivers/usb/usb.h>
 #include <drivers/usb/xhci.h>
-#include <sch/sched.h>
+#include <irq/irq.h>
+#include <log_types.h>
+#include <sch/irql.h>
 #include <string.h>
+#include <structures/list.h>
+#include <sync/event.h>
 #include <thread/thread.h>
+#include <thread/thread_types.h>
+#include <types/refcount.h>
 
 #define XHCI_PORTSC_CHANGE_MASK                                                \
     (PORTSC_CSC | PORTSC_PEC | PORTSC_WRC | PORTSC_OCC | PORTSC_PRC |          \

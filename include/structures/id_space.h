@@ -1,8 +1,9 @@
 /* @title: ID Allocator (id_space) */
 #pragma once
-#include <stdint.h>
 #include <structures/rbt.h>
-#include <sync/spinlock.h>
+#include <sync/spinlock_types.h>
+#include <tsa.h>
+#include <types/types.h>
 
 #define ID_RANGE_RESERVE_COUNT 128
 

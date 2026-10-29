@@ -1,3 +1,10 @@
+#include <block/block.h>
+#include <err.h>
+#include <fs/detect.h>
+#include <fs/global.h>
+#include <mem/alloc.h>
+#include <scaled_param.h>
+
 #include "fs/ext2/tests/test_internal.h"
 
 TEST_GROUP_DEFINE(ext2, .intensity_desc = {
@@ -5,10 +12,10 @@ TEST_GROUP_DEFINE(ext2, .intensity_desc = {
                             .unit = "ops",
                         });
 
-#define EXT2_ROOT struct vfs_node *root = global.root_node
+#define EXT2_ROOT struct vfs_node *root = fs_global.root_node
 
 static void flush(void) {
-    struct ext2_fs *fs = global.root_node->fs_data;
+    struct ext2_fs *fs = fs_global.root_node->fs_data;
     struct block_device *d = fs->drive;
 
     bio_sched_dispatch_all(d);

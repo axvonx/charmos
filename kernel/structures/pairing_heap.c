@@ -1,5 +1,7 @@
 #include <enforce.h>
+#include <sch/irql.h>
 #include <structures/pairing_heap.h>
+#include <sync/spinlock.h>
 
 void pairing_heap_init(struct pairing_heap *h, pairing_cmp_t cmp) {
     h->root = NULL;

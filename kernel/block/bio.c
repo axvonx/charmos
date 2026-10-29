@@ -1,10 +1,10 @@
 #include <block/bio.h>
 #include <block/block.h>
-#include <block/sched.h>
 #include <mem/alloc.h>
+#include <mem/page.h>
 #include <mem/slab.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <structures/list.h>
+#include <types/types.h>
 
 SLAB_SIZE_REGISTER_FOR_STRUCT(bio_request, SLAB_OBJ_ALIGN_DEFAULT);
 

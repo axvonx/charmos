@@ -1,11 +1,12 @@
 /* @title: Mutex */
 #pragma once
 #include <compiler/core.h>
-#include <sch/irql.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <console/crash.h>
+#include <sync/lock_chk.h>
 #include <sync/lock_chk_types.h>
+#include <sync/lock_general.h>
 #include <tsa.h>
+#include <types/types.h>
 
 /* mutex: pointer sized mutex
  *

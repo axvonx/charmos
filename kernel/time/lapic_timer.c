@@ -1,12 +1,19 @@
 #include <acpi/hpet.h>
 #include <acpi/lapic.h>
-#include <global.h>
+#include <asm.h>
+#include <err.h>
 #include <irq/irq.h>
 #include <math/align.h>
-#include <smp/core.h>
+#include <math/bit.h>
+#include <math/fixed.h>
+#include <mem/nofail.h>
+#include <time/clock.h>
 #include <time/clock_evdev.h>
 #include <time/lapic_timer.h>
 #include <time/names.h>
+#include <topo/core.h>
+#include <topo/global.h>
+#include <topo/topology.h>
 
 #define LAPIC_CALIBRATION_WINDOW_US 2000
 #define LAPIC_CALIBRATION_SAMPLES 5
@@ -48,7 +55,7 @@ void lapic_timer_init(cpu_id_t core_id) {
     lapic_write(LAPIC_REG_LVT_TIMER,
                 IRQ_TIMER | LAPIC_LVT_MASK | TIMER_MODE_ONESHOT);
 
-    global.cores[core_id]->lapic_khz = lapic_timer_calibrate();
+    topo_global.cores[core_id]->lapic_khz = lapic_timer_calibrate();
     lapic_timer_disable();
 }
 
@@ -137,7 +144,7 @@ static struct clock_evdev *lapic_clock_evdev_create(cpu_id_t core_id) {
     ced->change_state = lapic_evdev_change_state;
 
     /* bounds based on LAPIC frequency */
-    freq_khz_t freq_khz = global.cores[core_id]->lapic_khz;
+    freq_khz_t freq_khz = topo_global.cores[core_id]->lapic_khz;
 
     ced->min_delta_ns =
         (time_ns_t) DIV_ROUND_UP(nanoseconds_per_khz_tick, freq_khz);

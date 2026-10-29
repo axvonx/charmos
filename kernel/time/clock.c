@@ -1,8 +1,12 @@
+#include <container_of.h>
+#include <err.h>
 #include <mem/alloc.h>
+#include <sch/irql.h>
 #include <string.h>
+#include <structures/list.h>
 #include <structures/locked_list.h>
+#include <sync/spinlock.h>
 #include <time/clock.h>
-#include <time/names.h>
 
 #include "internal.h"
 

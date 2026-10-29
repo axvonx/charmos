@@ -2,26 +2,29 @@
 #include <atomic.h>
 #include <container_of.h>
 #include <enforce.h>
+#include <log.h>
 #include <math/align.h>
 #include <math/bit.h>
 #include <math/range.h>
 #include <mem/alloc.h>
 #include <mem/fixed_size_alloc.h>
+#include <mem/global.h>
 #include <mem/page.h>
-#include <mem/page_alloc.h>
 #include <mem/page_fault.h>
 #include <mem/simple_alloc.h>
-#include <mem/vmm.h>
-#include <smp/domain.h>
 #include <stat_series.h>
-#include <stdint.h>
 #include <structures/list.h>
 #include <structures/mpmc_fifo_ring.h>
 #include <structures/mpsc_lifo_list.h>
 #include <structures/rbt.h>
 #include <sync/spinlock.h>
+#include <thread/dpc.h>
 #include <thread/workqueue.h>
 #include <time/time.h>
+#include <topo/core.h>
+#include <topo/domain.h>
+#include <topo/topology.h>
+#include <types/types.h>
 
 LOG_SITE_EXTERN(slab);
 LOG_HANDLE_EXTERN(slab);

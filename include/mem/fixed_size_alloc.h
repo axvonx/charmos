@@ -1,12 +1,11 @@
 /* @title: Fixed Size Allocation */
 #pragma once
 #include <compiler/core.h>
-#include <mem/alloc.h>
 #include <mem/nofail.h>
 #include <mem/page.h>
-#include <smp/perdomain.h>
 #include <structures/list.h>
-#include <sync/spinlock.h>
+#include <sync/spinlock_types.h>
+#include <topo/perdomain.h>
 
 /* Number of fully-empty freelist backing pages to keep cached per local tree
  * before reclaiming on free
@@ -72,15 +71,15 @@ void fixed_size_range_init(struct fixed_size_range *fsr,
                                     size_t domain_) {                          \
         static struct fixed_size_range **__perdomain_fsrs_##name = NULL;       \
         if (!__perdomain_fsrs_##name)                                          \
-            __perdomain_fsrs_##name =                                          \
-                nofail_vnews(__perdomain_fsrs_##name, global.domain_count);    \
+            __perdomain_fsrs_##name = nofail_vnews(__perdomain_fsrs_##name,    \
+                                                   topo_global.domain_count);  \
                                                                                \
         struct fixed_size_range_attributes __fsr_attrs = {__VA_ARGS__};        \
         fixed_size_range_init(fsr_, &__fsr_attrs);                             \
         __perdomain_fsrs_##name[domain_] = fsr_;                               \
         fsr_->perdomain_fsrs = __perdomain_fsrs_##name;                        \
         fsr_->domain = domain_;                                                \
-        if (domain_ == global.domain_count - 1)                                \
+        if (domain_ == topo_global.domain_count - 1)                           \
             __fsr_##name##_enabled = true;                                     \
     }                                                                          \
     PERDOMAIN_DEFINE(struct fixed_size_range, __##name##_fsr,                  \

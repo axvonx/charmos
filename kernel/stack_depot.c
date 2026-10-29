@@ -1,9 +1,16 @@
+#include <atomic.h>
 #include <compiler/intrinsic.h>
+#include <dbg.h>
+#include <mem/alloc_param.h>
 #include <mem/fixed_size_alloc.h>
+#include <sch/irql.h>
 #include <stack_depot.h>
 #include <string.h>
-#include <sync/lock_chk_assert.h>
+#include <structures/list.h>
+#include <sync/qspinlock.h>
+#include <sync/spinlock.h>
 #include <tsa.h>
+#include <types/refcount.h>
 
 struct stack_depot_globals stack_depot_global = {0};
 FIXED_SIZE_RANGE_PERDOMAIN_DEFINE(

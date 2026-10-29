@@ -1,3 +1,4 @@
+#include <atomic.h>
 #include <math/bit.h>
 #include <math/min_max.h>
 #include <mem/alloc.h>
@@ -108,6 +109,5 @@ bool spsc_fifo_ring_push_ptr(struct spsc_fifo_ring *fifo, const void *ptr) {
 }
 
 bool spsc_fifo_ring_pop_ptr(struct spsc_fifo_ring *fifo, void **out_ptr) {
-    return spsc_fifo_ring_read(fifo, out_ptr, sizeof(void *)) ==
-           sizeof(void *);
+    return spsc_fifo_ring_read(fifo, out_ptr, sizeof(void *)) == sizeof(void *);
 }

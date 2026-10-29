@@ -1,8 +1,10 @@
 #include <block/block.h>
 #include <block/sched.h>
-#include <console/printf.h>
+#include <console/panic.h>
 #include <mem/alloc.h>
-#include <sync/lock_chk_assert.h>
+#include <structures/list.h>
+#include <sync/mutex.h>
+#include <sync/qspinlock.h>
 #include <sync/spinlock.h>
 #include <thread/workqueue.h>
 

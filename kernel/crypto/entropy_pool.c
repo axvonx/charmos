@@ -1,8 +1,9 @@
 #include <crypto/chacha20.h>
 #include <crypto/entropy_pool.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <math/units.h>
+#include <sch/irql.h>
 #include <string.h>
+#include <types/types.h>
 
 #include <sync/spinlock.h>
 

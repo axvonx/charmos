@@ -1,9 +1,6 @@
 /* @title: Topology */
 #pragma once
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <structures/cpu_mask.h>
+#include <structures/cpu_mask_types.h>
 #include <types/types.h>
 
 enum topology_level {
@@ -107,4 +104,4 @@ const char *topology_level_name(enum topology_level l);
 bool topology_contract_verify(struct topology_contract c);
 
 #define topology_for_each_id(n_, l_)                                           \
-    for ((n_) = 0; (n_) < global.topology.count[l_]; (n_)++)
+    for ((n_) = 0; (n_) < topo_global.topology.count[l_]; (n_)++)

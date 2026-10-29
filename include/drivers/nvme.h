@@ -2,13 +2,15 @@
 #pragma once
 #include <atomic.h>
 #include <block/block.h>
-#include <block/sched.h>
 #include <compiler/core.h>
-#include <stdint.h>
+#include <irq/irq.h>
+#include <mem/page.h>
+#include <structures/list.h>
 #include <sync/event.h>
 #include <sync/semaphore.h>
-#include <sync/spinlock.h>
+#include <sync/spinlock_types.h>
 #include <thread/workqueue.h>
+#include <types/types.h>
 
 /* NOTE: offsets and sizes asserted in kernel/drivers/nvme/layout.c */
 struct nvme_command {

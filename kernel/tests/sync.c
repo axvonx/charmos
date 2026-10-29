@@ -1,7 +1,10 @@
-#include <asm.h>
+#include <atomic.h>
+#include <sch/irql.h>
+#include <sync/condvar.h>
+#include <sync/spinlock.h>
 #include <test/sync.h>
-#include <thread/thread_types.h>
 #include <time/time.h>
+#include <tsa.h>
 
 #ifdef TEST_ENABLED
 

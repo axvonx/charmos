@@ -1,14 +1,22 @@
+#include <asm.h>
 #include <atomic.h>
+#include <boot/global.h>
+#include <bootstage.h>
 #include <irq/ipi.h>
-#include <mem/alloc.h>
-#include <mem/page.h>
+#include <irq/irq.h>
+#include <mem/global.h>
 #include <mem/tlb.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
-#include <smp/percpu.h>
-#include <smp/perdomain.h>
-#include <stdint.h>
-#include <thread/dpc.h>
+#include <structures/cpu_mask.h>
 #include <time/tsc.h>
+#include <topo/core.h>
+#include <topo/domain.h>
+#include <topo/global.h>
+#include <topo/percpu.h>
+#include <topo/perdomain.h>
+#include <topo/topology.h>
+#include <types/types.h>
 
 #include "tlb_internal.h"
 
@@ -26,7 +34,7 @@ static void tlb_cpu_init(struct tlb_cpu *cpu, cpu_id_t id) {
 }
 
 static void tlb_domain_init(struct tlb_domain *d, domain_id_t id) {
-    d->domain = global.domains[id];
+    d->domain = topo_global.domains[id];
     struct cpu_mask mask = CPU_MASK_INIT;
     domain_set_cpu_mask(&mask, d->domain);
 
@@ -94,7 +102,7 @@ void tlb_shootdown_full(struct tlb_request rq) {
     if (rq.mode == TLB_MODE_NONE)
         return;
 
-    if (global.current_bootstage < BOOTSTAGE_MID_MP)
+    if (boot_global.stage < BOOTSTAGE_MID_MP)
         return;
 
     enum irql lirql = irql_raise(IRQL_DISPATCH_LEVEL);
@@ -122,7 +130,7 @@ void tlb_shootdown_full(struct tlb_request rq) {
             ring_wait(&PERCPU_PTR_FOR(tlb_cpus, i)->eager_ring);
         }
 
-        atomic_inc_release(&global.pt_epoch);
+        atomic_inc_release(&mem_global.pt_epoch);
     }
 
     irql_lower(lirql);

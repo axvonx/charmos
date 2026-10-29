@@ -1,8 +1,7 @@
 /* @title: One-time atomic counters */
 #pragma once
 #include <atomic.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <types/types.h>
 
 struct once_counter {
     atomic_uint64_t count;

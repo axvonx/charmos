@@ -1,4 +1,7 @@
 #include "sync/tests/test_internal.h"
+#include <scaled_param.h>
+#include <sync/rwlock_types.h>
+#include <thread/thread_types.h>
 
 TEST_GROUP_DEFINE(rwlock, .intensity_desc = {
                               .curve = SCALE_PIECEWISE_LOG,

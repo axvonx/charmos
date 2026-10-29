@@ -1,8 +1,9 @@
+#include <block/bcache.h>
 #include <err.h>
 #include <fs/ext2.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <sch/irql.h>
 #include <string.h>
+#include <types/types.h>
 
 bool ext2_dirent_valid(struct ext2_dir_entry *entry) {
     if (entry->inode == 0 || entry->rec_len < 8 || entry->name_len == 0)

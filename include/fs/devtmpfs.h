@@ -1,6 +1,5 @@
 /* @title: devtmpfs */
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 #pragma once
 
 enum devtmpfs_node_type {

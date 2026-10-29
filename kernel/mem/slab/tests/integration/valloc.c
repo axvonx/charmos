@@ -1,4 +1,8 @@
+#include <atomic.h>
+#include <mem/alloc.h>
 #include <mem/nofail.h>
+#include <sch/irql.h>
+#include <time/time.h>
 
 #include "mem/slab/tests/test_internal.h"
 

@@ -1,5 +1,6 @@
+#include <console/panic.h>
 #include <enforce.h>
-#include <stdint.h>
+#include <types/types.h>
 
 #pragma GCC diagnostic ignored "-Wmissing-prototypes"
 

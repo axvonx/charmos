@@ -1,6 +1,9 @@
+#include <sch/wroost.h>
 #include <sync/rwlock.h>
+#include <test/conc.h>
 #include <test/fleet.h>
 #include <test/sync.h>
+#include <thread/thread_types.h>
 
 #include "sch/tests/test_internal.h"
 

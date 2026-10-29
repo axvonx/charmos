@@ -3,9 +3,7 @@
 #include <atomic.h>
 #include <compiler/core.h>
 #include <sch/irql.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 struct lock_chk_class;
 struct lock_chk_lock;

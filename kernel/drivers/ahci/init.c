@@ -1,16 +1,15 @@
-#include <asm.h>
-#include <console/printf.h>
+#include <console/panic.h>
 #include <drivers/ahci.h>
 #include <drivers/mmio.h>
-#include <irq/idt.h>
+#include <irq/irq.h>
+#include <log.h>
 #include <math/bit.h>
 #include <mem/alloc.h>
+#include <mem/page.h>
 #include <mem/pmm.h>
-#include <mem/vmm.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
 #include <time/spin_sleep.h>
+#include <types/types.h>
 
 // TODO: Hand this off to IDE if the GHC bit 31 is OFF
 // It won't be AHCI - Sometimes we are in IDE emul mode

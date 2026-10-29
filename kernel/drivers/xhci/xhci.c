@@ -1,19 +1,31 @@
-#include <asm.h>
 #include <compiler/core.h>
-#include <console/printf.h>
+#include <container_of.h>
+#include <device.h>
+#include <drivers/mmio.h>
 #include <drivers/pci.h>
+#include <drivers/usb/usb.h>
 #include <drivers/usb/xhci.h>
-#include <irq/idt.h>
+#include <err.h>
+#include <irq/irq.h>
+#include <log.h>
 #include <math/bit.h>
+#include <math/fixed.h>
 #include <math/min_max.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
 #include <mem/page.h>
 #include <mem/vmm.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <sch/irql.h>
+#include <sch/sched.h>
 #include <string.h>
+#include <structures/cpu_mask.h>
+#include <structures/list.h>
+#include <sync/semaphore.h>
+#include <sync/spinlock.h>
+#include <thread/thread.h>
 #include <thread/workqueue.h>
+#include <topo/global.h>
+#include <types/types.h>
 
 #include "internal.h"
 
@@ -172,6 +184,8 @@ static enum usb_error xhci_configure_device_endpoints(struct usb_device *usb) {
         /* Add one, there is a slot that the add flags account for */
         input_ctx->ctrl_ctx.add_flags |= BIT(input_ctx_idx + 1);
 
+        /* ep->number is 4 bits and nonzero here, so the index is 1..30 */
+        assume(input_ctx_idx < ct_array_size(input_ctx->ep_ctx));
         struct xhci_ep_ctx *ep_ctx =
             &input_ctx->ep_ctx[input_ctx_idx]; // NOLINT(*ArrayBound)
 
@@ -759,7 +773,7 @@ static struct usb_controller_ops xhci_ctrl_ops = {
 void xhci_init(uint8_t bus, uint8_t slot, uint8_t func,
                struct pci_device *pci) {
     struct cpu_mask cmask;
-    cpu_mask_init(&cmask, global.core_count);
+    cpu_mask_init(&cmask, topo_global.cpu_count);
 
     cpu_mask_set_all(&cmask);
     struct workqueue_attributes attrs = {

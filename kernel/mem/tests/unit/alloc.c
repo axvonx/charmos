@@ -1,4 +1,5 @@
 #include <math/units.h>
+#include <mem/alloc.h>
 
 #include "mem/tests/test_internal.h"
 

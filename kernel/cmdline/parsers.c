@@ -1,3 +1,14 @@
+#include <cmdline.h>
+#include <err.h>
+#include <math/bit.h>
+#include <math/fixed.h>
+#include <mem/nofail.h>
+#include <parse.h>
+#include <string.h>
+#include <structures/cpu_mask.h>
+#include <topo/global.h>
+#include <types/refcount.h>
+
 #include "internal.h"
 
 static enum err cmdline_parse_i64_val(const char *text, int64_t *out) {
@@ -77,7 +88,7 @@ enum err cmdline_parse_data_size(void *write_to, const char *text) {
 
 enum err cmdline_parse_cpu_mask(void *write_to, const char *text) {
     struct cpu_mask mask;
-    if (!parse_is_cpu_mask(text, &mask, global.core_count))
+    if (!parse_is_cpu_mask(text, &mask, topo_global.cpu_count))
         return ERR_INVAL;
     *(struct cpu_mask *) write_to = mask;
     return ERR_OK;
@@ -157,7 +168,8 @@ static bool detect_data_size(const char *text, void *out) {
 }
 
 static bool detect_cpu_mask(const char *text, void *out) {
-    return parse_is_cpu_mask(text, (struct cpu_mask *) out, global.core_count);
+    return parse_is_cpu_mask(text, (struct cpu_mask *) out,
+                             topo_global.cpu_count);
 }
 
 static bool detect_range(const char *text, void *out) {

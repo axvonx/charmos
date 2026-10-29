@@ -1,6 +1,9 @@
+#include <log.h>
 #include <mem/arena.h>
 #include <mem/arena_provider.h>
-#include <sync/rcu.h>
+#include <structures/rbt.h>
+#include <sync/rcu_types.h>
+#include <sync/spinlock.h>
 
 struct arena_layout_desc {
     uint8_t total_header_size;

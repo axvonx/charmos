@@ -2,9 +2,7 @@
 #pragma once
 #include <atomic.h>
 #include <compiler/core.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 /* Bounded Vyukov MPMC FIFO ring, like
  *

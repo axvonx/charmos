@@ -1,6 +1,6 @@
 /* @title: Memory Sizes and Unit Conversions */
 #pragma once
-#include <stddef.h>
+#include <types/types.h>
 
 /* Binary (IEC) units: powers of 1024 */
 #define KIB(x) ((size_t) (x) << 10)

@@ -1,5 +1,7 @@
+#include <math/fixed.h>
 #include <math/units.h>
 #include <parse.h>
+#include <structures/cpu_mask.h>
 
 #include "tests/test_internal.h"
 

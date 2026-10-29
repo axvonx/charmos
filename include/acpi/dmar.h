@@ -1,10 +1,6 @@
 /* @title: DMAR */
 #pragma once
-#include <console/panic.h>
-#include <console/printf.h>
 #include <log.h>
-#include <math/bit.h>
-#include <uacpi/tables.h>
 
 LOG_HANDLE_EXTERN(dmar);
 LOG_SITE_EXTERN(dmar);

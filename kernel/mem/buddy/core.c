@@ -1,17 +1,19 @@
-#include <console/printf.h>
+#include <console/panic.h>
 #include <enforce.h>
-#include <math/align.h>
+#include <math/bit.h>
 #include <math/min_max.h>
 #include <mem/alloc.h>
-#include <mem/bitmap.h>
 #include <mem/buddy.h>
+#include <mem/global.h>
 #include <mem/page.h>
-#include <mem/pmm.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <sch/irql.h>
 #include <string.h>
+#include <sync/spinlock.h>
+#include <types/types.h>
 
 #include "internal.h"
+
+struct buddy_globals buddy_global = {0};
 
 bool buddy_fa_empty(struct buddy_free_area *area) {
     return area->head == NULL;
@@ -233,14 +235,15 @@ void buddy_free_pages(paddr_t addr, size_t count,
 static struct spinlock buddy_lock = SPINLOCK_INIT;
 void buddy_free_pages_global(paddr_t addr, uint64_t count) {
     enum irql irql = spin_lock(&buddy_lock);
-    buddy_free_pages(addr, count, global.buddy_free_area, global.last_pfn);
+    buddy_free_pages(addr, count, buddy_global.buddy_free_area,
+                     mem_global.last_pfn);
     spin_unlock(&buddy_lock, irql);
 }
 
 paddr_t buddy_alloc_pages_global(size_t count, enum alloc_flags f) {
     cc_ignore(f);
     enum irql irql = spin_lock(&buddy_lock);
-    paddr_t ret = buddy_alloc_pages(global.buddy_free_area, count);
+    paddr_t ret = buddy_alloc_pages(buddy_global.buddy_free_area, count);
     spin_unlock(&buddy_lock, irql);
     return ret;
 }

@@ -3,9 +3,7 @@
 #include <container_of.h>
 #include <enforce.h>
 #include <math/align.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 struct rbt_parent {
     uintptr_t word; /* Lowest bit is color */

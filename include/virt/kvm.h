@@ -1,9 +1,7 @@
 /* @title: KVM Guest */
 #pragma once
 #include <err.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <virt/kvm_para.h>
+#include <types/types.h>
 
 bool kvm_detect(void);
 

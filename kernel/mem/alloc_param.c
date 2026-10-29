@@ -1,3 +1,4 @@
+#include <linker/symbols.h>
 #include <mem/alloc.h>
 
 LINKER_SECTION_EXTERN(struct alloc_flag_ex_desc, alloc_flag_ex_descs);

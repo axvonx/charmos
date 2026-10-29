@@ -1,13 +1,23 @@
+#include <atomic.h>
+#include <console/crash.h>
+#include <console/panic.h>
+#include <irq/irq.h>
+#include <math/fixed.h>
 #include <math/min_max.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
-#include <stddef.h>
+#include <sync/lock_chk.h>
+#include <sync/lock_chk_types.h>
+#include <sync/lock_general.h>
 #include <sync/mutex.h>
 #include <sync/rcu.h>
 #include <sync/turnstile.h>
 #include <thread/thread.h>
-#include <time/spin_sleep.h>
+#include <thread/thread_types.h>
+#include <topo/global.h>
+#include <tsa.h>
+#include <types/types.h>
 
-#include "console/printf.h"
 #include "lock_general_internal.h"
 #include "mutex_internal.h"
 
@@ -237,7 +247,7 @@ void mutex_lock_subclass_full(struct mutex *mutex, enum lock_subclass subclass,
         /* reset these values so we can have a better chance
          * at actually getting the lock, we've been dawdling for
          * a while if we've reached this branch. */
-        if (owner_change_count >= global.core_count) {
+        if (owner_change_count >= topo_global.cpu_count) {
             backoff = MUTEX_BACKOFF_DEFAULT;
             owner_change_count = 0;
         }

@@ -1,4 +1,8 @@
+#include <structures/list.h>
+#include <sync/lock_chk.h>
 #include <sync/seqlock.h>
+#include <sync/spinlock.h>
+#include <thread/thread_types.h>
 
 #include "sync/tests/test_internal.h"
 

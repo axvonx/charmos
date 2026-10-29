@@ -1,9 +1,6 @@
 #pragma once
 #include <err.h>
-#include <math/fixed.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 #define ELCM_MAX_WASTAGE_DEFAULT 1
 

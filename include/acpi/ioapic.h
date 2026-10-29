@@ -2,8 +2,6 @@
 #pragma once
 #include <compiler/core.h>
 #include <irq/irq.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <types/types.h>
 
 #define IOAPIC_REGSEL_INDEX 0 /* IOREGSEL index */

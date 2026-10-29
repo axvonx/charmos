@@ -1,4 +1,6 @@
+#include <sch/irql.h>
 #include <sync/event.h>
+#include <thread/thread_types.h>
 
 #include "sch/tests/test_internal.h"
 

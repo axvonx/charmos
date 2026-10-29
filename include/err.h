@@ -4,9 +4,8 @@
 #include <console/panic.h>
 #include <enforce.h>
 #include <linker/symbols.h>
-#include <stdarg.h>
-#include <stdint.h>
 #include <stringify.h>
+#include <types/types.h>
 
 #define ERR_IS_FATAL(e) (e != ERR_OK && e != ERR_AGAIN)
 

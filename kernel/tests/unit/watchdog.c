@@ -1,5 +1,9 @@
+#include <math/ewma.h>
+#include <math/fixed.h>
 #include <string.h>
+#include <sync/seqlock.h>
 #include <test/test.h>
+#include <watchdog.h>
 
 #include "watchdog/internal.h"
 

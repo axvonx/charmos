@@ -1,6 +1,6 @@
 /* @title: Simple allocator */
 #include <compiler/wrapper.h>
-#include <stddef.h>
+#include <types/types.h>
 
 struct vas;
 void *simple_alloc(struct vas *space, size_t size) cw_alloc(2);

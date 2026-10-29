@@ -1,15 +1,13 @@
 /* @title: xHCI */
 #pragma once
+#include <atomic.h>
 #include <compiler/core.h>
 #include <log.h>
 #include <math/bit.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <structures/list.h>
-#include <structures/locked_list.h>
 #include <sync/event.h>
 #include <sync/semaphore.h>
-#include <thread/workqueue.h>
+#include <sync/spinlock_types.h>
 #include <types/types.h>
 struct usb_controller;
 struct usb_packet;

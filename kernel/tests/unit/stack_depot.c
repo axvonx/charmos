@@ -1,4 +1,11 @@
 #include "tests/test_internal.h"
+#include <dbg.h>
+#include <mem/alloc.h>
+#include <scaled_param.h>
+#include <sch/irql.h>
+#include <structures/list.h>
+#include <sync/spinlock.h>
+#include <types/refcount.h>
 
 TEST_GROUP_DEFINE(stack_depot, .intensity_desc = {
                                    .curve = SCALE_PIECEWISE_LOG,

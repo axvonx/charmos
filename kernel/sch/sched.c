@@ -1,11 +1,28 @@
+#include <asm.h>
+#include <atomic.h>
+#include <bootstage.h>
 #include <bootstage_condition.h>
+#include <mem/global.h>
 #include <mem/vmm.h>
+#include <sch/global.h>
+#include <sch/irql.h>
 #include <sch/periodic_work.h>
 #include <sch/sched.h>
-#include <smp/smp.h>
+#include <sch/wroost.h>
+#include <structures/cpu_mask.h>
+#include <structures/list.h>
+#include <sync/lock_chk.h>
 #include <sync/rcu.h>
+#include <sync/spinlock.h>
 #include <thread/apc.h>
-#include <thread/reaper.h>
+#include <thread/thread.h>
+#include <thread/thread_types.h>
+#include <time/time.h>
+#include <time/timer.h>
+#include <topo/core.h>
+#include <topo/smp.h>
+#include <topo/topology.h>
+#include <tsa.h>
 #include <watchdog.h>
 
 #include "internal.h"
@@ -152,7 +169,7 @@ static inline bool migrate_to_destination(struct thread *t, time_ms_t time) {
 
     enum irql irql_us, irql_other;
     struct scheduler *us = smp_core_scheduler();
-    struct scheduler *other = global.schedulers[dst];
+    struct scheduler *other = sch_global.schedulers[dst];
 
     scheduler_acquire_two_locks(us, other, &irql_us, &irql_other);
 
@@ -432,7 +449,7 @@ void scheduler_switch_in(void) TSA_NO_ANALYSIS {
      * pretty easy to see that any code calling this would be at DISPATCH */
     cpu_id_t i;
     cpu_mask_for_each(i, us->deferred_resched_mask)
-        scheduler_force_resched(global.schedulers[i]);
+        scheduler_force_resched(sch_global.schedulers[i]);
 
     enum irql wirql = spin_lock_high(&us->wroost_lock);
     enum irql sirql = spin_lock_high(&us->lock);
@@ -457,7 +474,7 @@ void scheduler_switch_in(void) TSA_NO_ANALYSIS {
     scheduler_periodic_work_execute(PERIODIC_WORK_PERIOD_BASED);
     vmm_reclaim_page_tables();
     atomic_store(&smp_core(TOPC_IRQL)->pt_seen_epoch,
-                 atomic_load(&global.pt_epoch));
+                 atomic_load(&mem_global.pt_epoch));
     watchdog_pet();
 }
 

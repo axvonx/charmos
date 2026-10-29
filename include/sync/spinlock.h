@@ -7,23 +7,13 @@
 #include <enforce.h>
 #include <irq/irq.h>
 #include <sch/irql.h>
-#include <smp/core.h>
-#include <stdbool.h>
+#include <sync/lock_chk.h>
 #include <sync/lock_chk_types.h>
 #include <sync/lock_general.h>
 #include <sync/raw_spinlock.h>
+#include <sync/spinlock_types.h>
 #include <tsa.h>
-
-struct TSA_CAPABILITY("spinlock") spinlock {
-    struct raw_spinlock raw;
-
-#ifdef DEBUG_LOCK_CHK
-    struct lock_chk_lock chk;
-    atomic(enum lock_op_flags) irq_usage;
-#endif /* DEBUG_LOCK_CHK */
-};
-
-TSA_DEFINE_ASSUME(struct spinlock)
+#include <types/types.h>
 
 #define SPINLOCK_INIT SPINLOCK_INIT_CHK(NULL, LOCK_CHKD_FULL)
 #define SPINLOCK_DEFINE(id) struct spinlock id = SPINLOCK_INIT

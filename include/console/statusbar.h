@@ -2,10 +2,8 @@
 #pragma once
 #include <compiler/core.h>
 #include <console/report.h>
-#include <console/term.h>
-#include <stdarg.h>
-#include <stddef.h>
 #include <time/time.h>
+#include <types/types.h>
 
 /* This is the only place that moves the cursor. DECSTBM (CSI top;bottom r)
  * shrinks the region that scrolls, and CUP (CSI row; col H) addresses the row

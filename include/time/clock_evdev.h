@@ -1,8 +1,8 @@
 /* @title: Clock Event Device */
 #pragma once
 #include <err.h>
-#include <mem/nofail.h>
-#include <smp/domain.h>
+#include <math/fixed.h>
+#include <structures/cpu_mask_types.h>
 #include <structures/list.h>
 #include <time/clock.h>
 #include <types/types.h>

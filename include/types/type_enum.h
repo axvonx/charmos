@@ -1,9 +1,7 @@
 /* @title: Type Enum */
 #pragma once
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 enum type_enum {
     TYPE_NONE,

@@ -1,8 +1,11 @@
+#include <console/panic.h>
+#include <err.h>
 #include <math/min_max.h>
+#include <mem/alloc_param.h>
 #include <mem/nofail.h>
 #include <mem/slab.h>
-#include <sch/sched.h>
-#include <smp/domain.h>
+#include <structures/mpsc_lifo_list.h>
+#include <topo/domain.h>
 
 #include "internal.h"
 

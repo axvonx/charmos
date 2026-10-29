@@ -1,13 +1,14 @@
 /* @title: Page */
 #pragma once
 #include <compiler/core.h>
-#include <global.h>
 #include <math/align.h>
 #include <math/bit.h>
+#include <math/min_max.h>
 #include <math/units.h>
+#include <mem/global.h>
 #include <mem/hhdm.h>
-#include <stdint.h>
 #include <sync/spinlock.h>
+#include <types/types.h>
 
 struct folio;
 
@@ -97,10 +98,10 @@ static inline void page_assert_tag(const struct page *p,
 }
 
 static inline struct page *page_for_pfn(pfn_t pfn) {
-    if (pfn >= global.last_pfn)
+    if (pfn >= mem_global.last_pfn)
         return NULL;
 
-    return &global.page_array[pfn];
+    return &mem_global.page_array[pfn];
 }
 
 static inline struct page *page_for_paddr(paddr_t paddr) {
@@ -108,7 +109,7 @@ static inline struct page *page_for_paddr(paddr_t paddr) {
 }
 
 static inline pfn_t page_get_pfn(const struct page *bp) {
-    return (pfn_t) (bp - global.page_array);
+    return (pfn_t) (bp - mem_global.page_array);
 }
 
 static inline paddr_t page_get_paddr(const struct page *bp) {

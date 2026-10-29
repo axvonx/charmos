@@ -1,12 +1,18 @@
 #include <atomic.h>
 #include <compiler/intrinsic.h>
 #include <math/bit.h>
+#include <sch/global.h>
 #include <sch/sched.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <structures/cpu_mask.h>
+#include <structures/list.h>
+#include <structures/rbt.h>
 #include <sync/spinlock.h>
-#include <thread/apc.h>
+#include <thread/thread.h>
+#include <thread/thread_types.h>
+#include <topo/core.h>
+#include <topo/global.h>
+#include <topo/topology.h>
+#include <types/types.h>
 
 #include "internal.h"
 
@@ -30,7 +36,7 @@ struct scheduler *scheduler_pick_victim(struct scheduler *self) {
 
     size_t i;
     for_each_cpu_id(i) {
-        struct scheduler *potential_victim = global.schedulers[i];
+        struct scheduler *potential_victim = sch_global.schedulers[i];
 
         /* duh.... */
         if (potential_victim == self)
@@ -40,8 +46,8 @@ struct scheduler *scheduler_pick_victim(struct scheduler *self) {
                            atomic_load(&potential_victim->stealing_work);
 
         size_t victim_thread_count = potential_victim->total_thread_count;
-        if (global.cores && global.cores[i] &&
-            !scheduler_core_idle(global.cores[i]))
+        if (topo_global.cores && topo_global.cores[i] &&
+            !scheduler_core_idle(topo_global.cores[i]))
             victim_thread_count++;
 
         uint64_t victim_scaled = victim_thread_count * 100;
@@ -215,7 +221,7 @@ struct thread *scheduler_try_do_steal(struct scheduler *sched) {
 
 uint64_t scheduler_compute_steal_threshold(void) {
     uint64_t threads = atomic_load(&scheduler_data.total_threads);
-    uint64_t threads_per_core = threads / global.core_count;
+    uint64_t threads_per_core = threads / topo_global.cpu_count;
 
     if (threads_per_core <= 1)
         return 150;
@@ -229,7 +235,7 @@ uint64_t scheduler_compute_steal_threshold(void) {
 
 bool scheduler_can_steal_work(struct scheduler *sched) {
     uint64_t val = atomic_load(&scheduler_data.total_threads);
-    uint64_t avg_core_threads = val / global.core_count;
+    uint64_t avg_core_threads = val / topo_global.cpu_count;
 
     if (sched->total_thread_count == 0)
         return val > 0;

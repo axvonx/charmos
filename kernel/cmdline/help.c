@@ -1,4 +1,12 @@
 #include "internal.h"
+#include <asm.h>
+#include <cmdline.h>
+#include <console/panic.h>
+#include <math/fixed.h>
+#include <math/range.h>
+#include <parse.h>
+#include <string.h>
+#include <types/type_enum.h>
 
 static void validate_default_choice_or_mapping(const struct cmdline_entry *e,
                                                const char *name) {

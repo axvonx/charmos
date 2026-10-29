@@ -1,14 +1,13 @@
 /* @title: Watchdog */
 #pragma once
-#include <linker/symbol_table.h>
+#include <atomic.h>
 #include <math/ewma.h>
 #include <math/fixed.h>
 #include <structures/cpu_mask.h>
 #include <structures/list.h>
 #include <structures/locked_list.h>
 #include <sync/seqlock.h>
-#include <sync/spinlock.h>
-#include <time/timer.h>
+#include <time/timer_types.h>
 #include <types/types.h>
 
 /* TODO: This watchdog implementation is the "minimal correct fallback",

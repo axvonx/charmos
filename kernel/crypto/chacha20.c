@@ -1,7 +1,7 @@
 #include <crypto/chacha20.h>
 #include <math/min_max.h>
-#include <stdint.h>
 #include <string.h>
+#include <types/types.h>
 
 #define ROTL32(v, n) ((v << n) | (v >> (32 - n)))
 #define CHACHA20_BLOCK_SIZE UINT64_C(64)

@@ -1,9 +1,9 @@
 /* @title: Page Allocation */
 #pragma once
 #include <compiler/core.h>
+#include <mem/alloc.h>
 #include <mem/alloc_param.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 #define ALLOC_FLAG_EX_PG_CONTIGUOUS ALLOC_FLAG_AVAIL_BIT(0)
 

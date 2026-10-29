@@ -2,7 +2,6 @@
 #pragma once
 #include <compiler/core.h>
 #include <linker/symbols.h>
-#include <stddef.h>
 #include <types/types.h>
 
 #ifdef TEST_ENABLED

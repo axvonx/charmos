@@ -1,7 +1,14 @@
+#include <atomic.h>
 #include <math/bit.h>
 #include <math/range.h>
+#include <mem/demand_page.h>
 #include <mem/domain.h>
+#include <mem/hhdm.h>
+#include <mem/page.h>
 #include <mem/pmm.h>
+#include <mem/vmm.h>
+#include <string.h>
+#include <structures/rbt.h>
 
 #include "internal.h"
 

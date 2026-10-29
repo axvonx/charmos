@@ -1,12 +1,10 @@
+#include <block/bio.h>
 #include <block/block.h>
 #include <block/sched.h>
-#include <console/printf.h>
-#include <mem/alloc.h>
-#include <stdint.h>
 #include <structures/dll.h>
-#include <sync/spinlock.h>
-#include <thread/workqueue.h>
-#include <time/time.h>
+#include <structures/list.h>
+#include <sync/mutex.h>
+#include <types/types.h>
 
 /* enqueuing skips enqueuing if the req is URGENT */
 

@@ -1,7 +1,6 @@
 /* @title: Anonymous VMA Chain */
 #pragma once
 #include <compiler/wrapper.h>
-#include <mem/page.h>
 #include <mem/vma_range.h>
 #include <structures/list.h>
 #include <structures/rbit.h>

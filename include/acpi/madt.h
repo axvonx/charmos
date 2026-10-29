@@ -1,7 +1,5 @@
 /* @title: ACPI Multiple APIC Description Table */
 #pragma once
-#include <stdbool.h>
-#include <stdint.h>
 #include <types/types.h>
 
 #define MADT_MAX_ISO 16

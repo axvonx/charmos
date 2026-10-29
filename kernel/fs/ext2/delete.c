@@ -1,10 +1,9 @@
 #include <block/bcache.h>
 #include <err.h>
 #include <fs/ext2.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
 #include <time/time.h>
+#include <types/types.h>
 
 struct unlink_ctx {
     const char *name;

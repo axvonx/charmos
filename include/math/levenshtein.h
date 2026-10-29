@@ -1,7 +1,5 @@
 /* @title: Levenshtein Distance & Fuzzy Matching */
 #pragma once
-#include <stddef.h>
-#include <stdint.h>
 #include <types/types.h>
 
 int64_t levenshtein(const char *s1, const char *s2, size_t len1, size_t len2);

@@ -2,11 +2,12 @@
 #pragma once
 #include <asm.h>
 #include <atomic.h>
-#include <irq/irq.h>
 #include <math/bit.h>
 #include <mem/page.h>
 #include <sch/irql.h>
-#include <stdint.h>
+#include <sync/spinlock.h>
+#include <tsa.h>
+#include <types/types.h>
 
 #define PT_LEVELS 4
 

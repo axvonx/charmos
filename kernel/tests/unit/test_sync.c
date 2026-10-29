@@ -2,6 +2,7 @@
 #include <sync/once_token.h>
 #include <test/sync.h>
 #include <time/spin_sleep.h>
+#include <time/time.h>
 
 #include "tests/test_internal.h"
 

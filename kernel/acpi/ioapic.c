@@ -2,13 +2,12 @@
 #include <acpi/lapic.h>
 #include <acpi/madt.h>
 #include <console/panic.h>
-#include <console/printf.h>
 #include <drivers/mmio.h>
 #include <irq/irq.h>
 #include <log.h>
-#include <mem/page.h>
-#include <mem/vmm.h>
-#include <stdint.h>
+#include <types/types.h>
+
+#include "irq/internal.h"
 
 static struct ioapic_info ioapic;
 LOG_HANDLE_DEFINE_PRINT_STATIC(ioapic);

@@ -6,7 +6,6 @@
 #include <log.h>
 #include <mem/alloc.h>
 #include <sch/sched.h>
-#include <smp/core.h>
 #include <string.h>
 #include <sync/mutex.h>
 #include <sync/mutex_simple.h>
@@ -16,6 +15,7 @@
 #include <thread/thread.h>
 #include <thread/workqueue.h>
 #include <time/spin_sleep.h>
+#include <topo/core.h>
 
 #include <sync/qspinlock.h>
 #include <sync/turnstile.h>

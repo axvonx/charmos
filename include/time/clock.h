@@ -1,11 +1,7 @@
 /* @title: Clocks */
 #pragma once
 #include <err.h>
-#include <math/fixed.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <structures/list.h>
-#include <time/time.h>
 #include <types/types.h>
 
 struct clock_base {

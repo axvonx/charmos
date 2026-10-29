@@ -1,7 +1,5 @@
 /* @title: uACPI interface */
 #pragma once
-#include <stdbool.h>
-#include <stdint.h>
 #include <types/types.h>
 #include <uacpi/types.h>
 

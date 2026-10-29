@@ -1,3 +1,5 @@
+#include <block/bio.h>
+#include <block/block.h>
 #include <block/sched.h>
 
 bool noop_should_coalesce(struct block_device *disk,

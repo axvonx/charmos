@@ -1,4 +1,5 @@
 #include "acpi/tests/test_internal.h"
+#include <math/bit.h>
 
 TEST_GROUP_DEFINE(ioapic);
 static_assert(sizeof(union ioapic_redirection_entry) == 8);

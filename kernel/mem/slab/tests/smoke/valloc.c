@@ -1,4 +1,6 @@
 #include "mem/slab/tests/test_internal.h"
+#include <scaled_param.h>
+#include <time/time.h>
 
 TEST_GROUP_DEFINE(slab, .intensity_desc = {
                             .curve = SCALE_PIECEWISE_LOG,

@@ -1,8 +1,11 @@
+#include <block/block.h>
+#include <err.h>
 #include <fs/ext2.h>
+#include <fs/vfs.h>
 #include <mem/alloc.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <mem/page.h>
 #include <string.h>
+#include <types/types.h>
 
 // TODO: flags - maybe?
 ERR_FACILITY_DEFINE(ext2, .desc = "Ext2 Filesystem");

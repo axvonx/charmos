@@ -1,4 +1,12 @@
+#include <err.h>
+#include <log.h>
 #include <math/range.h>
+#include <mem/alloc_param.h>
+#include <mem/arena.h>
+#include <mem/arena_provider.h>
+#include <mem/arena_types.h>
+#include <structures/rbt.h>
+#include <thread/thread_types.h>
 
 #include "internal.h"
 

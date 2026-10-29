@@ -1,10 +1,9 @@
 /* @title: Stat series */
 #pragma once
 #include <atomic.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <string.h>
-#include <sync/spinlock.h>
+#include <sync/spinlock_types.h>
+#include <types/types.h>
 
 /*
  * Generic time-bucketed statistics series.

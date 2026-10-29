@@ -3,8 +3,7 @@
 #include <compiler/core.h>
 #include <compiler/intrinsic.h>
 #include <enforce.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <types/types.h>
 
 /* Use UNCHECKED and WRAPPING when callers don't want to panic and want to
  * validate input, whereas the defaults panic */

@@ -1,7 +1,15 @@
 #include <acpi/lapic.h>
+#include <asm.h>
+#include <container_of.h>
 #include <irq/ipi.h>
 #include <irq/irq.h>
+#include <mem/alloc.h>
 #include <mem/nofail.h>
+#include <scaled_param.h>
+#include <time/time.h>
+#include <topo/global.h>
+#include <topo/topology.h>
+#include <tsa.h>
 
 #include "sync/tests/test_internal.h"
 
@@ -10,7 +18,7 @@ TEST_GROUP_DEFINE(rcu, .intensity_desc = {
                            .unit = "ms",
                        });
 
-#define NUM_RCU_READERS (global.core_count)
+#define NUM_RCU_READERS (topo_global.cpu_count)
 static size_t rcu_test_duration_ms = 50;
 
 struct rcu_test_data {
@@ -83,16 +91,17 @@ TEST_DEFINE_INTEGRATION(rcu, mt_readers_during_replace,
     initial->value = 42;
     rcu_assign_pointer(shared_ptr, initial);
 
-    struct thread **readers = vnews(readers, NUM_RCU_READERS, ALLOC_ZERO);
+    const size_t nr_readers = NUM_RCU_READERS;
+    struct thread **readers = vnews(readers, nr_readers, ALLOC_ZERO);
     TEST_ASSERT_NONNULL(readers);
-    for (uint64_t i = 0; i < NUM_RCU_READERS; i++)
+    for (size_t i = 0; i < nr_readers; i++)
         readers[i] = thread_spawn("rcu_reader_test", rcu_reader_thread,
                                   .joinable = true);
 
     struct thread *writer =
         thread_spawn("rcu_writer_test", rcu_writer_thread, .joinable = true);
 
-    for (uint64_t i = 0; i < NUM_RCU_READERS; i++) {
+    for (size_t i = 0; i < nr_readers; i++) {
         if (readers[i])
             thread_join(readers[i]);
     }
@@ -101,7 +110,7 @@ TEST_DEFINE_INTEGRATION(rcu, mt_readers_during_replace,
     if (writer)
         thread_join(writer);
 
-    TEST_ASSERT_EQ(atomic_load(&rcu_reads_done), NUM_RCU_READERS);
+    TEST_ASSERT_EQ(atomic_load(&rcu_reads_done), nr_readers);
 
     for (int i = 0; i < 100 && !atomic_load(&rcu_deferred_freed); i++)
         sleep_spin_ms(1);
@@ -111,8 +120,8 @@ TEST_DEFINE_INTEGRATION(rcu, mt_readers_during_replace,
     return TEST_SUCCESS;
 }
 
-#define STRESS_NUM_READERS (global.core_count * 8)
-#define STRESS_NUM_WRITERS (global.core_count)
+#define STRESS_NUM_READERS (topo_global.cpu_count * 8)
+#define STRESS_NUM_WRITERS (topo_global.cpu_count)
 static size_t rcu_stress_duration_ms = 2000;
 #define STRESS_PRINT_MS 1000
 
@@ -235,18 +244,23 @@ TEST_DEFINE_INTEGRATION(rcu, mt_stress, TEST_INTENSITY(200, 2000, 10000)) {
     initial->value = 42;
     rcu_assign_pointer(stress_shared, initial);
 
-    struct thread **readers = vnews(readers, STRESS_NUM_READERS, ALLOC_ZERO);
-    struct thread **writers = vnews(writers, STRESS_NUM_WRITERS, ALLOC_ZERO);
+    /* main.c enforces this at boot */
+    assume(topo_global.cpu_count <= CPU_MASK_BITS);
+    const size_t nr_readers = STRESS_NUM_READERS;
+    const size_t nr_writers = STRESS_NUM_WRITERS;
+    struct thread **readers = vnews(readers, nr_readers, ALLOC_ZERO);
+    struct thread **writers = vnews(writers, nr_writers, ALLOC_ZERO);
     TEST_ASSERT_NONNULL(readers);
     TEST_ASSERT_NONNULL(writers);
 
-    for (uint32_t i = 0; i < STRESS_NUM_READERS; ++i) {
-        readers[i] = thread_spawn(("rcu_stread_%u", i), rcu_stress_reader,
+    for (size_t i = 0; i < nr_readers; ++i) {
+        readers[i] = thread_spawn(("rcu_stread_%zu", i), rcu_stress_reader,
                                   .joinable = true);
     }
 
-    for (uint32_t i = 0; i < STRESS_NUM_WRITERS; ++i) {
-        writers[i] = thread_spawn(("rcu_strite_%u", i), rcu_stress_writer,
+    for (size_t i = 0; i < nr_writers; ++i) {
+        // NOLINTNEXTLINE(*ArrayBound)
+        writers[i] = thread_spawn(("rcu_strite_%zu", i), rcu_stress_writer,
                                   .joinable = true);
     }
 
@@ -264,12 +278,12 @@ TEST_DEFINE_INTEGRATION(rcu, mt_stress, TEST_INTENSITY(200, 2000, 10000)) {
 
     atomic_store(&stress_stop, true);
 
-    for (uint32_t i = 0; i < STRESS_NUM_READERS; ++i) {
+    for (size_t i = 0; i < nr_readers; ++i) {
         if (readers[i])
             thread_join(readers[i]);
     }
 
-    for (uint32_t i = 0; i < STRESS_NUM_WRITERS; ++i) {
+    for (size_t i = 0; i < nr_writers; ++i) {
         if (writers[i])
             thread_join(writers[i]);
     }
@@ -385,7 +399,8 @@ TEST_DEFINE_INTEGRATION(rcu, irq_reader_on_idle_cpu, TEST_INTENSITY(5, 10, 100),
     struct thread *self_thread = thread_get_current();
     bool was_pinned = thread_pin(self_thread);
     cpu_id_t self = smp_id(TOPC_PINNED);
-    cpu_id_t target = (self + global.core_count / 2) % global.core_count;
+    cpu_id_t target =
+        (self + topo_global.cpu_count / 2) % topo_global.cpu_count;
 
     atomic_store(&rcu_irq_failed, false);
 

@@ -1,7 +1,7 @@
 /* @title: Thread IDs */
 #pragma once
-#include <stdint.h>
 #include <structures/id_space.h>
+#include <types/types.h>
 
 #define TID_RANGE_RESERVE_COUNT ID_RANGE_RESERVE_COUNT
 #define tid_range id_range

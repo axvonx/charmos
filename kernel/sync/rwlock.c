@@ -1,10 +1,25 @@
+#include <atomic.h>
+#include <console/crash.h>
 #include <console/panic.h>
+#include <irq/irq.h>
+#include <math/bit.h>
+#include <math/fixed.h>
 #include <math/min_max.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
 #include <sch/wroost.h>
+#include <structures/rbt.h>
+#include <sync/lock_chk.h>
+#include <sync/lock_chk_types.h>
+#include <sync/lock_general.h>
 #include <sync/rcu.h>
+#include <sync/rwlock.h>
+#include <sync/rwlock_types.h>
 #include <sync/turnstile.h>
 #include <thread/thread.h>
+#include <thread/thread_types.h>
+#include <topo/global.h>
+#include <tsa.h>
 
 #include "lock_general_internal.h"
 #include "rwlock_internal.h"
@@ -243,7 +258,7 @@ void rw_lock_full(struct rwlock *lock, enum rwlock_acquire_type acq_type,
 
     uintptr_t old, new;
 
-    /* reset backoff once this equals global.core_count */
+    /* reset backoff once this equals topo_global.cpu_count */
     size_t looped = 0;
     size_t backoff = RWLOCK_BACKOFF_DEFAULT;
     size_t queue = rwlock_get_wait_queue(acq_type);
@@ -269,7 +284,7 @@ void rw_lock_full(struct rwlock *lock, enum rwlock_acquire_type acq_type,
 
             backoff = rwlock_get_backoff(backoff);
             lock_delay(backoff, RWLOCK_BACKOFF_JITTER_PCT);
-            if (++looped == global.core_count) {
+            if (++looped == topo_global.cpu_count) {
                 backoff = RWLOCK_BACKOFF_DEFAULT;
                 looped = 0;
             }
@@ -472,7 +487,7 @@ void rw_unlock_full(struct rwlock *lock,
             lock_delay(backoff, RWLOCK_BACKOFF_JITTER_PCT);
 
             /* reset if we have reached the # of CPUs */
-            if (++looped == global.core_count) {
+            if (++looped == topo_global.cpu_count) {
                 looped = 0;
                 backoff = RWLOCK_BACKOFF_DEFAULT;
             }

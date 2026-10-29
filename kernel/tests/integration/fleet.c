@@ -1,8 +1,13 @@
+#include <atomic.h>
 #include <sch/sched.h>
+#include <string.h>
 #include <sync/mutex.h>
+#include <test/conc.h>
 #include <test/fleet.h>
+#include <test/test.h>
 #include <thread/thread.h>
 #include <time/spin_sleep.h>
+#include <topo/global.h>
 
 TEST_GROUP_DEFINE(fleet);
 
@@ -217,10 +222,10 @@ static void affinity_probe(void *arg) {
 TEST_DEFINE_INTEGRATION(fleet, run_on_core, .min_cores = 2) {
     struct affinity_fix fix = {0};
 
-    for (size_t cpu = 0; cpu < global.core_count && cpu < 4; cpu++)
+    for (size_t cpu = 0; cpu < topo_global.cpu_count && cpu < 4; cpu++)
         TEST_ASSERT(test_run_on_core(cpu, affinity_probe, &fix));
 
-    size_t expected = global.core_count < 4 ? global.core_count : 4;
+    size_t expected = topo_global.cpu_count < 4 ? topo_global.cpu_count : 4;
     TEST_ASSERT_EQ(atomic_load(&fix.checked), expected);
     TEST_ASSERT_EQ(atomic_load(&fix.wrong_core), 0);
     return TEST_SUCCESS;
@@ -241,7 +246,7 @@ TEST_DEFINE_INTEGRATION(fleet, spawn_on_core_pins, .min_cores = 2) {
 
     size_t n =
         test_fleet_spawn_per_core(fleet, "pinned", pinned_worker, fix, 1);
-    TEST_ASSERT_EQ(n, global.core_count);
+    TEST_ASSERT_EQ(n, topo_global.cpu_count);
 
     test_fleet_start_all(fleet);
     struct test_verdict v = test_fleet_join(fleet);

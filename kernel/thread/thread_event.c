@@ -1,8 +1,13 @@
+#include <atomic.h>
+#include <console/printf.h>
 #include <math/min_max.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
 #include <string.h>
-#include <thread/apc.h>
+#include <sync/spinlock.h>
 #include <thread/thread.h>
+#include <thread/thread_types.h>
+#include <time/time.h>
 
 #include "sch/internal.h"
 

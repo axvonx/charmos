@@ -1,9 +1,8 @@
 /* @title: Minheap */
 #pragma once
 #include <atomic.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <sync/spinlock.h>
+#include <sync/spinlock_types.h>
+#include <types/types.h>
 #define MINHEAP_INIT_CAP 32
 #define MINHEAP_INDEX_INVALID ((uint32_t) -1)
 

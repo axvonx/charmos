@@ -1,6 +1,6 @@
+#include <block/bcache.h>
 #include <fs/ext2.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <types/types.h>
 
 static bool walk_dir(struct ext2_fs *fs, uint32_t block_num,
                      dir_entry_callback callback, void *ctx) {

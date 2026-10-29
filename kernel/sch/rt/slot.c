@@ -2,6 +2,7 @@
 #include <mem/nofail.h>
 #include <sch/irql.h>
 #include <sch/rt_sched.h>
+#include <sch/rt_sched_types.h>
 #include <sync/spinlock.h>
 
 #include "internal.h"

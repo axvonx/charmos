@@ -4,11 +4,9 @@
 #include <compiler/core.h>
 #include <err.h>
 #include <math/bit.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <string.h>
 #include <time/time.h>
+#include <types/types.h>
 
 /* We expect
  * - test_err(fmt, ...)

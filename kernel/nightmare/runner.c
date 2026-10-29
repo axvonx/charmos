@@ -1,19 +1,26 @@
 #ifdef TEST_NIGHTMARE_ENABLED
 #include <asm.h>
+#include <atomic.h>
 #include <charmos_commit.h>
-#include <console/panic.h>
-#include <console/printf.h>
-#include <global.h>
+#include <cmdline.h>
+#include <console/crash.h>
+#include <err.h>
 #include <math/units.h>
 #include <mem/alloc.h>
 #include <mem/pmm.h>
 #include <ndjson.h>
+#include <nightmare/nightmare.h>
 #include <nightmare/perturb.h>
 #include <nightmare/record.h>
-#include <smp/smp.h>
+#include <scaled_param.h>
 #include <string.h>
+#include <sync/event.h>
+#include <test/conc.h>
+#include <test/perturb.h>
 #include <thread/thread.h>
 #include <time/time.h>
+#include <time/timer.h>
+#include <topo/global.h>
 
 #include "internal.h"
 
@@ -108,7 +115,7 @@ nightmare_record_resolved_boot(const struct nightmare_cmdline_config *config,
         .intensity = nightmare_runtime.ctx.intensity,
         .intensity_val = nightmare_runtime.ctx.intensity_val,
         .workers = nightmare_runtime.ctx.worker_count,
-        .smp = global.core_count,
+        .smp = topo_global.cpu_count,
         .mem_mib = pmm_get_usable_ram() / NIGHTMARE_MIB,
         .caps = nightmare_runtime.caps,
         .campaign_id = config->campaign_id ? config->campaign_id : "",
@@ -196,7 +203,7 @@ nightmare_has_missing_service(const struct nightmare *nm,
 static enum nightmare_skip_reason
 nightmare_preflight(const struct nightmare *nm,
                     const struct nightmare_cmdline_config *config) {
-    if ((nm->requires & NIGHTMARE_REQ_SMP) && global.core_count < 2)
+    if ((nm->requires & NIGHTMARE_REQ_SMP) && topo_global.cpu_count < 2)
         return NIGHTMARE_SKIP_NEEDS_SMP;
     /* Today, we always have preemption enabled, however TODO: someday
      * we can implement support for a non-preemptive kernel*/

@@ -1,8 +1,9 @@
 /* @title: Events */
 #pragma once
 #include <atomic.h>
+#include <console/crash.h>
+#include <thread/thread_types.h>
 #include <thread/wait.h>
-#include <time/time.h>
 #include <tsa.h>
 
 /* This event model is somewhat similar to KEVENT in Windows. Notification

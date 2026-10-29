@@ -1,4 +1,5 @@
 #include "sync/tests/test_internal.h"
+#include <scaled_param.h>
 
 TEST_GROUP_DEFINE(mutex, .intensity_desc = {
                              .curve = SCALE_PIECEWISE_LOG,

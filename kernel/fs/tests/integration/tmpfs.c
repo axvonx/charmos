@@ -1,4 +1,7 @@
 #include "fs/tests/test_internal.h"
+#include <mem/alloc.h>
+#include <scaled_param.h>
+#include <string.h>
 
 TEST_GROUP_DEFINE(tmpfs, .intensity_desc = {
                              .curve = SCALE_PIECEWISE_LOG,

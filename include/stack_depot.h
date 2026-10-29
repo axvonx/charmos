@@ -4,7 +4,7 @@
 #include <math/hash.h>
 #include <mem/alloc.h>
 #include <structures/list.h>
-#include <sync/spinlock.h>
+#include <sync/spinlock_types.h>
 #include <types/refcount.h>
 
 /* This is a single item in the hash table, and the idea here is that

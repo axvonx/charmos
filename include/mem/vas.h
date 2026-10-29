@@ -1,11 +1,7 @@
 /* @title: Virtual address allocator */
 #pragma once
 #include <math/bit.h>
-#include <mem/page.h>
 #include <mem/vmm.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <types/types.h>
 
 struct address_range;

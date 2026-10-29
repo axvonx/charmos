@@ -3,15 +3,10 @@
 #include <asm.h>
 #include <atomic.h>
 #include <compiler/core.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <sync/spinlock_types.h>
 #include <tsa.h>
+#include <types/types.h>
 
-struct TSA_CAPABILITY("spinlock") raw_spinlock {
-    atomic_uint8_t state;
-};
-
-#define RAW_SPINLOCK_INIT ((struct raw_spinlock) {.state = ATOMIC_VAR_INIT(0)})
 #define RAW_SPINLOCK_DEFINE(id) struct raw_spinlock id = RAW_SPINLOCK_INIT
 
 static inline void raw_spinlock_init(struct raw_spinlock *lock) {

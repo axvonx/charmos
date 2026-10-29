@@ -1,17 +1,16 @@
 #include <acpi/lapic.h>
-#include <console/printf.h>
+#include <console/panic.h>
 #include <drivers/mmio.h>
 #include <drivers/pci.h>
 #include <drivers/usb/xhci.h>
+#include <err.h>
 #include <log.h>
-#include <math/align.h>
 #include <math/bit.h>
 #include <math/min_max.h>
 #include <mem/alloc.h>
 #include <mem/page.h>
 #include <mem/vmm.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 static struct pci_device *pci_devices = NULL;
 static uint64_t           pci_device_count;

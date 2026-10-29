@@ -1,7 +1,7 @@
 /* @title: Master Boot Record */
 #pragma once
 #include <compiler/core.h>
-#include <stdint.h>
+#include <types/types.h>
 
 struct mbr_partition_entry {
     uint8_t status;

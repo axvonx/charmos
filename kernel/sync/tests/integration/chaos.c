@@ -1,4 +1,13 @@
+#include <asm.h>
+#include <mem/alloc.h>
 #include <mem/nofail.h>
+#include <sch/irql.h>
+#include <sync/rwlock_types.h>
+#include <sync/spinlock.h>
+#include <thread/apc_types.h>
+#include <thread/thread_diag.h>
+#include <thread/thread_types.h>
+#include <thread/wait.h>
 
 #include "sync/tests/test_internal.h"
 

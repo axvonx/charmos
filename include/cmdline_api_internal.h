@@ -2,6 +2,7 @@
 #pragma once
 #include <compiler/core.h>
 #include <compiler/diagnostic.h>
+#include <linker/symbols.h>
 #include <math/bit.h>
 #include <types/type_enum.h>
 

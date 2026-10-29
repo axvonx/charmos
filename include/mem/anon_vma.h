@@ -4,6 +4,7 @@
 #include <err.h>
 #include <structures/rbit.h>
 #include <sync/rwlock.h>
+#include <tsa.h>
 #include <types/refcount.h>
 #include <types/types.h>
 

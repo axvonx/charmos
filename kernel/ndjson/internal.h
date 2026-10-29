@@ -1,7 +1,5 @@
 #pragma once
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 bool ndjson_carrier_begin(bool *irqs_were_on);
 void ndjson_carrier_end(bool irqs_were_on);

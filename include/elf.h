@@ -1,6 +1,6 @@
 /* @title: ELF */
 #include <compiler/core.h>
-#include <stdint.h>
+#include <types/types.h>
 #pragma once
 
 struct elf64_ident {

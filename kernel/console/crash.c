@@ -1,16 +1,19 @@
-/* @title: Kernel Crash Engine */
 #include <asm.h>
+#include <atomic.h>
+#include <boot/global.h>
 #include <bootstage.h>
+#include <colors.h>
 #include <compiler/core.h>
 #include <compiler/intrinsic.h>
 #include <console/crash.h>
+#include <console/global.h>
+#include <console/panic.h>
 #include <console/panic_scene.h>
 #include <console/printf.h>
 #include <console/report.h>
-#include <console/statusbar.h>
 #include <console/term.h>
+#include <container_of.h>
 #include <dbg.h>
-#include <global.h>
 #include <irq/ipi.h>
 #include <irq/irq.h>
 #include <linker/symbols.h>
@@ -18,21 +21,29 @@
 #include <logo.h>
 #include <math/align.h>
 #include <math/bit.h>
-#include <math/sort.h>
+#include <mem/nofail.h>
 #include <ndjson.h>
-#include <smp/core.h>
-#include <smp/percpu.h>
-#include <stdarg.h>
+#include <sch/irql.h>
 #include <string.h>
 #include <stringify.h>
+#include <structures/list.h>
+#include <structures/rbt.h>
 #include <sync/mutex.h>
 #include <sync/qspinlock.h>
 #include <sync/raw_spinlock.h>
+#include <sync/rcu.h>
 #include <sync/rwlock.h>
 #include <sync/spinlock.h>
 #include <thread/thread.h>
 #include <time/spin_sleep.h>
 #include <time/time.h>
+#include <topo/core.h>
+#include <topo/percpu.h>
+#include <topo/topology.h>
+#include <tsa.h>
+#include <types/types.h>
+
+#include "internal.h"
 
 static atomic_int64_t crash_owner = -1;
 static atomic_uint32_t crash_depth = 0;
@@ -103,7 +114,7 @@ void panic_handler(struct crash_regs *regs) TSA_ACQUIRES_IRQS {
         boot_crash_regs = *regs;
     }
 
-    if (global.current_bootstage >= BOOTSTAGE_MID_MP) {
+    if (boot_global.stage >= BOOTSTAGE_MID_MP) {
         crash_broadcast_nmi();
         sleep_spin_ms(50);
     }
@@ -308,7 +319,7 @@ static void crash_backtrace_panel(struct report_target *tgt,
     if (crash_regs_captured(regs) && regs->rip)
         entries[nr++] = regs->rip;
 
-    if (global.current_bootstage >= BOOTSTAGE_EARLY_ALLOCATORS) {
+    if (boot_global.stage >= BOOTSTAGE_EARLY_ALLOCATORS) {
         if (crash_regs_captured(regs) && regs->rbp)
             nr += stack_unwind(regs->rbp, entries + nr,
                                STACK_TRACE_MAX_DEPTH - nr);
@@ -448,7 +459,7 @@ static void crash_other_cpus(struct report_panes *panes) {
     uint32_t slot = 0;
     uint64_t id;
 
-    if (global.current_bootstage < BOOTSTAGE_MID_MP) {
+    if (boot_global.stage < BOOTSTAGE_MID_MP) {
         report_printf(&col0, "  %s<single core at this bootstage>%s",
                       term_style(TERM_SEV_DIM), term_style_reset());
         return;
@@ -582,18 +593,18 @@ static void crash_where_box(struct report_target *tgt, const char *file,
              file ? file : "<unknown>", line, ANSI_RESET, ANSI_CYAN,
              func ? func : "<unknown>", ANSI_RESET);
 
-    char *thread_name = global.current_bootstage >= BOOTSTAGE_LATE
+    char *thread_name = boot_global.stage >= BOOTSTAGE_LATE
                             ? thread_get_current()->name
                             : "(null)";
-    if (global.current_bootstage < BOOTSTAGE_EARLY_DEVICES)
+    if (boot_global.stage < BOOTSTAGE_EARLY_DEVICES)
         snprintf(ctx, (int) sizeof(ctx),
                  "cpu %lu%stime unknown%sbootstage '%s'", smp_id(TOPC_NONE),
-                 sep, sep, bootstage_str[global.current_bootstage]);
+                 sep, sep, bootstage_str[boot_global.stage]);
     else
         snprintf(ctx, (int) sizeof(ctx),
                  "cpu %lu%s%lu ms%sbootstage '%s'\nthread '%s'",
                  smp_id(TOPC_NONE), sep, time_get_ms(), sep,
-                 bootstage_str[global.current_bootstage], thread_name);
+                 bootstage_str[boot_global.stage], thread_name);
 
     w = report_strwidth(loc);
     if (report_strwidth(ctx) > w)
@@ -671,16 +682,15 @@ static void crash_facility_dump(const struct crash_facility *facility,
 static void crash_emit_ndjson_records(const struct crash_context *ctx,
                                       const struct crash_regs *regs,
                                       uint32_t depth) {
-    const char *thread = global.current_bootstage >= BOOTSTAGE_LATE
-                             ? thread_get_current()->name
-                             : NULL;
+    const char *thread =
+        boot_global.stage >= BOOTSTAGE_LATE ? thread_get_current()->name : NULL;
 
     ndjson_emit(panic_at, .file = ctx->file ? ctx->file : "",
                 .line = (uint64_t) ctx->line,
                 .func = ctx->func ? ctx->func : "",
                 .msg = ctx->msg ? ctx->msg : "",
-                .bootstage = bootstage_str[global.current_bootstage],
-                .thread = thread, .depth = depth);
+                .bootstage = bootstage_str[boot_global.stage], .thread = thread,
+                .depth = depth);
 
     uint64_t entries[STACK_TRACE_MAX_DEPTH];
     size_t nr = 0;
@@ -688,7 +698,7 @@ static void crash_emit_ndjson_records(const struct crash_context *ctx,
     if (regs && regs->rip)
         entries[nr++] = regs->rip;
 
-    if (global.current_bootstage >= BOOTSTAGE_EARLY_ALLOCATORS) {
+    if (boot_global.stage >= BOOTSTAGE_EARLY_ALLOCATORS) {
         if (regs && regs->rbp)
             nr += stack_unwind(regs->rbp, entries + nr,
                                STACK_TRACE_MAX_DEPTH - nr);
@@ -880,7 +890,7 @@ cc_noreturn void crash_full(const struct crash_context *ctx) TSA_NO_ANALYSIS {
 
     int64_t unowned = -1;
     atomic_cas_strong(&crash_owner, &unowned, (int64_t) smp_id(TOPC_NONE));
-    atomic_store(&global.panicked, true);
+    atomic_store(&crash_global.panicked, true);
 
     struct crash_regs captured_regs;
     if (ctx->regs) {
@@ -895,7 +905,7 @@ cc_noreturn void crash_full(const struct crash_context *ctx) TSA_NO_ANALYSIS {
         boot_crash_regs = captured_regs;
     }
 
-    if (global.current_bootstage >= BOOTSTAGE_MID_MP) {
+    if (boot_global.stage >= BOOTSTAGE_MID_MP) {
         crash_broadcast_nmi();
         sleep_spin_ms(500);
     }
@@ -904,7 +914,7 @@ cc_noreturn void crash_full(const struct crash_context *ctx) TSA_NO_ANALYSIS {
     ndjson_enter_panic();
 
     uint32_t formats = ctx->formats;
-    if (global.current_bootstage < BOOTSTAGE_EARLY_DEVICES) {
+    if (boot_global.stage < BOOTSTAGE_EARLY_DEVICES) {
         formats &= ~CRASH_FMT_VISUAL_PANES;
         formats |= CRASH_FMT_RAW_SERIAL;
     }
@@ -950,7 +960,9 @@ size_t crash_code_name(const struct crash_code *code, char *buf, size_t len) {
 void crash_thread_init(struct thread *t) {
     cc_ignore(t);
 
-    struct crash_thread_data *pt = &t->crash_data;
+    /* TODO: fallibility */
+    t->crash_data = nofail_vnew(t->crash_data);
+    struct crash_thread_data *pt = t->crash_data;
     list_head_init(&pt->crash_hooks);
     pt->in_hook = false;
     list_head_init(&pt->unwind.free_list);
@@ -961,7 +973,7 @@ void crash_thread_init(struct thread *t) {
 
 static struct crash_unwind_node *
 unwind_node_alloc(struct thread *t, enum crash_unwind_type type) {
-    struct list_node *n = list_head_pop_back(&t->crash_data.unwind.free_list);
+    struct list_node *n = list_head_pop_back(&t->crash_data->unwind.free_list);
     if (!n)
         panic(CAPACITY_EXCEEDED, "unwind node pool");
 
@@ -975,7 +987,7 @@ unwind_node_alloc(struct thread *t, enum crash_unwind_type type) {
 static void unwind_node_free(struct thread *t, struct crash_unwind_node *n) {
     n->type = CRASH_UNWIND_NONE;
     n->data.raw = 0;
-    list_head_push_back(&t->crash_data.unwind.free_list, &n->list);
+    list_head_push_back(&t->crash_data->unwind.free_list, &n->list);
 }
 
 /* Small optimization here: it doesn't matter if we go backwards or
@@ -984,10 +996,10 @@ static void unwind_node_free(struct thread *t, struct crash_unwind_node *n) {
 static void crash_unwind_node_add(struct crash_unwind_node_data *data,
                                   enum crash_unwind_type type) {
     struct thread *t = thread_get_current();
-    enforce(!t->crash_data.unwinding);
+    enforce(!t->crash_data->unwinding);
     if (type == CRASH_UNWIND_RCU) {
         struct crash_unwind_node *n;
-        list_for_each_entry_rev(n, &t->crash_data.unwind.in_use, list) {
+        list_for_each_entry_rev(n, &t->crash_data->unwind.in_use, list) {
             if (n->type == type) {
                 n->data.rcu_lock_times++;
                 return;
@@ -996,24 +1008,24 @@ static void crash_unwind_node_add(struct crash_unwind_node_data *data,
 
         n = unwind_node_alloc(t, type);
         n->data.rcu_lock_times = 1;
-        list_head_push_back(&t->crash_data.unwind.in_use, &n->list);
+        list_head_push_back(&t->crash_data->unwind.in_use, &n->list);
         return;
     }
 
     struct crash_unwind_node *node = unwind_node_alloc(t, type);
     node->data = *data;
-    list_head_push_back(&t->crash_data.unwind.in_use, &node->list);
+    list_head_push_back(&t->crash_data->unwind.in_use, &node->list);
 }
 
 static void crash_unwind_node_remove(struct crash_unwind_node_data *data,
                                      enum crash_unwind_type type) {
     struct thread *t = thread_get_current();
-    enforce(!t->crash_data.unwinding);
+    enforce(!t->crash_data->unwinding);
     bool found = false;
 
     if (type == CRASH_UNWIND_RCU) {
         struct crash_unwind_node *n;
-        list_for_each_entry_rev(n, &t->crash_data.unwind.in_use, list) {
+        list_for_each_entry_rev(n, &t->crash_data->unwind.in_use, list) {
             if (n->type == type) {
                 if (n->data.rcu_lock_times == 1) {
                     list_node_delete(&n->list);
@@ -1030,7 +1042,7 @@ static void crash_unwind_node_remove(struct crash_unwind_node_data *data,
 
     struct crash_unwind_node *iter = NULL;
 
-    list_for_each_entry_rev(iter, &t->crash_data.unwind.in_use, list) {
+    list_for_each_entry_rev(iter, &t->crash_data->unwind.in_use, list) {
         if (iter->data.raw == data->raw && iter->type == type) {
             list_node_delete(&iter->list);
             unwind_node_free(t, iter);
@@ -1085,8 +1097,8 @@ STRINGIFY_DECLARE_ENUM(crash_unwind_type) {
 
 static void crash_unwind_enter(uintptr_t data, enum crash_unwind_type type,
                                uintptr_t arg) {
-    if (global.current_bootstage >= BOOTSTAGE_LATE &&
-        !thread_get_current()->crash_data.unwinding) {
+    if (boot_global.stage >= BOOTSTAGE_LATE &&
+        !thread_get_current()->crash_data->unwinding) {
         struct crash_unwind_node_data nd = {
             .raw = data,
             .arg = arg,
@@ -1097,8 +1109,8 @@ static void crash_unwind_enter(uintptr_t data, enum crash_unwind_type type,
 }
 
 static void crash_unwind_exit(uintptr_t data, enum crash_unwind_type type) {
-    if (global.current_bootstage >= BOOTSTAGE_LATE &&
-        !thread_get_current()->crash_data.unwinding) {
+    if (boot_global.stage >= BOOTSTAGE_LATE &&
+        !thread_get_current()->crash_data->unwinding) {
         struct crash_unwind_node_data nd = {
             .raw = data,
         };
@@ -1111,7 +1123,7 @@ static void crash_unwind_exit(uintptr_t data, enum crash_unwind_type type) {
  * one by one, detaching as we go */
 void crash_unwind(void) TSA_NO_ANALYSIS {
     struct thread *t = thread_get_current();
-    struct crash_thread_data *pt = &t->crash_data;
+    struct crash_thread_data *pt = t->crash_data;
     pt->unwinding = true;
 
     struct crash_unwind_thread_data *upt = &pt->unwind;

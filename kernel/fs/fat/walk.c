@@ -1,8 +1,8 @@
 #include <fs/fat.h>
+#include <math/align.h>
 #include <mem/alloc.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
+#include <types/types.h>
 
 // TODO: optimize this so I dont memcpy every iteration :boom:
 

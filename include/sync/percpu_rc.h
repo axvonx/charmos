@@ -4,10 +4,10 @@
 #include <compiler/core.h>
 #include <enforce.h>
 #include <math/bit.h>
-#include <smp/core.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <sync/rcu.h>
+#include <topo/core.h>
+#include <topo/topology.h>
+#include <types/types.h>
 
 /*
  * Per-CPU Reference Counter

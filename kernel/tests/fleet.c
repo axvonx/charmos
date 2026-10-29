@@ -1,20 +1,31 @@
+#include <atomic.h>
 #include <console/panic.h>
 #include <container_of.h>
-#include <global.h>
+#include <math/range.h>
 #include <mem/alloc.h>
 #include <sch/sched.h>
-#include <smp/core.h>
-#include <stdarg.h>
 #include <string.h>
+#include <structures/cpu_mask.h>
+#include <sync/event.h>
+#include <sync/once_token.h>
+#include <test/conc.h>
 #include <test/fleet.h>
+#include <test/perturb.h>
+#include <test/test.h>
 #include <thread/thread.h>
 #include <thread/thread_diag.h>
+#include <thread/thread_types.h>
+#include <thread/wait.h>
 #include <time/time.h>
+#include <time/timer.h>
+#include <topo/core.h>
+#include <topo/global.h>
+#include <types/types.h>
 
 #ifdef TEST_ENABLED
 
 static cpu_id_t test_core_modulo(size_t index) {
-    size_t count = global.core_count ? global.core_count : 1;
+    size_t count = topo_global.cpu_count ? topo_global.cpu_count : 1;
     return (cpu_id_t) (index % count);
 }
 
@@ -284,7 +295,7 @@ size_t test_fleet_spawn_per_core(struct test_fleet *f, const char *role,
     size_t spawned = 0;
 
     for (size_t rep = 0; rep < per_core; rep++) {
-        for (size_t cpu = 0; cpu < global.core_count; cpu++) {
+        for (size_t cpu = 0; cpu < topo_global.cpu_count; cpu++) {
             if (!test_fleet_spawn(f, role, body, .arg = arg, .core_id = cpu,
                                   .pinned = true))
                 return spawned;
@@ -310,7 +321,7 @@ size_t test_fleet_spawn_perturbers(struct test_fleet *f,
         if (victim_cpu == TEST_PERTURB_VICTIM_ANY) {
             uint64_t seed = test_rng_seed_for(f->ctx ? f->ctx->seed : 0,
                                               TEST_FLEET_MAX_WORKERS);
-            victim_cpu = (int64_t) (seed % global.core_count);
+            victim_cpu = (int64_t) (seed % topo_global.cpu_count);
         }
 
         f->subject_count = f->count;

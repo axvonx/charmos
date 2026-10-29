@@ -1,4 +1,11 @@
 #include "sch/tests/test_internal.h"
+#include <asm.h>
+#include <atomic.h>
+#include <scaled_param.h>
+#include <sync/rcu.h>
+#include <thread/apc_types.h>
+#include <thread/thread_types.h>
+#include <thread/wait.h>
 
 TEST_GROUP_DEFINE(sched, .intensity_desc = {
                              .curve = SCALE_PIECEWISE_LOG,

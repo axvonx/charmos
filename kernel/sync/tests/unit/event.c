@@ -1,5 +1,10 @@
+#include <sch/irql.h>
 #include <string.h>
+#include <structures/list.h>
 #include <sync/event.h>
+#include <sync/spinlock.h>
+#include <thread/thread_types.h>
+#include <thread/wait.h>
 
 #include "sync/tests/test_internal.h"
 

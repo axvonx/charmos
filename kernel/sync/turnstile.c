@@ -1,12 +1,23 @@
+#include <atomic.h>
 #include <enforce.h>
-#include <math/min_max.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
 #include <mem/slab.h> /* to get SLAB_OBJ_ALIGN */
+#include <sch/irql.h>
 #include <sch/sched.h>
+#include <sch/wroost.h>
+#include <structures/list.h>
+#include <structures/rbt.h>
+#include <sync/lock_chk.h>
 #include <sync/rcu.h>
+#include <sync/spinlock.h>
 #include <sync/turnstile.h>
 #include <thread/thread.h>
+#include <thread/thread_types.h>
+#include <thread/wait.h>
+#include <tsa.h>
+
+static struct turnstile_hash_table *turnstiles;
 
 /* LOCK ORDERING: wroost_lock -> chain -> thread.wait_lock ->
  * header / runqueues -> thread lock -> pi_lock */
@@ -50,11 +61,11 @@ SLAB_SIZE_REGISTER_FOR_STRUCT(turnstile, SLAB_OBJ_ALIGN_DEFAULT);
 LOCK_CHK_CLASS_DEFINE_LOCAL(turnstile_chain);
 
 void turnstiles_init(void) {
-    global.turnstiles = nofail_vnew(global.turnstiles, ALLOC_ZERO);
+    turnstiles = nofail_vnew(turnstiles, ALLOC_ZERO);
     for (size_t i = 0; i < TURNSTILE_HASH_SIZE; i++) {
-        spinlock_init_chk(&global.turnstiles->heads[i].lock,
+        spinlock_init_chk(&turnstiles->heads[i].lock,
                           LOCK_CHK_CLASS(turnstile_chain), LOCK_CHKD_FULL);
-        list_head_init(&global.turnstiles->heads[i].list);
+        list_head_init(&turnstiles->heads[i].list);
     }
 }
 
@@ -140,7 +151,7 @@ struct turnstile *turnstile_create(void) {
 
 static inline struct turnstile_hash_chain *turnstile_chain_for(void *obj) {
     size_t idx = TURNSTILE_OBJECT_HASH(obj);
-    return &global.turnstiles->heads[idx];
+    return &turnstiles->heads[idx];
 }
 
 static void turnstile_insert_to_freelist(struct turnstile *parent,

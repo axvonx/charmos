@@ -1,10 +1,7 @@
 /* @title: Thread reaper */
 #pragma once
 #include <structures/locked_list.h>
-#include <sync/condvar.h>
 #include <sync/semaphore.h>
-#include <sync/spinlock.h>
-#include <thread/queue.h>
 #include <thread/thread.h>
 
 struct reaper_thread {

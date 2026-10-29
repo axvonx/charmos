@@ -1,20 +1,27 @@
+#include <atomic.h>
 #include <console/crash.h>
 #include <console/printf.h>
 #include <dbg.h>
+#include <err.h>
 #include <irq/exception_sync_cb.h>
 #include <irq/irq.h>
+#include <math/fixed.h>
 #include <math/range.h>
 #include <mem/address_range.h>
 #include <mem/demand_page.h>
 #include <mem/hhdm.h>
+#include <mem/page.h>
 #include <mem/page_fault.h>
 #include <mem/page_table.h>
 #include <mem/pmm.h>
 #include <mem/vmm.h>
+#include <sch/global.h>
 #include <sch/sched.h>
 #include <string.h>
 #include <sync/spinlock.h>
 #include <thread/thread.h>
+#include <topo/core.h>
+#include <types/refcount.h>
 
 static enum exception_sync_cb_result
 page_fault_sync_cb(struct exception_sync_cb *this, struct irq_context *irqc,
@@ -212,7 +219,7 @@ static void dump_slab_exec_fault(struct thread *curr, struct irq_context *ctx) {
     printf("  cs=%p   ss=%p\n", (void *) rsp->cs, (void *) rsp->ss);
 
     /* Crash: raw smp_id is fine */
-    struct scheduler *sched = global.schedulers[smp_id_raw()];
+    struct scheduler *sched = sch_global.schedulers[smp_id_raw()];
     printf("\n--- Scheduler state (core %zu) ---\n", smp_id_raw());
     printf("  sched->current = %p\n", (void *) sched->current);
     printf("  sched->drop_last_ref = %p\n", (void *) sched->drop_last_ref);

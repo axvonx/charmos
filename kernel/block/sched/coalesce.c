@@ -1,11 +1,7 @@
 #include <block/block.h>
 #include <block/sched.h>
-#include <console/printf.h>
-#include <mem/alloc.h>
-#include <stdint.h>
-#include <sync/spinlock.h>
-#include <thread/workqueue.h>
-#include <time/time.h>
+#include <structures/list.h>
+#include <types/types.h>
 
 static inline void set_coalesced(struct bio_request *into,
                                  struct bio_request *from) {

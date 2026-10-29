@@ -1,12 +1,13 @@
 #include <block/block.h>
 #include <drivers/ahci.h>
 #include <math/bit.h>
-#include <sch/sched.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <sch/irql.h>
+#include <sync/event.h>
+#include <sync/spinlock.h>
 #include <test/export.h>
 #include <thread/thread.h>
+#include <thread/thread_types.h>
+#include <types/types.h>
 
 static void ahci_set_lba_cmd(struct ahci_fis_reg_h2d *fis, uint64_t lba,
                              uint16_t sector_count) {

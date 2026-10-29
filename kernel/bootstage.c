@@ -1,11 +1,15 @@
+#include <asm.h>
+#include <boot/global.h>
 #include <bootstage.h>
 #include <bootstage_condition.h>
 #include <compiler/atomic.h>
-#include <console/printf.h>
-#include <global.h>
+#include <linker/symbols.h>
 #include <log.h>
 #include <string.h>
 #include <text_patch.h>
+#include <types/refcount.h>
+
+struct boot_globals boot_global = {0};
 
 /* The standard bootstage.h API and the fancy condition stuff are both here */
 
@@ -23,7 +27,7 @@ const char *bootstage_str[BOOTSTAGE_COUNT] = {
 };
 
 enum bootstage bootstage_get(void) {
-    return global.current_bootstage;
+    return boot_global.stage;
 }
 
 static void bootstage_write_jump(struct bootstage_condition_entry *ent) {
@@ -78,7 +82,7 @@ void bootstage_advance(enum bootstage new) {
     /* disable interrupts to be safe */
     bool ints = irq_disable_save();
 
-    global.current_bootstage = new;
+    boot_global.stage = new;
     ca_mb();
 
     /* EARLY_FB leaves the kernel RO, we don't have patchability */

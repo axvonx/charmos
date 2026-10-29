@@ -1,15 +1,18 @@
 #include <asm.h>
+#include <block/bio.h>
 #include <block/block.h>
-#include <console/printf.h>
 #include <drivers/ata.h>
+#include <irq/irq.h>
 #include <mem/alloc.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <sch/irql.h>
 #include <structures/sll.h>
-#include <sync/lock_chk_assert.h>
+#include <sync/event.h>
+#include <sync/spinlock.h>
 #include <thread/thread.h>
+#include <thread/thread_types.h>
 #include <time/spin_sleep.h>
 #include <tsa.h>
+#include <types/types.h>
 
 static void ide_start_next_locked(struct ide_channel *chan)
     TSA_CALLER_HOLDS(&chan->lock);

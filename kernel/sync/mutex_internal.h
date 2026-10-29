@@ -1,5 +1,6 @@
 #pragma once
-#include <crypto/prng.h>
+#include <atomic.h>
+#include <console/crash.h>
 #include <sync/mutex.h>
 
 enum mutex_bits : uintptr_t {

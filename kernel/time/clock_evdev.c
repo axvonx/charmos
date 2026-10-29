@@ -1,8 +1,13 @@
+#include <err.h>
 #include <mem/alloc.h>
-#include <mem/nofail.h>
-#include <stdarg.h>
+#include <sch/irql.h>
 #include <string.h>
+#include <structures/cpu_mask.h>
+#include <structures/list.h>
+#include <structures/locked_list.h>
 #include <time/clock_evdev.h>
+#include <topo/global.h>
+#include <types/types.h>
 
 #include "internal.h"
 
@@ -31,7 +36,7 @@ struct clock_evdev *clock_evdev_create(const char *name, ...) {
     if (!ced)
         return NULL;
 
-    cpu_mask_init(&ced->cpu_mask, global.core_count);
+    cpu_mask_init(&ced->cpu_mask, topo_global.cpu_count);
 
     va_list args;
     va_start(args, name);

@@ -1,12 +1,10 @@
 #include <boot/gdt.h>
 #include <boot/tss.h>
 #include <console/panic.h>
-#include <console/printf.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
 #include <mem/page.h>
-#include <stdint.h>
-#include <string.h>
+#include <types/types.h>
 
 #define GDT_ENTRIES 7
 

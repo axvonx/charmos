@@ -1,9 +1,9 @@
 #include <math/bit.h>
-#include <mem/anon_vma.h>
+#include <mem/alloc_param.h>
 #include <mem/fixed_size_alloc.h>
 #include <mem/folio.h>
+#include <mem/page.h>
 #include <mem/pmm.h>
-#include <smp/perdomain.h>
 #include <string.h>
 #include <types/refcount.h>
 

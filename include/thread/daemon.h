@@ -1,7 +1,11 @@
 /* @title: Daemons */
 #pragma once
+#include <atomic.h>
+#include <container_of.h>
+#include <structures/cpu_mask_types.h>
 #include <structures/list.h>
 #include <sync/semaphore.h>
+#include <sync/spinlock_types.h>
 #include <thread/thread.h>
 #include <thread/workqueue.h>
 

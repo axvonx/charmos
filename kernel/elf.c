@@ -1,15 +1,17 @@
 #include <asm.h>
 #include <compiler/core.h>
 #include <compiler/intrinsic.h>
+#include <console/panic.h>
 #include <console/printf.h>
 #include <elf.h>
+#include <err.h>
 #include <math/bit.h>
+#include <math/range.h>
 #include <mem/page.h>
 #include <mem/pmm.h>
 #include <mem/vmm.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
+#include <types/types.h>
 
 #define ELF_MAGIC 0x464C457F // "\x7FELF"
 

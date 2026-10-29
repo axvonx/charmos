@@ -1,5 +1,11 @@
+#include <sch/climb.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
+#include <sch/wroost.h>
+#include <sync/spinlock.h>
 #include <thread/thread.h>
+#include <thread/thread_types.h>
+#include <tsa.h>
 
 #include "internal.h"
 

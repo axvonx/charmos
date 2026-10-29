@@ -3,33 +3,33 @@
  * for boost and event recording + scoring */
 
 #pragma once
-#include <asm.h>
 #include <atomic.h>
+#include <boot/global.h>
 #include <compiler/core.h>
-#include <log.h>
+#include <container_of.h>
+#include <log_types.h>
 #include <math/range.h>
 #include <mem/page.h>
-#include <mem/tlb.h> /* TODO: This header has little business being in here,
-                      * we should consider moving it out of this */
-#include <sch/climb.h>
+#include <mem/tlb_types.h>
+#include <sch/climb_types.h>
+#include <sch/irql.h>
 #include <sch/rt_sched_types.h>
-#include <sch/wroost.h>
-#include <stdarg.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <sch/wroost_types.h>
+#include <structures/cpu_mask.h>
 #include <structures/list.h>
 #include <structures/pairing_heap.h>
 #include <structures/rbt.h>
-#include <sync/condvar.h>
+#include <sync/condvar_types.h>
 #include <sync/lock_chk_types.h>
-#include <sync/rcu.h>
+#include <sync/rcu_types.h>
 #include <sync/spinlock.h>
 #include <thread/apc_types.h>
 #include <thread/thread_diag.h>
 #include <thread/thread_types.h>
-#include <thread/wait.h>
-#include <time/time.h>
-#include <time/timer.h>
+#include <thread/wait_types.h>
+#include <time/timer_types.h>
+#include <topo/core.h>
+#include <tsa.h>
 #include <types/refcount.h>
 #include <types/types.h>
 
@@ -185,7 +185,7 @@ struct thread {
      * reset if unions are to be used */
 
 #ifdef DEBUG_CRASH
-    struct crash_thread_data crash_data;
+    struct crash_thread_data *crash_data;
 #endif
 
     union {
@@ -431,7 +431,7 @@ struct thread {
 
 #define thread_log(lvl, fmt, ...)                                              \
     ({                                                                         \
-        if (global.current_bootstage >= BOOTSTAGE_LATE)                        \
+        if (boot_global.stage >= BOOTSTAGE_LATE)                               \
             log(thread_get_current()->log_site,                                \
                 &thread_get_current()->log_handle, lvl, fmt, ##__VA_ARGS__);   \
     })

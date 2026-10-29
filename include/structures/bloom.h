@@ -1,8 +1,5 @@
 /* @title: (Counting) Bloom Filter */
 #pragma once
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <types/types.h>
 
 #define COUNTER_BITS 4

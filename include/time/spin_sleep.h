@@ -1,6 +1,5 @@
 #include <compiler/core.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <types/types.h>
 void sleep_spin(uint64_t seconds);
 void sleep_spin_us(uint64_t us);
 void sleep_spin_ms(uint64_t msec);

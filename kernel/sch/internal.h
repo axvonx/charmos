@@ -1,12 +1,23 @@
+#include <atomic.h>
 #include <compiler/core.h>
 #include <compiler/intrinsic.h>
 #include <enforce.h>
 #include <math/bit.h>
 #include <math/min_max.h>
+#include <sch/global.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
+#include <structures/cpu_mask.h>
+#include <structures/list.h>
+#include <structures/rbt.h>
+#include <sync/spinlock.h>
 #include <thread/apc.h>
 #include <thread/thread.h>
+#include <thread/thread_types.h>
 #include <time/time.h>
+#include <topo/core.h>
+#include <topo/topology.h>
+#include <tsa.h>
 
 static inline void scheduler_set_queue_bitmap(struct scheduler *sched,
                                               uint8_t prio) {
@@ -27,7 +38,7 @@ static inline uint8_t scheduler_get_bitmap(struct scheduler *sched) {
 }
 
 static inline struct scheduler *smp_core_scheduler(void) {
-    return global.schedulers[smp_id(TOPC_IRQL)];
+    return sch_global.schedulers[smp_id(TOPC_IRQL)];
 }
 
 static inline struct idle_thread_data *smp_core_idle_thread(void) {

@@ -1,4 +1,7 @@
+#include <asm.h>
+#include <test/conc.h>
 #include <test/fleet.h>
+#include <test/perturb.h>
 
 #include "sync/tests/test_internal.h"
 

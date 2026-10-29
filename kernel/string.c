@@ -1,12 +1,8 @@
 #include <console/panic.h>
 #include <err.h>
-#include <limits.h>
 #include <mem/alloc.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <string.h>
+#include <types/types.h>
 
 #undef memset
 #undef memcpy

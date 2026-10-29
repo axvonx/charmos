@@ -2,9 +2,8 @@
 #include <enforce.h>
 #include <math/min_max.h>
 #include <mem/alloc.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <structures/rbit.h>
+#include <types/types.h>
 
 static void rbit_check_cycle(struct rbit_node *node, const char *caller) {
     struct rbit_node *tortoise = node;

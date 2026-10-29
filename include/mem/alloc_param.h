@@ -4,11 +4,9 @@
 #include <compiler/core.h>
 #include <compiler/wrapper.h>
 #include <console/printf.h>
-#include <log.h>
-#include <mem/alloc_api_internal.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <linker/symbols.h>
+#include <structures/bitmap.h>
+#include <types/types.h>
 
 /*
  * TL;DR:

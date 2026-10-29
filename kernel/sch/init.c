@@ -1,14 +1,28 @@
-#include <console/printf.h>
+#include <atomic.h>
+#include <console/panic.h>
+#include <irq/irq.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
+#include <sch/climb.h>
+#include <sch/global.h>
 #include <sch/sched.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <thread/reaper.h>
-#include <thread/workqueue.h>
+#include <sch/wroost.h>
+#include <structures/cpu_mask.h>
+#include <structures/list.h>
+#include <structures/rbt.h>
+#include <sync/lock_chk.h>
+#include <sync/spinlock.h>
+#include <thread/thread.h>
+#include <thread/thread_types.h>
+#include <time/time.h>
+#include <time/timer.h>
+#include <topo/core.h>
+#include <topo/global.h>
+#include <types/types.h>
 
 #include "internal.h"
+
+struct sch_globals sch_global = {0};
 
 enum irq_result scheduler_reschedule_isr(struct irq_context *rsp, void *ctx) {
     scheduler_mark_self_needs_resched(true);
@@ -37,15 +51,15 @@ static void scheduler_tick(struct timer *t) {
 }
 
 void scheduler_init(void) {
-    scheduler_data.max_concurrent_stealers = global.core_count / 4;
+    scheduler_data.max_concurrent_stealers = topo_global.cpu_count / 4;
 
     /* I mean, if we have one core and that core wants
      * to steal work from itself, go ahead? */
     if (scheduler_data.max_concurrent_stealers == 0)
         scheduler_data.max_concurrent_stealers = 1;
 
-    global.schedulers = vnews(global.schedulers, global.core_count);
-    if (!global.schedulers)
+    sch_global.schedulers = vnews(sch_global.schedulers, topo_global.cpu_count);
+    if (!sch_global.schedulers)
         panic(OUT_OF_MEMORY, "scheduler pointer array");
 
     wroost_init();
@@ -88,6 +102,6 @@ void scheduler_init(void) {
             scheduler_add_thread(s, t);
         }
 
-        global.schedulers[i] = s;
+        sch_global.schedulers[i] = s;
     }
 }

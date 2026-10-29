@@ -1,23 +1,10 @@
 /* @title: CPU Mask */
 #pragma once
 #include <compiler/diagnostic.h>
-#include <math/align.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <string.h>
 #include <structures/bitmap.h>
-
-#ifndef CPU_MASK_BITS
-#define CPU_MASK_BITS 128
-#endif
-
-#define CPU_MASK_WORD_BITS 64
-#define CPU_MASK_WORDS BITMAP_WORDS_CONST(CPU_MASK_BITS)
-
-struct cpu_mask {
-    BITMAP_DECLARE(bits, CPU_MASK_BITS);
-};
+#include <structures/cpu_mask_types.h>
+#include <types/types.h>
 
 #define CPU_MASK_INIT                                                          \
     (struct cpu_mask) {                                                        \
@@ -141,8 +128,8 @@ static inline void cpu_mask_fill(struct cpu_mask *m) {
 }
 
 #define cpu_mask_active_bits                                                   \
-    (global.core_count && global.core_count <= CPU_MASK_BITS                   \
-         ? global.core_count                                                   \
+    (topo_global.cpu_count && topo_global.cpu_count <= CPU_MASK_BITS           \
+         ? topo_global.cpu_count                                               \
          : CPU_MASK_BITS)
 
 #define cpu_mask_set_all(m) bitmap_fill((m)->bits, cpu_mask_active_bits)

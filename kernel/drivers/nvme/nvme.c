@@ -1,22 +1,30 @@
-#include <asm.h>
 #include <block/bcache.h>
+#include <block/bio.h>
 #include <block/block.h>
 #include <block/sched.h>
 #include <compiler/core.h>
-#include <console/printf.h>
+#include <console/panic.h>
+#include <device.h>
 #include <drivers/mmio.h>
 #include <drivers/nvme.h>
 #include <drivers/pci.h>
-#include <irq/idt.h>
+#include <err.h>
+#include <irq/irq.h>
+#include <log.h>
 #include <math/bit.h>
 #include <math/min_max.h>
+#include <math/range.h>
 #include <mem/alloc.h>
-#include <mem/vmm.h>
+#include <mem/page.h>
 #include <registry.h>
-#include <sch/sched.h>
-#include <smp/core.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <structures/cpu_mask.h>
+#include <structures/list.h>
+#include <sync/semaphore.h>
+#include <sync/spinlock.h>
+#include <thread/workqueue.h>
+#include <topo/core.h>
+#include <topo/global.h>
+#include <types/types.h>
 
 #include "internal.h"
 LOG_HANDLE_DEFINE_PRINT(nvme);
@@ -85,7 +93,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
 
     mmio_write_32(&nvme->regs->cc, cc.raw);
 
-    uint64_t core_count = global.core_count;
+    uint64_t core_count = topo_global.cpu_count;
 
     nvme_alloc_admin_queues(nvme);
     nvme_setup_admin_queues(nvme);
@@ -142,7 +150,7 @@ struct nvme_device *nvme_discover_device(uint8_t bus, uint8_t slot,
     spinlock_init(&nvme->finished_requests.lock);
 
     struct cpu_mask mask;
-    cpu_mask_init(&mask, global.core_count);
+    cpu_mask_init(&mask, topo_global.cpu_count);
 
     cpu_mask_set_all(&mask);
 

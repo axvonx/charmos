@@ -1,12 +1,9 @@
 #include <acpi/hpet.h>
 #include <asm.h>
-#include <console/printf.h>
 #include <drivers/mmio.h>
 #include <log.h>
 #include <math/bit.h>
 #include <mem/page.h>
-#include <mem/vmm.h>
-#include <smp/core.h>
 #include <uacpi/tables.h>
 
 #include "uacpi/acpi.h"

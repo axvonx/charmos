@@ -1,5 +1,15 @@
 #include <asm.h>
 #include <compiler/intrinsic.h>
+#include <math/bit.h>
+#include <math/units.h>
+#include <sch/irql.h>
+#include <structures/list.h>
+#include <structures/rbt.h>
+#include <sync/spinlock.h>
+#include <topo/core.h>
+#include <topo/global.h>
+#include <topo/topology.h>
+#include <tsa.h>
 
 #include "mem/tests/test_internal.h"
 #include "mem/vas_internal.h"
@@ -120,7 +130,7 @@ static bool vas_valid(struct vas *vas, size_t expected_live) {
     if (!arena_valid(&vas->global, vas->base, vas->limit, &live, &cached,
                      &enrolled))
         return false;
-    for (cpu_id_t cpu = 0; cpu < global.core_count; cpu++) {
+    for (cpu_id_t cpu = 0; cpu < topo_global.cpu_count; cpu++) {
         struct vas_arena *arena = &vas->local[cpu];
         if (!arena_valid(arena, vas->base, vas->limit, &live, &cached,
                          &enrolled))
@@ -475,13 +485,13 @@ TEST_DEFINE_UNIT(vas, import_failure_rolls_back_ownership) {
     struct vas *vas = vas_create(TEST_VAS_BASE, TEST_VAS_BASE + VAS_CHUNK_SIZE);
     TEST_ASSERT_NONNULL(vas);
     for (ssize_t budget = 0; budget < 2; budget++) {
-        for (cpu_id_t cpu = 0; cpu < global.core_count; cpu++)
+        for (cpu_id_t cpu = 0; cpu < topo_global.cpu_count; cpu++)
             vas->local[cpu].tag_alloc_budget = budget;
         TEST_ASSERT_EQ(vas_alloc(vas, PAGE_SIZE, PAGE_SIZE), 0);
         TEST_ASSERT_EQ(atomic_load(&vas->chunk_owner[0]), VAS_OWNER_GLOBAL);
         TEST_ASSERT(vas_valid(vas, 0));
     }
-    for (cpu_id_t cpu = 0; cpu < global.core_count; cpu++)
+    for (cpu_id_t cpu = 0; cpu < topo_global.cpu_count; cpu++)
         vas->local[cpu].tag_alloc_budget = -1;
     vaddr_t addr = vas_alloc(vas, PAGE_SIZE, PAGE_SIZE);
     TEST_ASSERT_EQ(addr, TEST_VAS_BASE);

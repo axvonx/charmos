@@ -1,9 +1,10 @@
+#include <block/bcache.h>
 #include <err.h>
 #include <fs/ext2.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <math/min_max.h>
 #include <string.h>
 #include <time/time.h>
+#include <types/types.h>
 
 enum err ext2_symlink_file(struct ext2_fs *fs,
                            struct ext2_full_inode *dir_inode, const char *name,

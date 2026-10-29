@@ -1,12 +1,10 @@
 #include <acpi/dmar.h>
-#include <asm.h>
-#include <console/panic.h>
 #include <console/printf.h>
+#include <drivers/iommu/iommu.h>
 #include <drivers/iommu/vt_d.h>
 #include <drivers/mmio.h>
 #include <log.h>
 #include <mem/page.h>
-#include <mem/vmm.h>
 #include <uacpi/tables.h>
 
 #include "uacpi/acpi.h"

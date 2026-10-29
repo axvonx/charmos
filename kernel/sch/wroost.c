@@ -1,10 +1,25 @@
+#include <console/panic.h>
+#include <math/align.h>
+#include <math/bit.h>
+#include <math/hash.h>
+#include <math/min_max.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
+#include <sch/global.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
 #include <sch/wroost.h>
+#include <structures/bitmap.h>
+#include <structures/cpu_mask.h>
+#include <structures/hlist.h>
 #include <sync/rwlock.h>
+#include <sync/rwlock_types.h>
+#include <sync/spinlock.h>
 #include <sync/turnstile.h>
+#include <thread/dpc.h>
 #include <thread/thread.h>
+#include <thread/thread_types.h>
+#include <topo/global.h>
 
 #include "atomic.h"
 #include "internal.h"
@@ -921,7 +936,7 @@ void wroost_post_release(struct rwlock *lock, enum rwlock_acquire_type type) {
 
 static bool percpu_boost_kick(cpu_id_t target, wroost_id_t lock_id,
                               int options) {
-    struct wroost_percpu_data *pcd = global.schedulers[target]->wroost_data;
+    struct wroost_percpu_data *pcd = sch_global.schedulers[target]->wroost_data;
 
     size_t word = lock_id / BIT_SIZEOF(bitmap_word_t);
     size_t idx = lock_id % BIT_SIZEOF(bitmap_word_t);
@@ -945,7 +960,7 @@ static bool percpu_boost_kick(cpu_id_t target, wroost_id_t lock_id,
             return true;
 
         return dpc_enqueue_on_cpu(
-            target, &global.schedulers[target]->wroost_data->boost_dpc);
+            target, &sch_global.schedulers[target]->wroost_data->boost_dpc);
     } else {
         return true;
     }
@@ -956,7 +971,7 @@ static size_t wroost_kick_cpus(struct cpu_mask *mask, wroost_id_t lock_id,
     cpu_id_t i;
 #ifdef DEBUG_WROOST
     cpu_mask_for_each(i, *mask)
-        enforce(i < global.core_count);
+        enforce(i < topo_global.cpu_count);
 #endif
 
     size_t kicked = 0;
@@ -976,11 +991,12 @@ size_t wroost_kick(struct wroost_kicks *kicks) {
 static void set_target_cpus(struct wroost_bucket *bkt, struct cpu_mask *on_mask,
                             enum thread_prio_class writer_prio) {
     cpu_id_t checked = 0;
-    for (size_t bm_word_idx = 0; checked < global.core_count; bm_word_idx++) {
+    for (size_t bm_word_idx = 0; checked < topo_global.cpu_count;
+         bm_word_idx++) {
         bitmap_word_t word = atomic_load(&bkt->rq_min_prio[bm_word_idx]);
 
         for (int shift = 0;
-             shift < BITMAP_BITS_PER_WORD && checked < global.core_count;
+             shift < BITMAP_BITS_PER_WORD && checked < topo_global.cpu_count;
              shift += THREAD_PRIO_CLASS_BIT_COUNT) {
             enum thread_prio_class prio =
                 (word >> shift) & THREAD_PRIO_CLASS_MASK;
@@ -1215,9 +1231,9 @@ void wroost_post_migrate_hook(struct thread *t, cpu_id_t from, cpu_id_t to) {
     if (atomic_load(&t->blocked_ts))
         panic("reader with blocked_ts cannot migrate");
 
-    update_reader(global.schedulers[from]->wroost_data, t,
+    update_reader(sch_global.schedulers[from]->wroost_data, t,
                   /* add = */ false);
-    update_reader(global.schedulers[to]->wroost_data, t, /* add = */ true);
+    update_reader(sch_global.schedulers[to]->wroost_data, t, /* add = */ true);
 }
 
 struct wroost_kicks wroost_post_prio_change_locked(struct thread *t,
@@ -1259,7 +1275,7 @@ static size_t wroost_calc_default_buckets(size_t cpu_count) {
 }
 
 void wroost_init(void) {
-    size_t bucket_count = wroost_calc_default_buckets(global.core_count);
+    size_t bucket_count = wroost_calc_default_buckets(topo_global.cpu_count);
     enforce(IS_POW2(bucket_count));
     enforce(bucket_count <= UINT16_MAX - 1, CAPACITY_EXCEEDED);
 

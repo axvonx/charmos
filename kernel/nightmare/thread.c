@@ -1,6 +1,11 @@
+#include <nightmare/nightmare.h>
 #include <nightmare/record.h>
-#include <sch/sched.h>
+#include <sync/event.h>
+#include <test/conc.h>
+#include <test/perturb.h>
 #include <thread/thread.h>
+#include <thread/thread_types.h>
+#include <time/time.h>
 
 #include "internal.h"
 

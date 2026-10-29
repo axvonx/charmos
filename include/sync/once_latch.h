@@ -2,9 +2,8 @@
 #pragma once
 #include <asm.h>
 #include <atomic.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <time/time.h>
+#include <types/types.h>
 
 struct once_latch {
     atomic_uint64_t count;

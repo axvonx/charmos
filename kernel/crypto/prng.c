@@ -1,8 +1,10 @@
 #include <crypto/prng.h>
-#include <smp/core.h>
-#include <smp/percpu.h>
-#include <stdint.h>
+#include <sch/irql.h>
 #include <string.h>
+#include <topo/core.h>
+#include <topo/percpu.h>
+#include <topo/topology.h>
+#include <types/types.h>
 
 struct prng_core {
     uint32_t state[16];

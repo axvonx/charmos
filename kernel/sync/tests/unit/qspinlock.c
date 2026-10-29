@@ -1,3 +1,5 @@
+#include <sch/irql.h>
+#include <test/conc.h>
 #include <test/fleet.h>
 
 #include "sync/tests/test_internal.h"

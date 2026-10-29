@@ -1,10 +1,23 @@
+#include <console/panic.h>
+#include <container_of.h>
+#include <err.h>
+#include <math/align.h>
 #include <math/fixed.h>
 #include <math/hash.h>
 #include <math/sort.h>
 #include <mem/alloc.h>
+#include <mem/arena.h>
 #include <mem/arena_provider.h>
+#include <mem/arena_types.h>
+#include <sch/irql.h>
+#include <string.h>
+#include <structures/bitmap.h>
+#include <structures/list.h>
 #include <structures/list_rcu.h>
+#include <structures/rbt.h>
+#include <sync/mutex.h>
 #include <sync/rcu.h>
+#include <sync/spinlock.h>
 
 #include "internal.h"
 

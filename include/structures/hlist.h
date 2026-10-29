@@ -1,8 +1,7 @@
 /* @title: Hash list */
 #pragma once
 #include <container_of.h>
-#include <stdbool.h>
-#include <stddef.h>
+#include <types/types.h>
 
 struct hlist_head {
     struct hlist_node *first;

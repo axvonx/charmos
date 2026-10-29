@@ -1,7 +1,9 @@
 #include <asm.h>
+#include <cmdline.h>
 #include <nightmare/nightmare.h>
 #include <sch/sched.h>
 #include <thread/thread.h>
+#include <time/time.h>
 
 struct harness_smoke_options {
     bool stall;

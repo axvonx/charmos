@@ -3,9 +3,6 @@
 #include <atomic.h>
 #include <compiler/core.h>
 #include <container_of.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <types/types.h>
 
 struct mpmc_lifo_list_node {

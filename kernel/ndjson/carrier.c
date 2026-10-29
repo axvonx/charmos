@@ -2,6 +2,7 @@
 #include <atomic.h>
 #include <ndjson.h>
 #include <sync/raw_spinlock.h>
+#include <tsa.h>
 
 #include "internal.h"
 

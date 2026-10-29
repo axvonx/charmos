@@ -1,6 +1,9 @@
+#include <atomic.h>
 #include <math/bit.h>
-#include <stdbool.h>
 #include <sync/rwlock.h>
+#include <sync/rwlock_types.h>
+#include <thread/thread_types.h>
+#include <types/types.h>
 
 struct thread; /* forward def */
 

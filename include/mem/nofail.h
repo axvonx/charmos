@@ -1,17 +1,18 @@
 /* @title: Boot OOM */
 #pragma once
+#include <boot/global.h>
 #include <console/panic.h>
-#include <global.h>
 #include <log.h>
+#include <mem/alloc.h>
 
 #define nofail(expr)                                                           \
     ({                                                                         \
-        if (global.current_bootstage >= BOOTSTAGE_COMPLETE)                    \
+        if (boot_global.stage >= BOOTSTAGE_COMPLETE)                           \
             log_msg_once(LOG_WARN, "nofail() invoked after boot");             \
         typeof(expr) _p_ = (expr);                                             \
         if (cc_unlikely(!_p_))                                                 \
             panic(OUT_OF_MEMORY, "%s == NULL, bootstage: %s", #expr,           \
-                  bootstage_str[global.current_bootstage]);                    \
+                  bootstage_str[boot_global.stage]);                           \
         _p_;                                                                   \
     })
 

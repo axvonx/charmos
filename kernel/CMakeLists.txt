@@ -35,7 +35,7 @@ include(uACPI/uacpi.cmake)
 
 set(EARLY_INIT_FILES
     ${CMAKE_SOURCE_DIR}/kernel/main.c
-    ${CMAKE_SOURCE_DIR}/kernel/smp/smp.c
+    ${CMAKE_SOURCE_DIR}/kernel/topo/smp.c
     ${CMAKE_SOURCE_DIR}/kernel/bootstage.c
     ${CMAKE_SOURCE_DIR}/kernel/string.c
     ${CMAKE_SOURCE_DIR}/kernel/console/printf.c

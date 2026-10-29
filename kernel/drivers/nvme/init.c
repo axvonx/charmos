@@ -1,18 +1,19 @@
 #include <acpi/lapic.h>
-#include <asm.h>
 #include <compiler/core.h>
-#include <console/printf.h>
+#include <console/panic.h>
 #include <drivers/mmio.h>
 #include <drivers/nvme.h>
-#include <irq/idt.h>
+#include <irq/irq.h>
+#include <log.h>
+#include <math/align.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
 #include <mem/pmm.h>
 #include <mem/vmm.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
+#include <sync/spinlock.h>
 #include <time/spin_sleep.h>
+#include <types/types.h>
 
 #include "internal.h"
 

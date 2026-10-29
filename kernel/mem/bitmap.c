@@ -1,11 +1,11 @@
+#include <console/panic.h>
 #include <console/printf.h>
 #include <math/units.h>
 #include <mem/alloc.h>
 #include <mem/bitmap.h>
 #include <mem/hhdm.h>
-#include <mem/pmm.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <mem/page.h>
+#include <types/types.h>
 
 uint8_t boot_bitmap[BOOT_BITMAP_SIZE] = {[0 ...(BOOT_BITMAP_SIZE - 1)] = 0xFF};
 uint64_t bitmap_size = BOOT_BITMAP_SIZE;

@@ -1,21 +1,19 @@
-#include <acpi/print.h>
 #include <acpi/uacpi_interface.h>
 #include <asm.h>
 #include <compiler/core.h>
+#include <console/panic.h>
 #include <console/printf.h>
 #include <drivers/mmio.h>
-#include <irq/idt.h>
+#include <irq/irq.h>
 #include <mem/alloc.h>
 #include <mem/vmm.h>
 #include <pit.h>
-#include <sch/sched.h>
-#include <smp/core.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <sync/mutex.h>
 #include <sync/mutex_simple.h>
 #include <sync/spinlock.h>
 #include <thread/thread.h>
+#include <topo/core.h>
+#include <tsa.h>
 #include <types/freq.h>
 #include <types/types.h>
 #include <uacpi/event.h>
@@ -26,7 +24,6 @@
 
 #include "uacpi/kernel_api.h"
 #include "uacpi/log.h"
-#include "uacpi/namespace.h"
 
 freq_hz_t tsc_freq = 0;
 

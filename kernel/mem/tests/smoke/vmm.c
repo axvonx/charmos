@@ -1,4 +1,5 @@
 #include "mem/tests/test_internal.h"
+#include <mem/vmm.h>
 
 TEST_DEFINE_SMOKE(mem, vmm_map_bump) {
     paddr_t p = pmm_alloc_page();

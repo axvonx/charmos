@@ -1,3 +1,4 @@
+#include <err.h>
 #include <mem/elcm.h>
 
 #include "mem/slab/tests/test_internal.h"

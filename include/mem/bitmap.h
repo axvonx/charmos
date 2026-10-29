@@ -1,11 +1,9 @@
 /* @title: Bitmap allocator */
 #pragma once
 #include <math/bit.h>
+#include <math/units.h>
 #include <mem/alloc.h>
 #include <mem/page.h>
-#include <mem/vmm.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <types/types.h>
 
 #define BOOT_BITMAP_SIZE (MIB(128) / PAGE_SIZE / 8)

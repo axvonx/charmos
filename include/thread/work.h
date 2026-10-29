@@ -1,6 +1,8 @@
 /* @title: Work(ers|queues)? */
 #pragma once
-#include <sync/seqlock.h>
+#include <atomic.h>
+#include <console/crash.h>
+#include <structures/list.h>
 
 /* Throughout much of the kernel, drivers want to defer work to threaded
  * contexts. However, we don't necessarily want to make one big overarching
@@ -30,17 +32,26 @@
  *
  *      ┌──────────────────────────────────────────────────────┐
  * Bits │ 31..28 27..24 23..20 19..16 15..12 11..8  7..4  3..0 │
- * Use  │  AAAA   AAAA   AAAA   AAAA   AAAA   AAAA  AAAA  AAAA │
+ * Use  │  AAAA   AAAA   AAAA   AAAA   AAAA   AAAA  AAAA  AAAD │
  *      └──────────────────────────────────────────────────────┘
+ *
+ * D - Detached - Worker is not assigned to a queue
  *
  * A - Unused (available)
  * * - Unused (unavailable)
  *
  */
-enum worker_flags { WORKER_FLAG_ };
+enum worker_flags {
+    WORKER_FLAG_DETACHED = 1,
+
+};
 
 struct worker {
+    struct list_node list_node;
     enum worker_flags flags;
 
     struct thread *thread;
+    atomic(struct work *) work;
+
+    struct workqueue *workqueue; /* NULL if detached */
 };

@@ -1,8 +1,19 @@
+#include <atomic.h>
+#include <console/panic.h>
+#include <mem/alloc.h>
+#include <mem/alloc_param.h>
 #include <mem/domain.h>
+#include <mem/global.h>
 #include <mem/nofail.h>
 #include <mem/slab.h>
-#include <smp/domain.h>
-#include <thread/daemon.h>
+#include <mem/vmm.h>
+#include <sch/irql.h>
+#include <stat_series.h>
+#include <string.h>
+#include <structures/list.h>
+#include <sync/spinlock.h>
+#include <topo/domain.h>
+#include <topo/global.h>
 
 #include "internal.h"
 #include "mem/domain/internal.h"
@@ -18,8 +29,9 @@ static void slab_domain_build_locality_lists(struct slab_domain *sdom) {
         for (size_t j = 0; j < zl->count; j++) {
             struct domain_zonelist_entry *zent = &zl->entries[j];
             struct domain_buddy *bd = zent->domain;
-            size_t idx = bd - global.domain_buddies;
-            struct slab_domain *remote_sdom = global.domains[idx]->slab_domain;
+            size_t idx = bd - mem_global.domain_buddies;
+            struct slab_domain *remote_sdom =
+                topo_global.domains[idx]->slab_domain;
             sdom->zonelists[i].entries[j] = (struct slab_cache_ref){
                 .caches = remote_sdom->caches[i],
                 .type = i,
@@ -110,7 +122,7 @@ static void slab_domain_init_stats(struct slab_domain *domain) {
 
 static struct slab_cache *slab_domain_cache_for_slab(struct slab *slab) {
     struct domain *d = domain_for_addr(vmm_get_phys((vaddr_t) slab));
-    d = d ? d : global.domains[0];
+    d = d ? d : topo_global.domains[0];
 
     size_t o = slab->parent_cache->order;
 
@@ -135,8 +147,8 @@ static void slab_domain_move_slabs(void) {
 }
 
 void slab_domain_init(void) {
-    for (size_t i = 0; i < global.domain_count; i++) {
-        struct domain *domain = global.domains[i];
+    for (size_t i = 0; i < topo_global.domain_count; i++) {
+        struct domain *domain = topo_global.domains[i];
         struct slab_domain *sdomain = nofail_vnew(sdomain, ALLOC_ZERO);
 
         sdomain->domain = domain;
@@ -150,8 +162,8 @@ void slab_domain_init(void) {
         slab_domain_init_stats(sdomain);
     }
 
-    for (size_t i = 0; i < global.domain_count; i++)
-        slab_domain_build_locality_lists(global.domains[i]->slab_domain);
+    for (size_t i = 0; i < topo_global.domain_count; i++)
+        slab_domain_build_locality_lists(topo_global.domains[i]->slab_domain);
 
     slab_domain_move_slabs();
     slab_switch_to_domain_allocations();
@@ -159,8 +171,8 @@ void slab_domain_init(void) {
 }
 
 void slab_domain_init_late(void) {
-    for (size_t i = 0; i < global.domain_count; i++) {
-        struct slab_domain *sd = global.domains[i]->slab_domain;
+    for (size_t i = 0; i < topo_global.domain_count; i++) {
+        struct slab_domain *sd = topo_global.domains[i]->slab_domain;
         slab_domain_init_workqueue(sd);
         slab_domain_init_daemon(sd);
     }

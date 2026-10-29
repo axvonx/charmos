@@ -1,5 +1,5 @@
 /* @title: Bootstages */
-#include <stdint.h>
+#include <types/types.h>
 #pragma once
 
 enum bootstage : uint8_t {
@@ -28,7 +28,7 @@ enum bootstage : uint8_t {
 
 extern const char *bootstage_str[BOOTSTAGE_COUNT];
 
-/* This is a bit goofy, but we use it when global.bootstage can't be used,
+/* This is a bit goofy, but we use it when boot_global.stage can't be used,
  * often due to header file recursion soup and other happenings */
 enum bootstage bootstage_get(void);
 void bootstage_advance(enum bootstage new);

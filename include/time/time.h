@@ -1,6 +1,5 @@
 /* @title: Time */
 #pragma once
-#include <stdint.h>
 #include <types/types.h>
 
 #define NS_PER_US 1000LL

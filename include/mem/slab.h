@@ -2,9 +2,8 @@
 #pragma once
 #include <compiler/core.h>
 #include <linker/symbols.h>
-#include <stdbool.h>
-#include <stddef.h>
 #include <structures/list.h>
+#include <types/types.h>
 
 struct slab_domain;
 

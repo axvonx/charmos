@@ -1,9 +1,8 @@
 /* @title: Physical memory manager */
 #pragma once
 #include <compiler/core.h>
+#include <log.h>
 #include <mem/alloc.h>
-#include <stdbool.h>
-#include <stddef.h>
 #include <types/types.h>
 struct limine_memmap_request;
 

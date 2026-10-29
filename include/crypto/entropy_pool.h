@@ -1,8 +1,8 @@
 /* @title: Entropy Pool */
 #pragma once
 #include <math/units.h>
-#include <stdint.h>
-#include <sync/spinlock.h>
+#include <sync/spinlock_types.h>
+#include <types/types.h>
 
 #define ENTROPY_POOL_SIZE 64 // 512 bits
 #define ENTROPY_MAX_BITS to_bits(ENTROPY_POOL_SIZE)

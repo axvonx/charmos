@@ -1,11 +1,10 @@
 /* @title: TLB */
 #pragma once
-#include <atomic.h>
 #include <compiler/diagnostic.h>
+#include <console/crash.h>
 #include <math/range.h>
-#include <stdint.h>
+#include <mem/tlb_types.h>
 #include <structures/cpu_mask.h>
-#include <structures/mpmc_fifo_ring.h>
 #include <types/types.h>
 
 /* per-cpu */
@@ -35,8 +34,6 @@
  * current thread.
  *
  */
-
-typedef uint64_t tlb_stamp_t;
 
 /* A type describes what an actual operation is */
 enum tlb_payload_type {

@@ -3,8 +3,11 @@
 #include <asm.h>
 #include <atomic.h>
 #include <enforce.h>
-#include <smp/percpu.h>
+#include <sch/irql.h>
 #include <sync/lock_chk.h>
+#include <sync/lock_chk_types.h>
+#include <topo/percpu.h>
+#include <topo/topology.h>
 
 #include "internal.h"
 

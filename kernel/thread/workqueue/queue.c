@@ -1,4 +1,10 @@
+#include <atomic.h>
+#include <sch/irql.h>
+#include <structures/list.h>
+#include <sync/condvar.h>
+#include <sync/spinlock.h>
 #include <thread/thread.h>
+#include <thread/workqueue.h>
 
 #include "internal.h"
 

@@ -1,17 +1,22 @@
 #include <acpi/ioapic.h>
 #include <acpi/lapic.h>
+#include <block/bcache.h>
+#include <block/bio.h>
+#include <block/block.h>
+#include <block/sched.h>
+#include <console/panic.h>
+#include <device.h>
 #include <drivers/ahci.h>
 #include <drivers/mmio.h>
 #include <drivers/pci.h>
-#include <irq/idt.h>
-#include <math/align.h>
+#include <err.h>
+#include <irq/irq.h>
+#include <log.h>
 #include <mem/alloc.h>
-#include <mem/vmm.h>
+#include <mem/page.h>
 #include <registry.h>
-#include <smp/core.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <topo/core.h>
+#include <types/types.h>
 
 LOG_SITE_DEFINE_PRINT(ahci);
 LOG_HANDLE_DEFINE_PRINT(ahci);

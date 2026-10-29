@@ -1,11 +1,12 @@
 #include <console/crash.h>
+#include <console/global.h>
 #include <console/panic.h>
-#include <console/printf.h>
 #include <console/report.h>
-#include <dbg.h>
-#include <stdarg.h>
 #include <string.h>
 #include <sync/raw_spinlock.h>
+#include <types/types.h>
+
+struct crash_globals crash_global = {0};
 
 static char msg[REPORT_LINE_MAX];
 static struct raw_spinlock panic_msg_lock = RAW_SPINLOCK_INIT;

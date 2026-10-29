@@ -3,9 +3,7 @@
 #include <compiler/core.h>
 #include <compiler/intrinsic.h>
 #include <linker/symbols.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 /* Uses a non-console output and a single
  * JSON object for each line, with each record type declared once (custom)

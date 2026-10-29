@@ -1,4 +1,12 @@
 #include "tests/test_internal.h"
+#include <dbg.h>
+#include <math/min_max.h>
+#include <sch/irql.h>
+#include <structures/list.h>
+#include <structures/rbt.h>
+#include <sync/spinlock.h>
+#include <time/time.h>
+#include <types/refcount.h>
 
 static cc_noinline void sd_save_n(stack_handle_t *out, size_t n) {
     for (size_t i = 0; i < n; i++)

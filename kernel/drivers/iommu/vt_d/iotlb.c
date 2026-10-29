@@ -1,4 +1,7 @@
+#include <asm.h>
+#include <drivers/iommu/vt_d.h>
 #include <drivers/mmio.h>
+#include <mem/page.h>
 
 #include "internal.h"
 

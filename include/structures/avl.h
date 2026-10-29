@@ -1,8 +1,7 @@
 /* @title: AVL tree */
 #pragma once
 #include <container_of.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 struct avl_tree_node {
     int height;

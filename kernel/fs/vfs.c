@@ -1,12 +1,15 @@
 #include <console/printf.h>
 #include <err.h>
+#include <fs/global.h>
 #include <fs/vfs.h>
 #include <log.h>
 #include <mem/alloc.h>
-#include <stdint.h>
 #include <string.h>
+#include <types/types.h>
 
 #include "fs/detect.h"
+
+struct fs_globals fs_global = {0};
 
 static struct vfs_mount **mount_table = NULL;
 static uint64_t mount_table_count = 0;

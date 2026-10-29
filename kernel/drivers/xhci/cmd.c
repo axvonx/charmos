@@ -1,14 +1,12 @@
-#include <asm.h>
 #include <compiler/core.h>
 #include <drivers/pci.h>
+#include <drivers/usb/usb.h>
 #include <drivers/usb/xhci.h>
 #include <mem/alloc.h>
-#include <mem/page.h>
 #include <mem/vmm.h>
-#include <sch/sched.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <time/spin_sleep.h>
+#include <sch/irql.h>
+#include <sync/spinlock.h>
+#include <types/types.h>
 
 #include "internal.h"
 

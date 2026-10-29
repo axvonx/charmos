@@ -1,31 +1,35 @@
 #ifdef TEST_ENABLED
+#include "mem/slab/internal.h"
+#include <cmdline.h>
 #include <colors.h>
+#include <console/crash.h>
 #include <console/panic.h>
 #include <console/printf.h>
-#include <console/report.h>
 #include <console/statusbar.h>
-#include <console/term.h>
 #include <crypto/prng.h>
+#include <err.h>
+#include <fs/detect.h>
+#include <fs/global.h>
 #include <fs/vfs.h>
-#include <global.h>
-#include <irq/irq.h>
-#include <math/align.h>
-#include <math/sort.h>
+#include <linker/symbols.h>
+#include <log.h>
+#include <math/fixed.h>
+#include <math/range.h>
+#include <math/units.h>
+#include <mem/alloc.h>
+#include <mem/alloc_param.h>
 #include <mem/nofail.h>
-#include <mem/vas.h>
+#include <mem/pmm.h>
 #include <ndjson.h>
-#include <smp/core.h>
-#include <stack_depot.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <scaled_param.h>
+#include <string.h>
+#include <structures/rbt.h>
 #include <test/export.h>
-#include <test/fleet.h>
 #include <test/test.h>
-#include <time/spin_sleep.h>
 #include <time/time.h>
-
-#include "mem/slab/internal.h"
+#include <topo/core.h>
+#include <topo/global.h>
+#include <types/types.h>
 
 /* Basically, every test and test setting wires back here */
 CMDLINE_DEFINE(test_root, .name = "test", .flags = CMDLINE_ENTRY_SYMBOLIC);
@@ -229,14 +233,15 @@ CMDLINE_SCHEMA_DEFINE(
                         .desc = "Exit after first test fails"));
 
 static enum test_skip_reason test_check_preconditions(const struct test *t) {
-    if (t->min_cores && global.core_count < t->min_cores)
+    if (t->min_cores && topo_global.cpu_count < t->min_cores)
         return TEST_SKIP_INSUFFICIENT_CORES;
 
     if (t->min_ram_mib && pmm_get_usable_ram() < MIB(t->min_ram_mib))
         return TEST_SKIP_RAM_LOW;
 
     if (t->required_fs != FS_UNKNOWN &&
-        (!global.root_node || global.root_node->fs_type != t->required_fs))
+        (!fs_global.root_node ||
+         fs_global.root_node->fs_type != t->required_fs))
         return TEST_SKIP_UNSUPPORTED_FS;
 
     return TEST_SKIP_NONE;

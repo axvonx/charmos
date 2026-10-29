@@ -1,12 +1,16 @@
+#include <err.h>
 #include <math/units.h>
 #include <mem/address_range.h>
+#include <mem/alloc_param.h>
 #include <mem/asan.h>
+#include <mem/demand_page.h>
 #include <mem/hhdm.h>
 #include <mem/page.h>
 #include <mem/page_alloc.h>
 #include <mem/page_fault.h>
 #include <mem/pmm.h>
 #include <mem/vas.h>
+#include <mem/vmm.h>
 
 ALLOC_FLAG_EX_REGISTER(PG, CONTIGUOUS);
 static bool page_alloc_pf_valid(struct page_fault_info *pfi);

@@ -1,4 +1,9 @@
 #include "sync/tests/test_internal.h"
+#include <asm.h>
+#include <sch/irql.h>
+#include <sync/rwlock_types.h>
+#include <thread/thread_types.h>
+#include <time/time.h>
 
 static struct rwlock rw_two_writers = RWLOCK_INIT(THREAD_PRIO_CLASS_TIMESHARE);
 static atomic_bool rw_two_done = false;

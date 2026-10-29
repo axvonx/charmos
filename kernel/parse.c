@@ -2,9 +2,9 @@
 #include <math/fixed.h>
 #include <math/units.h>
 #include <mem/alloc.h>
-#include <mem/nofail.h>
 #include <parse.h>
 #include <string.h>
+#include <structures/cpu_mask.h>
 
 static bool parse_bool_internal(const char *str, bool *out) {
     if (!str || *str == '\0') {

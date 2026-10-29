@@ -2,11 +2,10 @@
 #pragma once
 #include <console/crash.h>
 #include <enforce.h>
-#include <smp/core.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <structures/cpu_mask.h>
-#include <structures/list.h>
+#include <sch/irql.h>
+#include <structures/cpu_mask_types.h>
+#include <topo/core.h>
+#include <topo/topology.h>
 #include <types/types.h>
 
 #define IRQ_DIV_BY_Z 0x0
@@ -41,12 +40,6 @@ enum irq_flags {
     IRQ_FLAG_NONE = 0,
 };
 
-struct irq_action {
-    irq_handler_t handler;
-    void *data;
-    struct list_node list;
-};
-
 struct irq_chip {
     const char *name;
 
@@ -56,25 +49,6 @@ struct irq_chip {
 
     void (*set_affinity)(struct irq_desc *, struct cpu_mask *);
     int (*set_rate_limit)(struct irq_desc *, time_us_t interval);
-};
-
-struct irq_desc {
-    uint8_t vector;
-    enum irq_flags flags;
-
-    const char *name;
-
-    struct irq_chip *chip;
-    void *chip_data;
-
-    struct list_head actions;
-
-    struct cpu_mask affinity;
-    struct cpu_mask masked_cpus;
-
-    bool present;   /* Have we set handlers? */
-    bool allocated; /* Has this been allocated? */
-    bool enabled;
 };
 
 struct irq_registers {
@@ -124,8 +98,8 @@ static inline void irq_context_to_crash_regs(const struct irq_registers *ictx,
         return;
     out->rip = ictx->rip;
     out->rflags = ictx->rflags;
-    __asm__ volatile("mov %%cr2, %0" : "=r"(out->cr2));
-    __asm__ volatile("mov %%cr3, %0" : "=r"(out->cr3));
+    asm volatile("mov %%cr2, %0" : "=r"(out->cr2));
+    asm volatile("mov %%cr3, %0" : "=r"(out->cr3));
     out->rax = ictx->rax;
     out->rbx = ictx->rbx;
     out->rcx = ictx->rcx;

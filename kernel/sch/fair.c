@@ -1,15 +1,13 @@
-#include <asm.h>
-#include <atomic.h>
-#include <bootstage.h>
 #include <crypto/prng.h>
-#include <irq/idt.h>
 #include <math/bit.h>
 #include <math/fixed.h>
 #include <math/min_max.h>
-#include <registry.h>
 #include <sch/sched.h>
-#include <smp/smp.h>
-#include <stdint.h>
+#include <structures/rbt.h>
+#include <thread/thread.h>
+#include <thread/thread_types.h>
+#include <time/time.h>
+#include <types/types.h>
 
 #include "internal.h"
 

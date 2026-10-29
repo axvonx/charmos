@@ -1,7 +1,6 @@
 /* @title: Domain buddy allocator */
 #include <mem/alloc.h>
-#include <smp/domain.h>
-#include <stdint.h>
+#include <topo/domain.h>
 #include <types/types.h>
 
 void domain_buddies_init(void);

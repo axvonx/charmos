@@ -1,28 +1,33 @@
 #include <acpi/lapic.h>
-#include <asm.h>
 #include <compiler/core.h>
-#include <console/printf.h>
-#include <dbg.h>
-#include <global.h>
+#include <console/panic.h>
+#include <container_of.h>
 #include <irq/exception_sync_cb.h>
 #include <irq/idt.h>
+#include <irq/irq.h>
+#include <linker/symbols.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
 #include <mem/page_fault.h>
 #include <mem/tlb.h>
-#include <mem/vmm.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
-#include <smp/core.h>
-#include <smp/smp.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <string.h>
+#include <structures/cpu_mask.h>
+#include <structures/list.h>
 #include <sync/rcu.h>
-#include <thread/apc.h>
+#include <sync/seqlock.h>
+#include <sync/spinlock.h>
+#include <thread/dpc.h>
 #include <thread/thread.h>
 #include <time/timer.h>
+#include <topo/core.h>
+#include <topo/global.h>
+#include <topo/topology.h>
+#include <types/types.h>
 #include <watchdog.h>
+
+#include "internal.h"
 
 /* Lock is only used for allocation/free and registering */
 static struct spinlock irq_table_lock = SPINLOCK_INIT;
@@ -313,8 +318,8 @@ static void exception_sync_cbs_init(void) {
 void irq_init(void) {
     for (size_t i = 0; i < IDT_ENTRIES; i++) {
         struct irq_desc *desc = &irq_table[i];
-        cpu_mask_init(&desc->masked_cpus, global.core_count);
-        cpu_mask_init(&desc->affinity, global.core_count);
+        cpu_mask_init(&desc->masked_cpus, topo_global.cpu_count);
+        cpu_mask_init(&desc->affinity, topo_global.cpu_count);
 
         desc->vector = i;
         irq_desc_clear(desc);

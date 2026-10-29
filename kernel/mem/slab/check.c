@@ -1,4 +1,3 @@
-#include <math/bit.h>
 
 #include "internal.h"
 

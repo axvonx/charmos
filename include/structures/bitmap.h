@@ -5,27 +5,16 @@
 #include <compiler/intrinsic.h>
 #include <math/align.h>
 #include <math/bit.h>
-#include <math/min_max.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <string.h>
+#include <structures/bitmap_types.h>
+#include <types/types.h>
 
-typedef uint64_t bitmap_word_t;
-
-#define BITMAP_BITS_PER_WORD 64
 #define BITMAP_WORDS(nbits)                                                    \
     ({                                                                         \
         __auto_type __nbits = (nbits);                                         \
         ct_typecheck_widenable_to((size_t) 0, nbits);                          \
         DIV_ROUND_UP((size_t) __nbits, BITMAP_BITS_PER_WORD);                  \
     })
-
-/* Integer constant expression variant */
-#define BITMAP_WORDS_CONST(nbits)                                              \
-    (((nbits) / BITMAP_BITS_PER_WORD) + !!((nbits) % BITMAP_BITS_PER_WORD))
-#define BITMAP_DECLARE(name, nbits)                                            \
-    bitmap_word_t name[BITMAP_WORDS_CONST(nbits)]
 
 #define BITMAP_DECLARE_ATOMIC(name, nbits)                                     \
     atomic(bitmap_word_t) name[BITMAP_WORDS_CONST(nbits)]
@@ -41,6 +30,10 @@ typedef uint64_t bitmap_word_t;
 #define bitmap_for_each_bit_unset(bit, map, nbits)                             \
     for (bit = 0; bit < (nbits); bit++)                                        \
         if (!bitmap_test((map), (bit)))
+
+static inline size_t bitmap_words(size_t nbits) {
+    return BITMAP_WORDS_CONST(nbits);
+}
 
 static inline void bitmap_set(bitmap_word_t *map, size_t bit) {
     map[BITMAP_WORD_INDEX(bit)] |= BITMAP_BIT_MASK(bit);
@@ -108,12 +101,12 @@ static inline bool bitmap_atomic_test_and_clear(bitmap_word_t *map,
 }
 
 static inline void bitmap_zero(bitmap_word_t *map, size_t nbits) {
-    memset(map, 0, BITMAP_WORDS(nbits) * sizeof(bitmap_word_t));
+    memset(map, 0, bitmap_words(nbits) * sizeof(bitmap_word_t));
 }
 
 static inline void bitmap_copy(bitmap_word_t *dst, const bitmap_word_t *src,
                                size_t nbits) {
-    memcpy(dst, src, BITMAP_WORDS(nbits) * sizeof(bitmap_word_t));
+    memcpy(dst, src, bitmap_words(nbits) * sizeof(bitmap_word_t));
 }
 
 static inline void bitmap_fill(bitmap_word_t *map, size_t nbits) {
@@ -140,7 +133,7 @@ static inline void bitmap_clear_range(bitmap_word_t *map, size_t start,
 
 static inline void bitmap_and(bitmap_word_t *dst, const bitmap_word_t *src1,
                               const bitmap_word_t *src2, size_t nbits) {
-    size_t words = BITMAP_WORDS(nbits);
+    size_t words = bitmap_words(nbits);
     for (size_t i = 0; i < words; i++) {
         dst[i] = src1[i] & src2[i];
     }
@@ -148,7 +141,7 @@ static inline void bitmap_and(bitmap_word_t *dst, const bitmap_word_t *src1,
 
 static inline void bitmap_or(bitmap_word_t *dst, const bitmap_word_t *src1,
                              const bitmap_word_t *src2, size_t nbits) {
-    size_t words = BITMAP_WORDS(nbits);
+    size_t words = bitmap_words(nbits);
     for (size_t i = 0; i < words; i++) {
         dst[i] = src1[i] | src2[i];
     }
@@ -156,7 +149,7 @@ static inline void bitmap_or(bitmap_word_t *dst, const bitmap_word_t *src1,
 
 static inline void bitmap_xor(bitmap_word_t *dst, const bitmap_word_t *src1,
                               const bitmap_word_t *src2, size_t nbits) {
-    size_t words = BITMAP_WORDS(nbits);
+    size_t words = bitmap_words(nbits);
     for (size_t i = 0; i < words; i++) {
         dst[i] = src1[i] ^ src2[i];
     }
@@ -164,7 +157,7 @@ static inline void bitmap_xor(bitmap_word_t *dst, const bitmap_word_t *src1,
 
 static inline void bitmap_andnot(bitmap_word_t *dst, const bitmap_word_t *src1,
                                  const bitmap_word_t *src2, size_t nbits) {
-    size_t words = BITMAP_WORDS(nbits);
+    size_t words = bitmap_words(nbits);
     for (size_t i = 0; i < words; i++) {
         dst[i] = src1[i] & ~src2[i];
     }
@@ -172,7 +165,7 @@ static inline void bitmap_andnot(bitmap_word_t *dst, const bitmap_word_t *src1,
 
 static inline bool bitmap_equal(const bitmap_word_t *src1,
                                 const bitmap_word_t *src2, size_t nbits) {
-    size_t words = BITMAP_WORDS(nbits);
+    size_t words = bitmap_words(nbits);
     for (size_t i = 0; i < words; i++) {
         if (src1[i] != src2[i]) {
             return false;
@@ -183,7 +176,7 @@ static inline bool bitmap_equal(const bitmap_word_t *src1,
 
 static inline bool bitmap_intersects(const bitmap_word_t *src1,
                                      const bitmap_word_t *src2, size_t nbits) {
-    size_t words = BITMAP_WORDS(nbits);
+    size_t words = bitmap_words(nbits);
     for (size_t i = 0; i < words; i++) {
         if ((src1[i] & src2[i]) != 0) {
             return true;
@@ -194,7 +187,7 @@ static inline bool bitmap_intersects(const bitmap_word_t *src1,
 
 static inline bool bitmap_subset(const bitmap_word_t *subset,
                                  const bitmap_word_t *superset, size_t nbits) {
-    size_t words = BITMAP_WORDS(nbits);
+    size_t words = bitmap_words(nbits);
     for (size_t i = 0; i < words; i++) {
         if ((subset[i] & ~superset[i]) != 0) {
             return false;
@@ -204,7 +197,7 @@ static inline bool bitmap_subset(const bitmap_word_t *subset,
 }
 
 static inline bool bitmap_empty(const bitmap_word_t *map, size_t nbits) {
-    size_t words = BITMAP_WORDS(nbits);
+    size_t words = bitmap_words(nbits);
     for (size_t i = 0; i < words; i++) {
         if (map[i] != 0) {
             return false;
@@ -214,7 +207,7 @@ static inline bool bitmap_empty(const bitmap_word_t *map, size_t nbits) {
 }
 
 static inline bool bitmap_full(const bitmap_word_t *map, size_t nbits) {
-    size_t words = BITMAP_WORDS(nbits);
+    size_t words = bitmap_words(nbits);
     if (words == 0)
         return true;
     for (size_t i = 0; i < words - 1; i++) {
@@ -229,7 +222,7 @@ static inline bool bitmap_full(const bitmap_word_t *map, size_t nbits) {
 }
 
 static inline size_t bitmap_weight(const bitmap_word_t *map, size_t nbits) {
-    size_t words = BITMAP_WORDS(nbits);
+    size_t words = bitmap_words(nbits);
     size_t count = 0;
 
     if (words == 0)
@@ -250,11 +243,11 @@ static inline size_t bitmap_weight(const bitmap_word_t *map, size_t nbits) {
 
 static inline size_t bitmap_find_first_set(const bitmap_word_t *map,
                                            size_t nbits) {
-    size_t words = BITMAP_WORDS(nbits);
+    size_t words = bitmap_words(nbits);
     for (size_t i = 0; i < words; i++) {
         if (map[i]) {
             size_t bit = i * BITMAP_BITS_PER_WORD + (size_t) ci_ctzll(map[i]);
-            return MIN(bit, nbits);
+            return (bit < nbits ? bit : nbits);
         }
     }
     return nbits;
@@ -262,12 +255,12 @@ static inline size_t bitmap_find_first_set(const bitmap_word_t *map,
 
 static inline size_t bitmap_find_first_zero(const bitmap_word_t *map,
                                             size_t nbits) {
-    size_t words = BITMAP_WORDS(nbits);
+    size_t words = bitmap_words(nbits);
     for (size_t i = 0; i < words; i++) {
         bitmap_word_t inv = ~map[i];
         if (inv) {
             size_t bit = i * BITMAP_BITS_PER_WORD + (size_t) ci_ctzll(inv);
-            return MIN(bit, nbits);
+            return (bit < nbits ? bit : nbits);
         }
     }
     return nbits;
@@ -285,13 +278,13 @@ static inline size_t bitmap_find_next_bit(const bitmap_word_t *map,
     if (word) {
         size_t bit =
             word_index * BITMAP_BITS_PER_WORD + (size_t) ci_ctzll(word);
-        return MIN(bit, nbits);
+        return (bit < nbits ? bit : nbits);
     }
 
-    for (size_t i = word_index + 1; i < BITMAP_WORDS(nbits); i++) {
+    for (size_t i = word_index + 1; i < bitmap_words(nbits); i++) {
         if (map[i]) {
             size_t bit = i * BITMAP_BITS_PER_WORD + (size_t) ci_ctzll(map[i]);
-            return MIN(bit, nbits);
+            return (bit < nbits ? bit : nbits);
         }
     }
 
@@ -309,14 +302,14 @@ static inline size_t bitmap_find_next_zero_bit(const bitmap_word_t *map,
     bitmap_word_t inv = ~map[word_index] & (~((bitmap_word_t) 0) << bit_offset);
     if (inv) {
         size_t bit = word_index * BITMAP_BITS_PER_WORD + (size_t) ci_ctzll(inv);
-        return MIN(bit, nbits);
+        return (bit < nbits ? bit : nbits);
     }
 
-    for (size_t i = word_index + 1; i < BITMAP_WORDS(nbits); i++) {
+    for (size_t i = word_index + 1; i < bitmap_words(nbits); i++) {
         inv = ~map[i];
         if (inv) {
             size_t bit = i * BITMAP_BITS_PER_WORD + (size_t) ci_ctzll(inv);
-            return MIN(bit, nbits);
+            return (bit < nbits ? bit : nbits);
         }
     }
 

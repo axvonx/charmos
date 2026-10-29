@@ -1,4 +1,6 @@
+#include <atomic.h>
 #include <mem/slab.h>
+#include <topo/global.h>
 
 #include "internal.h"
 
@@ -43,6 +45,7 @@ static void slab_domain_bucket_print(const struct slab_domain_bucket *bucket) {
 }
 
 void slab_domains_print(void) {
-    for (size_t i = 0; i < global.domain_count; i++)
-        slab_domain_bucket_print(&global.domains[i]->slab_domain->aggregate);
+    for (size_t i = 0; i < topo_global.domain_count; i++)
+        slab_domain_bucket_print(
+            &topo_global.domains[i]->slab_domain->aggregate);
 }

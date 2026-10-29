@@ -1,4 +1,6 @@
 #include "thread/workqueue/tests/test_internal.h"
+#include <atomic.h>
+#include <scaled_param.h>
 
 TEST_GROUP_DEFINE(defer, .intensity_desc = {
                              .curve = SCALE_PIECEWISE_LOG,

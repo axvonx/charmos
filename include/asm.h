@@ -2,9 +2,8 @@
 #pragma once
 #include <compiler/core.h>
 #include <compiler/intrinsic.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <tsa.h>
+#include <types/types.h>
 
 //
 //

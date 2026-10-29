@@ -1,8 +1,6 @@
 /* @title: Scaled parameters */
 #pragma once
-#include <math/fixed.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 enum scale_curve : uint8_t {
     SCALE_NONE = 0,

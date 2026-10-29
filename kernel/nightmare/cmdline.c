@@ -1,6 +1,9 @@
 #include <cmdline.h>
+#include <err.h>
+#include <math/fixed.h>
 #include <math/range.h>
-#include <string.h>
+#include <nightmare/nightmare.h>
+#include <test/conc.h>
 #include <time/time.h>
 
 #include "internal.h"

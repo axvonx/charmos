@@ -1,5 +1,20 @@
-#include <stdarg.h>
+#include <console/crash.h>
+#include <container_of.h>
+#include <sch/irql.h>
+#include <structures/cpu_mask_types.h>
+#include <structures/list.h>
+#include <sync/spinlock.h>
 #include <thread/workqueue.h>
+#include <tsa.h>
+#include <types/refcount.h>
+#include <types/types.h>
+
+struct workqueue_globals {
+    struct workqueue *
+        *workqueues; /* per CPU, counted by topo_global.cpu_count */
+};
+
+extern struct workqueue_globals workqueue_global;
 
 #define work_from_worklist_node(node) container_of(node, struct work, list_node)
 

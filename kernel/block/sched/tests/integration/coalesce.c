@@ -1,4 +1,10 @@
+#include <block/bio.h>
+#include <fs/global.h>
+#include <mem/alloc.h>
 #include <mem/nofail.h>
+#include <scaled_param.h>
+#include <sch/sched.h>
+#include <time/time.h>
 
 #include "block/sched/tests/test_internal.h"
 
@@ -7,7 +13,7 @@ TEST_GROUP_DEFINE(bio_sched, .intensity_desc = {
                                  .unit = "requests",
                              });
 
-#define EXT2_ROOT struct vfs_node *root = global.root_node
+#define EXT2_ROOT struct vfs_node *root = fs_global.root_node
 
 static atomic_bool cb1d = false;
 

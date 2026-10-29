@@ -4,10 +4,8 @@
 #include <console/printf.h>
 #include <console/term.h>
 #include <math/bit.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <string.h>
 #include <time/time.h>
+#include <types/types.h>
 
 #define TERM_PROBE_SPIN_CAP BIT(26)
 #define TERM_ESC(s) serial_write((s), sizeof(s) - 1)

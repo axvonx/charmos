@@ -1,4 +1,5 @@
 #include "drivers/ahci/tests/test_internal.h"
+#include <test/export.h>
 
 TEST_GROUP_DEFINE(ahci);
 

@@ -1,12 +1,9 @@
 /* @title: Block Devices */
 #pragma once
-#include <atomic.h>
 #include <block/bcache.h>
 #include <fs/detect.h>
 #include <sch/sched.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <sync/spinlock.h>
+#include <types/types.h>
 
 struct block_device;
 struct bio_request;

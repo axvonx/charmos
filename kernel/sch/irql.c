@@ -1,10 +1,18 @@
+#include <asm.h>
+#include <bootstage.h>
 #include <bootstage_condition.h>
+#include <console/panic.h>
+#include <irq/irq.h>
 #include <math/min_max.h>
-#include <sch/periodic_work.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
-#include <smp/core.h>
+#include <sync/seqlock.h>
 #include <thread/apc.h>
 #include <thread/dpc.h>
+#include <thread/thread.h>
+#include <topo/core.h>
+#include <topo/topology.h>
+#include <tsa.h>
 #include <watchdog.h>
 
 enum irql irql_get(void) {

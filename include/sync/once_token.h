@@ -2,7 +2,7 @@
 #pragma once
 #include <atomic.h>
 #include <compiler/core.h>
-#include <stdbool.h>
+#include <types/types.h>
 
 #define ONCE_TOKEN_DEFINE(type, name)                                          \
     struct {                                                                   \

@@ -1,7 +1,17 @@
+#include <atomic.h>
 #include <console/panic.h>
-#include <global.h>
 #include <log.h>
+#include <math/range.h>
+#include <sch/global.h>
 #include <sch/sched.h>
+#include <structures/cpu_mask.h>
+#include <structures/list.h>
+#include <structures/rbt.h>
+#include <thread/thread.h>
+#include <thread/thread_types.h>
+#include <time/time.h>
+#include <topo/core.h>
+#include <topo/global.h>
 #include <watchdog.h>
 
 #include "internal.h"
@@ -75,8 +85,8 @@ void scheduler_debug_validate(struct scheduler *sched) {
 }
 
 static void sched_debug_dump(cpu_id_t cpu, uint64_t now_ms) {
-    struct scheduler *s = global.schedulers[cpu];
-    struct core *c = global.cores[cpu];
+    struct scheduler *s = sch_global.schedulers[cpu];
+    struct core *c = topo_global.cores[cpu];
     struct thread *curr = s->current;
 
     log_msg(LOG_ERROR,
@@ -108,7 +118,7 @@ static void sched_debug_strand_check(struct watchdog_callback *cb) {
     size_t i;
 
     for_each_cpu_id(i) {
-        struct scheduler *s = global.schedulers[i];
+        struct scheduler *s = sch_global.schedulers[i];
 
         if (s->total_thread_count == 0)
             continue;
@@ -143,7 +153,7 @@ void scheduler_debug_start(void) {
     size_t i;
 
     for_each_cpu_id(i) {
-        atomic_store_rlx(&global.schedulers[i]->debug_progress_ms, now_ms);
+        atomic_store_rlx(&sch_global.schedulers[i]->debug_progress_ms, now_ms);
         sched_debug_callbacks[i].fn = sched_debug_strand_check;
         watchdog_callback_add((cpu_id_t) i, &sched_debug_callbacks[i]);
     }

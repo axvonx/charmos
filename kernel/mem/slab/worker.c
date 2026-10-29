@@ -1,8 +1,15 @@
 /* Implements slab workers and daemon threads */
-#include <mem/nofail.h>
-#include <smp/domain.h>
+#include "mem/slab/internal.h"
+#include <err.h>
+#include <irq/irq.h>
+#include <mem/alloc.h>
+#include <structures/cpu_mask.h>
+#include <structures/mpsc_lifo_list.h>
 #include <thread/daemon.h>
+#include <thread/dpc.h>
 #include <thread/workqueue.h>
+#include <topo/domain.h>
+#include <topo/global.h>
 
 #include "gc_internal.h"
 
@@ -53,7 +60,7 @@ static struct daemon_work bg =
 
 void slab_domain_init_daemon(struct slab_domain *domain) {
     struct cpu_mask cmask;
-    cpu_mask_init(&cmask, global.core_count);
+    cpu_mask_init(&cmask, topo_global.cpu_count);
 
     domain_set_cpu_mask(&cmask, domain->domain);
     struct daemon_attributes attrs = {
@@ -73,7 +80,7 @@ void slab_domain_init_daemon(struct slab_domain *domain) {
 
 void slab_domain_init_workqueue(struct slab_domain *domain) {
     struct cpu_mask mask = {0};
-    cpu_mask_init(&mask, global.core_count);
+    cpu_mask_init(&mask, topo_global.cpu_count);
 
     domain_set_cpu_mask(&mask, domain->domain);
 

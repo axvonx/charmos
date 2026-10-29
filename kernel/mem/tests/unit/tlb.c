@@ -1,4 +1,5 @@
 #include "mem/tests/test_internal.h"
+#include <mem/vmm.h>
 
 TEST_DEFINE_UNIT(mem, tlb_shootdown_single_cpu, .min_ram_mib = 8) {
     paddr_t p1 = pmm_alloc_page();

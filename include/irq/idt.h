@@ -1,8 +1,7 @@
 /* @title: Interrupt Descriptor Table */
 #pragma once
 #include <compiler/core.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <types/types.h>
 
 #define IDT_ENTRIES 256
 

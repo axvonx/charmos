@@ -3,8 +3,7 @@
 #include <drivers/pci.h>
 #include <log.h>
 #include <math/bit.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <types/types.h>
 #pragma once
 // Register offsets
 #define E1000_REG_CTRL 0x0000

@@ -1,4 +1,6 @@
 #include "sync/tests/test_internal.h"
+#include <sch/irql.h>
+#include <time/time.h>
 
 union collision_lock {
     struct mutex lock;

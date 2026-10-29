@@ -1,3 +1,4 @@
+#include <structures/list.h>
 #include <sync/mutex_simple.h>
 
 #include "sync/tests/test_internal.h"

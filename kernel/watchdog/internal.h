@@ -1,8 +1,6 @@
 #pragma once
 #include <console/crash.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <time/time.h>
+#include <types/types.h>
 #include <watchdog.h>
 
 #define watchdog_panic(fmt, ...)                                               \

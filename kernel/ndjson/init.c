@@ -1,6 +1,7 @@
 #include <cmdline.h>
+#include <math/range.h>
 #include <ndjson.h>
-#include <stdint.h>
+#include <types/types.h>
 
 #include "internal.h"
 

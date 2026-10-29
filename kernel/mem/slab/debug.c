@@ -1,4 +1,11 @@
+#include <atomic.h>
+#include <console/crash.h>
+#include <console/panic.h>
+#include <err.h>
 #include <mem/address_range.h>
+#include <mem/page.h>
+#include <mem/vmm.h>
+#include <topo/global.h>
 
 #include "internal.h"
 
@@ -52,8 +59,8 @@ void slab_track_dump(const char *label, vaddr_t addr) {
 void slab_debug_assert_not_already_free(vaddr_t v, int32_t class) {
     if (class < 0)
         return;
-    for (size_t d = 0; d < global.domain_count; d++) {
-        struct slab_domain *sd = global.domains[d]->slab_domain;
+    for (size_t d = 0; d < topo_global.domain_count; d++) {
+        struct slab_domain *sd = topo_global.domains[d]->slab_domain;
         if (!sd)
             continue;
 
@@ -141,8 +148,8 @@ cc_no_asan void slab_dump_corruption(void *obj,
 
     /* Search every magazine, shadow buffer, and free_queue for this address. */
     size_t found = 0;
-    for (size_t d = 0; d < global.domain_count; d++) {
-        struct slab_domain *sd = global.domains[d]->slab_domain;
+    for (size_t d = 0; d < topo_global.domain_count; d++) {
+        struct slab_domain *sd = topo_global.domains[d]->slab_domain;
         if (!sd)
             continue;
 

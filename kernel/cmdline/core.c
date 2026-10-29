@@ -1,6 +1,10 @@
+#include <cmdline.h>
+#include <fs/global.h>
+#include <string.h>
+
 #include "internal.h"
 
-CMDLINE_DEFINE_VAR_STATIC(root, global.root_partition,
+CMDLINE_DEFINE_VAR_STATIC(root, fs_global.root_partition,
                           .types = CMDLINE_TYPES(CMDLINE_TYPE_STRING),
                           .desc = "Root filesystem partition to mount at boot",
                           .arg = "<device>", .default_val = NULL,

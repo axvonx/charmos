@@ -1,8 +1,7 @@
 /* @title: Pairing heap */
 #pragma once
-#include <stddef.h>
-#include <stdint.h>
-#include <sync/spinlock.h>
+#include <sync/spinlock_types.h>
+#include <types/types.h>
 
 struct pairing_node {
     struct pairing_node *parent;

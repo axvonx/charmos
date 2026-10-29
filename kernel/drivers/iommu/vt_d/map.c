@@ -1,12 +1,11 @@
-#include <asm.h>
-#include <console/printf.h>
+#include <atomic.h>
+#include <drivers/iommu/iommu.h>
 #include <drivers/iommu/vt_d.h>
-#include <drivers/mmio.h>
-#include <log.h>
+#include <mem/alloc.h>
 #include <mem/hhdm.h>
 #include <mem/page.h>
 #include <mem/pmm.h>
-#include <mem/vmm.h>
+#include <sch/irql.h>
 #include <string.h>
 
 #include "internal.h"

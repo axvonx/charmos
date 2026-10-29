@@ -2,8 +2,6 @@
 #pragma once
 #include <compiler/core.h>
 #include <mem/page.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <types/types.h>
 
 #define MMIO_RANGE_SIZE ((uintptr_t) PAGE_1GB * 64ULL)

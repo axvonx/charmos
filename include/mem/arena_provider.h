@@ -1,15 +1,21 @@
 /* @title: Memory Arena Provider API */
 #pragma once
+#include <err.h>
+#include <log.h>
 #include <math/bit.h>
+#include <mem/alloc_param.h>
 #include <mem/arena.h>
-#include <structures/bitmap.h>
+#include <mem/arena_types.h>
 #include <structures/hlist.h>
+#include <structures/list.h>
 #include <structures/mpmc_lifo_list.h>
 #include <structures/rbt.h>
 #include <sync/mutex.h>
 #include <sync/once_token.h>
 #include <sync/rcu.h>
 #include <sync/rwlock.h>
+#include <sync/spinlock.h>
+#include <types/refcount.h>
 #include <types/types.h>
 
 /* TODO: Arena unregistration */

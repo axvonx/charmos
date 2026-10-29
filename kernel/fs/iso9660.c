@@ -3,9 +3,8 @@
 #include <fs/iso9660.h>
 #include <math/align.h>
 #include <mem/alloc.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
+#include <types/types.h>
 
 #include <time/time.h>
 

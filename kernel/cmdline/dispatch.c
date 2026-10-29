@@ -1,4 +1,17 @@
 #include "internal.h"
+#include <cmdline.h>
+#include <console/panic.h>
+#include <err.h>
+#include <log.h>
+#include <math/bit.h>
+#include <math/range.h>
+#include <mem/alloc.h>
+#include <mem/nofail.h>
+#include <parse.h>
+#include <string.h>
+#include <structures/cpu_mask.h>
+#include <types/refcount.h>
+#include <types/type_enum.h>
 
 bool cmdline_has_list_separator(const char *value) {
     bool quoted = false;

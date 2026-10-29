@@ -1,16 +1,23 @@
-#include <global.h>
+#include <asm.h>
+#include <atomic.h>
 #include <inject.h>
 #include <irq/ipi.h>
 #include <irq/irq.h>
 #include <mem/alloc.h>
+#include <sch/global.h>
 #include <sch/sched.h>
 #include <string.h>
 #include <structures/cpu_mask.h>
+#include <test/conc.h>
 #include <test/perturb.h>
 #include <thread/apc.h>
+#include <thread/apc_types.h>
 #include <thread/dpc.h>
 #include <thread/thread.h>
+#include <thread/wait.h>
 #include <time/time.h>
+#include <topo/core.h>
+#include <topo/global.h>
 
 #if defined(TEST_ENABLED) || defined(TEST_NIGHTMARE_ENABLED)
 
@@ -71,8 +78,8 @@ void test_perturb_migrator(const struct test_perturb_env *env,
 
     while (perturb_continue(env, self)) {
         struct thread *target = perturb_pick_subject(env, self);
-        if (target && global.core_count > 1) {
-            uint64_t cpu = test_rng_next(&self->rng) % global.core_count;
+        if (target && topo_global.cpu_count > 1) {
+            uint64_t cpu = test_rng_next(&self->rng) % topo_global.cpu_count;
             thread_set_migration_target(target, (int64_t) cpu);
         }
 
@@ -203,10 +210,11 @@ enum storm_target : uint8_t {
 
 static cpu_id_t storm_pick_victim(const struct test_perturb_env *env,
                                   struct test_conc_worker *self) {
-    if (env->victim_cpu >= 0 && (size_t) env->victim_cpu < global.core_count)
+    if (env->victim_cpu >= 0 &&
+        (size_t) env->victim_cpu < topo_global.cpu_count)
         return (cpu_id_t) env->victim_cpu;
 
-    return (cpu_id_t) (test_rng_next(&self->rng) % global.core_count);
+    return (cpu_id_t) (test_rng_next(&self->rng) % topo_global.cpu_count);
 }
 
 static enum storm_target storm_roll(struct test_conc_worker *self,
@@ -219,7 +227,8 @@ static enum storm_target storm_roll(struct test_conc_worker *self,
     }
 
     if (roll == TEST_PERTURB_VICTIM_BIAS) {
-        *out_cpu = (cpu_id_t) (test_rng_next(&self->rng) % global.core_count);
+        *out_cpu =
+            (cpu_id_t) (test_rng_next(&self->rng) % topo_global.cpu_count);
         return STORM_TARGET_RANDOM;
     }
 
@@ -240,11 +249,11 @@ void test_perturb_ipi_storm(const struct test_perturb_env *env,
         if (storm_roll(self, victim, &cpu) == STORM_TARGET_BROADCAST) {
             size_t i;
             for_each_cpu_id(i) {
-                scheduler_mark_core_needs_resched(global.cores[i], true);
+                scheduler_mark_core_needs_resched(topo_global.cores[i], true);
             }
             ipi_send_mask(&all, IRQ_SCHEDULER, IPI_MASK_SUPERSET_OK);
         } else {
-            scheduler_force_resched(global.schedulers[cpu]);
+            scheduler_force_resched(sch_global.schedulers[cpu]);
         }
 
         thread_sleep_for_us(interval_us);
@@ -277,7 +286,7 @@ void test_perturb_dpc_storm(const struct test_perturb_env *env,
     cpu_id_t victim = storm_pick_victim(env, self);
 
     /* dpc_fanout() waits for every CPU, so this can be per-thread */
-    struct dpc *fanout = vnews(fanout, global.core_count, ALLOC_ZERO);
+    struct dpc *fanout = vnews(fanout, topo_global.cpu_count, ALLOC_ZERO);
 
     struct cpu_mask all = CPU_MASK_INIT;
     cpu_mask_set_all(&all);

@@ -1,9 +1,7 @@
 /* @title: Treap (Randomized Binary Search Tree) */
 #pragma once
 #include <container_of.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 struct treap_node {
     uint32_t priority;

@@ -1,8 +1,10 @@
 /* @title: Locked list */
 #pragma once
 #include <enforce.h>
+#include <sch/irql.h>
 #include <structures/list.h>
 #include <sync/spinlock.h>
+#include <tsa.h>
 
 /* Doubly linked list with a lock and counter for elements */
 

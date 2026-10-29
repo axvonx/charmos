@@ -1,4 +1,6 @@
 #include "drivers/nvme/tests/test_internal.h"
+#include <block/bio.h>
+#include <test/export.h>
 
 TEST_GROUP_DEFINE(nvme);
 

@@ -1,7 +1,10 @@
 /* @title: Asynchronous completion objects */
 #pragma once
-#include <stdint.h>
+#include <math/fixed.h>
 #include <thread/apc.h>
+#include <thread/apc_types.h>
+#include <thread/thread.h>
+#include <types/types.h>
 
 enum async_completion_type {
     ASYNC_COMPLETION_APC = 0,

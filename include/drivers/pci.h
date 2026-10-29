@@ -7,7 +7,8 @@
 #include <log.h>
 #include <math/align.h>
 #include <math/bit.h>
-#include <stdint.h>
+#include <sync/lock_general.h>
+#include <types/types.h>
 
 #define PCI_CLASS_MASS_STORAGE 0x01
 #define PCI_SUBCLASS_NVM 0x08

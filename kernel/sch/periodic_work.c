@@ -1,9 +1,18 @@
+#include <boot/global.h>
+#include <bootstage.h>
+#include <container_of.h>
+#include <math/fixed.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
 #include <mem/slab.h>
+#include <sch/irql.h>
 #include <sch/periodic_work.h>
 #include <sch/sched.h>
-#include <smp/percpu.h>
+#include <structures/pairing_heap.h>
+#include <time/time.h>
+#include <topo/global.h>
+#include <topo/percpu.h>
+#include <topo/topology.h>
 
 #include "internal.h"
 
@@ -53,7 +62,7 @@ linker_object_work_to_work(struct scheduler_periodic_work_linker_record *lobj,
 
 static void
 attach_work_to_cpus(struct scheduler_periodic_work_linker_record *spwlo) {
-    for (size_t i = 0; i < global.core_count; i++) {
+    for (size_t i = 0; i < topo_global.cpu_count; i++) {
         struct scheduler_periodic_work *w = nofail_vnew(w, ALLOC_ZERO);
 
         pairing_node_init(&w->pnode);
@@ -110,7 +119,7 @@ static bool passed_limit(time_ns_t initial_time, size_t executed,
 /* The IRQL guarantees that we will NEVER have to do locking on
  * percpu state inside of these functions */
 void scheduler_periodic_work_execute(enum scheduler_periodic_work_type type) {
-    if (global.current_bootstage < BOOTSTAGE_LATE)
+    if (boot_global.stage < BOOTSTAGE_LATE)
         return;
 
     enforce(irql_get() == IRQL_DISPATCH_LEVEL, INVALID_CONTEXT);

@@ -1,4 +1,9 @@
 #include "internal.h"
+#include <console/panic.h>
+#include <mem/alloc.h>
+#include <mem/alloc_param.h>
+#include <string.h>
+#include <structures/rbt.h>
 
 /* Free_queue function naming semantics:
  *

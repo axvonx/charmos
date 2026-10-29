@@ -2,6 +2,7 @@
 #include <mem/anon_vma.h>
 #include <mem/avc.h>
 #include <mem/folio.h>
+#include <mem/page.h>
 #include <mem/rmap.h>
 #include <mem/vma_range.h>
 

@@ -1,9 +1,11 @@
+#include <atomic.h>
+#include <container_of.h>
 #include <enforce.h>
 #include <err.h>
-#include <global.h>
 #include <mem/alloc.h>
 #include <sync/percpu_rc.h>
 #include <sync/rcu.h>
+#include <topo/global.h>
 
 static void percpu_rc_switch_to_atomic_rcu(struct rcu_cb *cb) {
     cc_ignore(cb);
@@ -14,7 +16,7 @@ static void percpu_rc_switch_to_atomic_rcu(struct rcu_cb *cb) {
     int64_t sum = 0;
 
     if (counters) {
-        for (size_t i = 0; i < global.core_count; i++) {
+        for (size_t i = 0; i < topo_global.cpu_count; i++) {
             sum += atomic_load_rlx(&counters[i]);
             atomic_store_rlx(&counters[i], 0);
         }
@@ -47,7 +49,7 @@ int percpu_rc_init(struct percpu_rc *rc, percpu_rc_release_fn release,
         return 0;
     }
 
-    size_t size = sizeof(int64_t) * global.core_count;
+    size_t size = sizeof(int64_t) * topo_global.cpu_count;
     int64_t *counters = valloc(size, ALLOC_ZERO);
     if (!counters)
         return ERR_NO_MEM;
@@ -107,7 +109,7 @@ int64_t percpu_rc_read(struct percpu_rc *rc) {
         int64_t sum = 0;
         atomic_int64_t *counters = PERCPU_RC_PTR(pcpu);
         if (counters) {
-            for (size_t i = 0; i < global.core_count; i++)
+            for (size_t i = 0; i < topo_global.cpu_count; i++)
                 sum += atomic_load_rlx(&counters[i]);
         }
         return (atomic_load_rlx(&rc->count) - PERCPU_COUNT_BIAS) + sum;

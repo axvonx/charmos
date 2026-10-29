@@ -1,8 +1,7 @@
 /* @title: SMP initialization */
 #pragma once
-#include <atomic.h>
 #include <limine.h>
-#include <stdbool.h>
+#include <types/types.h>
 
 struct core;
 void smp_init(void);

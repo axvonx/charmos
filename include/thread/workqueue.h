@@ -1,13 +1,13 @@
 /* @title: Workqueues */
 #pragma once
 #include <atomic.h>
-#include <smp/topology.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <console/crash.h>
+#include <structures/cpu_mask_types.h>
 #include <structures/list.h>
-#include <sync/condvar.h>
-#include <sync/spinlock.h>
-#include <time/timer.h>
+#include <sync/condvar_types.h>
+#include <sync/spinlock_types.h>
+#include <time/time.h>
+#include <time/timer_types.h>
 #include <types/refcount.h>
 #include <types/types.h>
 

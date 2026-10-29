@@ -2,9 +2,10 @@
 #pragma once
 #include <compiler/core.h>
 #include <compiler/wrapper.h>
+#include <log.h>
+#include <mem/alloc_api_internal.h>
 #include <mem/alloc_param.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 LOG_SITE_EXTERN(slab);
 LOG_HANDLE_EXTERN(slab_flags);

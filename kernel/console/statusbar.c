@@ -1,5 +1,4 @@
 /* @title: Pinned status bar */
-#include <asm.h>
 #include <colors.h>
 #include <console/printf.h>
 #include <console/report.h>
@@ -7,14 +6,11 @@
 #include <console/term.h>
 #include <math/min_max.h>
 #include <sch/irql.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <string.h>
 #include <sync/raw_spinlock.h>
 #include <time/time.h>
 #include <time/timer.h>
+#include <types/types.h>
 
 #define BAR_MIN_COLS ((size_t) 10)
 #define BAR_MAX_COLS ((size_t) 40)

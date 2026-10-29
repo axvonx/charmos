@@ -1,12 +1,11 @@
 #include <asm.h>
 #include <block/bcache.h>
 #include <block/block.h>
-#include <console/printf.h>
+#include <console/panic.h>
 #include <drivers/ata.h>
 #include <mem/alloc.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <time/spin_sleep.h>
+#include <types/types.h>
 
 #define ATAPI_SECTOR_SIZE 2048
 

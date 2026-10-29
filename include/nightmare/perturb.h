@@ -1,5 +1,6 @@
 /* @title: Nightmare perturbation */
 #pragma once
+#include <test/conc.h>
 #include <test/perturb.h>
 
 const struct test_perturb_desc *nightmare_perturb_lookup(const char *name);

@@ -2,7 +2,6 @@
 #pragma once
 #include <compiler/core.h>
 #include <linker/symbols.h>
-#include <structures/list.h>
 #include <structures/pairing_heap.h>
 #include <types/types.h>
 

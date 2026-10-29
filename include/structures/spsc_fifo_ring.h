@@ -1,9 +1,7 @@
 /* @title: Single-Producer Single-Consumer Lock-Free FIFO Ring */
 #pragma once
 #include <atomic.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 struct spsc_fifo_ring {
     atomic_size_t head; /* Written by Producer */

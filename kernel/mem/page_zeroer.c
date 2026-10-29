@@ -1,7 +1,11 @@
 #include <mem/nofail.h>
 #include <mem/page_zeroer.h>
-#include <smp/domain.h>
-#include <smp/perdomain.h>
+#include <structures/cpu_mask.h>
+#include <thread/daemon.h>
+#include <thread/workqueue.h>
+#include <topo/domain.h>
+#include <topo/global.h>
+#include <topo/perdomain.h>
 
 static enum daemon_thread_command page_zeroer_ts_thread(void *a, void *b) {
     cc_ignore(a, b);
@@ -22,12 +26,12 @@ static struct daemon_work pz_bg_work =
 static void page_zeroer_perdomain_init(struct page_zeroer *pz,
                                        domain_id_t domain) {
     struct cpu_mask cmask;
-    cpu_mask_init(&cmask, global.core_count);
-    size_t threads = global.domains[domain]->num_cores / 4;
+    cpu_mask_init(&cmask, topo_global.cpu_count);
+    size_t threads = topo_global.domains[domain]->num_cores / 4;
     if (!threads)
         threads = 1;
 
-    domain_set_cpu_mask(&cmask, global.domains[domain]);
+    domain_set_cpu_mask(&cmask, topo_global.domains[domain]);
     struct daemon_attributes attrs = {
         .thread_cpu_mask = cmask,
         .max_timesharing_threads = threads,

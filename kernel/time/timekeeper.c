@@ -1,11 +1,13 @@
 #include <cmdline.h>
 #include <enforce.h>
+#include <sch/irql.h>
 #include <string.h>
 #include <sync/seqlock.h>
 #include <time/clock.h>
 #include <time/time.h>
 #include <time/timekeeper.h>
 #include <time/tsc.h>
+#include <topo/core.h>
 
 #include "internal.h"
 

@@ -1,10 +1,7 @@
 /* @title: Per-thread diagnostics */
 #pragma once
-#include <atomic.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <thread/thread_types.h>
-#include <time/time.h>
+#include <types/types.h>
 
 struct thread;
 

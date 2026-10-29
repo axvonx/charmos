@@ -1,11 +1,17 @@
-#include <global.h>
 #include <log.h>
-#include <math/fixed.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
+#include <sch/global.h>
 #include <sch/rt_sched.h>
 #include <sch/sched.h>
-#include <smp/core.h>
+#include <structures/list.h>
+#include <structures/locked_list.h>
+#include <sync/semaphore.h>
+#include <sync/spinlock.h>
+#include <thread/workqueue.h>
+#include <topo/core.h>
+#include <topo/domain.h>
+#include <topo/global.h>
 
 #include "internal.h"
 
@@ -54,7 +60,7 @@ void rt_scheduler_boot_init(void) {
     locked_list_init(&rt_global.static_list, LOCKED_LIST_INIT_IRQ_DISABLE);
     spinlock_init(&rt_global.switch_lock);
     rt_global.sch_pool =
-        nofail_vnews(rt_global.sch_pool, global.domain_count, ALLOC_ZERO);
+        nofail_vnews(rt_global.sch_pool, topo_global.domain_count, ALLOC_ZERO);
 
     struct domain *d;
     domain_for_each_domain(d) {
@@ -64,7 +70,7 @@ void rt_scheduler_boot_init(void) {
 
     struct core *c;
     for_each_cpu_struct(c) {
-        struct scheduler *s = global.schedulers[c->id];
+        struct scheduler *s = sch_global.schedulers[c->id];
         init_scheduler_boot(s);
     }
 }

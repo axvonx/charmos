@@ -1,8 +1,7 @@
 /* @title: Processor Exception Synchronous Work */
 #pragma once
 #include <linker/symbols.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 #define EXCEPTION_SYNC_CB_SCRATCH_BUFFER_SIZE 32 /* bytes */
 

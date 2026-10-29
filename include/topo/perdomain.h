@@ -1,11 +1,10 @@
 /* @title: Per-Domain dynamic objects */
 #pragma once
 #include <compiler/core.h>
-#include <global.h>
 #include <linker/symbols.h>
-#include <smp/domain.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <math/min_max.h>
+#include <topo/domain.h>
+#include <types/types.h>
 
 struct perdomain_descriptor;
 typedef void (*perdomain_descriptor_constructor)(void *, size_t);
@@ -28,7 +27,7 @@ LINKER_SECTION_EXTERN(struct perdomain_descriptor, perdomain_desc);
         void (*const __typed_ctor)(typeof(type_) *, size_t) = (ctor_);         \
         if (__typed_ctor != NULL)                                              \
             __typed_ctor((typeof(type_) *) inst, domain);                      \
-        if (domain == global.domain_count - 1)                                 \
+        if (domain == topo_global.domain_count - 1)                            \
             atomic_store(&__perdomain_desc_##name_.ready, true);               \
     }                                                                          \
     static LINKER_SECTION_OBJECT(struct perdomain_descriptor, perdomain_desc)  \
@@ -86,12 +85,12 @@ static inline
 #define PERDOMAIN_WRITE(clr, name, val) (PERDOMAIN_READ(clr, name) = (val))
 
 #define perdomain_for_each_internal_3(var, domain, name)                       \
-    for (domain = 0; domain < global.domain_count; domain++)                   \
+    for (domain = 0; domain < topo_global.domain_count; domain++)              \
         for (var = PERDOMAIN_PTR_FOR(name, domain); var != NULL; var = NULL)
 
 #define perdomain_for_each_internal_2(var, name)                               \
     for (domain_id_t __perdomain_idx = 0;                                      \
-         __perdomain_idx < global.domain_count; __perdomain_idx++)             \
+         __perdomain_idx < topo_global.domain_count; __perdomain_idx++)        \
         for (var = PERDOMAIN_PTR_FOR(name, __perdomain_idx); var != NULL;      \
              var = NULL)
 

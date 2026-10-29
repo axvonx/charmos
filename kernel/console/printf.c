@@ -1,14 +1,18 @@
 #include <asm.h>
+#include <atomic.h>
+#include <boot/global.h>
+#include <bootstage.h>
+#include <console/global.h>
 #include <flanterm/src/flanterm_backends/fb.h>
-#include <global.h>
 #include <limine.h>
-#include <limits.h>
 #include <logo.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <sch/irql.h>
 #include <string.h>
+#include <sync/lock_chk.h>
+#include <sync/raw_spinlock.h>
 #include <sync/spinlock.h>
+#include <tsa.h>
+#include <types/types.h>
 
 #include "console/printf.h"
 #include "flanterm/src/flanterm.h"
@@ -80,7 +84,7 @@ static void double_print(struct flanterm_context *f, struct printf_cursor *csr,
                          const char *str, int len) {
     serial_puts(csr, str, len);
 
-    if (!csr && global.current_bootstage >= BOOTSTAGE_EARLY_FB)
+    if (!csr && boot_global.stage >= BOOTSTAGE_EARLY_FB)
         flanterm_write(f, str, len);
 }
 
@@ -506,7 +510,7 @@ void printf_unlocked(const char *format, ...) {
 void printf(const char *format, ...) TSA_NO_ANALYSIS {
     bool i = irq_disable_save();
 
-    bool lock = !atomic_load_rlx(&global.panicked);
+    bool lock = !atomic_load_rlx(&crash_global.panicked);
 
     if (lock)
         raw_spin_lock(&k_printf_lock.raw);

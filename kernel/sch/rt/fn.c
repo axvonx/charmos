@@ -1,3 +1,6 @@
+#include <sch/irql.h>
+#include <sch/rt_sched.h>
+#include <sch/rt_sched_types.h>
 #include <string.h>
 
 #include "internal.h"

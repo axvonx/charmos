@@ -1,22 +1,18 @@
 #pragma once
 
-#include <asm.h>
 #include <cmdline.h>
 #include <compiler/intrinsic.h>
-#include <console/panic.h>
 #include <console/printf.h>
 #include <enforce.h>
 #include <err.h>
-#include <global.h>
+#include <linker/symbols.h>
 #include <log.h>
 #include <math/bit.h>
 #include <math/fixed.h>
 #include <math/range.h>
-#include <mem/alloc.h>
-#include <mem/nofail.h>
-#include <parse.h>
 #include <string.h>
 #include <stringify.h>
+#include <types/type_enum.h>
 
 LINKER_SECTION_EXTERN(struct cmdline_entry, cmdline_entries);
 LINKER_SECTION_EXTERN(struct cmdline_schema, cmdline_schemas);

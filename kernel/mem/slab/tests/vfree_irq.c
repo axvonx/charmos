@@ -1,6 +1,9 @@
 #include <acpi/lapic.h>
+#include <asm.h>
+#include <atomic.h>
 #include <irq/ipi.h>
 #include <irq/irq.h>
+#include <mem/alloc.h>
 
 #include "mem/slab/tests/test_internal.h"
 

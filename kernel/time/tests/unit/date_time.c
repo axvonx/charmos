@@ -1,4 +1,5 @@
 #include "time/tests/test_internal.h"
+#include <scaled_param.h>
 
 TEST_GROUP_DEFINE(date_time, .intensity_desc = {
                                  .curve = SCALE_PIECEWISE_LOG,

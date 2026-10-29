@@ -3,11 +3,10 @@
 #include <compiler/atomic.h>
 #include <compiler/core.h>
 #include <container_of.h>
-#include <stdbool.h>
-#include <stddef.h>
 #include <structures/hlist.h>
 #include <structures/list.h>
 #include <sync/rcu.h>
+#include <types/types.h>
 
 static inline void list_node_init_rcu(struct list_node *n) {
     ca_write_once(n->next, n);

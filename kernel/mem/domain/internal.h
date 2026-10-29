@@ -1,12 +1,17 @@
 #pragma once
+#include <atomic.h>
+#include <console/crash.h>
 #include <mem/buddy.h>
+#include <mem/global.h>
 #include <mem/page.h>
-#include <mem/vmm.h>
-#include <smp/domain.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <sch/irql.h>
 #include <sync/semaphore.h>
 #include <sync/spinlock.h>
+#include <topo/core.h>
+#include <topo/domain.h>
+#include <topo/global.h>
+#include <topo/topology.h>
+#include <types/types.h>
 
 #define DISTANCE_WEIGHT 100000 /* distance is heavily weighted */
 #define FREE_PAGES_WEIGHT 1    /* free pages count less */
@@ -128,8 +133,8 @@ void domain_enqueue_flush_worker(struct domain_flush_worker *worker);
          __arena_idx++)
 
 static inline struct domain_buddy *domain_buddy_for_addr(paddr_t addr) {
-    for (size_t i = 0; i < global.domain_count; i++) {
-        struct domain_buddy *d = &global.domain_buddies[i];
+    for (size_t i = 0; i < topo_global.domain_count; i++) {
+        struct domain_buddy *d = &mem_global.domain_buddies[i];
         if (addr >= d->start && addr < d->end)
             return d;
     }

@@ -1,6 +1,13 @@
-#include <thread/io_wait.h>
 
 #include "thread/tests/test_internal.h"
+#include <atomic.h>
+#include <sch/irql.h>
+#include <structures/list.h>
+#include <structures/locked_list.h>
+#include <sync/spinlock.h>
+#include <thread/apc_types.h>
+#include <thread/thread_types.h>
+#include <thread/wait.h>
 
 TEST_GROUP_DEFINE(wait_block);
 

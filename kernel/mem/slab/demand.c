@@ -1,6 +1,9 @@
-#include <mem/demand_page.h>
+#include <atomic.h>
 #include <mem/domain.h>
+#include <mem/page.h>
 #include <mem/page_fault.h>
+#include <mem/vmm.h>
+#include <structures/rbt.h>
 
 #include "internal.h"
 

@@ -3,13 +3,10 @@
 #include <atomic.h>
 #include <compiler/core.h>
 #include <crypto/prng.h>
-#include <smp/percpu.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <stringify.h>
 #include <sync/event.h>
-#include <time/time.h>
+#include <topo/percpu.h>
+#include <topo/topology.h>
 #include <types/types.h>
 #include <watchdog.h>
 

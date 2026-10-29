@@ -1,7 +1,7 @@
 #include <enforce.h>
 #include <math/align.h>
 #include <mem/alloc.h>
-#include <stddef.h>
+#include <types/types.h>
 
 void *valloc_aligned_full(size_t size, size_t align,
                           struct alloc_params params) {

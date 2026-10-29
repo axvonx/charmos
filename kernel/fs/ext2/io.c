@@ -1,8 +1,9 @@
+#include <block/bcache.h>
+#include <block/bio.h>
 #include <block/block.h>
 #include <fs/ext2.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
+#include <types/types.h>
 
 uint32_t ext2_block_to_lba(struct ext2_fs *fs, uint32_t block_num) {
     if (!fs)

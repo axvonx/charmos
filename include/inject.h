@@ -2,9 +2,7 @@
 #pragma once
 #include <atomic.h>
 #include <linker/symbols.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 enum inject_kind {
     INJECT_KIND_DELAY = 1,     /* spin */

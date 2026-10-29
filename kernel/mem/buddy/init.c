@@ -1,17 +1,18 @@
 #include <compiler/intrinsic.h>
-#include <console/printf.h>
+#include <console/panic.h>
 #include <limine.h>
 #include <math/align.h>
 #include <math/bit.h>
+#include <math/min_max.h>
 #include <math/units.h>
-#include <mem/alloc.h>
 #include <mem/bitmap.h>
 #include <mem/buddy.h>
+#include <mem/global.h>
 #include <mem/hhdm.h>
+#include <mem/page.h>
 #include <mem/pmm.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
+#include <types/types.h>
 
 #include "internal.h"
 
@@ -109,8 +110,8 @@ static cc_no_asan void mid_init_buddy(size_t pages_needed) {
         uint64_t run_len = end > start ? (end - start) / PAGE_SIZE : 0;
 
         if (run_len >= pages_needed) {
-            global.page_array = hhdm_paddr_to_ptr(start);
-            memset(global.page_array, 0, pages_needed * PAGE_SIZE);
+            mem_global.page_array = hhdm_paddr_to_ptr(start);
+            memset(mem_global.page_array, 0, pages_needed * PAGE_SIZE);
 
             for (uint64_t j = 0; j < pages_needed; j++)
                 set_bit((start / PAGE_SIZE) + j);
@@ -123,23 +124,23 @@ static cc_no_asan void mid_init_buddy(size_t pages_needed) {
         }
     }
 
-    if (!global.page_array)
+    if (!mem_global.page_array)
         panic(OUT_OF_MEMORY, "buddy metadata");
 }
 
 void buddy_init(void) {
     size_t pages_needed =
-        DIV_ROUND_UP(sizeof(struct page) * global.last_pfn, PAGE_SIZE);
+        DIV_ROUND_UP(sizeof(struct page) * mem_global.last_pfn, PAGE_SIZE);
 
     mid_init_buddy(pages_needed);
 
     for (int i = 0; i < BUDDY_MAX_ORDER; i++) {
-        global.buddy_free_area[i].head = NULL;
-        global.buddy_free_area[i].tail = NULL;
-        global.buddy_free_area[i].nr_free = 0;
+        buddy_global.buddy_free_area[i].head = NULL;
+        buddy_global.buddy_free_area[i].tail = NULL;
+        buddy_global.buddy_free_area[i].nr_free = 0;
     }
 
     for (uint64_t i = 0; i < memmap->entry_count; i++)
-        buddy_add_entry(global.page_array, memmap->entries[i],
-                        global.buddy_free_area);
+        buddy_add_entry(mem_global.page_array, memmap->entries[i],
+                        buddy_global.buddy_free_area);
 }

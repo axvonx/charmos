@@ -1,15 +1,20 @@
 #include <acpi/lapic.h>
 #include <asm.h>
 #include <atomic.h>
+#include <boot/global.h>
+#include <bootstage.h>
 #include <enforce.h>
-#include <global.h>
+#include <err.h>
 #include <irq/ipi.h>
 #include <log.h>
 #include <math/bit.h>
 #include <sch/irql.h>
-#include <smp/core.h>
 #include <structures/cpu_mask.h>
+#include <topo/core.h>
+#include <topo/global.h>
+#include <topo/topology.h>
 #include <virt/kvm.h>
+#include <virt/kvm_para.h>
 
 #define IPI_ICR_FIXED (LAPIC_DELIVERY_FIXED | LAPIC_LEVEL_ASSERT)
 
@@ -217,7 +222,7 @@ static struct ipi_mask_plan ipi_mask_plan(const struct cpu_mask *targets,
 static bool ipi_mask_should_broadcast(const struct ipi_mask_plan *p,
                                       size_t online,
                                       enum ipi_mask_flags flags) {
-    if (global.current_bootstage < BOOTSTAGE_MID_MP)
+    if (boot_global.stage < BOOTSTAGE_MID_MP)
         return false;
 
     if (online > CPU_MASK_BITS)
@@ -251,7 +256,7 @@ void ipi_send_mask(const struct cpu_mask *targets, uint8_t vector,
     enum irql irql = irql_raise(IRQL_HIGH_LEVEL);
 
     cpu_id_t this_cpu = smp_id(TOPC_IRQL);
-    size_t online = global.core_count;
+    size_t online = topo_global.cpu_count;
     enum ipi_mask_backend backend = ipi_backend_get();
     struct ipi_mask_plan plan = ipi_mask_plan(targets, backend, this_cpu);
 

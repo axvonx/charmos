@@ -1,4 +1,4 @@
-#include <console/printf.h>
+#include <console/panic.h>
 #include <limine.h>
 #include <math/align.h>
 #include <math/units.h>
@@ -6,11 +6,13 @@
 #include <mem/bitmap.h>
 #include <mem/buddy.h>
 #include <mem/domain.h>
+#include <mem/global.h>
+#include <mem/page.h>
 #include <mem/pmm.h>
-#include <smp/domain.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
+#include <types/types.h>
+
+struct mem_globals mem_global = {0};
 
 struct limine_memmap_response *memmap;
 typedef paddr_t (*alloc_fn)(size_t pages, enum alloc_flags f);
@@ -61,8 +63,8 @@ void pmm_early_init(struct limine_memmap_request m) {
             last_usable_pfn = end;
     }
 
-    global.last_pfn = last_usable_pfn;
-    global.total_pages = total_phys / PAGE_SIZE;
+    mem_global.last_pfn = last_usable_pfn;
+    mem_global.total_pages = total_phys / PAGE_SIZE;
 }
 
 void pmm_mid_init(void) {
@@ -97,5 +99,5 @@ void pmm_free_pages(paddr_t addr, uint64_t count) {
 }
 
 uint64_t pmm_get_usable_ram(void) {
-    return global.total_pages * PAGE_SIZE;
+    return mem_global.total_pages * PAGE_SIZE;
 }

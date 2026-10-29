@@ -1,15 +1,20 @@
-#include <console/panic.h>
 #include <enforce.h>
-#include <global.h>
 #include <log.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
 #include <sch/domain.h>
+#include <sch/global.h>
 #include <string.h>
+#include <structures/cpu_mask.h>
+#include <topo/core.h>
+#include <topo/global.h>
+#include <topo/topology.h>
+
+static bool scheduler_domains_ready;
 
 static struct scheduler_domain *
 build_domain_for_level(enum topology_level lvl) {
-    struct topology *t = &global.topology;
+    struct topology *t = &topo_global.topology;
 
     size_t n = t->count[lvl];
     struct topology_node *nodes = t->level[lvl];
@@ -58,7 +63,7 @@ static void map_cpus_to_groups(void) {
     struct core *c;
     for_each_cpu_struct(c) {
         for (size_t i = 0; i < TOPOLOGY_LEVEL_MAX; i++) {
-            struct scheduler_domain *d = global.scheduler_domains[i];
+            struct scheduler_domain *d = sch_global.scheduler_domains[i];
             c->domains[i] = d;
 
             /* find group for this CPU */
@@ -80,12 +85,12 @@ static void cpu_mask_print(const struct cpu_mask *m, char *buf, size_t buflen) {
     pos += snprintf(buf + pos, buflen - pos, "{");
 
     size_t last = 0;
-    for (size_t cpu = 0; cpu < global.core_count; cpu++)
+    for (size_t cpu = 0; cpu < topo_global.cpu_count; cpu++)
         if (cpu_mask_test(m, cpu))
             if (last < cpu)
                 last = cpu;
 
-    for (size_t cpu = 0; cpu < global.core_count; cpu++) {
+    for (size_t cpu = 0; cpu < topo_global.cpu_count; cpu++) {
         if (cpu_mask_test(m, cpu)) {
             if (cpu == last)
                 pos += snprintf(buf + pos, buflen - pos, "%zu", cpu);
@@ -98,7 +103,7 @@ static void cpu_mask_print(const struct cpu_mask *m, char *buf, size_t buflen) {
 
 static void scheduler_domains_dump(void) {
     for (size_t lvl = 0; lvl < TOPOLOGY_LEVEL_MAX; lvl++) {
-        struct scheduler_domain *d = global.scheduler_domains[lvl];
+        struct scheduler_domain *d = sch_global.scheduler_domains[lvl];
 
         log_msg(LOG_INFO, "SCHEDULER DOMAIN %zu (%s), %zu groups", lvl,
                 topology_level_name(lvl), d->ngroups);
@@ -123,19 +128,19 @@ static void scheduler_domains_dump(void) {
 
 void scheduler_domains_init(void) {
     for (size_t i = 0; i < TOPOLOGY_LEVEL_MAX; i++) {
-        global.scheduler_domains[i] = build_domain_for_level(i);
+        sch_global.scheduler_domains[i] = build_domain_for_level(i);
     }
 
     for (size_t i = 0; i + 1 < TOPOLOGY_LEVEL_MAX; i++) {
-        link_parent_groups(global.scheduler_domains[i],
-                           global.scheduler_domains[i + 1]);
+        link_parent_groups(sch_global.scheduler_domains[i],
+                           sch_global.scheduler_domains[i + 1]);
     }
 
     map_cpus_to_groups();
 
     scheduler_domains_dump();
 
-    global.scheduler_domains_ready = true;
+    scheduler_domains_ready = true;
 }
 
 struct scheduler_group *scheduler_domain_find_sibling_group(struct core *c,
@@ -151,7 +156,7 @@ struct scheduler_group *scheduler_domain_find_sibling_group(struct core *c,
 }
 
 int32_t scheduler_group_find_idle_cpu(struct scheduler_group *g) {
-    for (size_t cpu = 0; cpu < global.core_count; cpu++)
+    for (size_t cpu = 0; cpu < topo_global.cpu_count; cpu++)
         if (cpu_mask_test(&g->cpus, cpu) && cpu_mask_test(&g->idle, cpu))
             return cpu;
 
@@ -159,7 +164,7 @@ int32_t scheduler_group_find_idle_cpu(struct scheduler_group *g) {
 }
 
 void scheduler_domain_mark_self_idle(bool idle) {
-    if (!global.scheduler_domains_ready)
+    if (!scheduler_domains_ready)
         return;
 
     /* Caller upholds the contract */
@@ -174,7 +179,7 @@ void scheduler_domain_mark_self_idle(bool idle) {
 
         struct scheduler_group *grp = &d->groups[g];
 
-        enforce(cpu < global.core_count);
+        enforce(cpu < topo_global.cpu_count);
         enforce(cpu_mask_test(&grp->cpus, cpu));
 
         if (idle)
@@ -185,7 +190,7 @@ void scheduler_domain_mark_self_idle(bool idle) {
 }
 
 int32_t scheduler_find_idle_cpu_near(struct core *from) {
-    if (!global.scheduler_domains_ready)
+    if (!scheduler_domains_ready)
         return -1;
 
     for (size_t lvl = TOPOLOGY_LEVEL_SMT; lvl < TOPOLOGY_LEVEL_MAX; lvl++) {
@@ -201,7 +206,7 @@ int32_t scheduler_find_idle_cpu_near(struct core *from) {
 }
 
 int32_t scheduler_push_target(struct core *from) {
-    if (!global.scheduler_domains_ready)
+    if (!scheduler_domains_ready)
         return -1;
 
     for (int32_t lvl = TOPOLOGY_LEVEL_MAX - 1; lvl >= 0; lvl--) {

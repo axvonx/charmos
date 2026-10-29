@@ -1,4 +1,6 @@
 #include "internal.h"
+#include <atomic.h>
+#include <stat_series.h>
 
 #define SLAB_STAT_SERIES_GENERATE(name, field)                                 \
     static inline size_t slab_stat_##name##_callback(                          \

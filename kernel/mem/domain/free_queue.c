@@ -1,9 +1,7 @@
-#include <math/align.h>
-#include <mem/alloc.h>
-#include <mem/buddy.h>
-#include <mem/pmm.h>
-#include <mem/vmm.h>
+#include <atomic.h>
+#include <sch/irql.h>
 #include <string.h>
+#include <sync/spinlock.h>
 
 #include "internal.h"
 

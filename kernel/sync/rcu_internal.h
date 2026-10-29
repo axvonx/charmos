@@ -2,14 +2,12 @@
 #include <atomic.h>
 #include <compiler/core.h>
 #include <log.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <structures/cpu_mask.h>
+#include <structures/bitmap.h>
+#include <structures/cpu_mask_types.h>
 #include <structures/list.h>
 #include <sync/rcu.h>
 #include <sync/semaphore.h>
-#include <sync/spinlock.h>
+#include <sync/spinlock_types.h>
 #include <types/types.h>
 
 /* TODO: Here, we have 32 bit masks per node, with 4 levels, since right now

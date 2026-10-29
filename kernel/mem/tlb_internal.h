@@ -1,4 +1,7 @@
+#include <asm.h>
+#include <atomic.h>
 #include <mem/tlb.h>
+#include <structures/mpmc_fifo_ring.h>
 
 #define TLB_STAMP_GUARD_SLACK 1000 /* I just picked a number */
 enum tlb_stamp_source {

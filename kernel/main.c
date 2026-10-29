@@ -11,22 +11,18 @@
 #include <compiler/core.h>
 #include <console/printf.h>
 #include <console/term.h>
-#include <crypto/prng.h>
 #include <drivers/iommu/iommu.h>
 #include <drivers/mmio.h>
 #include <elf.h>
-#include <fs/vfs.h>
-#include <global.h>
+#include <err.h>
 #include <irq/idt.h>
 #include <limine.h>
 #include <log.h>
-#include <logo.h>
 #include <mem/address_range.h>
-#include <mem/alloc.h>
 #include <mem/arena.h>
 #include <mem/asan.h>
-#include <mem/buddy.h>
 #include <mem/domain.h>
+#include <mem/global.h>
 #include <mem/movealloc.h>
 #include <mem/page_alloc.h>
 #include <mem/pmm.h>
@@ -40,16 +36,11 @@
 #include <sch/domain.h>
 #include <sch/periodic_work.h>
 #include <sch/sched.h>
-#include <smp/core.h>
-#include <smp/domain.h>
-#include <smp/percpu.h>
-#include <smp/perdomain.h>
-#include <smp/pertopo.h>
-#include <smp/smp.h>
 #include <stack_depot.h>
-#include <stdint.h>
+#include <structures/cpu_mask.h>
 #include <sync/lock_chk.h>
 #include <sync/rcu.h>
+#include <sync/seqlock.h>
 #include <sync/spinlock.h>
 #include <sync/turnstile.h>
 #include <syscall.h>
@@ -62,24 +53,30 @@
 #include <time/lapic_timer.h>
 #include <time/timekeeper.h>
 #include <time/timer.h>
+#include <topo/core.h>
+#include <topo/domain.h>
+#include <topo/global.h>
+#include <topo/percpu.h>
+#include <topo/perdomain.h>
+#include <topo/pertopo.h>
+#include <topo/smp.h>
+#include <tsa.h>
+#include <types/types.h>
 #include <watchdog.h>
-
-struct globals global = {0};
 
 #define BEHAVIOR /* avoids undefined behavior */
 
-/* Only called from the linker script ENTRY */
 void k_main(void);
 cc_no_asan void k_main(void) TSA_ACQUIRES_IRQS {
     irq_disable();
-    global.core_count = mp_request.response->cpu_count;
-    global.hhdm_offset = hhdm_request.response->offset;
-    atomic_init(&global.pt_epoch, 1);
+    topo_global.cpu_count = mp_request.response->cpu_count;
+    mem_global.hhdm_offset = hhdm_request.response->offset;
+    atomic_init(&mem_global.pt_epoch, 1);
 
     printf_init(framebuffer_request.response->framebuffers[0]);
     err_facilities_init();
-    enforce(global.core_count <= CPU_MASK_BITS, CAPACITY_EXCEEDED,
-            "%zu CPUs exceed CPU_MASK_BITS (%d)", global.core_count,
+    enforce(topo_global.cpu_count <= CPU_MASK_BITS, CAPACITY_EXCEEDED,
+            "%zu CPUs exceed CPU_MASK_BITS (%d)", topo_global.cpu_count,
             CPU_MASK_BITS);
     ndjson_early_init();
     bootstage_advance(BOOTSTAGE_EARLY_FB);

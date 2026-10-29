@@ -1,6 +1,6 @@
 /* @title: Realtime scheduling types */
 #pragma once
-#include <stdint.h>
+#include <types/types.h>
 /* This enum defines *what* the realtime scheduler will tell you from
  * functions. For example, when it summarizes itself and produces a
  * `struct rt_thread_summary` it will also send along an error

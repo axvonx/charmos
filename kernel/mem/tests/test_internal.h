@@ -23,12 +23,10 @@
 #include <mem/vmm.h>
 #include <sch/sched.h>
 #include <stack_depot.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <string.h>
 #include <structures/rbit.h>
 #include <thread/thread.h>
+#include <types/types.h>
 
 TEST_GROUP_EXTERN(mem);
 TEST_GROUP_EXTERN(folio);

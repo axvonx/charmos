@@ -1,7 +1,6 @@
 /* @title: Compiler Intrinsics (ci_) */
 #pragma once
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 /*
  * Prefix Convention:

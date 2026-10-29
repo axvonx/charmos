@@ -1,6 +1,6 @@
 /* @title: Kernel symbol table */
 #pragma once
-#include <stdint.h>
+#include <types/types.h>
 
 #define KERNEL_SYMS_MAGIC 0x534d5953u /* "SYMS" */
 

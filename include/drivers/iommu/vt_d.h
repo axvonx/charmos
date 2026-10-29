@@ -1,12 +1,10 @@
 /* @title: VT-d */
 #pragma once
 #include <compiler/core.h>
-#include <console/panic.h>
-#include <console/printf.h>
 #include <drivers/iommu/iommu.h>
 #include <log.h>
 #include <math/bit.h>
-#include <sync/spinlock.h>
+#include <sync/spinlock_types.h>
 LOG_SITE_EXTERN(vtd);
 LOG_HANDLE_EXTERN(vtd);
 

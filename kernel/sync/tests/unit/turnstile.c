@@ -1,4 +1,5 @@
 #include "sync/tests/test_internal.h"
+#include <structures/list.h>
 
 TEST_GROUP_DEFINE(turnstile);
 

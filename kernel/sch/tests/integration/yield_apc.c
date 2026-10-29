@@ -1,4 +1,6 @@
 #include "sch/tests/test_internal.h"
+#include <sync/rcu.h>
+#include <thread/apc_types.h>
 
 #define YIELD_APC_SPIN_LIMIT 2000000
 #define YIELD_APC_NO_READING 999

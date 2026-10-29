@@ -1,13 +1,12 @@
 #include <asm.h>
-#include <console/printf.h>
+#include <console/panic.h>
 #include <drivers/ahci.h>
 #include <drivers/ata.h>
 #include <drivers/pci.h>
 #include <mem/alloc.h>
 #include <registry.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <time/spin_sleep.h>
+#include <types/types.h>
 
 void ata_select_drive(struct ata_drive *ata_drive) {
     uint16_t base = ata_drive->io_base;

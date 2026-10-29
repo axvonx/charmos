@@ -1,14 +1,15 @@
 #include <console/panic.h>
 #include <console/printf.h>
 #include <enforce.h>
-#include <global.h>
+#include <log.h>
 #include <math/sort.h>
 #include <mem/alloc.h>
 #include <mem/numa.h>
 #include <string.h>
+#include <topo/global.h>
 
 void numa_dump(void) {
-    size_t n = global.numa_node_count;
+    size_t n = topo_global.numa_node_count;
     if (!n) {
         log_msg(LOG_WARN, "No NUMA nodes detected");
         return;
@@ -25,8 +26,8 @@ void numa_dump(void) {
     for (size_t i = 0; i < n; i++) {
         printf("%4zu: ", i);
         for (size_t j = 0; j < n; j++) {
-            printf("%4u (%4u)", global.numa_nodes[i].distance[j],
-                   global.numa_nodes[i].rel_dists[j]);
+            printf("%4u (%4u)", topo_global.numa_nodes[i].distance[j],
+                   topo_global.numa_nodes[i].rel_dists[j]);
         }
         printf("\n");
     }

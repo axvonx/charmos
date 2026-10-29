@@ -1,8 +1,7 @@
 /* @title: Console terminal state */
 #pragma once
 #include <compiler/core.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <types/types.h>
 
 #define TERM_PROBE_TIMEOUT_MS 250
 

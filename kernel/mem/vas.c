@@ -1,26 +1,41 @@
+#include <atomic.h>
+#include <boot/global.h>
+#include <bootstage.h>
 #include <compiler/intrinsic.h>
 #include <console/panic.h>
 #include <enforce.h>
+#include <irq/irq.h>
 #include <math/align.h>
 #include <math/bit.h>
 #include <mem/address_range.h>
 #include <mem/alloc.h>
+#include <mem/fixed_size_alloc.h>
 #include <mem/hhdm.h>
+#include <mem/page.h>
 #include <mem/pmm.h>
-#include <smp/core.h>
+#include <mem/vas.h>
+#include <mem/vmm.h>
+#include <sch/irql.h>
 #include <string.h>
+#include <structures/list.h>
+#include <structures/rbt.h>
+#include <sync/spinlock.h>
+#include <topo/core.h>
+#include <topo/global.h>
+#include <topo/topology.h>
+#include <tsa.h>
 
 #include "vas_internal.h"
 
 static cpu_id_t vas_cpu_id(void) {
-    if (global.current_bootstage < BOOTSTAGE_MID_MP)
+    if (boot_global.stage < BOOTSTAGE_MID_MP)
         return 0;
 
     return smp_id(TOPC_IRQL);
 }
 
 static enum irql vas_enter(void) TSA_ACQUIRES(IRQL_RAISED) TSA_NO_ANALYSIS {
-    if (global.current_bootstage >= BOOTSTAGE_MID_MP &&
+    if (boot_global.stage >= BOOTSTAGE_MID_MP &&
         (irq_in_interrupt() || irq_in_nmi()))
         panic(INVALID_CONTEXT, "used from hardware interrupt context");
 
@@ -52,7 +67,7 @@ static bool magazines_enabled(struct vas *vas) {
 #endif
 
     /* IRQL is a no-op during bootstrap */
-    return global.current_bootstage >= BOOTSTAGE_LATE;
+    return boot_global.stage >= BOOTSTAGE_LATE;
 }
 
 static bool magazine_claim(struct vas_mag_slot *slot, uintptr_t token) {
@@ -399,7 +414,7 @@ static size_t owner_index(struct vas *vas, vaddr_t addr) {
 
 /* Global lock held */
 static void reclaim_locked(struct vas *vas) {
-    for (cpu_id_t cpu = 0; cpu < global.core_count; cpu++) {
+    for (cpu_id_t cpu = 0; cpu < topo_global.cpu_count; cpu++) {
         struct vas_arena *local = &vas->local[cpu];
 
         enum irql irql = spin_lock(&local->lock);
@@ -559,7 +574,7 @@ static enum irql vas_lock_owner(struct vas *vas, vaddr_t addr,
     size_t index = owner_index(vas, addr);
     while (true) {
         cpu_id_t owner = atomic_load_acq(&vas->chunk_owner[index]);
-        enforce(owner == VAS_OWNER_GLOBAL || owner < global.core_count);
+        enforce(owner == VAS_OWNER_GLOBAL || owner < topo_global.cpu_count);
         struct vas_arena *arena =
             owner == VAS_OWNER_GLOBAL ? &vas->global : &vas->local[owner];
         enum irql irql = spin_lock(&arena->lock);
@@ -668,7 +683,7 @@ bool vas_destroy(struct vas *vas) {
     if (vas->global.total_free != vas->limit - vas->base)
         return false;
 
-    for (cpu_id_t cpu = 0; cpu < global.core_count; cpu++)
+    for (cpu_id_t cpu = 0; cpu < topo_global.cpu_count; cpu++)
         arena_destroy(&vas->local[cpu]);
 
     arena_destroy(&vas->global);
@@ -677,13 +692,13 @@ bool vas_destroy(struct vas *vas) {
 }
 
 static struct vas *space_create(vaddr_t base, vaddr_t limit, bool bootstrap) {
-    enforce(global.core_count && global.core_count < VAS_OWNER_GLOBAL);
+    enforce(topo_global.cpu_count && topo_global.cpu_count < VAS_OWNER_GLOBAL);
     if (!base || limit <= base)
         return NULL;
 
     vaddr_t map_base = ALIGN_DOWN(base, VAS_CHUNK_SIZE);
     size_t owners = ((limit - 1 - map_base) >> VAS_CHUNK_SHIFT) + 1;
-    size_t arena_bytes = global.core_count * sizeof(struct vas_arena);
+    size_t arena_bytes = topo_global.cpu_count * sizeof(struct vas_arena);
     size_t overhead = sizeof(struct vas) + arena_bytes;
 
     if (owners > (SIZE_MAX - overhead) / sizeof(atomic(cpu_id_t)))
@@ -723,7 +738,7 @@ static struct vas *space_create(vaddr_t base, vaddr_t limit, bool bootstrap) {
         atomic_init(&vas->chunk_owner[i], VAS_OWNER_GLOBAL);
 
     arena_init(&vas->global, true);
-    for (cpu_id_t cpu = 0; cpu < global.core_count; cpu++)
+    for (cpu_id_t cpu = 0; cpu < topo_global.cpu_count; cpu++)
         arena_init(&vas->local[cpu], false);
 
     struct vas_segment *seg = segment_alloc(&vas->global);
@@ -819,7 +834,7 @@ void vas_space_dump(struct vas *vas) {
            (void *) vas->limit, (size_t) VAS_CHUNK_SIZE);
     printf("  global:\n");
     arena_dump(&vas->global);
-    for (cpu_id_t cpu = 0; cpu < global.core_count; cpu++) {
+    for (cpu_id_t cpu = 0; cpu < topo_global.cpu_count; cpu++) {
         printf("  cpu[%zu]:\n", cpu);
         arena_dump(&vas->local[cpu]);
     }

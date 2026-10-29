@@ -1,7 +1,10 @@
-#include <sch/sched.h>
+#include <sch/irql.h>
 #include <sync/condvar.h>
+#include <sync/spinlock.h>
 #include <thread/thread.h>
-#include <thread/workqueue.h>
+#include <thread/thread_types.h>
+#include <thread/wait.h>
+#include <tsa.h>
 
 static void condvar_prepare_wait(struct condvar *cv) {
     thread_wait_prepare_one(&cv->waiters, cv, THREAD_WAIT_UNINTERRUPTIBLE,

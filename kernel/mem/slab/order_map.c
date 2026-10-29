@@ -1,6 +1,9 @@
+#include <atomic.h>
 #include <math/align.h>
 #include <mem/nofail.h>
 #include <mem/page.h>
+#include <string.h>
+#include <structures/rbt.h>
 
 #include "internal.h"
 

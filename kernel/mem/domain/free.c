@@ -1,6 +1,7 @@
-#include <math/align.h>
 #include <math/min_max.h>
-#include <smp/domain.h>
+#include <sch/irql.h>
+#include <sync/semaphore.h>
+#include <topo/domain.h>
 
 #include "internal.h"
 

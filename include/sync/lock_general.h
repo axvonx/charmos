@@ -1,7 +1,7 @@
 /* @title: General Locking */
 #pragma once
 #include <compiler/name.h>
-#include <stdint.h>
+#include <types/types.h>
 
 /* The reason we have this is because code around the kernel uses a function
  * parameter to indicate the held state of a lock. Using this enum rather than

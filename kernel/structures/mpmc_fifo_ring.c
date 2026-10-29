@@ -1,3 +1,4 @@
+#include <atomic.h>
 #include <math/bit.h>
 #include <math/min_max.h>
 #include <mem/alloc.h>

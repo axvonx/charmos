@@ -1,8 +1,7 @@
 /* @title: Thread Enumerations and Types */
 #pragma once
 #include <mem/page.h>
-#include <stdarg.h>
-#include <stdint.h>
+#include <types/types.h>
 
 struct thread;
 struct thread_create_params;

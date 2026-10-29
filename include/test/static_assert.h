@@ -1,8 +1,7 @@
 /* @title: Static Assertions & Compile-Time Checks */
 #pragma once
 #include <compiler/core.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 #define static_assert_size(type, expected_size)                                \
     ct_assert_size(type, expected_size)

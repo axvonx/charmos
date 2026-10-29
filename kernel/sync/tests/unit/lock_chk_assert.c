@@ -1,16 +1,19 @@
 #ifdef DEBUG_LOCK_CHK
 
+#include <sch/irql.h>
+#include <sync/lock_chk.h>
 #include <sync/lock_chk_assert.h>
 #include <sync/mutex.h>
 #include <sync/mutex_simple.h>
 #include <sync/qspinlock.h>
 #include <sync/rwlock.h>
+#include <sync/rwlock_types.h>
 #include <sync/spinlock.h>
+#include <test/conc.h>
 #include <test/fleet.h>
 #include <test/sync.h>
-#include <time/spin_sleep.h>
+#include <thread/thread_types.h>
 
-#include "sync/lock_chk/internal.h"
 #include "sync/tests/test_internal.h"
 
 LOCK_CHK_CLASS_DEFINE_LOCAL(assert_spin_class);

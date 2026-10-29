@@ -1,11 +1,5 @@
 /* @title: Programmable Interval Timer */
 #pragma once
-#include <acpi/ioapic.h>
-#include <irq/irq.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <time/time.h>
 #include <types/types.h>
 
 /* IO ports */

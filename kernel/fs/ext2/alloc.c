@@ -1,8 +1,9 @@
 #include <block/bcache.h>
 #include <console/printf.h>
 #include <fs/ext2.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <math/bit.h>
+#include <sch/irql.h>
+#include <types/types.h>
 
 static bool find_free_bit(uint8_t *bitmap, uint32_t size, uint32_t *byte_pos,
                           uint32_t *bit_pos) {

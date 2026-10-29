@@ -6,9 +6,12 @@
 #include <mem/fixed_size_alloc.h>
 #include <mem/mm.h>
 #include <mem/page.h>
+#include <mem/vma_range.h>
 #include <mem/vmm.h>
-#include <smp/perdomain.h>
+#include <structures/rbit.h>
 #include <structures/rbt.h>
+#include <sync/rwlock.h>
+#include <thread/thread_types.h>
 #include <types/refcount.h>
 
 #define MM_USER_MIN 0x0000000000010000UL

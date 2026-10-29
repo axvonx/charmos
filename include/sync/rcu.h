@@ -2,11 +2,11 @@
 #pragma once
 #include <atomic.h>
 #include <compiler/core.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <container_of.h>
 #include <structures/list.h>
+#include <sync/rcu_types.h>
 #include <tsa.h>
+#include <types/types.h>
 
 struct thread;
 
@@ -14,19 +14,7 @@ struct thread;
 struct rcu_node;
 
 struct rcu_cb;
-typedef void (*rcu_fn)(struct rcu_cb *);
 
-struct rcu_cb {
-    struct list_node list;
-    rcu_fn fn;
-
-    /* TODO: as debug flags get better, move away from raw TEST_ENABLED */
-#ifdef TEST_ENABLED
-    size_t gen_when_called; /* Diagnostics */
-    size_t enqueued_waiting_on_gen;
-    size_t target_gen;
-#endif
-};
 #define rcu_cb_from_list_node(ln) (container_of(ln, struct rcu_cb, list))
 
 TSA_REENTRANT_CAPABILITY_DECLARE("rcu", RCU_READ_LOCKED);

@@ -1,7 +1,6 @@
 /* @title: Radix Tree */
 #pragma once
-#include <err.h>
-#include <stdint.h>
+#include <types/types.h>
 
 #define RADIX_BITS 6
 #define RADIX_SIZE (1 << RADIX_BITS)

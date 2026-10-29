@@ -3,8 +3,7 @@
 #include <err.h>
 #include <mem/alloc_param.h>
 #include <mem/arena_types.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 /*
  * This subsystem allows the kernel to provide generic memory arenas that

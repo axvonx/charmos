@@ -1,6 +1,6 @@
 #include <asm.h>
 #include <crypto/prng.h>
-#include <stddef.h>
+#include <types/types.h>
 
 /* jitter to avoid lockstep */
 static inline int32_t backoff_jitter(size_t backoff, size_t pct) {

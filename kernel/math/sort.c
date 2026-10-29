@@ -39,9 +39,7 @@
  */
 
 #include <math/sort.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 #define swapcode(TYPE, parmi, parmj, n)                                        \
     {                                                                          \

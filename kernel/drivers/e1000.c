@@ -1,18 +1,17 @@
 #include <compiler/core.h>
-#include <console/printf.h>
+#include <device.h>
 #include <drivers/e1000.h>
 #include <drivers/mmio.h>
 #include <drivers/pci.h>
+#include <err.h>
+#include <log.h>
 #include <math/bit.h>
-#include <mem/alloc.h>
 #include <mem/nofail.h>
-#include <mem/page.h>
 #include <mem/pmm.h>
 #include <mem/vmm.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
 #include <time/spin_sleep.h>
+#include <types/types.h>
 
 LOG_HANDLE_DEFINE_PRINT(e1000);
 LOG_SITE_DEFINE_PRINT(e1000);

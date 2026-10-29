@@ -1,17 +1,13 @@
 #include <acpi/acpi.h>
-#include <asm.h>
-#include <console/panic.h>
-#include <console/printf.h>
-#include <global.h>
 #include <log.h>
-#include <math/sort.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
 #include <mem/numa.h>
-#include <mem/vmm.h>
-#include <smp/core.h>
-#include <stdint.h>
 #include <string.h>
+#include <structures/cpu_mask.h>
+#include <topo/core.h>
+#include <topo/global.h>
+#include <types/types.h>
 #include <uacpi/tables.h>
 
 #include "uacpi/acpi.h"
@@ -25,13 +21,14 @@ void srat_init(void) {
         log_warn_global(LOG_HANDLE(srat),
                         "SRAT table not found, assuming single NUMA node");
 
-        global.numa_nodes = nofail_vnew(global.numa_nodes, ALLOC_ZERO);
+        topo_global.numa_nodes =
+            nofail_vnew(topo_global.numa_nodes, ALLOC_ZERO);
 
-        global.numa_nodes[0].topo = NULL;
-        global.numa_nodes[0].mem_base = 0;
-        global.numa_nodes[0].mem_size = 0;
-        global.numa_nodes[0].distances_cnt = 0;
-        global.numa_nodes[0].distance = NULL;
+        topo_global.numa_nodes[0].topo = NULL;
+        topo_global.numa_nodes[0].mem_base = 0;
+        topo_global.numa_nodes[0].mem_size = 0;
+        topo_global.numa_nodes[0].distances_cnt = 0;
+        topo_global.numa_nodes[0].distance = NULL;
         return;
     }
 
@@ -65,20 +62,20 @@ void srat_init(void) {
         remaining -= entry->length;
     }
 
-    global.numa_node_count = max_prox_domain + 1;
-    size_t numa_node_count = global.numa_node_count;
-    global.numa_nodes =
-        nofail_vnews(global.numa_nodes, numa_node_count, ALLOC_ZERO);
+    topo_global.numa_node_count = max_prox_domain + 1;
+    size_t numa_node_count = topo_global.numa_node_count;
+    topo_global.numa_nodes =
+        nofail_vnews(topo_global.numa_nodes, numa_node_count, ALLOC_ZERO);
 
     for (size_t i = 0; i < numa_node_count; i++) {
-        global.numa_nodes[i].topo = NULL;
-        global.numa_nodes[i].mem_base = 0;
-        global.numa_nodes[i].mem_size = 0;
-        global.numa_nodes[i].distances_cnt = numa_node_count;
-        global.numa_nodes[i].distance = nofail_vnews(
-            global.numa_nodes[i].distance, numa_node_count, ALLOC_ZERO);
+        topo_global.numa_nodes[i].topo = NULL;
+        topo_global.numa_nodes[i].mem_base = 0;
+        topo_global.numa_nodes[i].mem_size = 0;
+        topo_global.numa_nodes[i].distances_cnt = numa_node_count;
+        topo_global.numa_nodes[i].distance = nofail_vnews(
+            topo_global.numa_nodes[i].distance, numa_node_count, ALLOC_ZERO);
 
-        cpu_mask_init(&global.numa_nodes[i].cpus, global.core_count);
+        cpu_mask_init(&topo_global.numa_nodes[i].cpus, topo_global.cpu_count);
     }
 
     ptr = (uint8_t *) srat + sizeof(struct acpi_srat);
@@ -99,8 +96,11 @@ void srat_init(void) {
 
                 cpu_id_t cpu_id = smp_cpu_from_apic_id(cpu->id);
                 if (cpu_id != CPU_ID_NONE) {
+                    /* the first pass sized numa_nodes from this same field */
+                    assume(prox_domain < topo_global.numa_node_count);
                     /* NOLINTNEXTLINE(*ArrayBound) */
-                    cpu_mask_set(&global.numa_nodes[prox_domain].cpus, cpu_id);
+                    cpu_mask_set(&topo_global.numa_nodes[prox_domain].cpus,
+                                 cpu_id);
                 }
             }
             break;
@@ -116,7 +116,7 @@ void srat_init(void) {
             if (node_id >= numa_node_count)
                 break;
 
-            struct numa_node *n = &global.numa_nodes[node_id];
+            struct numa_node *n = &topo_global.numa_nodes[node_id];
             n->mem_base = mem->address;
             n->mem_size = mem->length;
             break;

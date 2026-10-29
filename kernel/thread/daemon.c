@@ -1,6 +1,17 @@
+#include <atomic.h>
+#include <console/panic.h>
+#include <math/fixed.h>
 #include <mem/alloc.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
+#include <structures/cpu_mask.h>
+#include <structures/list.h>
+#include <sync/semaphore.h>
+#include <sync/spinlock.h>
 #include <thread/daemon.h>
+#include <thread/thread.h>
+#include <thread/workqueue.h>
+#include <types/refcount.h>
 
 #include <string.h>
 

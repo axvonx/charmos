@@ -1,9 +1,9 @@
 #include <console/panic.h>
+#include <err.h>
 #include <math/bit.h>
 #include <mem/alloc.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <structures/radix.h>
+#include <types/types.h>
 
 static bool radix_verify_tree(struct radix_tree *tree);
 static void radix_prune_up(struct radix_node *node, struct radix_tree *tree);

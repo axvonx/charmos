@@ -1,3 +1,13 @@
+#include <asm.h>
+#include <atomic.h>
+#include <mem/alloc.h>
+#include <mem/alloc_param.h>
+#include <sch/global.h>
+#include <time/time.h>
+#include <topo/core.h>
+#include <topo/global.h>
+#include <topo/topology.h>
+
 #include "sch/tests/test_internal.h"
 
 #define MIGRATE_KICK_MAX_MS 10
@@ -22,14 +32,14 @@ struct migrate_kick {
 };
 
 static int64_t migrate_kick_pick_dst(cpu_id_t self, cpu_id_t main_cpu) {
-    size_t n = global.core_count;
+    size_t n = topo_global.cpu_count;
 
     for (size_t step = 0; step < n; step++) {
         size_t cpu = (self + n / 2 + step) % n;
         if (cpu == self || cpu == main_cpu)
             continue;
 
-        if (scheduler_core_idle(global.cores[cpu]))
+        if (scheduler_core_idle(topo_global.cores[cpu]))
             return (int64_t) cpu;
     }
 
@@ -50,7 +60,7 @@ static void migrate_kick_worker(void *arg) {
 
     if (dst >= 0) {
         atomic_store_rlx(&mk->dst_was_idle,
-                         scheduler_core_idle(global.cores[dst]));
+                         scheduler_core_idle(topo_global.cores[dst]));
         thread_set_migration_target(thread_get_current(), dst);
 
         mk->yielded_ms = time_get_ms();
@@ -81,7 +91,7 @@ TEST_DEFINE_INTEGRATION(sched, migrate_target_kicks_idle, .min_cores = 4) {
     mk->main_cpu = smp_id(TOPC_NONE);
     atomic_store_rlx(&mk->dst, -1);
 
-    cpu_id_t src = (mk->main_cpu + 1) % global.core_count;
+    cpu_id_t src = (mk->main_cpu + 1) % topo_global.cpu_count;
     struct thread *t = thread_spawn(("migrate_kick"), migrate_kick_worker,
                                     .arg = mk, .on_cpu = src, .joinable = true);
     TEST_ASSERT_NONNULL(t);
@@ -93,7 +103,7 @@ TEST_DEFINE_INTEGRATION(sched, migrate_target_kicks_idle, .min_cores = 4) {
     int64_t dst = atomic_load_rlx(&mk->dst);
 
     if (stranded && dst >= 0)
-        scheduler_force_resched(global.schedulers[dst]);
+        scheduler_force_resched(sch_global.schedulers[dst]);
 
     thread_join(t);
 

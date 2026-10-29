@@ -1,5 +1,4 @@
 /* @title: Console report composer */
-#include <asm.h>
 #include <colors.h>
 #include <compiler/core.h>
 #include <console/printf.h>
@@ -7,11 +6,9 @@
 #include <console/term.h>
 #include <math/min_max.h>
 #include <sch/irql.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <string.h>
+#include <tsa.h>
+#include <types/types.h>
 
 /* Which section is being rendered right now, so a panic arriving mid render
  * can state which is being faulted and skip on the way through */

@@ -1,4 +1,6 @@
 #include "math/tests/test_internal.h"
+#include <math/range.h>
+#include <scaled_param.h>
 
 TEST_GROUP_DEFINE(bit_ops, .intensity_desc = {
                                .curve = SCALE_PIECEWISE_LOG,

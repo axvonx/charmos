@@ -1,7 +1,19 @@
+#include <atomic.h>
+#include <console/panic.h>
+#include <irq/irq.h>
+#include <math/fixed.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
+#include <structures/list.h>
+#include <sync/lock_chk.h>
+#include <sync/lock_chk_types.h>
+#include <sync/lock_general.h>
 #include <sync/mutex_simple.h>
 #include <sync/spinlock.h>
 #include <thread/thread.h>
+#include <thread/thread_types.h>
+#include <thread/wait.h>
+#include <tsa.h>
 
 #ifdef DEBUG_LOCK_CHK
 

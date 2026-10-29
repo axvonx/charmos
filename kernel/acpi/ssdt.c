@@ -1,13 +1,10 @@
 #include <acpi/cst.h>
 #include <asm.h>
 #include <console/printf.h>
-#include <mem/vmm.h>
 #include <string.h>
 #include <types/types.h>
-#include <uacpi/acpi.h>
 #include <uacpi/namespace.h>
 #include <uacpi/status.h>
-#include <uacpi/tables.h>
 #include <uacpi/uacpi.h>
 
 static uacpi_iteration_decision

@@ -1,10 +1,15 @@
 #include <compiler/intrinsic.h>
+#include <console/panic.h>
+#include <console/printf.h>
+#include <container_of.h>
 #include <log.h>
+#include <math/align.h>
 #include <math/range.h>
 #include <math/units.h>
 #include <mem/address_range.h>
 #include <mem/page.h>
 #include <string.h>
+#include <structures/rbt.h>
 
 LOG_SITE_DEFINE_PRINT(address_range);
 LOG_HANDLE_DEFINE_PRINT(address_range);

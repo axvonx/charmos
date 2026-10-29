@@ -1,4 +1,6 @@
+#include <console/panic.h>
 #include <enforce.h>
+#include <linker/symbols.h>
 #include <ndjson.h>
 #include <string.h>
 

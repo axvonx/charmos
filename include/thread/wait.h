@@ -2,39 +2,14 @@
 #include <structures/list.h>
 #include <sync/spinlock.h>
 #include <thread/thread_types.h>
-#include <time/time.h>
+#include <thread/wait_types.h>
 
 #define THREAD_WAIT_BLOCK_SYNC 0
-#define THREAD_NUM_WAIT_BLOCKS 4
 #define THREAD_WAIT_KEY_NONE UINT16_MAX
-
-struct thread_wait_header {
-    struct spinlock lock;
-    struct list_head waiters;
-};
 
 #define THREAD_WAIT_HEADER_INIT(name_)                                         \
     {.lock = SPINLOCK_INIT, .waiters = LIST_HEAD_INIT((name_).waiters)}
 
-enum thread_wait_block_state {
-    THREAD_WAIT_BLOCK_INACTIVE,
-    THREAD_WAIT_BLOCK_ACTIVE,
-    THREAD_WAIT_BLOCK_SATISFIED,
-};
-
-struct thread_wait_block {
-    /* TODO: we're using a doubly linked list here because the block list under
-     * a thread can grow arbitrarily long. Perhaps someday we can consider
-     * something like Windows' MAXIMUM_WAIT_OBJECTS, so we can go for
-     * a singularly linked list, save 8 bytes, at the cost of an
-     * absolute maximum + maybe minor slowdowns (?) */
-    struct list_node obj_node;
-    struct thread *thread;
-    void *object;
-    uint16_t key;
-    enum thread_wait_block_state state;
-    struct thread_wait_header *header;
-};
 ct_assert_struct_size_eq(thread_wait_block, 48);
 
 struct thread_wait_object {

@@ -1,9 +1,9 @@
 #include <block/bcache.h>
 #include <err.h>
 #include <fs/ext2.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <math/align.h>
 #include <string.h>
+#include <types/types.h>
 
 struct link_ctx {
     const char *name;

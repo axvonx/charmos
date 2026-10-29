@@ -2,16 +2,10 @@
 #pragma once
 #include <atomic.h>
 #include <compiler/core.h>
-#include <irq/irq.h>
-#include <sch/sched.h>
-#include <smp/core.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <structures/list.h>
 #include <thread/apc_types.h>
 #include <thread/thread.h>
-#include <types/refcount.h>
+#include <types/types.h>
 
 enum apc_state : uint8_t {
     APC_STATE_IDLE = 0,

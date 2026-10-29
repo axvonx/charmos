@@ -1,3 +1,8 @@
+#include <asm.h>
+#include <mem/vmm.h>
+#include <time/time.h>
+#include <topo/global.h>
+
 #include "mem/tests/test_internal.h"
 
 #define TLB_MAX_TEST_THREADS ((size_t) 64)
@@ -22,7 +27,7 @@ TEST_DEFINE_INTEGRATION(mem, tlb_shootdown_sync,
                         TEST_INTENSITY_CORES(1, 1, 4, "threads/core"),
                         .min_cores = 2, .min_ram_mib = 8) {
     size_t nthreads =
-        MIN(ctx->intensity_val ? ctx->intensity_val : global.core_count,
+        MIN(ctx->intensity_val ? ctx->intensity_val : topo_global.cpu_count,
             TLB_MAX_TEST_THREADS);
 
     atomic_store(&tlb_go, false);

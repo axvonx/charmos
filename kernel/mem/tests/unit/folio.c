@@ -1,4 +1,5 @@
 #include "mem/tests/test_internal.h"
+#include <scaled_param.h>
 
 TEST_GROUP_DEFINE(folio, .intensity_desc = {
                              .curve = SCALE_PIECEWISE_LOG,

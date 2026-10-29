@@ -21,11 +21,11 @@
  * to get more information about what sleeping readers are doing
  */
 
+#include <asm.h>
 #include <atomic.h>
 #include <compiler/atomic.h>
-#include <console/printf.h>
+#include <console/crash.h>
 #include <enforce.h>
-#include <global.h>
 #include <irq/ipi.h>
 #include <irq/irq.h>
 #include <log.h>
@@ -33,15 +33,20 @@
 #include <math/min_max.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
-#include <smp/core.h>
+#include <structures/bitmap.h>
+#include <structures/cpu_mask.h>
 #include <structures/list.h>
 #include <sync/rcu.h>
 #include <sync/semaphore.h>
 #include <sync/spinlock.h>
 #include <thread/thread.h>
-#include <time/spin_sleep.h>
 #include <time/time.h>
+#include <topo/core.h>
+#include <topo/global.h>
+#include <topo/topology.h>
+#include <tsa.h>
 
 #include "rcu_internal.h"
 
@@ -334,7 +339,7 @@ void rcu_defer(struct rcu_cb *cc_nonnull_ptr cb, rcu_fn cc_nonnull_ptr func) {
 }
 
 static void rcu_detach_callbacks(struct list_head *batch) {
-    for (cpu_id_t cpu = 0; cpu < global.core_count; cpu++) {
+    for (cpu_id_t cpu = 0; cpu < topo_global.cpu_count; cpu++) {
         struct rcu_cpu *q = &rcu_global.cpus[cpu];
 
         enum irql irql = spin_lock_high(&q->lock);
@@ -344,7 +349,7 @@ static void rcu_detach_callbacks(struct list_head *batch) {
 }
 
 static bool rcu_callbacks_pending(void) {
-    for (cpu_id_t cpu = 0; cpu < global.core_count; cpu++) {
+    for (cpu_id_t cpu = 0; cpu < topo_global.cpu_count; cpu++) {
         struct rcu_cpu *q = &rcu_global.cpus[cpu];
 
         enum irql irql = spin_lock_high(&q->lock);
@@ -617,7 +622,7 @@ static void rcu_build_tree(void) {
     size_t counts[RCU_MAX_LEVELS];
     size_t levels = 0;
 
-    size_t n = global.core_count;
+    size_t n = topo_global.cpu_count;
     enforce(n > 0);
 
     do {
@@ -664,7 +669,7 @@ static void rcu_build_tree(void) {
                 node->is_leaf = true;
                 node->cpu_base = j * RCU_FANOUT;
                 list_head_init(&node->blocked);
-                owned = global.core_count - node->cpu_base;
+                owned = topo_global.cpu_count - node->cpu_base;
             } else {
                 node->is_leaf = false;
                 owned = counts[level - 1] - (j * RCU_FANOUT);
@@ -695,8 +700,8 @@ void rcu_init(void) {
     rcu_build_tree();
 
     rcu_global.cpus =
-        nofail_vnews(rcu_global.cpus, global.core_count, ALLOC_ZERO);
-    for (cpu_id_t cpu = 0; cpu < global.core_count; cpu++) {
+        nofail_vnews(rcu_global.cpus, topo_global.cpu_count, ALLOC_ZERO);
+    for (cpu_id_t cpu = 0; cpu < topo_global.cpu_count; cpu++) {
         spinlock_init(&rcu_global.cpus[cpu].lock);
         list_head_init(&rcu_global.cpus[cpu].list);
         atomic_store_rlx(&rcu_global.cpus[cpu].reported_seq, 0);

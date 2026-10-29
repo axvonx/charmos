@@ -1,4 +1,5 @@
 #include "mem/tests/test_internal.h"
+#include <mem/alloc.h>
 
 TEST_DEFINE_UNIT(mem, pmm_alloc_free_stress, TEST_INTENSITY(256, 2048, 32768),
                  .min_ram_mib = 8) {

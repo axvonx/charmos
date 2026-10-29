@@ -1,10 +1,6 @@
 /* @title: Parsing */
 #pragma once
-#include <math/fixed.h>
-#include <smp/topology.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <structures/cpu_mask_types.h>
 #include <types/types.h>
 
 struct cmdline_range;

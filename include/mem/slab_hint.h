@@ -1,8 +1,6 @@
 /* @title: Slab Allocator Hint Mechanism */
 #pragma once
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 enum slab_hint_type {
     SLAB_HINT_ALLOCS_SOON,

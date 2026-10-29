@@ -2,10 +2,7 @@
 #pragma once
 #include <atomic.h>
 #include <console/panic.h>
-#include <console/printf.h>
 #include <enforce.h>
-#include <limits.h>
-#include <stdbool.h>
 #include <types/types.h>
 
 static inline void refcount_init(refcount_t *rc, uint32_t val) {

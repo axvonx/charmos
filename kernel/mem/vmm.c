@@ -1,26 +1,36 @@
+#include <asm.h>
+#include <atomic.h>
+#include <boot/global.h>
+#include <bootstage.h>
 #include <cmdline.h>
 #include <compiler/core.h>
 #include <compiler/intrinsic.h>
-#include <console/printf.h>
-#include <global.h>
-#include <irq/idt.h>
+#include <console/panic.h>
+#include <err.h>
 #include <limine.h>
 #include <linker/symbols.h>
+#include <log.h>
+#include <math/align.h>
 #include <math/bit.h>
 #include <mem/address_range.h>
 #include <mem/asan.h>
 #include <mem/demand_page.h>
+#include <mem/global.h>
 #include <mem/hhdm.h>
+#include <mem/page.h>
 #include <mem/page_table.h>
 #include <mem/pmm.h>
 #include <mem/tlb.h>
 #include <mem/vmm.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
-#include <smp/smp.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
 #include <sync/spinlock.h>
+#include <topo/core.h>
+#include <topo/smp.h>
+#include <topo/topology.h>
+#include <tsa.h>
+#include <types/types.h>
 
 #include "mem/slab/internal.h"
 
@@ -138,26 +148,26 @@ static inline uint64_t pt_level_granule(int level) {
 }
 
 static inline void pt_walk_enter(void) {
-    if (global.current_bootstage >= BOOTSTAGE_MID_MP) {
-        uint64_t e = atomic_load_acq(&global.pt_epoch);
+    if (boot_global.stage >= BOOTSTAGE_MID_MP) {
+        uint64_t e = atomic_load_acq(&mem_global.pt_epoch);
         atomic_store_release(&smp_core(TOPC_IRQL)->pt_seen_epoch, e);
     }
 }
 
 static inline void pt_walk_exit(void) {
-    if (global.current_bootstage >= BOOTSTAGE_MID_MP) {
+    if (boot_global.stage >= BOOTSTAGE_MID_MP) {
         atomic_store_release(&smp_core(TOPC_IRQL)->pt_seen_epoch, UINT64_MAX);
     }
 }
 
 static void enqueue_pt_free(paddr_t phys) {
-    if (global.current_bootstage < BOOTSTAGE_MID_MP)
+    if (boot_global.stage < BOOTSTAGE_MID_MP)
         return pmm_free_page(phys);
 
     struct pt_deferred_free *n =
         (struct pt_deferred_free *) hhdm_paddr_to_ptr(phys);
 
-    uint64_t e = atomic_inc_return_new_acq_rel(&global.pt_epoch);
+    uint64_t e = atomic_inc_return_new_acq_rel(&mem_global.pt_epoch);
     n->phys = phys;
     n->epoch = e;
 
@@ -168,7 +178,7 @@ static void enqueue_pt_free(paddr_t phys) {
 }
 
 void vmm_reclaim_page_tables(void) {
-    if (global.current_bootstage < BOOTSTAGE_LATE)
+    if (boot_global.stage < BOOTSTAGE_LATE)
         return;
 
     if (smp_read(TOPC_IRQL, reclaiming_page_tables))
@@ -1078,7 +1088,7 @@ void vmm_unmap_full(void *addr, uint64_t len, struct vmm_request rq) {
 }
 
 void *vmm_map_bump_full(uintptr_t addr, uint64_t len, struct vmm_request rq) {
-    if (global.current_bootstage >= BOOTSTAGE_LATE)
+    if (boot_global.stage >= BOOTSTAGE_LATE)
         log_msg_once(LOG_WARN, "vmm_map_bump called after BOOTSTAGE_LATE...");
 
     if (len == 0)

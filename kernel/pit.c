@@ -1,12 +1,9 @@
 #include <acpi/ioapic.h>
 #include <asm.h>
-#include <console/printf.h>
-#include <irq/irq.h>
 #include <log.h>
 #include <pit.h>
-#include <smp/core.h>
-#include <stdint.h>
 #include <time/time.h>
+#include <topo/core.h>
 #include <types/types.h>
 
 LOG_HANDLE_DEFINE_PRINT(pit);

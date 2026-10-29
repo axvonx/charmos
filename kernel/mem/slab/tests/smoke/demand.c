@@ -1,4 +1,5 @@
 #include "mem/slab/tests/test_internal.h"
+#include <mem/alloc.h>
 
 TEST_DEFINE_SMOKE(slab, demand_growth) {
     size_t count = 500;

@@ -1,12 +1,21 @@
+#include <asm.h>
+#include <atomic.h>
+#include <cmdline.h>
 #include <math/range.h>
 #include <mem/alloc.h>
 #include <nightmare/nightmare.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
 #include <sync/lock_chk.h>
 #include <sync/mutex.h>
 #include <sync/qspinlock.h>
 #include <sync/rwlock.h>
+#include <sync/rwlock_types.h>
+#include <sync/spinlock.h>
+#include <test/conc.h>
 #include <thread/thread.h>
+#include <thread/thread_types.h>
+#include <thread/wait.h>
 #include <time/time.h>
 
 #define WAKE_STORM_DEFAULT_SLEEPER_STALL_MS 10000

@@ -1,7 +1,5 @@
 /* @title: IPIs */
 #pragma once
-#include <stdbool.h>
-#include <stdint.h>
 #include <types/types.h>
 
 struct cpu_mask;

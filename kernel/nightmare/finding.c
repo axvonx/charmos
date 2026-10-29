@@ -1,7 +1,10 @@
-#include <console/printf.h>
+#include <atomic.h>
 #include <math/hash.h>
+#include <nightmare/nightmare.h>
 #include <nightmare/record.h>
-#include <stdarg.h>
+#include <string.h>
+#include <test/conc.h>
+#include <types/types.h>
 
 #include "internal.h"
 

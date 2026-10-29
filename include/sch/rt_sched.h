@@ -3,17 +3,16 @@
 #include <atomic.h>
 #include <log.h>
 #include <sch/rt_sched_types.h>
-#include <smp/topology.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <structures/cpu_mask_types.h>
 #include <structures/list.h>
 #include <structures/locked_list.h>
 #include <structures/rbt.h>
 #include <sync/semaphore.h>
+#include <sync/spinlock_types.h>
 #include <thread/thread_types.h>
 #include <thread/workqueue.h>
-#include <types/refcount.h>
+#include <topo/topology.h>
+#include <types/types.h>
 
 /* @idea:big Real-time scheduler load balancing */
 /*

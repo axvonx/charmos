@@ -2,8 +2,7 @@
 #pragma once
 #include <compiler/core.h>
 #include <container_of.h>
-#include <stdbool.h>
-#include <stddef.h>
+#include <types/types.h>
 
 /* Circular doubly linked list.
  *

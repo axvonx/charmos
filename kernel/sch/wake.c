@@ -1,3 +1,15 @@
+#include <atomic.h>
+#include <math/fixed.h>
+#include <sch/global.h>
+#include <sch/irql.h>
+#include <sch/sched.h>
+#include <structures/cpu_mask.h>
+#include <sync/spinlock.h>
+#include <thread/thread.h>
+#include <thread/thread_types.h>
+#include <topo/global.h>
+#include <tsa.h>
+
 #include "internal.h"
 
 struct scheduler *scheduler_select_best_for_thread(struct thread *t) {
@@ -14,15 +26,15 @@ struct scheduler *scheduler_select_best_for_thread(struct thread *t) {
     struct scheduler *sched = NULL;
     size_t i, min_load = SIZE_MAX;
     cpu_mask_for_each(i, t->allowed_cpus) {
-        size_t this_load = global.schedulers[i]->total_thread_count;
+        size_t this_load = sch_global.schedulers[i]->total_thread_count;
 
-        if (global.cores && global.cores[i] &&
-            !scheduler_core_idle(global.cores[i]))
+        if (topo_global.cores && topo_global.cores[i] &&
+            !scheduler_core_idle(topo_global.cores[i]))
             this_load++;
 
         if (this_load < min_load) {
             min_load = this_load;
-            sched = global.schedulers[i];
+            sched = sch_global.schedulers[i];
         }
     }
 

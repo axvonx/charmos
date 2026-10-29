@@ -1,7 +1,10 @@
 /* @title: Domains */
 #pragma once
-#include <smp/core.h>
-#include <stdint.h>
+#include <structures/cpu_mask_types.h>
+#include <topo/core.h>
+#include <topo/global.h>
+#include <topo/topology.h>
+#include <types/types.h>
 
 /* NOTE: Definition of a "domain"
  *
@@ -58,14 +61,14 @@ static inline domain_id_t domain_local_id(enum topology_caller c) {
 
 #define domain_for_each_domain(dom_)                                           \
     for (domain_id_t __dom_idx = 0;                                            \
-         __dom_idx < global.domain_count &&                                    \
-         (((dom_) = global.domains[__dom_idx]), true);                         \
+         __dom_idx < topo_global.domain_count &&                               \
+         (((dom_) = topo_global.domains[__dom_idx]), true);                    \
          __dom_idx++)
 
 #define domain_for_each_domain_id(id_)                                         \
     for (domain_id_t __dom_id_idx = 0;                                         \
-         __dom_id_idx < global.domain_count &&                                 \
-         (((id_) = global.domains[__dom_id_idx]->id), true);                   \
+         __dom_id_idx < topo_global.domain_count &&                            \
+         (((id_) = topo_global.domains[__dom_id_idx]->id), true);              \
          __dom_id_idx++)
 
 #define domain_for_each_core(pos_, dom_)                                       \

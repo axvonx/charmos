@@ -1,4 +1,5 @@
 #include "mem/tests/test_internal.h"
+#include <math/bit.h>
 
 TEST_GROUP_DEFINE(page_table);
 

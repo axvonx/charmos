@@ -1,9 +1,9 @@
+#include <boot/global.h>
 #include <bootstage.h>
-#include <global.h>
 #include <ndjson.h>
-#include <smp/core.h>
 #include <string.h>
 #include <time/time.h>
+#include <topo/core.h>
 
 #include "internal.h"
 
@@ -132,7 +132,7 @@ static bool ndjson_put_field(const struct ndjson_field *f, const void *args) {
 }
 
 static void ndjson_put_context(void) {
-    bool ready = global.current_bootstage >= NDJSON_CONTEXT_STAGE;
+    bool ready = boot_global.stage >= NDJSON_CONTEXT_STAGE;
 
     ndjson_put_key(NDJSON_KEY_TIME);
     if (ready)

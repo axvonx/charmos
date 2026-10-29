@@ -3,14 +3,12 @@
 #include <atomic.h>
 #include <log.h>
 #include <math/bit.h>
-#include <mem/alloc.h>
 #include <mem/nofail.h>
-#include <smp/percpu.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <time/clock.h>
 #include <time/names.h>
 #include <time/tsc.h>
+#include <topo/global.h>
+#include <topo/percpu.h>
 #include <types/freq.h>
 #include <types/types.h>
 
@@ -145,10 +143,10 @@ void tsc_sync_check_ap(cpu_id_t self) {
 
 void tsc_sync_check_all_aps(void) {
     size_t ok = 0;
-    for (cpu_id_t i = 1; i < global.core_count; i++)
+    for (cpu_id_t i = 1; i < topo_global.cpu_count; i++)
         ok += tsc_sync_check_bsp(i);
 
-    if (ok == global.core_count - 1)
+    if (ok == topo_global.cpu_count - 1)
         tsc_global.use_tsc = true;
 }
 

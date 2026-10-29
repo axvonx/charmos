@@ -1,17 +1,21 @@
 /* @title: Scheduler */
 #pragma once
-#include <global.h>
+#include <atomic.h>
 #include <irq/ipi.h>
+#include <irq/irq.h>
 #include <sch/domain.h>
-#include <smp/core.h>
-#include <smp/topology.h>
-#include <stdarg.h>
-#include <stdbool.h>
+#include <sch/global.h>
+#include <sch/irql.h>
+#include <structures/list.h>
 #include <structures/rbt.h>
 #include <sync/spinlock.h>
 #include <thread/thread_types.h>
-#include <time/timer.h>
+#include <time/timer_types.h>
+#include <topo/core.h>
+#include <topo/global.h>
+#include <topo/topology.h>
 #include <tsa.h>
+#include <types/types.h>
 
 #define WORK_STEAL_THRESHOLD                                                   \
     75ULL /* How little work the core needs to be                              \
@@ -196,9 +200,9 @@ static inline void scheduler_mark_self_idle(bool new) {
         topology_mark_core_idle(c->id, new);
         scheduler_domain_mark_self_idle(new);
         if (new) {
-            atomic_inc_acq_rel(&global.idle_core_count);
+            atomic_inc_acq_rel(&sch_global.idle_cpu_count);
         } else {
-            atomic_dec_acq_rel(&global.idle_core_count);
+            atomic_dec_acq_rel(&sch_global.idle_cpu_count);
         }
     }
 }
@@ -239,13 +243,13 @@ static inline bool scheduler_core_idle(struct core *c) {
  *     defined in the internal header there.
  */
 static inline void scheduler_force_resched(struct scheduler *sched) {
-    scheduler_mark_core_needs_resched(global.cores[sched->core_id], true);
+    scheduler_mark_core_needs_resched(topo_global.cores[sched->core_id], true);
     ipi_send(sched->core_id, IRQ_SCHEDULER);
 }
 
 static inline bool cc_must_check
 scheduler_try_force_resched(struct scheduler *sched) {
-    scheduler_mark_core_needs_resched(global.cores[sched->core_id], true);
+    scheduler_mark_core_needs_resched(topo_global.cores[sched->core_id], true);
     return ipi_send_try(sched->core_id, IRQ_SCHEDULER);
 }
 

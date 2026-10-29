@@ -2,15 +2,13 @@
 #pragma once
 #include <compiler/core.h>
 #include <compiler/wrapper.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <sync/once_token.h>
 #include <test/conc.h>
 #include <test/perturb.h>
 #include <test/test.h>
-#include <time/time.h>
-#include <time/timer.h>
+#include <thread/thread_types.h>
+#include <time/timer_types.h>
+#include <types/types.h>
 
 struct test_fleet;
 struct test_fleet_alloc;

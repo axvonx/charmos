@@ -4,12 +4,9 @@
 #include <compiler/diagnostic.h>
 #include <err.h>
 #include <linker/symbols.h>
-#include <math/bit.h>
-#include <math/fixed.h>
 #include <math/range.h>
-#include <stdbool.h>
-#include <stddef.h>
 #include <types/type_enum.h>
+#include <types/types.h>
 
 struct cmdline_entry;
 struct cpu_mask;

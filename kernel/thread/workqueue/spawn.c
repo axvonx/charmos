@@ -1,6 +1,14 @@
+#include <atomic.h>
+#include <irq/irq.h>
 #include <mem/alloc.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
+#include <structures/cpu_mask.h>
+#include <structures/list.h>
+#include <sync/spinlock.h>
 #include <thread/thread.h>
+#include <thread/workqueue.h>
+#include <time/time.h>
 
 #include "internal.h"
 

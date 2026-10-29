@@ -1,9 +1,7 @@
 /* @title: Red-Black Interval Tree */
 #pragma once
 #include <container_of.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 #define rbit_for_each_safe(pos, tmp, tree)                                     \
     for (pos = rbit_first(tree), tmp = rbit_next(pos); pos != NULL;            \

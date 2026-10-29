@@ -2,12 +2,10 @@
 #pragma once
 #include <asm.h>
 #include <compiler/core.h>
-#include <console/printf.h>
 #include <drivers/mmio.h>
+#include <irq/irq.h>
 #include <math/bit.h>
-#include <smp/core.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <types/types.h>
 
 #define IA32_APIC_BASE 0x1B
 #define IA32_APIC_BASE_MSR 0x1B

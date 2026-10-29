@@ -1,4 +1,7 @@
 #include "internal.h"
+#include <math/align.h>
+#include <mem/arena_provider.h>
+#include <structures/bitmap.h>
 
 #define arena_check_assert_return_false(expr)                                  \
     do {                                                                       \

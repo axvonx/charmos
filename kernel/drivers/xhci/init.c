@@ -1,17 +1,27 @@
 #include <acpi/lapic.h>
 #include <asm.h>
 #include <compiler/core.h>
+#include <console/panic.h>
+#include <container_of.h>
 #include <drivers/mmio.h>
 #include <drivers/pci.h>
+#include <drivers/usb/usb.h>
 #include <drivers/usb/xhci.h>
+#include <irq/irq.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
 #include <mem/page.h>
 #include <mem/vmm.h>
-#include <smp/core.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <string.h>
+#include <structures/list.h>
+#include <sync/lock_chk.h>
+#include <sync/semaphore.h>
+#include <sync/spinlock.h>
 #include <time/spin_sleep.h>
+#include <time/time.h>
+#include <topo/core.h>
+#include <types/refcount.h>
+#include <types/types.h>
 
 #include "internal.h"
 

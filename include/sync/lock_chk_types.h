@@ -1,11 +1,7 @@
 /* @title: Lock Validation Layout Types */
 #pragma once
-#include <asm.h>
 #include <atomic.h>
-#include <irq/irq.h>
 #include <sch/irql.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <sync/lock_chk.h>
 #include <sync/lock_general.h>
 #include <types/types.h>
@@ -165,23 +161,11 @@ lock_chk_map_runtime_init(struct lock_chk_map *map,
     atomic_store_rlx(&map->base_node, NULL);
 }
 
-static inline struct lock_chk_acq_req
-lock_chk_acq_req_make(struct lock_chk_lock *lock,
-                      const struct lock_chk_site *site, enum lock_chk_mode mode,
-                      enum lock_subclass subclass, enum lock_op_flags flags) {
-    return (struct lock_chk_acq_req) {
-        .map = &lock->map,
-        .lock = lock_chk_id_of(lock),
-        .site = site,
-        .mode = mode,
-        .prev_irql = irql_get(),
-        .subclass = subclass,
-        .op_flags = flags,
-        .irqs_enabled = irqs_enabled(),
-        .in_irq = irq_in_interrupt(),
-        .in_nmi = irq_in_nmi(),
-    };
-}
+struct lock_chk_acq_req lock_chk_acq_req_make(struct lock_chk_lock *lock,
+                                              const struct lock_chk_site *site,
+                                              enum lock_chk_mode mode,
+                                              enum lock_subclass subclass,
+                                              enum lock_op_flags flags);
 
 static inline struct lock_chk_rel_req
 lock_chk_rel_req_make(struct lock_chk_lock *lock,

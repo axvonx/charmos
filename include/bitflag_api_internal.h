@@ -1,8 +1,7 @@
+#include <atomic.h>
 #include <compiler/core.h>
 #include <math/bit.h>
-#include <stdatomic.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <types/types.h>
 
 #define BR_BITFLAG_RANGE_ASSERT(lo, hi)                                        \
     (sizeof(struct {                                                           \

@@ -1,27 +1,51 @@
+#include <atomic.h>
+#include <boot/global.h>
 #include <bootstage.h>
+#include <console/crash.h>
+#include <console/panic.h>
+#include <container_of.h>
+#include <err.h>
+#include <irq/irq.h>
 #include <log.h>
 #include <mem/address_range.h>
 #include <mem/alloc.h>
+#include <mem/page.h>
 #include <mem/pmm.h>
 #include <mem/slab.h>
 #include <mem/vas.h>
 #include <mem/vmm.h>
-#include <sch/periodic_work.h>
+#include <sch/climb.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
-#include <smp/domain.h>
-#include <stdbool.h>
-#include <stddef.h>
 #include <string.h>
+#include <structures/cpu_mask.h>
+#include <structures/list.h>
+#include <structures/locked_list.h>
+#include <structures/rbt.h>
+#include <sync/condvar.h>
+#include <sync/lock_general.h>
 #include <sync/rcu.h>
+#include <sync/spinlock.h>
 #include <sync/turnstile.h>
 #include <thread/apc.h>
+#include <thread/apc_types.h>
+#include <thread/queue.h>
 #include <thread/reaper.h>
 #include <thread/thread.h>
+#include <thread/thread_types.h>
 #include <thread/tid.h>
-#include <thread/workqueue.h>
+#include <thread/wait.h>
+#include <time/time.h>
 #include <time/timer.h>
+#include <topo/global.h>
+#include <tsa.h>
+#include <types/refcount.h>
+#include <types/types.h>
 
 #include "sch/internal.h"
+
+static atomic_size_t thread_count;
+static struct locked_list thread_list;
 
 #ifdef DEBUG_LOCK_CHK
 
@@ -61,7 +85,7 @@ static struct vas *stacks_space = NULL;
 void thread_init_thread_ids(void) {
     stacks_space = vas_create(THREAD_STACKS_HEAP_START, THREAD_STACKS_HEAP_END);
     global_tid_space = tid_space_init(UINT64_MAX);
-    locked_list_init(&global.thread_list, LOCKED_LIST_INIT_IRQ_DISABLE);
+    locked_list_init(&thread_list, LOCKED_LIST_INIT_IRQ_DISABLE);
 }
 
 void thread_exit(void) {
@@ -94,8 +118,8 @@ void thread_exit_with_status(int status) {
     condvar_broadcast(&self->join_cv);
 
     climb_thread_remove(self);
-    locked_list_del(&global.thread_list, &self->thread_list);
-    atomic_dec(&global.thread_count);
+    locked_list_del(&thread_list, &self->thread_list);
+    atomic_dec(&thread_count);
 
     irql_lower(irql);
 
@@ -112,7 +136,7 @@ static void thread_entry_wrapper(void) TSA_NO_ANALYSIS {
 
     if (atomic_load_rlx(&thread_get_current()->state) !=
         THREAD_STATE_IDLE_THREAD)
-        atomic_inc(&global.thread_count);
+        atomic_inc(&thread_count);
 
     void (*entry)(void *);
     asm volatile("mov %%r12, %0" : "=r"(entry));
@@ -251,7 +275,7 @@ static struct thread *thread_init(struct thread *thread,
     rbt_init_node(&thread->rq_tree_node);
     rbt_init_node(&thread->wq_tree_node);
     crash_thread_init(thread);
-    locked_list_add(&global.thread_list, &thread->thread_list);
+    locked_list_add(&thread_list, &thread->thread_list);
 
     return thread;
 }
@@ -275,7 +299,7 @@ struct thread *thread_create_full(char *cc_nonnull_ptr name,
     if (cc_unlikely(!new_thread->turnstile))
         goto err;
 
-    cpu_mask_init(&new_thread->allowed_cpus, global.core_count);
+    cpu_mask_init(&new_thread->allowed_cpus, topo_global.cpu_count);
 
     cpu_mask_set_all(&new_thread->allowed_cpus);
 
@@ -642,7 +666,7 @@ void thread_unlock_two_pi_locks(struct thread *cc_nonnull_ptr a,
 /* TODO: This is surprisngly tricky to implement, and the primary reason why
  * is because of invocations during boundaries. */
 bool thread_in_context(void) {
-    if (global.current_bootstage < BOOTSTAGE_LATE)
+    if (boot_global.stage < BOOTSTAGE_LATE)
         return false;
 
     if (irq_in_interrupt() || irq_in_nmi())

@@ -1,8 +1,9 @@
-#include <sch/sched.h>
+#include <sch/irql.h>
 #include <sync/condvar.h>
+#include <sync/lock_chk.h>
 #include <sync/semaphore.h>
 #include <sync/spinlock.h>
-#include <thread/thread_types.h>
+#include <tsa.h>
 
 LOCK_CHK_CLASS_DEFINE_LOCAL(semaphore_irq);
 

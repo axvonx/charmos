@@ -3,8 +3,6 @@
 #include <compiler/core.h>
 #include <compiler/diagnostic.h>
 #include <linker/symbols.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <structures/rbt.h>
 #include <types/types.h>
 

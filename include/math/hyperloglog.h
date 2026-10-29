@@ -1,7 +1,5 @@
 /* @title: HyperLogLog */
 #pragma once
-#include <stddef.h>
-#include <stdint.h>
 #include <types/types.h>
 
 struct hyperloglog;

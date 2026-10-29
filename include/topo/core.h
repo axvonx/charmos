@@ -3,14 +3,12 @@
 #include <atomic.h>
 #include <compiler/core.h>
 #include <compiler/intrinsic.h>
+#include <console/crash.h>
 #include <console/panic.h>
 #include <math/bit.h>
 #include <sch/irql.h>
-#include <smp/topology.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <thread/dpc.h>
+#include <topo/global.h>
+#include <topo/topology.h>
 #include <types/types.h>
 
 #define CPU_FEAT_SSE2 BIT(0)
@@ -331,8 +329,10 @@ static inline uint32_t smp_ctx_sub(enum topology_caller c, uint32_t one,
 }
 
 #define for_each_cpu_struct(iter_)                                             \
-    for (size_t __cpu_idx = 0; __cpu_idx < global.core_count &&                \
-                               (((iter_) = global.cores[__cpu_idx]), true);    \
+    for (size_t __cpu_idx = 0;                                                 \
+         __cpu_idx < topo_global.cpu_count &&                                  \
+         (((iter_) = topo_global.cores[__cpu_idx]), true);                     \
          __cpu_idx++)
 
-#define for_each_cpu_id(id_) for ((id_) = 0; (id_) < global.core_count; (id_)++)
+#define for_each_cpu_id(id_)                                                   \
+    for ((id_) = 0; (id_) < topo_global.cpu_count; (id_)++)

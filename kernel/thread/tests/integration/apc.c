@@ -1,4 +1,10 @@
 #include "thread/tests/test_internal.h"
+#include <asm.h>
+#include <atomic.h>
+#include <mem/alloc.h>
+#include <mem/alloc_param.h>
+#include <scaled_param.h>
+#include <thread/apc_types.h>
 
 TEST_GROUP_DEFINE(apc, .intensity_desc = {
                            .curve = SCALE_PIECEWISE_LOG,

@@ -2,7 +2,8 @@
 #pragma once
 #include <sync/event.h>
 #include <sync/once_latch.h>
-#include <time/time.h>
+#include <thread/thread_types.h>
+#include <tsa.h>
 
 struct event_latch {
     struct once_latch latch;

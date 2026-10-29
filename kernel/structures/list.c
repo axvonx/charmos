@@ -1,3 +1,4 @@
+#include <console/panic.h>
 #include <enforce.h>
 #include <math/align.h>
 #include <mem/address_range.h>

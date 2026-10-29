@@ -1,7 +1,9 @@
 /* @title: Scheduling domains */
 #pragma once
-#include <smp/domain.h>
-#include <stdint.h>
+#include <structures/cpu_mask_types.h>
+#include <topo/core.h>
+#include <topo/topology.h>
+#include <types/types.h>
 
 /* per-group: cluster of CPUs in one domain node */
 struct scheduler_group {

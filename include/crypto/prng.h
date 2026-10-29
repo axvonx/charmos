@@ -1,6 +1,6 @@
 /* @title: PRNG */
 #pragma once
-#include <stdint.h>
+#include <types/types.h>
 
 #define PRNG_SPLITMIX64_GAMMA UINT64_C(0x9e3779b97f4a7c15)
 #define PRNG_SPLITMIX64_M1 UINT64_C(0xbf58476d1ce4e5b9)

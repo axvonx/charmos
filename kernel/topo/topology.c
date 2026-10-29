@@ -1,23 +1,24 @@
 #include <asm.h>
-#include <atomic.h>
+#include <boot/global.h>
+#include <bootstage.h>
+#include <colors.h>
 #include <console/printf.h>
 #include <enforce.h>
-#include <global.h>
-#include <irq/idt.h>
-#include <limine.h>
-#include <math/align.h>
-#include <math/bit.h>
-#include <math/min_max.h>
+#include <irq/irq.h>
+#include <log.h>
 #include <math/sort.h>
 #include <mem/alloc.h>
 #include <mem/nofail.h>
 #include <mem/numa.h>
-#include <smp/core.h>
-#include <smp/domain.h>
-#include <smp/smp.h>
-#include <smp/topology.h>
+#include <sch/irql.h>
+#include <structures/cpu_mask.h>
 #include <sync/spinlock.h>
 #include <thread/thread.h>
+#include <topo/core.h>
+#include <topo/domain.h>
+#include <topo/global.h>
+#include <topo/smp.h>
+#include <topo/topology.h>
 
 static struct topology_node *smt_nodes;
 static struct topology_node *core_nodes;
@@ -25,6 +26,8 @@ static struct topology_node *numa_nodes;
 static struct topology_node *package_nodes;
 static struct topology_node *llc_nodes;
 static struct topology_node machine_node;
+
+struct topo_globals topo_global = {0};
 
 #define BOLD_STR(str_) ANSI_BOLD str_ ANSI_RESET
 
@@ -87,8 +90,8 @@ static void print_topology_node(struct topology_node *node, int depth,
     if (node->level != TOPOLOGY_LEVEL_NUMA)
         scope = &node->cpus;
 
-    struct topology_node *children = global.topology.level[child_level];
-    for (size_t i = 0; i < global.topology.count[child_level]; i++) {
+    struct topology_node *children = topo_global.topology.level[child_level];
+    for (size_t i = 0; i < topo_global.topology.count[child_level]; i++) {
         struct topology_node *child = &children[i];
         if (topology_is_child(node, child) &&
             cpu_mask_intersects(&child->cpus, scope))
@@ -105,7 +108,7 @@ static size_t build_smt_nodes(size_t cpu_count, size_t core_count) {
     smt_nodes = nofail_vnews(smt_nodes, cpu_count, ALLOC_ZERO);
 
     for (size_t i = 0; i < cpu_count; i++) {
-        struct core *c = global.cores[i];
+        struct core *c = topo_global.cores[i];
 
         struct topology_node *node = &smt_nodes[i];
 
@@ -151,7 +154,7 @@ static size_t build_core_nodes(size_t cpu_count) {
     core_nodes = nofail_vnews(core_nodes, cpu_count, ALLOC_ZERO);
 
     for (size_t i = 0; i < cpu_count; i++) {
-        struct core *c = global.cores[i];
+        struct core *c = topo_global.cores[i];
 
         bool exists = false;
         for (size_t j = 0; j < core_count; j++) {
@@ -179,7 +182,7 @@ static size_t build_core_nodes(size_t cpu_count) {
         cpu_mask_init(&node->idle, cpu_count);
 
         for (size_t j = 0; j < cpu_count; j++) {
-            struct core *cj = global.cores[j];
+            struct core *cj = topo_global.cores[j];
             if (cj->core_id == c->core_id && cj->package_id == c->package_id) {
                 cpu_mask_set(&node->cpus, j);
                 cpu_mask_set(&node->idle, j);
@@ -212,18 +215,20 @@ static size_t build_numa_nodes(size_t core_count, size_t llc_count) {
 
         /* Initialized if there is actually
          * NUMA present (these nodes are not fake) */
-        if (global.numa_node_count > 1) {
-            numa->data.numa = &global.numa_nodes[i];
-            global.numa_nodes[i].topo = numa;
+        if (topo_global.numa_node_count > 1) {
+            numa->data.numa = &topo_global.numa_nodes[i];
+            topo_global.numa_nodes[i].topo = numa;
         }
 
-        cpu_mask_init(&numa->cpus, global.core_count);
-        cpu_mask_init(&numa->idle, global.core_count);
+        cpu_mask_init(&numa->cpus, topo_global.cpu_count);
+        cpu_mask_init(&numa->idle, topo_global.cpu_count);
     }
 
     for (size_t i = 0; i < core_count; i++) {
         struct core *c = core_nodes[i].core;
         uint32_t numa_id = c->numa_node;
+        /* numa_node_count is the max numa_node over these cores, plus one */
+        assume(numa_id < numa_node_count);
         /* NOLINTNEXTLINE(*ArrayBound) */
         struct topology_node *numa = &numa_nodes[numa_id];
 
@@ -301,10 +306,10 @@ static size_t build_llc_nodes(size_t core_count) {
         node->first_child = -1;
         node->nr_children = 0;
 
-        cpu_mask_init(&node->cpus, global.core_count);
+        cpu_mask_init(&node->cpus, topo_global.cpu_count);
         cpu_mask_or(&node->cpus, &core_nodes[i].cpus);
 
-        cpu_mask_init(&node->idle, global.core_count);
+        cpu_mask_init(&node->idle, topo_global.cpu_count);
         cpu_mask_or(&node->idle, &core_nodes[i].idle);
 
         llc_count++;
@@ -335,8 +340,8 @@ static size_t build_llc_nodes(size_t core_count) {
         node->first_child = -1;
         node->nr_children = 0;
 
-        cpu_mask_init(&node->cpus, global.core_count);
-        cpu_mask_init(&node->idle, global.core_count);
+        cpu_mask_init(&node->cpus, topo_global.cpu_count);
+        cpu_mask_init(&node->idle, topo_global.cpu_count);
 
         for (size_t i = 0; i < core_count; i++) {
 
@@ -371,8 +376,8 @@ static size_t build_package_nodes(size_t core_count, size_t llc_count) {
         pkg->first_child = -1;
         pkg->nr_children = 0;
         pkg->core = NULL;
-        cpu_mask_init(&pkg->cpus, global.core_count);
-        cpu_mask_init(&pkg->idle, global.core_count);
+        cpu_mask_init(&pkg->cpus, topo_global.cpu_count);
+        cpu_mask_init(&pkg->idle, topo_global.cpu_count);
     }
 
     for (size_t j = 0; j < llc_count; j++) {
@@ -404,9 +409,9 @@ static void build_machine_node(size_t package_count) {
     machine_node.nr_children = package_count;
     machine_node.core = NULL;
 
-    cpu_mask_init(&machine_node.cpus, global.core_count);
+    cpu_mask_init(&machine_node.cpus, topo_global.cpu_count);
 
-    cpu_mask_init(&machine_node.idle, global.core_count);
+    cpu_mask_init(&machine_node.idle, topo_global.cpu_count);
 
     for (size_t i = 0; i < package_count; i++) {
         struct topology_node *pkg = &package_nodes[i];
@@ -428,7 +433,7 @@ static int cmp_u32(const void *a, const void *b) {
 static void densify_package_ids(size_t cpu_count) {
     uint32_t *ids = nofail_vnews(ids, cpu_count);
     for (size_t i = 0; i < cpu_count; i++)
-        ids[i] = global.cores[i]->package_id;
+        ids[i] = topo_global.cores[i]->package_id;
 
     heapsort(ids, cpu_count, sizeof(*ids), cmp_u32);
 
@@ -438,7 +443,7 @@ static void densify_package_ids(size_t cpu_count) {
             ids[distinct++] = ids[i];
 
     for (size_t i = 0; i < cpu_count; i++) {
-        struct core *c = global.cores[i];
+        struct core *c = topo_global.cores[i];
         uint32_t *slot =
             bsearch(&c->package_id, ids, distinct, sizeof(*ids), cmp_u32);
         c->package_id = (uint32_t) (slot - ids);
@@ -448,7 +453,7 @@ static void densify_package_ids(size_t cpu_count) {
 }
 
 void topology_init(void) {
-    size_t cpu_count = global.core_count; /* Logical processor count */
+    size_t cpu_count = topo_global.cpu_count; /* Logical processor count */
     enforce(cpu_count > 0);
 
     densify_package_ids(cpu_count);
@@ -461,25 +466,25 @@ void topology_init(void) {
 
     build_machine_node(package_count);
 
-    global.topology.level[TOPOLOGY_LEVEL_SMT] = smt_nodes;
-    global.topology.count[TOPOLOGY_LEVEL_SMT] = smt_count;
-    global.topology.level[TOPOLOGY_LEVEL_CORE] = core_nodes;
-    global.topology.count[TOPOLOGY_LEVEL_CORE] = core_count;
-    global.topology.level[TOPOLOGY_LEVEL_NUMA] = numa_nodes;
-    global.topology.count[TOPOLOGY_LEVEL_NUMA] = numa_count;
-    global.topology.level[TOPOLOGY_LEVEL_LLC] = llc_nodes;
-    global.topology.count[TOPOLOGY_LEVEL_LLC] = llc_count;
-    global.topology.level[TOPOLOGY_LEVEL_PACKAGE] = package_nodes;
-    global.topology.count[TOPOLOGY_LEVEL_PACKAGE] = package_count;
-    global.topology.level[TOPOLOGY_LEVEL_MACHINE] = &machine_node;
-    global.topology.count[TOPOLOGY_LEVEL_MACHINE] = 1;
+    topo_global.topology.level[TOPOLOGY_LEVEL_SMT] = smt_nodes;
+    topo_global.topology.count[TOPOLOGY_LEVEL_SMT] = smt_count;
+    topo_global.topology.level[TOPOLOGY_LEVEL_CORE] = core_nodes;
+    topo_global.topology.count[TOPOLOGY_LEVEL_CORE] = core_count;
+    topo_global.topology.level[TOPOLOGY_LEVEL_NUMA] = numa_nodes;
+    topo_global.topology.count[TOPOLOGY_LEVEL_NUMA] = numa_count;
+    topo_global.topology.level[TOPOLOGY_LEVEL_LLC] = llc_nodes;
+    topo_global.topology.count[TOPOLOGY_LEVEL_LLC] = llc_count;
+    topo_global.topology.level[TOPOLOGY_LEVEL_PACKAGE] = package_nodes;
+    topo_global.topology.count[TOPOLOGY_LEVEL_PACKAGE] = package_count;
+    topo_global.topology.level[TOPOLOGY_LEVEL_MACHINE] = &machine_node;
+    topo_global.topology.count[TOPOLOGY_LEVEL_MACHINE] = 1;
 
     topology_dump();
     domain_dump();
 }
 
 void topology_mark_core_idle(cpu_id_t cpu_id, bool idle) {
-    if (!global.topology.level[TOPOLOGY_LEVEL_MACHINE])
+    if (!topo_global.topology.level[TOPOLOGY_LEVEL_MACHINE])
         return;
 
     struct topology_node *smt = &smt_nodes[cpu_id];
@@ -562,14 +567,14 @@ struct core *topology_find_idle_core(struct core *local_core,
 static struct cpu_mask topology_level_mask(cpu_id_t id,
                                            enum topology_level level) {
     if (level == TOPOLOGY_LEVEL_EX_DOMAIN) {
-        domain_id_t domain = global.cores[id]->domain->id;
+        domain_id_t domain = topo_global.cores[id]->domain->id;
         struct cpu_mask ret = CPU_MASK_INIT;
-        domain_set_cpu_mask(&ret, global.domains[domain]);
+        domain_set_cpu_mask(&ret, topo_global.domains[domain]);
         return ret;
     }
 
-    struct topology_node *nodes = global.topology.level[level];
-    uint16_t count = global.topology.count[level];
+    struct topology_node *nodes = topo_global.topology.level[level];
+    uint16_t count = topo_global.topology.count[level];
     for (uint16_t i = 0; i < count; i++) {
         struct topology_node *node = &nodes[i];
         if (cpu_mask_test(&node->cpus, id))
@@ -588,7 +593,7 @@ bool topology_contract_verify(struct topology_contract c) {
         if (caller & TOPC_IFLAG)
             valid = !irqs_enabled();
 
-        valid = valid || global.current_bootstage < BOOTSTAGE_LATE;
+        valid = valid || boot_global.stage < BOOTSTAGE_LATE;
 
         /* Short circuiting here matters: if EARLY and IRQL are set
          * before IRQLs are available to read, we are not able to

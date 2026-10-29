@@ -1,8 +1,12 @@
+#include <atomic.h>
 #include <enforce.h>
+#include <mem/alloc_param.h>
+#include <mem/buddy.h>
 #include <mem/domain.h>
-#include <mem/pmm.h>
-#include <mem/vmm.h>
-#include <smp/domain.h>
+#include <sch/irql.h>
+#include <sync/spinlock.h>
+#include <topo/domain.h>
+#include <topo/global.h>
 
 #include "internal.h"
 #include "mem/buddy/internal.h"
@@ -333,7 +337,8 @@ paddr_t domain_alloc(size_t pages, enum alloc_flags flags) {
     uint16_t locality_degree = ALLOC_LOCALITY_FROM_FLAGS(flags);
     bool flexible_locality =
         ALLOC_FLAG_TEST(flags, ALLOC_FLAG_FLEXIBLE_LOCALITY) ||
-        locality_degree == ALLOC_LOCALITY_MIN || global.numa_node_count == 1;
+        locality_degree == ALLOC_LOCALITY_MIN ||
+        topo_global.numa_node_count == 1;
 
     /* No other options. Allocate from the local buddy. */
     if (locality_degree == ALLOC_LOCALITY_MAX) {

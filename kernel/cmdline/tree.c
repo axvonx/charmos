@@ -1,4 +1,11 @@
 #include "internal.h"
+#include <cmdline.h>
+#include <console/panic.h>
+#include <log.h>
+#include <mem/alloc.h>
+#include <mem/nofail.h>
+#include <string.h>
+#include <types/refcount.h>
 
 #define CMDLINE_MAX_TREE_DEPTH 16
 

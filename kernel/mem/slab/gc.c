@@ -1,7 +1,15 @@
+#include "mem/slab/internal.h"
+#include <atomic.h>
+#include <err.h>
 #include <math/bit.h>
 #include <math/min_max.h>
+#include <sch/irql.h>
 #include <sch/sched.h>
 #include <stack_depot.h>
+#include <structures/list.h>
+#include <structures/rbt.h>
+#include <sync/spinlock.h>
+#include <time/time.h>
 
 #include "gc_internal.h"
 

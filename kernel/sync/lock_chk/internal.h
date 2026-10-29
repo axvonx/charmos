@@ -5,15 +5,18 @@
 #include <atomic.h>
 #include <console/crash.h>
 #include <math/hash.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <math/min_max.h>
+#include <sch/irql.h>
 #include <string.h>
 #include <stringify.h>
 #include <structures/hlist.h>
 #include <structures/list.h>
+#include <sync/lock_chk.h>
 #include <sync/lock_chk_types.h>
+#include <sync/lock_general.h>
 #include <sync/raw_spinlock.h>
+#include <tsa.h>
+#include <types/types.h>
 
 struct thread;
 

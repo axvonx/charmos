@@ -1,11 +1,8 @@
 /* @title: Virtual memory management */
 #pragma once
-#include <console/printf.h>
 #include <err.h>
 #include <mem/demand_page.h>
 #include <mem/tlb.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <types/types.h>
 struct limine_executable_address_response;
 struct limine_memmap_response;

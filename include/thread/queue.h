@@ -1,7 +1,8 @@
 /* @title: Thread queue */
 #pragma once
+#include <console/crash.h>
 #include <structures/list.h>
-#include <sync/spinlock.h>
+#include <sync/spinlock_types.h>
 
 struct thread_queue {
     struct list_head list;

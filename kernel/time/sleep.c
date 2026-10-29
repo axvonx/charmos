@@ -1,8 +1,8 @@
 #include <acpi/hpet.h>
 #include <asm.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <drivers/mmio.h>
 #include <time/spin_sleep.h>
+#include <types/types.h>
 
 static void sleep_hpet_fs(uint64_t femtoseconds) {
     uint32_t fs_per_tick = hpet_fs_per_tick;
