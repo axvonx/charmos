@@ -60,15 +60,9 @@ struct scheduler;
 #define WROOST_MIN_BUCKET_COUNT 256U
 #define WROOST_MAX_BUCKET_COUNT 32768U
 #define WROOST_BUCKETS_PER_CPU_MULT 16U
-#define WROOST_FINE_VALID_MASK ((1U << WROOST_FINE_ENTRY_COUNT) - 1U)
 
 /* Percpu data */
 #define WROOST_THREAD_MAP_OVERFLOW ((struct thread *) (UINTPTR_MAX))
-
-static_assert(BITS_NEEDED(WROOST_THREAD_COUNTERS - 1) == 5);
-
-static_assert(BIT_SIZEOF(wroost_id_t) >= BITS_NEEDED(WROOST_THREAD_COUNTERS),
-              "wroost_id_t needs to be wider");
 
 enum wroost_state {
     WROOST_DPC_IDLE = 0,
@@ -159,8 +153,6 @@ struct wroost_percpu_data {
     struct cpu_mask dpc_enqueue_deferred;
     wroost_id_t writer_lock_id; /* So we know what to set for deferred DPCS */
 };
-
-ct_assert_struct_size_eq(wroost_thread_data, 40);
 
 struct wroost_bucket {
     /* "tally", so as to not conflict with "counter":

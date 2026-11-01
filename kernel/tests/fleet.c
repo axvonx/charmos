@@ -411,7 +411,7 @@ static void test_fleet_dump(struct test_fleet *f,
 }
 
 static void test_fleet_arm_hard_deadline(struct test_fleet *f) {
-    timer_init(&f->hard_timer, test_fleet_deadline, NULL);
+    timer_init(&f->hard_timer, test_fleet_deadline);
     f->hard_timer.flags = TIMER_FLAG_IRQ;
     f->hard_timer.expiration_us = time_get_us() + MS_TO_US(f->opts.drain_ms);
     timer_add_global(&f->hard_timer);

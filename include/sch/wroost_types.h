@@ -1,5 +1,6 @@
 /* @title: Writer to Reader Boosting Types */
 #pragma once
+#include <compiler/core.h>
 #include <math/bit.h>
 #include <structures/cpu_mask_types.h>
 #include <structures/hlist.h>
@@ -8,6 +9,7 @@
 #define WROOST_THREAD_COUNTERS 32
 
 #define WROOST_FINE_ENTRY_COUNT 4
+#define WROOST_FINE_VALID_MASK ((1U << WROOST_FINE_ENTRY_COUNT) - 1U)
 
 #define WROOST_THREAD_COUNTER_BITS (WROOST_THREAD_COUNTERS * 2)
 
@@ -16,6 +18,11 @@
 typedef uint16_t wroost_id_t;
 
 typedef uint8_t wroost_counter_t;
+
+static_assert(BITS_NEEDED(WROOST_THREAD_COUNTERS - 1) == 5);
+
+static_assert(BIT_SIZEOF(wroost_id_t) >= BITS_NEEDED(WROOST_THREAD_COUNTERS),
+              "wroost_id_t needs to be wider");
 
 /* Writers are a simple state machine.
  *
@@ -42,7 +49,7 @@ struct wroost_kicks {
 };
 
 struct wroost_fine_entry {
-    wroost_id_t lock_id; /* Shift this right by WROOST_FINE_INDEX_SHIFT
+    wroost_id_t lock_id; /* Shift this right by wroost_global.fine_index_bits
                           * to get the coarse index of the fine entry */
 };
 
@@ -115,3 +122,5 @@ struct wroost_thread_data {
 
     enum thread_prio_class floor : THREAD_PRIO_CLASS_BIT_COUNT;
 };
+
+ct_assert_struct_size_eq(wroost_thread_data, 40);

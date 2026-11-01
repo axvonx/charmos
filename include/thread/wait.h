@@ -10,8 +10,6 @@
 #define THREAD_WAIT_HEADER_INIT(name_)                                         \
     {.lock = SPINLOCK_INIT, .waiters = LIST_HEAD_INIT((name_).waiters)}
 
-ct_assert_struct_size_eq(thread_wait_block, 48);
-
 struct thread_wait_object {
     struct thread_wait_header *header;
     void *object;

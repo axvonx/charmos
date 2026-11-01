@@ -101,10 +101,10 @@ void thread_exit_with_status(int status) {
     /* Can't be in a critical section  when we exit */
     enforce(self->rcu_nesting == 0, "thread exited inside an RCU read section");
 
-    /* Public status and the ZOMBIE state under join_lock...
+    /* Publish status and the ZOMBIE state under join_lock..
      *
-     * Joiners either see ZOMBIE here are don't block, or are already
-     * parked on join_cv and gets the broadcast, no third outcome */
+     * Joiners either see ZOMBIE here and don't block, or are already
+     * waiting on join_cv and get the broadcast */
     enum irql jirql = spin_lock(&self->join_lock);
     self->exit_status = status;
     thread_set_state(self, THREAD_STATE_ZOMBIE);
@@ -452,8 +452,14 @@ struct thread *thread_queue_pop_front(struct thread_queue *q) {
     return thread_from_wq_list_node(lhead);
 }
 
+struct thread_wait_timer {
+    struct thread_wait_header hdr;
+    struct timer timer;
+};
+
 static void wake_thread_timer_cb(struct timer *timer) {
-    struct thread_wait_header *wait = timer->data;
+    struct thread_wait_header *wait =
+        &container_of(timer, struct thread_wait_timer, timer)->hdr;
     thread_wait_header_satisfy(wait, THREAD_WAKE_REASON_SLEEP_TIMEOUT, NULL);
 }
 
@@ -463,12 +469,12 @@ void thread_sleep_for_us(uint64_t us) {
         return;
     }
 
-    struct thread_wait_header wait;
-    thread_wait_header_init(&wait);
+    struct thread_wait_timer wait_timer;
+    thread_wait_header_init(&wait_timer.hdr);
     struct timer sleep_timer;
-    timer_init(&sleep_timer, wake_thread_timer_cb, &wait);
+    timer_init(&sleep_timer, wake_thread_timer_cb);
 
-    thread_wait_prepare_to_sleep(&wait, &sleep_timer,
+    thread_wait_prepare_to_sleep(&wait_timer.hdr, &sleep_timer,
                                  THREAD_WAIT_UNINTERRUPTIBLE);
     timer_modify(&sleep_timer, timer_delta_us(us));
 

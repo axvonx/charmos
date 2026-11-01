@@ -68,7 +68,7 @@ void status_bar_open(void) {
 
     printf_unlock(irql);
 
-    timer_init(&bar_timer, bar_timer_fn, NULL);
+    timer_init(&bar_timer, bar_timer_fn);
     bar_timer_arm();
 }
 

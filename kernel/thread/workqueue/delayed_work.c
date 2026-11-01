@@ -3,7 +3,7 @@
 #include <time/timer.h>
 
 static void delayed_work_timer_cb(struct timer *t) {
-    struct delayed_work *dwork = t->data;
+    struct delayed_work *dwork = container_of(t, struct delayed_work, timer);
     if (dwork->wq) {
         workqueue_enqueue(dwork->wq, &dwork->work);
     } else {
@@ -16,7 +16,7 @@ void delayed_work_init(struct delayed_work *dwork, work_function fn,
                        struct work_args args) {
     work_init(&dwork->work, fn, args);
     dwork->wq = NULL;
-    timer_init(&dwork->timer, delayed_work_timer_cb, dwork);
+    timer_init(&dwork->timer, delayed_work_timer_cb);
 }
 
 bool delayed_work_schedule_on(struct workqueue *wq, struct delayed_work *dwork,

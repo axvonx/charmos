@@ -5,67 +5,7 @@
 #include <time/timer_types.h>
 #include <types/types.h>
 
-/* timer_flags: 32 bit bitflags
- *
- *      ┌───────────────────────────────────────────────────────┐
- * Bits │ 31..28 27..24 23..20 19..16 15..12  11..8  7..4  3..0 │
- * Use  │  %%%%   %%%%   %%Pd   ID##   ####    ####  ####  #### │
- *      └───────────────────────────────────────────────────────┘
- *
- * I - IRQ timer - not executed in DPC
- * D - Deferrable (Only activates when CPU non-idle)
- * d - DPC queued
- * P - Pinned
- *
- * %%% - Bucket idx (if present, up to 1023)
- * ### - CPU target for this timer
- *
- * A - Unused (available)
- * * - Unused (unavailable)
- *
- */
-
-#define TIMER_FLAG_CPU_MASK 0x0003FFFF
-#define TIMER_FLAG_CPU(c) ((c) & TIMER_FLAG_CPU_MASK)
-
-#define TIMER_FLAG_BUCKET_MASK 0x3FFu
-#define TIMER_FLAG_BUCKET_SHIFT 22
-#define TIMER_FLAG_BUCKET(b)                                                   \
-    (((b) & TIMER_FLAG_BUCKET_MASK) << TIMER_FLAG_BUCKET_SHIFT)
-
-#define TIMER_DEFINE(n, fn, ...)                                               \
-    struct timer n = (struct timer) {                                          \
-        .func = fn                                                             \
-    }
-
-static inline void timer_bucket_set(struct timer *timer, uint32_t bucket) {
-    timer->flags =
-        (timer->flags & ~(TIMER_FLAG_BUCKET_MASK << TIMER_FLAG_BUCKET_SHIFT)) |
-        TIMER_FLAG_BUCKET(bucket);
-}
-
-static inline uint32_t timer_bucket_get(struct timer *timer) {
-    return (timer->flags >> TIMER_FLAG_BUCKET_SHIFT) & TIMER_FLAG_BUCKET_MASK;
-}
-
-static inline void timer_cpu_set(struct timer *timer, cpu_id_t cpu) {
-    timer->flags = (timer->flags & ~TIMER_FLAG_CPU_MASK) | TIMER_FLAG_CPU(cpu);
-}
-
-static inline cpu_id_t timer_cpu_get(struct timer *timer) {
-    return timer->flags & TIMER_FLAG_CPU_MASK;
-}
-
-static inline void timer_init(struct timer *timer, void (*func)(struct timer *),
-                              void *data) {
-    timer->hlist_node.next = NULL;
-    timer->hlist_node.pprev = NULL;
-    timer->expiration_us = 0;
-    timer->func = func;
-    timer->flags = TIMER_FLAG_NONE;
-    timer->data = data;
-}
-
+struct irq_context;
 void timer_add(struct timer *timer);
 void timer_add_on(struct timer *timer, cpu_id_t cpu);
 
@@ -86,10 +26,36 @@ bool timer_delete_sync(struct timer *timer);
 bool timer_shutdown(struct timer *timer);
 bool timer_shutdown_sync(struct timer *timer);
 
-struct irq_context;
 enum irq_result timer_isr(struct irq_context *ctx, void *c);
 void timers_init_bsp(void);
 void timers_init_ap(cpu_id_t cpu);
+
+static inline void timer_bucket_set(struct timer *timer, uint32_t bucket) {
+    timer->flags =
+        (timer->flags & ~(TIMER_FLAG_BUCKET_MASK << TIMER_FLAG_BUCKET_SHIFT)) |
+        TIMER_FLAG_BUCKET(bucket);
+}
+
+static inline uint32_t timer_bucket_get(struct timer *timer) {
+    return (timer->flags >> TIMER_FLAG_BUCKET_SHIFT) & TIMER_FLAG_BUCKET_MASK;
+}
+
+static inline void timer_cpu_set(struct timer *timer, cpu_id_t cpu) {
+    timer->flags = (timer->flags & ~TIMER_FLAG_CPU_MASK) | TIMER_FLAG_CPU(cpu);
+}
+
+static inline cpu_id_t timer_cpu_get(struct timer *timer) {
+    return timer->flags & TIMER_FLAG_CPU_MASK;
+}
+
+static inline void timer_init(struct timer *timer,
+                              void (*func)(struct timer *)) {
+    timer->hlist_node.next = NULL;
+    timer->hlist_node.pprev = NULL;
+    timer->expiration_us = 0;
+    timer->func = func;
+    timer->flags = TIMER_FLAG_NONE;
+}
 
 static inline time_us_t timer_delta_us(time_us_t delta_us) {
     return time_get_us() + delta_us;

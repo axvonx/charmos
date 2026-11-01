@@ -3,6 +3,7 @@
 #include <atomic.h>
 #include <console/crash.h>
 #include <structures/list.h>
+#include <sync/event.h>
 
 /* Throughout much of the kernel, drivers want to defer work to threaded
  * contexts. However, we don't necessarily want to make one big overarching
@@ -30,28 +31,57 @@
 
 /* worker_flags: 32 bit bitflags
  *
+ * These flags are set once at worker creation, and never
+ *
  *      ┌──────────────────────────────────────────────────────┐
  * Bits │ 31..28 27..24 23..20 19..16 15..12 11..8  7..4  3..0 │
- * Use  │  AAAA   AAAA   AAAA   AAAA   AAAA   AAAA  AAAA  AAAD │
+ * Use  │  AAAA   AAAA   AAAA   AAAA   AAAA   AAAA  AAAA  AAAQ │
  *      └──────────────────────────────────────────────────────┘
  *
- * D - Detached - Worker is not assigned to a queue
+ * Q - Queue bound - Worker is attached to a workqueue.
+ *
+ *     Some special behavior occurs as a result of this. Notably, QUEUE_BOUND
+ *     workers are able to change the work item they are currently running,
+ *     whilst non-queue bound ones cannot.
+ *
+ *
  *
  * A - Unused (available)
  * * - Unused (unavailable)
  *
  */
 enum worker_flags {
-    WORKER_FLAG_DETACHED = 1,
+    WORKER_FLAG_QUEUE_BOUND = 1,
 
+};
+
+enum worker_action {
+    WORKER_ACTION_WAIT,
+    WORKER_ACTION_EXIT,
+    WORKER_ACTION_REPEAT,
+};
+
+/* NOTE: for now, worker priority is also fixed upon spawn.
+ *
+ * TODO: once I implement generic lock depth tracking and things, this should
+ * be mutable, but until then, it'll be fixed from spawn to exit */
+enum worker_priority {
+    WORKER_PRIORITY_BG,
+    WORKER_PRIORITY_TS_LOW,
+    WORKER_PRIORITY_TS_MID,
+    WORKER_PRIORITY_TS_HIGH,
+    WORKER_PRIORITY_RT,
+    WORKER_PRIORITY_URGENT,
 };
 
 struct worker {
     struct list_node list_node;
     enum worker_flags flags;
+    enum worker_priority prio;
 
     struct thread *thread;
     atomic(struct work *) work;
 
-    struct workqueue *workqueue; /* NULL if detached */
+    struct workqueue *workqueue; /* NULL if not queue bound */
+    struct event event;
 };

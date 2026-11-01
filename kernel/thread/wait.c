@@ -437,7 +437,7 @@ struct thread_wait_result thread_wait_complete_timeout(time_ms_t timeout_ms) {
     spin_unlock(&t->wait_lock, irql);
 
     if (armed) {
-        timer_init(&t->wait_timer, wait_timeout_send, NULL);
+        timer_init(&t->wait_timer, wait_timeout_send);
 
         /* TOPC_NONE because it is not imperative that we
          * have the timer run on this CPU */

@@ -1,5 +1,6 @@
 /* @title: Thread Wait Types */
 #pragma once
+#include <compiler/core.h>
 #include <structures/list.h>
 #include <sync/spinlock_types.h>
 
@@ -29,3 +30,5 @@ struct thread_wait_block {
     enum thread_wait_block_state state;
     struct thread_wait_header *header;
 };
+
+ct_assert_struct_size_eq(thread_wait_block, 48);

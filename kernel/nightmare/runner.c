@@ -260,12 +260,12 @@ static void nightmare_hard_deadline(struct timer *timer) {
 static void nightmare_arm_deadlines(time_ms_t duration_ms,
                                     time_ms_t drain_grace_ms) {
     time_us_t now = time_get_us();
-    timer_init(&nightmare_runtime.soft_timer, nightmare_soft_deadline, NULL);
+    timer_init(&nightmare_runtime.soft_timer, nightmare_soft_deadline);
     nightmare_runtime.soft_timer.flags = TIMER_FLAG_IRQ;
     nightmare_runtime.soft_timer.expiration_us = now + MS_TO_US(duration_ms);
     timer_add_global(&nightmare_runtime.soft_timer);
 
-    timer_init(&nightmare_runtime.hard_timer, nightmare_hard_deadline, NULL);
+    timer_init(&nightmare_runtime.hard_timer, nightmare_hard_deadline);
     nightmare_runtime.hard_timer.flags = TIMER_FLAG_IRQ;
     nightmare_runtime.hard_timer.expiration_us =
         now + MS_TO_US(duration_ms + drain_grace_ms);
