@@ -23,9 +23,6 @@ enum vas_segment_type {
     VAS_SEG_CACHED,
 };
 
-/* Slots outlive tags, and only a successful token claim
- * can allow a segment read, with page aligned
- * addresses leaving low bits for the state */
 enum vas_mag_state { VAS_MAG_LIVE = 1, VAS_MAG_CACHED, VAS_MAG_CLAIMED };
 #define VAS_MAG_STATE_MASK 3UL
 
@@ -40,7 +37,7 @@ struct vas_mag_slot {
 
 struct vas_magazine {
     struct vas_mag_slot slots[VAS_MAG_CAPACITY];
-    /* Owner CPU only, at DISPATCH, prefer most recently freed */
+    /* Owner CPU only, at DISPATCH, and prefer most recently freed */
     uint32_t recent;
 };
 

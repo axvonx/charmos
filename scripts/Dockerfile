@@ -1,7 +1,8 @@
 FROM ubuntu:24.04
 
 ARG LLVM_VERSION=23
-ARG GCC_VERSION=14
+ARG GCC_VERSION=15
+ARG TOOLCHAIN_PPA_FPR=C8EC952E2A0E1FBDC5090F6A2C277A0A352154E5
 
 RUN apt update -y && apt upgrade -y && \
     apt install -y --no-install-recommends ca-certificates curl gnupg && \
@@ -9,6 +10,12 @@ RUN apt update -y && apt upgrade -y && \
          -o /etc/apt/trusted.gpg.d/apt.llvm.org.asc && \
     echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${LLVM_VERSION} main" \
          > /etc/apt/sources.list.d/llvm.list && \
+    curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x${TOOLCHAIN_PPA_FPR}" \
+         -o /etc/apt/trusted.gpg.d/ubuntu-toolchain-r.asc && \
+    gpg --show-keys --with-colons /etc/apt/trusted.gpg.d/ubuntu-toolchain-r.asc \
+         | grep -qx "fpr:::::::::${TOOLCHAIN_PPA_FPR}:" && \
+    echo "deb https://ppa.launchpadcontent.net/ubuntu-toolchain-r/test/ubuntu noble main" \
+         > /etc/apt/sources.list.d/ubuntu-toolchain-r.list && \
     apt update -y && \
     apt install -y xorriso nasm qemu-system gdb make gcc gcc-${GCC_VERSION} git cmake binutils \
                    python3 nodejs \

@@ -34,7 +34,6 @@ CMDLINE_CHILDREN_DEFINE(
                                                     CLOCK_NAME_TSC)));
 
 static void timer_dpc(struct dpc_context *dc, void *ctx, void *unused);
-void timer_base_reprogram_hardware(cpu_id_t cpu);
 static void timer_percpu_ctor(struct timer_percpu *p, cpu_id_t cpu) {
     for (int i = 0; i < TIMER_BASE_MAX; i++) {
         struct timer_base *pcpu = &p->bases[i];
@@ -365,7 +364,9 @@ void timer_add_global(struct timer *timer) {
 
 /* Call holding base->lock */
 static bool timer_detach_if_dpc_queued(struct timer_base *base,
-                                       struct timer *timer) {
+                                       struct timer *timer)
+    TSA_CALLER_HOLDS(base->lock) {
+
     struct timer_percpu *pcpu = base->percpu;
     if (!pcpu)
         return false;
@@ -381,6 +382,17 @@ static bool timer_detach_if_dpc_queued(struct timer_base *base,
     return dpc_queued;
 }
 
+static void timer_dequeue_bucket(struct timer_base *base, struct timer *timer)
+    TSA_CALLER_HOLDS(base->lock) {
+    timer_list_del(timer);
+
+    uint32_t idx = timer_bucket_get(timer);
+    if (hlist_empty(&base->buckets[idx]))
+        bitmap_clear(base->pending_map, idx);
+
+    timer_recalc_next_expiration(base);
+}
+
 static bool timer_delete_internal(struct timer *timer, bool shutdown) {
     struct timer_base *base;
     enum irql irql = timer_lock_base(timer, &base);
@@ -389,13 +401,7 @@ static bool timer_delete_internal(struct timer *timer, bool shutdown) {
 
     bool bucketed = false;
     if (!dpc_queued && !hlist_unhashed(&timer->hlist_node)) {
-        timer_list_del(timer);
-
-        uint32_t idx = timer_bucket_get(timer);
-        if (hlist_empty(&base->buckets[idx]))
-            bitmap_clear(base->pending_map, idx);
-
-        timer_recalc_next_expiration(base);
+        timer_dequeue_bucket(base, timer);
         bucketed = true;
     }
 
@@ -414,16 +420,18 @@ static bool timer_delete_internal(struct timer *timer, bool shutdown) {
 }
 
 bool timer_delete(struct timer *timer) {
-    return timer_delete_internal(timer, false);
+    return timer_delete_internal(timer, /* shutdown = */ false);
 }
 
 bool timer_shutdown(struct timer *timer) {
-    return timer_delete_internal(timer, true);
+    return timer_delete_internal(timer, /* shutdown = */ true);
 }
 
 /* caller holds base->lock */
 static bool timer_dpc_is_dispatching(struct timer_base *base,
-                                     struct timer *timer) {
+                                     struct timer *timer)
+    TSA_CALLER_HOLDS(base->lock) {
+
     struct timer_percpu *pcpu = base->percpu;
     if (!pcpu)
         return false;
@@ -468,16 +476,11 @@ bool timer_modify(struct timer *timer, time_us_t new_exp) {
 
     bool dpc_queued = timer_detach_if_dpc_queued(base, timer);
 
-    bool pending = dpc_queued || hlist_unhashed(&timer->hlist_node) == 0;
+    bool pending = dpc_queued || !hlist_unhashed(&timer->hlist_node);
+    bool pinned = timer->flags & TIMER_FLAG_PINNED;
     if (pending && !dpc_queued) {
-        timer_list_del(timer);
-        uint32_t idx = timer_bucket_get(timer);
-        if (hlist_empty(&base->buckets[idx])) {
-            bitmap_clear(base->pending_map, idx);
-        }
-    } else if (!pending && !(timer->flags & TIMER_FLAG_PINNED) &&
-
-               /* The lock being held verifies the IRQL */
+        timer_dequeue_bucket(base, timer);
+    } else if (!pending && !pinned &&
                timer_cpu_get(timer) != smp_id(TOPC_IRQL)) {
         spin_unlock(&base->lock, irql);
         timer_cpu_set(timer, smp_id(TOPC_IRQL)); /* outer verifies this */
@@ -501,15 +504,10 @@ bool timer_modify_pending(struct timer *timer, time_us_t new_exp) {
 
     bool dpc_queued = timer_detach_if_dpc_queued(base, timer);
 
-    bool pending = dpc_queued || hlist_unhashed(&timer->hlist_node) == 0;
+    bool pending = dpc_queued || !hlist_unhashed(&timer->hlist_node);
     if (pending) {
-        if (!dpc_queued) {
-            timer_list_del(timer);
-            uint32_t idx = timer_bucket_get(timer);
-            if (hlist_empty(&base->buckets[idx])) {
-                bitmap_clear(base->pending_map, idx);
-            }
-        }
+        if (!dpc_queued)
+            timer_dequeue_bucket(base, timer);
 
         timer->expiration_us = new_exp;
         timer_add_internal(base, timer);
@@ -520,6 +518,7 @@ bool timer_modify_pending(struct timer *timer, time_us_t new_exp) {
 
     if (pending)
         timer_base_reprogram_hardware(cpu);
+
     return pending;
 }
 
@@ -530,7 +529,9 @@ bool timer_modify_reduce(struct timer *timer, time_us_t new_exp) {
 
     bool dpc_queued = timer_detach_if_dpc_queued(base, timer);
 
-    bool pending = dpc_queued || hlist_unhashed(&timer->hlist_node) == 0;
+    bool pending = dpc_queued || !hlist_unhashed(&timer->hlist_node);
+    bool pinned = timer->flags & TIMER_FLAG_PINNED;
+
     if (pending && !dpc_queued) {
         if (new_exp >= timer->expiration_us) {
             spin_unlock(&base->lock, irql);
@@ -538,12 +539,8 @@ bool timer_modify_reduce(struct timer *timer, time_us_t new_exp) {
             return true;
         }
 
-        timer_list_del(timer);
-        uint32_t idx = timer_bucket_get(timer);
-        if (hlist_empty(&base->buckets[idx])) {
-            bitmap_clear(base->pending_map, idx);
-        }
-    } else if (!pending && !(timer->flags & TIMER_FLAG_PINNED) &&
+        timer_dequeue_bucket(base, timer);
+    } else if (!pending && !pinned &&
                timer_cpu_get(timer) != smp_id(TOPC_IRQL)) {
         spin_unlock(&base->lock, irql);
         timer_cpu_set(timer, smp_id(TOPC_IRQL)); /* outer */

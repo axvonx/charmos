@@ -48,8 +48,7 @@ static const size_t mag_sizes[VAS_MAG_CLASSES] = {
     17 * PAGE_SIZE,
     PAGE_2MB,
 };
-static const uint32_t mag_capacities[VAS_MAG_CLASSES] = {VAS_MAG_CAPACITY, 8, 8,
-                                                         2};
+static const uint32_t mag_caps[VAS_MAG_CLASSES] = {VAS_MAG_CAPACITY, 8, 8, 2};
 
 static uint32_t mag_class(size_t size) {
     for (uint32_t i = 0; i < VAS_MAG_CLASSES; i++)
@@ -87,8 +86,8 @@ static void magazine_publish(struct vas_mag_slot *slot,
 static vaddr_t magazine_alloc(struct vas_arena *arena, uint32_t cls,
                               size_t align) {
     struct vas_magazine *mag = &arena->magazines[cls];
-    for (uint32_t n = 0; n < mag_capacities[cls]; n++) {
-        uint32_t i = (mag->recent + n) % mag_capacities[cls];
+    for (uint32_t n = 0; n < mag_caps[cls]; n++) {
+        uint32_t i = (mag->recent + n) % mag_caps[cls];
         struct vas_mag_slot *slot = &mag->slots[i];
         uintptr_t token = atomic_load_rlx(&slot->token);
 
@@ -118,7 +117,7 @@ static bool magazine_free(struct vas_arena *arena, uint32_t cls, vaddr_t addr) {
     if (!IS_PAGE_ALIGNED(addr))
         return false;
     struct vas_magazine *mag = &arena->magazines[cls];
-    for (uint32_t i = 0; i < mag_capacities[cls]; i++) {
+    for (uint32_t i = 0; i < mag_caps[cls]; i++) {
         struct vas_mag_slot *slot = &mag->slots[i];
         uintptr_t token = vas_token_make(addr, VAS_MAG_LIVE);
 
@@ -148,9 +147,9 @@ static int32_t segment_cmp(const struct rbt_node *a, const struct rbt_node *b) {
     return (l > r) - (l < r);
 }
 
-static uint32_t size_to_bin(size_t size) {
+static uint32_t size_to_bin(size_t size) ct_precond(size) {
     enforce_precond(size);
-    return 63U - ci_clzll(size);
+    return BIT_SIZEOF(size_t) - 1 - ci_clzll(size);
 }
 
 static void bin_insert(struct vas_arena *arena, struct vas_segment *seg) {
@@ -170,6 +169,7 @@ static struct vas_segment *segment_alloc(struct vas_arena *arena) {
 #ifdef TEST_ENABLED
     if (arena->tag_alloc_budget == 0)
         return NULL;
+
     if (arena->tag_alloc_budget > 0)
         arena->tag_alloc_budget--;
 #endif
@@ -252,7 +252,9 @@ static struct vas_segment *arena_alloc(struct vas_arena *arena, size_t size,
         list_for_each(pos, &arena->free_bins[bin]) {
             struct vas_segment *seg =
                 list_entry(pos, struct vas_segment, bin_node);
+
             size_t pad = (-seg->start) & (align - 1);
+
             if (pad > seg->length || size > seg->length - pad)
                 continue;
 
@@ -317,6 +319,7 @@ static void arena_release(struct vas_arena *arena, struct vas_segment *seg) {
     if (seg->seg_node.prev != list_head_sentinel(&arena->all_segs)) {
         struct vas_segment *prev =
             list_entry(seg->seg_node.prev, struct vas_segment, seg_node);
+
         if (segments_mergeable(prev, seg)) {
             bin_remove(arena, prev);
             prev->length += seg->length;
@@ -324,9 +327,11 @@ static void arena_release(struct vas_arena *arena, struct vas_segment *seg) {
             seg = prev;
         }
     }
+
     if (seg->seg_node.next != list_head_sentinel(&arena->all_segs)) {
         struct vas_segment *next =
             list_entry(seg->seg_node.next, struct vas_segment, seg_node);
+
         if (segments_mergeable(seg, next)) {
             bin_remove(arena, next);
             seg->length += next->length;
@@ -339,12 +344,13 @@ static void arena_release(struct vas_arena *arena, struct vas_segment *seg) {
 /* Arena lock is held */
 static bool magazine_enroll(struct vas *vas, struct vas_arena *arena,
                             struct vas_segment *seg, uint32_t cls,
-                            enum vas_mag_state state) {
+                            enum vas_mag_state state)
+    TSA_CALLER_HOLDS(arena->lock) {
     if (!IS_ALIGNED(seg->start, PAGE_SIZE))
         return false;
 
     struct vas_mag_slot *slot = NULL;
-    for (uint32_t i = 0; i < mag_capacities[cls]; i++) {
+    for (uint32_t i = 0; i < mag_caps[cls]; i++) {
         if (!atomic_load_rlx(&arena->magazines[cls].slots[i].token)) {
             slot = &arena->magazines[cls].slots[i];
             break;
@@ -366,17 +372,26 @@ static bool magazine_enroll(struct vas *vas, struct vas_arena *arena,
 
 /* Best-effort refill */
 static void magazine_refill(struct vas *vas, struct vas_arena *arena,
-                            struct vas_segment *allocated, size_t align) {
-    uint32_t cls = mag_class(allocated->length);
-    if (cls == VAS_MAG_CLASSES || !magazines_enabled(vas) ||
-        !magazine_enroll(vas, arena, allocated, cls, VAS_MAG_LIVE))
+                            struct vas_segment *allocated, size_t align)
+    TSA_CALLER_HOLDS(arena->lock) {
+    if (!magazines_enabled(vas))
         return;
-    for (uint32_t i = 1; i < VAS_MAG_REFILL && i < mag_capacities[cls]; i++) {
+
+    uint32_t cls = mag_class(allocated->length);
+    if (cls == VAS_MAG_CLASSES)
+        return;
+
+    if (!magazine_enroll(vas, arena, allocated, cls, VAS_MAG_LIVE))
+        return;
+
+    for (uint32_t i = 1; i < VAS_MAG_REFILL && i < mag_caps[cls]; i++) {
         bool failed = false;
         struct vas_segment *seg =
             arena_alloc(arena, mag_sizes[cls], align, &failed);
+
         if (!seg)
             break;
+
         if (!magazine_enroll(vas, arena, seg, cls, VAS_MAG_CACHED)) {
             arena_release(arena, seg);
             break;
@@ -397,11 +412,14 @@ static void magazine_release(struct vas *vas, struct vas_arena *arena,
 
 static void magazine_drain(struct vas *vas, struct vas_arena *arena) {
     for (uint32_t cls = 0; cls < VAS_MAG_CLASSES; cls++) {
-        for (uint32_t i = 0; i < mag_capacities[cls]; i++) {
+        for (uint32_t i = 0; i < mag_caps[cls]; i++) {
+
             struct vas_mag_slot *slot = &arena->magazines[cls].slots[i];
             uintptr_t token = atomic_load_rlx(&slot->token);
+
             if ((token & VAS_MAG_STATE_MASK) != VAS_MAG_CACHED)
                 continue;
+
             if (magazine_claim(slot, token))
                 magazine_release(vas, arena, slot);
         }
@@ -413,7 +431,7 @@ static size_t owner_index(struct vas *vas, vaddr_t addr) {
 }
 
 /* Global lock held */
-static void reclaim_locked(struct vas *vas) {
+static void reclaim_locked(struct vas *vas) TSA_CALLER_HOLDS(vas->global.lock) {
     for (cpu_id_t cpu = 0; cpu < topo_global.cpu_count; cpu++) {
         struct vas_arena *local = &vas->local[cpu];
 
@@ -431,6 +449,7 @@ static void reclaim_locked(struct vas *vas) {
 
             vaddr_t start = seg->start;
             struct vas_segment *parent = segment_find(&vas->global, start);
+
             enforce(parent && parent->start == start &&
                         parent->length == VAS_CHUNK_SIZE &&
                         atomic_load_rlx(&parent->type) == VAS_SEG_IMPORTED,
@@ -449,15 +468,19 @@ static void reclaim_locked(struct vas *vas) {
 
 /* Global lock held, build allocation and then publish owner */
 static vaddr_t import_alloc(struct vas *vas, uint32_t cpu, size_t size,
-                            size_t align, bool *metadata_failed) {
+                            size_t align, bool *metadata_failed)
+    TSA_CALLER_HOLDS(vas->global.lock) {
+
     struct vas_arena *local = &vas->local[cpu];
     enum irql irql = spin_lock(&local->lock);
     struct vas_segment *seg = segment_alloc(local);
+
     if (!seg) {
         *metadata_failed = true;
         spin_unlock(&local->lock, irql);
         return 0;
     }
+
     struct vas_segment *parent = arena_alloc(&vas->global, VAS_CHUNK_SIZE,
                                              VAS_CHUNK_SIZE, metadata_failed);
     if (!parent) {
@@ -571,12 +594,16 @@ out:
 static enum irql vas_lock_owner(struct vas *vas, vaddr_t addr,
                                 struct vas_arena **out_arena)
     TSA_ACQUIRES_SPIN(&(*out_arena)->lock) TSA_NO_ANALYSIS {
+
     size_t index = owner_index(vas, addr);
+
     while (true) {
         cpu_id_t owner = atomic_load_acq(&vas->chunk_owner[index]);
         enforce(owner == VAS_OWNER_GLOBAL || owner < topo_global.cpu_count);
+
         struct vas_arena *arena =
             owner == VAS_OWNER_GLOBAL ? &vas->global : &vas->local[owner];
+
         enum irql irql = spin_lock(&arena->lock);
         if (atomic_load_acq(&vas->chunk_owner[index]) == owner) {
             *out_arena = arena;
@@ -614,6 +641,7 @@ void vas_free(struct vas *vas, vaddr_t addr, size_t size) {
     if (seg->mag_slot) {
         struct vas_mag_slot *slot = seg->mag_slot;
         uintptr_t token = vas_token_make(addr, VAS_MAG_LIVE);
+
         if (!magazine_claim(slot, token))
             panic(BAD_FREE, "concurrent/duplicate magazine free at %p",
                   (void *) addr);
@@ -746,10 +774,12 @@ static struct vas *space_create(vaddr_t base, vaddr_t limit, bool bootstrap) {
         space_storage_free(vas);
         return NULL;
     }
+
     seg->start = base;
     seg->length = limit - base;
     segment_insert_after(&vas->global, seg,
                          list_head_sentinel(&vas->global.all_segs));
+
     bin_insert(&vas->global, seg);
     vas->global.total_free = seg->length;
     return vas;
@@ -783,6 +813,7 @@ static size_t mapped_extent_size(uintptr_t addr, size_t len) {
     if (!len || len - 1 > UINTPTR_MAX - addr || len > SIZE_MAX - offset ||
         len + offset > SIZE_MAX - (PAGE_SIZE - 1))
         return 0;
+
     return ALIGN_UP(len + offset, PAGE_SIZE);
 }
 
@@ -814,6 +845,7 @@ void vas_unmap(struct vas *vas, void *vaddr, size_t len) {
 
 static void arena_dump(struct vas_arena *arena) {
     enum irql irql = spin_lock(&arena->lock);
+
     struct list_node *pos;
     list_for_each(pos, &arena->all_segs) {
         struct vas_segment *seg = list_entry(pos, struct vas_segment, seg_node);
@@ -826,6 +858,7 @@ static void arena_dump(struct vas_arena *arena) {
                                           : "busy");
     }
     printf("    total_free=%zu\n", arena->total_free);
+
     spin_unlock(&arena->lock, irql);
 }
 

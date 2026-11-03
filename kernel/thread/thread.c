@@ -471,15 +471,14 @@ void thread_sleep_for_us(uint64_t us) {
 
     struct thread_wait_timer wait_timer;
     thread_wait_header_init(&wait_timer.hdr);
-    struct timer sleep_timer;
-    timer_init(&sleep_timer, wake_thread_timer_cb);
+    timer_init(&wait_timer.timer, wake_thread_timer_cb);
 
-    thread_wait_prepare_to_sleep(&wait_timer.hdr, &sleep_timer,
+    thread_wait_prepare_to_sleep(&wait_timer.hdr, &wait_timer.timer,
                                  THREAD_WAIT_UNINTERRUPTIBLE);
-    timer_modify(&sleep_timer, timer_delta_us(us));
+    timer_modify(&wait_timer.timer, timer_delta_us(us));
 
     thread_wait_complete();
-    timer_delete_sync(&sleep_timer);
+    timer_delete_sync(&wait_timer.timer);
 }
 
 void thread_sleep_for_ms(uint64_t ms) {

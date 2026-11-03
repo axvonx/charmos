@@ -27,7 +27,11 @@
  *
  * Ideally, such workers should not scope-creep into workqueues
  * and be reserved for dedicated emergency things.
+ *
+ * All workers will be marked joinable by default, so
  */
+
+enum work_state { WORK_STATE_ };
 
 /* worker_flags: 32 bit bitflags
  *
@@ -52,7 +56,8 @@
  */
 enum worker_flags {
     WORKER_FLAG_QUEUE_BOUND = 1,
-
+    WORKER_FLAG_EMERGENCY = 1 << 1,
+    WORKER_FLAG_
 };
 
 enum worker_action {
@@ -75,7 +80,9 @@ enum worker_priority {
 };
 
 struct worker {
-    struct list_node list_node;
+    struct list_node queue_list_node;
+    struct list_node worker_list_node;
+
     enum worker_flags flags;
     enum worker_priority prio;
 
@@ -85,3 +92,5 @@ struct worker {
     struct workqueue *workqueue; /* NULL if not queue bound */
     struct event event;
 };
+
+struct workqueue {};

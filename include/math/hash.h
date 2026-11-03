@@ -7,9 +7,9 @@
 static inline uint32_t hash_djb2(const void *key, size_t len) {
     const uint8_t *data = (const uint8_t *) key;
     uint32_t hash = 5381;
-    for (size_t i = 0; i < len; i++) {
+    for (size_t i = 0; i < len; i++)
         hash = ((hash << 5) + hash) + data[i];
-    }
+
     return hash;
 }
 
@@ -17,9 +17,9 @@ static inline uint32_t hash_djb2(const void *key, size_t len) {
 static inline uint32_t hash_sdbm(const void *key, size_t len) {
     const uint8_t *data = (const uint8_t *) key;
     uint32_t hash = 0;
-    for (size_t i = 0; i < len; i++) {
+    for (size_t i = 0; i < len; i++)
         hash = data[i] + (hash << 6) + (hash << 16) - hash;
-    }
+
     return hash;
 }
 
@@ -118,7 +118,7 @@ static inline uint32_t hash_jenkins_one_at_a_time(const void *key, size_t len) {
     return hash;
 }
 
-static inline size_t hash_pointer(void *ptr) {
+static inline size_t hash_ptr(void *ptr) {
     uintptr_t key = (uintptr_t) ptr;
     key = (~key) + (key << 21);
     key = key ^ (key >> 24);
@@ -197,8 +197,8 @@ static inline uint32_t hash_bkdr(const void *key, size_t len) {
     const uint8_t *data = (const uint8_t *) key;
     uint32_t seed = 131;
     uint32_t hash = 0;
-    for (size_t i = 0; i < len; i++) {
+    for (size_t i = 0; i < len; i++)
         hash = hash * seed + data[i];
-    }
+
     return hash;
 }

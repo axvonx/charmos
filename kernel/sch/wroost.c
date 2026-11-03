@@ -135,7 +135,7 @@ static inline void wroost_move_tally(struct wroost_bucket *bkt,
 }
 
 static inline wroost_id_t wroost_hash(struct rwlock *lock) {
-    return hash_pointer(lock) % wroost_global.hash_table.bucket_count;
+    return hash_ptr(lock) % wroost_global.hash_table.bucket_count;
 }
 
 static inline uint8_t wroost_fine_entry_index(struct wroost_fine_entry *ent) {
