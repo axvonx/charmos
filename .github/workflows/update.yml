@@ -90,7 +90,6 @@ jobs:
           delete-branch: true
           add-paths: |
             .github/workflows/*.yml
-            .github/workflows/*.yaml
 
       - name: Record published image and pull request
         env:
