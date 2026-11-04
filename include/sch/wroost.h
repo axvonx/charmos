@@ -26,9 +26,7 @@ struct scheduler;
  * keeps a set of 4 16-bit counters and a CPU mask.
  *
  * We hash every lock to store a small 'counting bloom filter'
- * within each thread. We also keep a max_boost which is the
- * maximum of all rwlock's maximum priorities to mitigate excess
- * boosting that could be pathological.
+ * within each thread.
  *
  * Then, writers hash into the table and bump the counter that
  * corresponds to their perceived priority.

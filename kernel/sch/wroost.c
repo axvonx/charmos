@@ -329,13 +329,7 @@ static void percpu_dec_id(struct wroost_percpu_data *pcpu,
 }
 
 static enum thread_prio_class ceil_for(wroost_id_t lock_id,
-                                       enum thread_prio_class max_boost,
                                        enum thread_prio_class min) {
-    enforce_precond(max_boost < THREAD_PRIO_CLASS_COUNT);
-
-    /* This is for readers. If the max boost is less than the minimum (base)
-     * thread priority, it should've panicked on lock entry. */
-    enforce_precond(min <= max_boost);
 
     uint64_t bucket_word =
         atomic_load(&wroost_global.hash_table.buckets[lock_id].raw_tally);
@@ -349,7 +343,7 @@ static enum thread_prio_class ceil_for(wroost_id_t lock_id,
     } exp = {.raw = bucket_word};
 
     enum thread_prio_class ceil = min;
-    for (int p = max_boost; p > min; p--) {
+    for (int p = THREAD_PRIO_CLASS_URGENT; p > min; p--) {
         if (exp.tallies[p] > 0) {
             ceil = MAX((enum thread_prio_class) p, ceil);
             break;
@@ -362,7 +356,6 @@ static enum thread_prio_class ceil_for(wroost_id_t lock_id,
 static struct wroost_kicks boost_thread_to(struct thread *t,
                                            enum thread_prio_class prio) {
     struct wroost_thread_data *wtd = &t->wroost_data;
-    enforce(prio <= wtd->max_boost);
 
     spin_guard_high(&t->pi_lock);
 
@@ -413,7 +406,6 @@ static struct wroost_kicks boost_thread_in_dpc(struct scheduler *sched,
     struct wroost_percpu_data *pcd = sched->wroost_data;
 
     struct wroost_thread_data *wtd = &t->wroost_data;
-    enforce(prio <= wtd->max_boost);
 
     struct wroost_kicks kicks = {0};
 
@@ -476,7 +468,7 @@ static void unboost_thread(struct thread *t) {
 
 static enum thread_prio_class ceil_for_thread(wroost_id_t id,
                                               struct thread *t) {
-    return ceil_for(id, t->wroost_data.max_boost, t->base_prio_class);
+    return ceil_for(id, t->base_prio_class);
 }
 
 /* There's a balance to strike with the scheduler runqueue lock granularity.
@@ -773,8 +765,7 @@ void wroost_pre_acquire(struct rwlock *lock, enum rwlock_acquire_type type) {
     }
 }
 
-static void post_read_acquire(struct rwlock *lock,
-                              enum thread_prio_class lock_max_ceil) {
+static void post_read_acquire(struct rwlock *lock) {
     struct thread *curr = thread_get_current();
     wroost_id_t id = wroost_hash(lock);
     uint16_t c_idx = id / WROOST_COARSE_FACTOR;
@@ -786,9 +777,6 @@ static void post_read_acquire(struct rwlock *lock,
      * so let's prevent preemption so it always sees a valid state */
     enum irql irql = irql_raise(IRQL_DISPATCH_LEVEL);
     wroost_check_enforce(wtd);
-
-    if (wtd->read_nesting_depth == 0 || lock_max_ceil > wtd->max_boost)
-        wtd->max_boost = lock_max_ceil;
 
     wtd->read_nesting_depth++;
 
@@ -834,9 +822,7 @@ void wroost_post_acquire(struct rwlock *lock, enum rwlock_acquire_type type) {
     struct wroost_thread_data *wtd = &curr->wroost_data;
 
     if (type == RWLOCK_READ) {
-        enum thread_prio_class ceil =
-            RWLOCK_GET_MAX_PRIO(RWLOCK_READ_LOCK_WORD(lock));
-        post_read_acquire(lock, ceil);
+        post_read_acquire(lock);
     } else {
         /* We cannot have been mid-wait and somehow got the lock.
          * We either wanted the lock, didn't block, or blocked,
@@ -901,7 +887,6 @@ static void post_read_release(struct rwlock *lock) {
 #endif
 
         wtd->fine_valid = 0;
-        wtd->max_boost = 0;
         unboost_thread(curr);
     } else {
         uint16_t c_idx = id / WROOST_COARSE_FACTOR;
@@ -1033,7 +1018,7 @@ static enum thread_prio_class update_reader(struct wroost_percpu_data *pcd,
     for (int i = 0; i < WROOST_FINE_ENTRY_COUNT; i++) {
         if (wtd->fine_valid & BIT(i)) {
             wroost_id_t id = wtd->fine_entries[i].lock_id;
-            if (add && (p = ceil_for(id, wtd->max_boost, boost_to)) > boost_to)
+            if (add && (p = ceil_for(id, boost_to)) > boost_to)
                 boost_to = p;
 
             if (add) {
@@ -1086,7 +1071,7 @@ static enum thread_prio_class update_reader(struct wroost_percpu_data *pcd,
                 percpu_dec_id(pcd, k);
             }
 
-            if (add && (p = ceil_for(k, wtd->max_boost, boost_to)) > boost_to)
+            if (add && (p = ceil_for(k, boost_to)) > boost_to)
                 boost_to = p;
         }
     }

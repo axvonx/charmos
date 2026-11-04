@@ -60,12 +60,6 @@ enum worker_flags {
     WORKER_FLAG_
 };
 
-enum worker_action {
-    WORKER_ACTION_WAIT,
-    WORKER_ACTION_EXIT,
-    WORKER_ACTION_REPEAT,
-};
-
 /* NOTE: for now, worker priority is also fixed upon spawn.
  *
  * TODO: once I implement generic lock depth tracking and things, this should

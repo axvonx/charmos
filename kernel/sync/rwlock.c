@@ -242,15 +242,14 @@ void rw_lock_full(struct rwlock *lock, enum rwlock_acquire_type acq_type,
 
     uintptr_t lword = RWLOCK_READ_LOCK_WORD(lock);
 
-    /* We are using this as a potential
-     * reserved state for special rwlocks */
+    /* TODO: This is now unused, we can use
+     * these two bits for something else */
     enforce(RWLOCK_GET_MAX_PRIO(lword) != 0, INVALID_STATE,
             "rwlock max prio cannot be 0");
 
     struct thread *curr = thread_get_current();
     enum thread_prio_class base_class = curr->base_prio_class;
     wroost_pre_acquire(lock, acq_type);
-    enforce(curr->base_prio_class <= RWLOCK_GET_MAX_PRIO(lword));
 
     /* fastpath */
     if (rwlock_try_lock(lock, curr, acq_type, base_class))

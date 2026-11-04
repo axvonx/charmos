@@ -89,23 +89,9 @@ struct wroost_thread_data {
 
     /* Boosts: applies to the readers */
 
-    /* boost_class_ceil is the ceil that the writer->reader boosts contribute.
+    /* floor is the floor that the writer->reader boosts contribute.
      * There is only one, and it is the maximum of any of the lock IDs it holds.
-     *
-     * max_boost serves a completely different role. Every rwlock is
-     * instantiated with a fixed maximum on the highest thread priority class
-     * that can enter the lock. max_boost is the maximum of all of these.
-     * The idea is that if an URGENT thread blocks on a rwlock with a maximum
-     * of RT, that code will panic.
-     *
-     * Thus, if we encounter a thread that seems
-     * to hold an ID where the urgent counter is >= 1, if this max_boost
-     * is at RT, we actually *don't* boost to urgent, and boost to what's
-     * further down (not necessarily RT either). It's essentially a way
-     * to cheaply verify that a big boost does NOT belong to us,
-     * because if it did, the kernel would've crashed long before.
      */
-    enum thread_prio_class max_boost : THREAD_PRIO_CLASS_BIT_COUNT;
 
     /* Whether this wroost_thread_data has
      * contributed to the thread's class_floors */
