@@ -248,12 +248,11 @@ void test_perturb_ipi_storm(const struct test_perturb_env *env,
         cpu_id_t cpu;
         if (storm_roll(self, victim, &cpu) == STORM_TARGET_BROADCAST) {
             size_t i;
-            for_each_cpu_id(i) {
-                scheduler_mark_core_needs_resched(topo_global.cores[i], true);
-            }
-            ipi_send_mask(&all, IRQ_SCHEDULER, IPI_MASK_SUPERSET_OK);
+            for_each_cpu_id(i)
+                scheduler_force_or_defer_resched(sch_global.schedulers[i]);
+
         } else {
-            scheduler_force_resched(sch_global.schedulers[cpu]);
+            scheduler_force_or_defer_resched(sch_global.schedulers[cpu]);
         }
 
         thread_sleep_for_us(interval_us);

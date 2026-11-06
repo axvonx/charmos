@@ -529,7 +529,6 @@ void scheduler_yield(void) {
 }
 
 void scheduler_force_resched(struct scheduler *sched) {
-    scheduler_mark_core_needs_resched(topo_global.cores[sched->core_id], true);
     ipi_send(sched->core_id, IRQ_SCHEDULER);
 }
 

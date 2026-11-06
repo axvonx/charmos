@@ -30,6 +30,7 @@ set(DEBUG_FLAGS
     DEBUG_SCHED_NESTING
     DEBUG_CLIMB
     DEBUG_THREAD
+    DEBUG_IRQL
     DEBUG_WROOST
     #
     # Drivers

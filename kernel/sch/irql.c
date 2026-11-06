@@ -52,6 +52,14 @@ enum irql irql_raise(enum irql new_level) TSA_NO_ANALYSIS {
 
     irql_set(new_level);
     if (new_level > old) {
+
+#ifdef DEBUG_IRQL
+        struct core *c = smp_core_raw();
+        enforce(cpu_mask_empty(&c->deferred_dpc_ipis));
+        enforce(cpu_mask_empty(&c->deferred_resched_ipis));
+        enforce(cpu_mask_empty(&c->deferred_timer_ipis));
+#endif
+
         if (old < IRQL_DISPATCH_LEVEL && new_level >= IRQL_DISPATCH_LEVEL)
             scheduler_preemption_disable();
 
