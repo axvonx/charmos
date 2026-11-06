@@ -15,6 +15,7 @@ enum ipi_mask_flags {
 #define IPI_BCAST_RATIO_Q8 (16 * 256)
 
 void ipi_send(cpu_id_t cpu, uint8_t vector);
+void ipi_send_unchecked(cpu_id_t cpu, uint8_t vector);
 
 /* Fails instead of waiting if a send is still in flight */
 bool ipi_send_try(cpu_id_t cpu, uint8_t vector);

@@ -6,6 +6,7 @@
 #include <math/min_max.h>
 #include <sch/irql.h>
 #include <structures/bitmap.h>
+#include <structures/cpu_mask.h>
 #include <structures/hlist.h>
 #include <structures/locked_list.h>
 #include <sync/spinlock.h>
@@ -561,7 +562,7 @@ bool timer_modify_reduce(struct timer *timer, time_us_t new_exp) {
 void timer_base_reprogram_hardware(cpu_id_t cpu) {
     enum irql outer = irql_raise(IRQL_HIGH_LEVEL);
     if (cpu != smp_id(TOPC_IRQL)) {
-        ipi_send(cpu, IRQ_TIMER);
+        cpu_mask_set(&smp_core_raw()->deferred_timer_ipis, cpu);
         irql_lower(outer);
         return;
     }

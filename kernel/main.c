@@ -143,7 +143,7 @@ cc_no_asan void k_main(void) TSA_ACQUIRES_IRQS {
     cmdline_debug_hook();
 
     lapic_timer_init_bsp();
-    dpc_init_percpu();
+    dpc_percpu_init();
     smp_wake(mp_request.response);
     timekeeper_init();
     term_probe();

@@ -183,9 +183,7 @@ static inline bool migrate_to_destination(struct thread *t, time_ms_t time) {
     save_thread(other, t, time);
     thread_set_runqueue(t, other);
 
-    /* An idle destination sits in a tickless hlt and won't look at its
-     * runqueue until its next interrupt, gotta go bother it */
-    scheduler_defer_resched(other);
+    scheduler_force_or_defer_resched(other);
 
     thread_post_migrate(t, us->core_id, dst);
     return true;
@@ -440,17 +438,6 @@ void scheduler_switch_in(void) TSA_NO_ANALYSIS {
                                     us->other_locked_irql);
     }
 
-    /* Once the locks are dropped, we need to go bother
-     * all deferred reschedule requests since it's
-     * safe to do so (preemption would be disabled still)
-     *
-     * We actually can't enforce(irql_get() == IRQL_DISPATCH_LEVEL) because
-     * early reschedules before IRQL availability would report NONE, but it's
-     * pretty easy to see that any code calling this would be at DISPATCH */
-    cpu_id_t i;
-    cpu_mask_for_each(i, us->deferred_resched_mask)
-        scheduler_force_resched(sch_global.schedulers[i]);
-
     enum irql wirql = spin_lock_high(&us->wroost_lock);
     enum irql sirql = spin_lock_high(&us->lock);
 
@@ -463,8 +450,6 @@ void scheduler_switch_in(void) TSA_NO_ANALYSIS {
     spin_unlock(&us->wroost_lock, wirql);
 
     wroost_scheduler_switch_in_hook();
-
-    cpu_mask_clear_all(&us->deferred_resched_mask);
 
     struct thread *drop = us->drop_last_ref;
     us->drop_last_ref = NULL;
@@ -541,4 +526,31 @@ void scheduler_yield(void) {
 
     if (self)
         apc_enable_kernel();
+}
+
+void scheduler_force_resched(struct scheduler *sched) {
+    scheduler_mark_core_needs_resched(topo_global.cores[sched->core_id], true);
+    ipi_send(sched->core_id, IRQ_SCHEDULER);
+}
+
+void scheduler_force_or_defer_resched(struct scheduler *sched) {
+    if (irql_get() < IRQL_HIGH_LEVEL) {
+        scheduler_mark_core_needs_resched(topo_global.cores[sched->core_id],
+                                          true);
+        ipi_send(sched->core_id, IRQ_SCHEDULER);
+    } else {
+        cpu_mask_set(&smp_core_raw()->deferred_resched_ipis, sched->core_id);
+    }
+}
+
+void scheduler_force_run_dpcs(cpu_id_t cpu) {
+    ipi_send(cpu, IRQ_DPC);
+}
+
+void scheduler_force_or_defer_run_dpcs(cpu_id_t cpu) {
+    if (irql_get() < IRQL_HIGH_LEVEL) {
+        ipi_send(cpu, IRQ_DPC);
+    } else {
+        cpu_mask_set(&smp_core_raw()->deferred_dpc_ipis, cpu);
+    }
 }

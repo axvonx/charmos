@@ -81,7 +81,6 @@ void scheduler_init(void) {
                                 * being mistakenly identified
                                 * as completed */
 
-        cpu_mask_clear_all(&s->deferred_resched_mask);
         s->core_id = i;
         s->tick.func = scheduler_tick;
         s->tick.flags =

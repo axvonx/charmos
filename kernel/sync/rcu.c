@@ -417,9 +417,8 @@ static void rcu_kick_pending(uint64_t seq) TSA_NO_ANALYSIS {
         cpu_mask_copy(&pending, &leaf->qs_cpus);
         rcu_propagate_done(leaf, seq, irql);
 
-        for_each_cpu(cpu, &pending) {
+        for_each_cpu(cpu, &pending)
             ipi_send((uint32_t) cpu, IRQ_NOP);
-        }
     }
 }
 

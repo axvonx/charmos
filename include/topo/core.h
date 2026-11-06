@@ -87,6 +87,12 @@ struct core {
 
     freq_khz_t lapic_khz;
 
+    /* TODO: Clean this up. We need some better mechanism,
+     * maybe an IRQL_IPI_LEVEL */
+    struct cpu_mask deferred_dpc_ipis;
+    struct cpu_mask deferred_resched_ipis;
+    struct cpu_mask deferred_timer_ipis;
+
     struct topology_node *topo_node;
     struct topology_cache_info llc;
 

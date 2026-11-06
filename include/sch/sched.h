@@ -100,7 +100,6 @@ struct scheduler {
     enum irql locked_irql;
     enum irql other_locked_irql;
 
-    struct cpu_mask deferred_resched_mask;
     struct rt_scheduler_percpu *rt;
 
 #ifdef DEBUG_SCHED
@@ -152,6 +151,10 @@ size_t scheduler_try_push_to_idle_core(struct scheduler *sched);
 void scheduler_tick_enable(void);
 void scheduler_tick_disable(void);
 enum irq_result scheduler_reschedule_isr(struct irq_context *rsp, void *ctx);
+void scheduler_force_or_defer_resched(struct scheduler *sched);
+void scheduler_force_resched(struct scheduler *sched);
+void scheduler_force_or_defer_run_dpcs(cpu_id_t cpu);
+void scheduler_force_run_dpcs(cpu_id_t cpu);
 
 /* For a global structure containing central scheduler data */
 struct scheduler_data {
@@ -219,47 +222,8 @@ static inline bool scheduler_core_idle(struct core *c) {
     return atomic_load(&c->idle);
 }
 
-/* NOTE: this function is unsafe to call from context that holds a runqueue
- * lock. The reason:
- *
- * Imagine the following:
- *     CPU 0 is holding RQ 0's lock
- *     CPU 0 IPI's CPU 1
- *     CPU 1, before that IPI arrives, was spinning on
- *            RQ 0's lock, since it was migrating a thread.
- *
- *            Thus, CPU 1 cannot respond to the IPI
- *            because it has interrupts disabled,
- *            and will never enter the ISR to ack.
- *
- *     CPU 0 spins on waiting for this (uncompletable) IPI to complete
- *     CPU 1 is also stuck waiting for RQ 0's lock to be relinquished,
- *           which is something that won't happen because of this
- *           dependency
- *
- *     *boom* deadlock.
- *
- *     scheduler core code is supposed to call scheduler_defer_resched()
- *     defined in the internal header there.
- */
-static inline void scheduler_force_resched(struct scheduler *sched) {
-    scheduler_mark_core_needs_resched(topo_global.cores[sched->core_id], true);
-    ipi_send(sched->core_id, IRQ_SCHEDULER);
-}
-
-static inline bool cc_must_check
-scheduler_try_force_resched(struct scheduler *sched) {
-    scheduler_mark_core_needs_resched(topo_global.cores[sched->core_id], true);
-    return ipi_send_try(sched->core_id, IRQ_SCHEDULER);
-}
-
 enum irql thread_lock_scheduler(struct thread *t, struct scheduler **out_sched)
     TSA_ACQUIRES_SPIN(&(*out_sched)->lock);
-
-/* Uses the blocking ipi_send(), so no spinlock may be held. */
-static inline void scheduler_force_run_dpcs(cpu_id_t cpu) {
-    ipi_send(cpu, IRQ_DPC);
-}
 
 static inline bool scheduler_preemption_disabled(enum topology_caller c) {
     return (smp_ctx(c) & SMP_CTX_PREEMPT_MASK) != 0;

@@ -116,7 +116,7 @@ bool dpc_enqueue_on_cpu(size_t cpu, struct dpc *cc_nonnull_ptr d) {
     struct dpc_queue *dq = &dc->queue;
     dpc_queue_enqueue(dq, d);
 
-    scheduler_force_run_dpcs(cpu);
+    scheduler_force_or_defer_run_dpcs(cpu);
 
     return true;
 }
@@ -125,7 +125,7 @@ bool dpc_enqueue_local(struct dpc *d) {
     return dpc_enqueue_on_cpu(smp_id_raw(), d);
 }
 
-void dpc_init_percpu(void) {
+void dpc_percpu_init(void) {
     dpc_data = nofail_vnews(dpc_data, topo_global.cpu_count, ALLOC_ZERO);
     size_t i;
     for_each_cpu_id(i) {

@@ -264,10 +264,6 @@ scheduler_release_two_raw_locks(struct scheduler *a,
     }
 }
 
-static inline void scheduler_defer_resched(struct scheduler *target) {
-    cpu_mask_set(&smp_core_scheduler()->deferred_resched_mask, target->core_id);
-}
-
 /* Internal use only */
 void scheduler_switch_in(void);
 

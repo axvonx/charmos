@@ -94,6 +94,25 @@ static void irql_lower_internal(enum irql new_level,
     if (old >= IRQL_HIGH_LEVEL && new_level < IRQL_HIGH_LEVEL) {
         enum irql intermediate = MAX(new_level, IRQL_DISPATCH_LEVEL);
         irql_set(intermediate);
+
+        struct core *c = smp_core_raw();
+        cpu_id_t i;
+        cpu_mask_for_each(i, c->deferred_resched_ipis) {
+            scheduler_force_resched(sch_global.schedulers[i]);
+        }
+
+        cpu_mask_for_each(i, c->deferred_dpc_ipis) {
+            scheduler_force_run_dpcs(i);
+        }
+
+        cpu_mask_for_each(i, c->deferred_timer_ipis) {
+            ipi_send(i, IRQ_TIMER);
+        }
+
+        cpu_mask_clear_all(&c->deferred_timer_ipis);
+        cpu_mask_clear_all(&c->deferred_dpc_ipis);
+        cpu_mask_clear_all(&c->deferred_resched_ipis);
+
         if (in_thread)
             irq_enable();
     }

@@ -115,7 +115,7 @@ end:
     thread_unlock_thread_and_rq(last, best, lirql, birql);
 
     if (to_force_resched)
-        scheduler_force_resched(to_force_resched);
+        scheduler_force_or_defer_resched(to_force_resched);
 }
 
 void scheduler_complete_object_wait(struct thread *t,

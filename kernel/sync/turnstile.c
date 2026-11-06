@@ -77,7 +77,7 @@ void turnstiles_init(void) {
 
 static inline enum irql
 turnstile_hash_chain_lock(struct turnstile_hash_chain *chain) TSA_NO_ANALYSIS {
-    return spin_lock_high(&chain->lock);
+    return spin_lock(&chain->lock);
 }
 
 static inline void

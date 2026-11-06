@@ -44,6 +44,6 @@ struct dpc *dpc_init(struct dpc *d, dpc_func_t fn, void *a, void *b);
  * the caller must uphold. storage entries get overwritten every call as well */
 void dpc_fanout(struct dpc *cc_nonnull_ptr storage, struct cpu_mask cpus,
                 dpc_fanout_fn_t cc_nonnull_ptr fn);
-void dpc_init_percpu(void);
+void dpc_percpu_init(void);
 bool dpc_enqueue_local(struct dpc *d);
 bool dpc_enqueue_on_cpu(size_t cpu, struct dpc *cc_nonnull_ptr d);

@@ -456,8 +456,6 @@ void rw_unlock_full(struct rwlock *lock,
     }
 #endif
 
-    /* once again, we raise the IRQL to DISPATCH to prevent
-     * us from being switched out while we unlock */
     size_t backoff = RWLOCK_BACKOFF_DEFAULT;
     size_t looped = 0;
 

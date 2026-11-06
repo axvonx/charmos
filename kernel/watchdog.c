@@ -395,7 +395,7 @@ static void watchdog_start_test_on(struct watchdog_master_cpu *cpu,
 
     /* Fine to not guard against cpu == 0, since the IRQ
      * here is safe as it's not an NMI */
-    ipi_send(cpu->id, watchdog_global.critical_test_irq);
+    ipi_send_unchecked(cpu->id, watchdog_global.critical_test_irq);
 }
 
 static time_ms_t watchdog_spin_for_response(struct watchdog_master_cpu *cpu) {

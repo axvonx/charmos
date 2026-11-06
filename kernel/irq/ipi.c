@@ -28,12 +28,19 @@ enum ipi_mask_backend {
 /* All CPUs would compute the same thing so it's fine to race */
 static atomic_uint32_t ipi_backend = IPI_BACKEND_UNKNOWN;
 
+void ipi_send_unchecked(cpu_id_t cpu, uint8_t vector) {
+    lapic_icr_write(smp_apic_id(cpu),
+                    vector | IPI_ICR_FIXED | LAPIC_DEST_PHYSICAL);
+}
+
 void ipi_send(cpu_id_t cpu, uint8_t vector) {
+    enforce(irql_get() < IRQL_HIGH_LEVEL);
     lapic_icr_write(smp_apic_id(cpu),
                     vector | IPI_ICR_FIXED | LAPIC_DEST_PHYSICAL);
 }
 
 bool ipi_send_try(cpu_id_t cpu, uint8_t vector) {
+    enforce(irql_get() < IRQL_HIGH_LEVEL);
     return lapic_icr_try_write(smp_apic_id(cpu),
                                vector | IPI_ICR_FIXED | LAPIC_DEST_PHYSICAL);
 }
@@ -253,6 +260,7 @@ size_t ipi_send_cost(const struct cpu_mask *targets) {
 
 void ipi_send_mask(const struct cpu_mask *targets, uint8_t vector,
                    enum ipi_mask_flags flags) {
+    enforce(irql_get() < IRQL_HIGH_LEVEL);
     enum irql irql = irql_raise(IRQL_HIGH_LEVEL);
 
     cpu_id_t this_cpu = smp_id(TOPC_IRQL);
